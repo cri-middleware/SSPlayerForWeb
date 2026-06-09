@@ -12,7 +12,8 @@
     "./wasm/*": "./wasm/*"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts && cp wasm/*.wasm dist/"
+    "build": "tsdown src/index.ts --format esm --dts && cp wasm/*.wasm dist/",
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "flatbuffers": "^25.9.23"

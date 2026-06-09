@@ -18,7 +18,8 @@
     "@spritestudio/ssplayer-core": "workspace:*"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts"
+    "build": "tsdown src/index.ts --format esm --dts",
+    "clean": "rimraf dist"
   },
   "devDependencies": {
     "pixi.js": "^8.19.0",
