@@ -1,5 +1,5 @@
 import { ExtensionType, ExtensionMetadata } from 'pixi.js';
-import { SSRuntimeResource } from '@spritestudio/ssplayer-core';
+import { SSABResource } from '@spritestudio/ssplayer-core';
 
 export const SSABLoader = {
     extension: {
@@ -11,7 +11,7 @@ export const SSABLoader = {
         return url.split('?')[0].endsWith('.ssab');
     },
 
-    async load(url: string): Promise<SSRuntimeResource> {
+    async load(url: string): Promise<SSABResource> {
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`[SSABLoader] Failed to load ssab: ${url} - ${response.statusText}`);
@@ -22,12 +22,12 @@ export const SSABLoader = {
         
         // Pass data to WASM which takes ownership of the memory inside the heap.
         // We let the JS Uint8Array get garbage collected to avoid double memory.
-        const resource = new SSRuntimeResource(data);
+        const resource = new SSABResource(data);
         
         return resource;
     },
 
-    unload(resource: SSRuntimeResource): void {
-        resource.free();
+    unload(resource: SSABResource): void {
+        resource.destroy();
     }
 };

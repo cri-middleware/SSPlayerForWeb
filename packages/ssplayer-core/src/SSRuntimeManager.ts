@@ -1,6 +1,7 @@
 import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem } from '../wasm/ssruntime.js';
 import * as flatbuffers from 'flatbuffers';
 import { FrameData } from './fbs/ss/runtime/frame-data.js';
+import { SsAnimeBinary } from './fbs/ss/format/ss-anime-binary.js';
 
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
@@ -58,6 +59,11 @@ export class SSRuntimeManager {
         this.context.bind_resource(resource.raw);
     }
 
+    public loadSsab(data: Uint8Array): boolean {
+        return this.context.load_ssab_borrow(data);
+    }
+
+
     public update(deltaSeconds: number) {
         this.context.update(deltaSeconds);
     }
@@ -78,6 +84,64 @@ export class SSRuntimeManager {
         const ptr = this.context.get_local_uvs_buf();
         const len = this.context.get_local_uvs_len();
         return new Float32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getMeshVerticesX(): Float32Array {
+        const ptr = this.context.get_mesh_vertices_x_buf();
+        const len = this.context.get_mesh_vertices_x_len();
+        return new Float32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getMeshVerticesY(): Float32Array {
+        const ptr = this.context.get_mesh_vertices_y_buf();
+        const len = this.context.get_mesh_vertices_y_len();
+        return new Float32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getMeshUVs(): Float32Array {
+        const ptr = this.context.get_mesh_uvs_buf();
+        const len = this.context.get_mesh_uvs_len();
+        return new Float32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getMeshIndices(): Int32Array {
+        const ptr = this.context.get_mesh_indices_buf();
+        const len = this.context.get_mesh_indices_len();
+        return new Int32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getMeshVertexOffsets(): Uint32Array {
+        const ptr = this.context.get_mesh_vertex_offsets_buf();
+        const len = this.context.get_mesh_vertex_offsets_len();
+        return new Uint32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getMeshIndexOffsets(): Uint32Array {
+        const ptr = this.context.get_mesh_index_offsets_buf();
+        const len = this.context.get_mesh_index_offsets_len();
+        return new Uint32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    /**
+     * Parse the SSAB buffer and extract the image paths and their name hashes.
+     */
+    public static extractTexturePaths(ssabBuffer: ArrayBuffer): { hash: number, path: string }[] {
+        const bb = new flatbuffers.ByteBuffer(new Uint8Array(ssabBuffer));
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const results: { hash: number, path: string }[] = [];
+        
+        for (let i = 0; i < ssab.cellmapsLength(); i++) {
+            const cellmap = ssab.cellmaps(i);
+            if (cellmap) {
+                const path = cellmap.imagePath();
+                const hash = cellmap.nameHash();
+                if (path) {
+                    results.push({ hash, path });
+                }
+            }
+        }
+        
+        return results;
     }
 
     public setCoordinateSystem(system: WebCoordinateSystem) {
