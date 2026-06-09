@@ -42,14 +42,18 @@ export const PartsColorShader = {
         float isMul = vVarg.z;
         float isAddSub = vVarg.w;
 
-        // Base blend colors
-        vec3 mixColor = mix(texColor.rgb, vColor.rgb, rate * vColor.a);
-        vec3 mulColor = texColor.rgb * mix(vec3(1.0), vColor.rgb, rate * vColor.a);
-        vec3 addSubColor = texColor.rgb + (vColor.rgb * rate * vColor.a * sign(isAddSub));
+        // 1. Un-premultiply texture color
+        vec3 straightTexRGB = texColor.rgb / max(texColor.a, 0.0001);
 
-        // Output color
+        // 2. Base blend colors
+        vec3 mixColor = mix(straightTexRGB, vColor.rgb, rate * vColor.a);
+        vec3 mulColor = straightTexRGB * mix(vec3(1.0), vColor.rgb, rate * vColor.a);
+        vec3 addSubColor = straightTexRGB + (vColor.rgb * rate * vColor.a * sign(isAddSub));
+
+        // 3. Output straight color
         vec3 outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
 
+        // 4. Re-premultiply
         finalColor = vec4(outRgb * texColor.a, texColor.a) * uColor;
     }
 `
@@ -131,11 +135,18 @@ fn mainFrag(in: VertexOutput) -> @location(0) vec4<f32> {
   let isMul = in.vVarg.z;
   let isAddSub = in.vVarg.w;
 
-  let mixColor = mix(texColor.rgb, in.vColor.rgb, rate * in.vColor.a);
-  let mulColor = texColor.rgb * mix(vec3<f32>(1.0, 1.0, 1.0), in.vColor.rgb, rate * in.vColor.a);
-  let addSubColor = texColor.rgb + (in.vColor.rgb * rate * in.vColor.a * sign(isAddSub));
+  // 1. Un-premultiply texture color
+  let straightTexRGB = texColor.rgb / max(texColor.a, 0.0001);
 
+  // 2. Blend
+  let mixColor = mix(straightTexRGB, in.vColor.rgb, rate * in.vColor.a);
+  let mulColor = straightTexRGB * mix(vec3<f32>(1.0, 1.0, 1.0), in.vColor.rgb, rate * in.vColor.a);
+  let addSubColor = straightTexRGB + (in.vColor.rgb * rate * in.vColor.a * sign(isAddSub));
+
+  // 3. Output straight color
   let outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
+
+  // 4. Re-premultiply
   let finalColor = vec4<f32>(outRgb * texColor.a, texColor.a) * localUniforms.uColor;
 
   return finalColor;
