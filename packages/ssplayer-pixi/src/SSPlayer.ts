@@ -128,52 +128,55 @@ export class SSPlayer extends Container {
             const startRank = batch.startRank();
             const count = batch.count();
             
-            // Generate index buffer for this batch
-            // Each normal part is 5 vertices (center + 4 corners)
-            // Wait: some parts might be 4 vertices. The batch has indexCount and vertexCount.
-            // For now, assume fixed 5 vertices (stride=10 floats) per part, which generates 4 triangles (12 indices).
-            // ssruntime's FrameData `parts` might give us update flags to know exactly.
-            // Let's implement the index building.
-            const indices = new Uint32Array(batch.indexCount());
+            const numParts = count;
+            const numVerts = numParts * 5;
+            const numIndices = numParts * 12;
+            
+            const batchPositions = new Float32Array(numVerts * 2);
+            const batchUVs = new Float32Array(numVerts * 2);
+            const batchIndices = new Uint32Array(numIndices);
+            
             let idxOffset = 0;
             
             for (let c = 0; c < count; c++) {
                 const partIdx = drawOrder[startRank + c];
-                const baseVert = partIdx * 5; // 5 vertices per part in WASM
+                const srcBase = partIdx * 10; // 5 vertices * 2 floats
+                const dstBase = c * 10;
+                
+                // Copy positions and UVs for this part
+                for (let i = 0; i < 10; i++) {
+                    batchPositions[dstBase + i] = this.worldPositions[srcBase + i];
+                    batchUVs[dstBase + i] = this.uvData[srcBase + i];
+                }
+                
+                const baseVert = c * 5; // local to this batch
                 
                 // Assuming 5 vertices per part
-                indices[idxOffset++] = baseVert + 0;
-                indices[idxOffset++] = baseVert + 1;
-                indices[idxOffset++] = baseVert + 4;
+                batchIndices[idxOffset++] = baseVert + 0;
+                batchIndices[idxOffset++] = baseVert + 1;
+                batchIndices[idxOffset++] = baseVert + 4;
                 
-                indices[idxOffset++] = baseVert + 1;
-                indices[idxOffset++] = baseVert + 3;
-                indices[idxOffset++] = baseVert + 4;
+                batchIndices[idxOffset++] = baseVert + 1;
+                batchIndices[idxOffset++] = baseVert + 3;
+                batchIndices[idxOffset++] = baseVert + 4;
                 
-                indices[idxOffset++] = baseVert + 3;
-                indices[idxOffset++] = baseVert + 2;
-                indices[idxOffset++] = baseVert + 4;
+                batchIndices[idxOffset++] = baseVert + 3;
+                batchIndices[idxOffset++] = baseVert + 2;
+                batchIndices[idxOffset++] = baseVert + 4;
                 
-                indices[idxOffset++] = baseVert + 2;
-                indices[idxOffset++] = baseVert + 0;
-                indices[idxOffset++] = baseVert + 4;
+                batchIndices[idxOffset++] = baseVert + 2;
+                batchIndices[idxOffset++] = baseVert + 0;
+                batchIndices[idxOffset++] = baseVert + 4;
             }
 
             const mesh = this.getMesh(texture);
             mesh.texture = texture;
             mesh.blendMode = this.getPixiBlendMode(batch.blendType());
             
-            const posBuffer = mesh.geometry.getBuffer('aPosition');
-            posBuffer.data = this.worldPositions;
-            posBuffer.update();
-            
-            const uvBuffer = mesh.geometry.getBuffer('aUV');
-            uvBuffer.data = this.uvData;
-            uvBuffer.update();
-            
-            const indexBuffer = mesh.geometry.getIndex();
-            indexBuffer.data = indices;
-            indexBuffer.update();
+            // In PixiJS v8, assigning new arrays handles buffer resize natively
+            mesh.geometry.positions = batchPositions;
+            mesh.geometry.uvs = batchUVs;
+            mesh.geometry.indices = batchIndices;
             
             this.addChild(mesh);
         }
@@ -181,14 +184,13 @@ export class SSPlayer extends Container {
 
     private getMesh(texture: Texture): Mesh {
         if (this.activeMeshes < this.meshPool.length) {
-            const mesh = this.meshPool[this.activeMeshes++];
-            return mesh;
+            return this.meshPool[this.activeMeshes++];
         }
         
         const geometry = new MeshGeometry({
-            positions: new Float32Array(0),
-            uvs: new Float32Array(0),
-            indices: new Uint32Array(0)
+            positions: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+            uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+            indices: new Uint32Array([0, 1, 2, 0, 2, 3])
         });
         
         const mesh = new Mesh({ geometry, texture });
