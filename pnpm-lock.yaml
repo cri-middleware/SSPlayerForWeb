@@ -51,7 +51,7 @@ importers:
         version: 5.4.21(lightningcss@1.32.0)
 
   packages/ssplayer-core:
-    dependencies:
+    devDependencies:
       flatbuffers:
         specifier: ^25.9.23
         version: 25.9.23
