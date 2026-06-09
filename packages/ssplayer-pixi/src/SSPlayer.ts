@@ -138,15 +138,20 @@ export class SSPlayer extends Container {
             
             let idxOffset = 0;
             
+            const invTexW = 1.0 / texture.width;
+            const invTexH = 1.0 / texture.height;
+
             for (let c = 0; c < count; c++) {
                 const partIdx = drawOrder[startRank + c];
                 const srcBase = partIdx * 10; // 5 vertices * 2 floats
                 const dstBase = c * 10;
                 
-                // Copy positions and UVs for this part
-                for (let i = 0; i < 10; i++) {
-                    batchPositions[dstBase + i] = this.worldPositions[srcBase + i];
-                    batchUVs[dstBase + i] = this.uvData[srcBase + i];
+                // Copy positions and normalize UVs for this part
+                for (let i = 0; i < 5; i++) {
+                    batchPositions[dstBase + i * 2] = this.worldPositions[srcBase + i * 2];
+                    batchPositions[dstBase + i * 2 + 1] = this.worldPositions[srcBase + i * 2 + 1];
+                    batchUVs[dstBase + i * 2] = this.uvData[srcBase + i * 2] * invTexW;
+                    batchUVs[dstBase + i * 2 + 1] = this.uvData[srcBase + i * 2 + 1] * invTexH;
                 }
                 
                 const baseVert = c * 5; // local to this batch
