@@ -17,6 +17,7 @@ export class DirectInternalPlayer {
     private _textureBaseUrl: string = '';
     private _texturePaths: { hash: number, path: string }[] = [];
     private _ssabResource: SSABResource | null = null;
+    private _animationName: string = '';
     public geometryBuilder: GeometryBuilder;
     public subFrameEnabled: boolean = false;
 
@@ -42,8 +43,6 @@ export class DirectInternalPlayer {
      * @param textureBaseUrl Optional base URL for textures. If omitted, uses the ssabUrl directory.
      */
     public async load(ssabUrl: string, textureBaseUrl?: string) {
-        await this.runtimeManager.init();
-
         const response = await fetch(ssabUrl);
         if (!response.ok) {
             throw new Error(`Failed to load SSAB: ${response.statusText}`);
@@ -97,15 +96,26 @@ export class DirectInternalPlayer {
     public async setAnimation(animationName: string, textureBaseUrl?: string) {
         await this.loadTextures(textureBaseUrl);
         this.runtimeManager.setupAnimation(animationName);
+        this._animationName = animationName;
+    }
+
+    /**
+     * Gets the current animation name.
+     */
+    public get animationName(): string {
+        return this._animationName;
     }
 
     /**
      * Starts the animation playback.
-     * @param loop The number of times to loop the animation. 0 = infinite, -1 = infinite (SSPlayer default)
+     * @param startFrame The frame to start playing from. -1 means play from the current frame.
      */
-    public play(loop: number = -1) {
-        this.runtimeManager.context.play();
-        this.setLoop(loop);
+    public play(startFrame: number = -1) {
+        if (startFrame >= 0) {
+            this.runtimeManager.context.play_with_start_frame(startFrame);
+        } else {
+            this.runtimeManager.context.play();
+        }
     }
 
     /**

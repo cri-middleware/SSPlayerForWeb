@@ -1,6 +1,8 @@
 import { Application, Ticker } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 async function main() {
+    await SSPlayer.initialize();
+
     // 2. Setup PixiJS Application
     const app = new Application();
     await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgl' });
@@ -61,7 +63,7 @@ async function main() {
 
         speedBar.addEventListener('input', (e) => {
             const val = parseFloat((e.target as HTMLInputElement).value);
-            player.animationSpeed = val;
+            player.speedScale = val;
             speedDisplay.textContent = val.toFixed(1);
         });
 

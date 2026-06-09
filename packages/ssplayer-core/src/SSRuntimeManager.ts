@@ -52,21 +52,15 @@ export class SSABResource {
 }
 
 export class SSRuntimeManager {
-    public context!: SSRuntimeContext;
+    public context: SSRuntimeContext;
     private effectSlots: Map<number, {slot: SSRuntimeEffectSlot, visible: boolean}> = new Map();
     private resource: SSABResource | null = null;
     private currentAnimationFps: number = 30;
 
     constructor() {
-        // Defer SSRuntimeContext creation to init()
-    }
-
-    public async init() {
-        if (!this.context) {
-            await initializeWasm();
-            this.context = new SSRuntimeContext();
-            finalizationRegistry.register(this, this.context);
-        }
+        if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
+        this.context = new SSRuntimeContext();
+        finalizationRegistry.register(this, this.context);
     }
 
     public bindResource(resource: SSABResource) {

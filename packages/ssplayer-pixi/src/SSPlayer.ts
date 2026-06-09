@@ -1,9 +1,13 @@
 import { Container, Mesh, MeshGeometry, Texture, Ticker, Text, Shader } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader } from './PartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
 
 export class SSPlayer extends Container {
+    public static async initialize(wasmUrl?: string | URL) {
+        await initializeWasm(wasmUrl);
+    }
+
     public internalPlayer: DirectInternalPlayer;
 
     private meshPool: Mesh[] = [];
@@ -20,11 +24,11 @@ export class SSPlayer extends Container {
         this.internalPlayer.subFrameEnabled = value;
     }
     
-    public get animationSpeed(): number {
-        return this._isLoaded ? this.internalPlayer.runtimeManager.context.get_active_event_instance(0).speed : 1;
+    public get speedScale(): number {
+        return this.internalPlayer.getSpeed();
     }
-    public set animationSpeed(speed: number) {
-        if (this._isLoaded) this.internalPlayer.runtimeManager.context.set_animation_speed(speed);
+    public set speedScale(speed: number) {
+        this.internalPlayer.setSpeed(speed);
     }
     
     private getPartsColorShader(texture: Texture): Shader {
@@ -43,15 +47,11 @@ export class SSPlayer extends Container {
         }
         return shader;
     }
-    
-    private _isLoaded: boolean = false;
 
     constructor() {
         super();
         this.pixiResourceManager = new PixiResourceManager();
         this.internalPlayer = new DirectInternalPlayer(this.pixiResourceManager);
-        
-        // Remove debug text by default, or keep it hidden
         this.debugText = new Text({ text: "Frame: 0", style: { fill: 0xffffff } });
         this.debugText.visible = false;
         this.addChild(this.debugText);
@@ -80,30 +80,19 @@ export class SSPlayer extends Container {
         await this.internalPlayer.load(ssabUrl, textureBaseUrl);
         this.internalPlayer.runtimeManager.context.set_render_mode(0); // 0 corresponds to RenderMode::Direct
         this.internalPlayer.runtimeManager.context.set_coordinate_system(1); // 1 = YDown
-        
-        this._isLoaded = true;
     }
 
-    /**
-     * Set the animation to play
-     * @param animationName Name of the animation inside the SSAB
-     * @param loop Number of loops (-1 = infinite)
-     */
     public async setAnimation(animationName: string, loop: number = -1, textureBaseUrl?: string) {
-        if (!this._isLoaded) {
-            console.warn("SSPlayer: Call load() before setAnimation()");
-            return;
-        }
-
         await this.internalPlayer.setAnimation(animationName, textureBaseUrl);
         this.internalPlayer.setLoop(loop);
-        // Ensure geometry buffers are re-allocated/cleared if needed?
-        // Usually handled during renderFrame
     }
 
-    public play() {
-        if (!this._isLoaded) return;
-        this.internalPlayer.play();
+    public get animationName(): string {
+        return this.internalPlayer.animationName;
+    }
+
+    public play(startFrame: number = -1) {
+        this.internalPlayer.play(startFrame);
     }
 
     public pause() {
@@ -115,28 +104,35 @@ export class SSPlayer extends Container {
     }
     
     public resume() {
-        if (!this._isLoaded) return;
         this.internalPlayer.resume();
     }
 
     public get frame(): number {
-        return this._isLoaded ? this.internalPlayer.getFrameNo() : 0;
+        return this.internalPlayer.getFrameNo();
     }
 
     public set frame(value: number) {
-        if (this._isLoaded) this.internalPlayer.runtimeManager.context.set_frame_no(value);
+        this.internalPlayer.setFrame(value);
+    }
+
+    public get totalFrames(): number {
+        return this.internalPlayer.getTotalFrames();
     }
 
     public get startFrame(): number {
-        return this._isLoaded ? this.internalPlayer.runtimeManager.context.get_start_frame() : 0;
+        return this.internalPlayer.getAnimationSectionStart();
     }
 
     public get endFrame(): number {
-        return this._isLoaded ? this.internalPlayer.runtimeManager.context.get_end_frame() : 0;
+        return this.internalPlayer.getAnimationSectionEnd();
     }
 
     public get fps(): number {
-        return this._isLoaded ? this.internalPlayer.runtimeManager.context.get_fps() : 30;
+        return this.internalPlayer.getFrameRate();
+    }
+
+    public set fps(value: number) {
+        this.internalPlayer.setFrameRate(value);
     }
 
     public get isPlaying(): boolean {
@@ -147,13 +143,36 @@ export class SSPlayer extends Container {
         return this.internalPlayer.isPausing;
     }
 
+    public setAnimationSection(startFrame: number, endFrame: number) {
+        this.internalPlayer.setAnimationSection(startFrame, endFrame);
+    }
+
+    public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle) {
+        this.internalPlayer.setPlaybackDirection(direction, style);
+    }
+
+    public get loopCount(): number {
+        return this.internalPlayer.getLoop();
+    }
+
+    public set loopCount(value: number) {
+        this.internalPlayer.setLoop(value);
+    }
+
+    public get frameSkipEnabled(): boolean {
+        return this.internalPlayer.isSkipFrames();
+    }
+
+    public set frameSkipEnabled(value: boolean) {
+        this.internalPlayer.setSkipFrames(value);
+    }
+
     
     public setTexture(textureHash: number, texture: Texture) {
         // Obsolete or adapt if needed, or pass directly to PixiResourceManager
     }
 
     private update(ticker: Ticker) {
-        if (!this._isLoaded) return;
         // console.log("update tick", this.internalPlayer.isPlaying, this.internalPlayer.isPausing, this.internalPlayer.getFrameNo());
         if (!this.internalPlayer.isPlaying) return;
         
