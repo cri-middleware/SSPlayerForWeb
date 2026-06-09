@@ -13,18 +13,21 @@ async function main() {
     
     // 2. Setup PixiJS Application
     const app = new Application();
-    await app.init({ width: 1280, height: 960, backgroundColor: 0x1099bb });
+    await app.init({ width: 1280, height: 960, backgroundColor: 0x1099bb, preference: 'webgl' });
     document.body.appendChild(app.canvas);
     
     // 3. Setup Player
     const player = new SSPlayer();
     
     console.log("Loading animation...");
-    await player.load('/Basic.ssab');
+    await player.load('/PartsColor.ssab');
     
-    player.playAnimation("anime_1");
+    // Enable subframe (interpolation)
+    player.subframe = true;
     
-    player.position.set(640, 700);
+    await player.setAnimation("PartsColor_only");
+    
+    player.position.set(640, 480);
     app.stage.addChild(player);
     
     // Debug frame progression (optional)

@@ -116,10 +116,28 @@ export class SSRuntimeManager {
         return new Uint32Array(getWasmMemory().buffer, ptr, len);
     }
 
-    public getMeshIndexOffsets(): Uint32Array {
+    public getMeshIndexOffsets(): Int32Array {
         const ptr = this.context.get_mesh_index_offsets_buf();
         const len = this.context.get_mesh_index_offsets_len();
-        return new Uint32Array(getWasmMemory().buffer, ptr, len);
+        return this.getInt32Array(ptr, len);
+    }
+
+    public getShapeVertexCounts(): Int32Array {
+        const ptr = this.context.get_shape_vertex_counts_buf();
+        const len = this.context.get_shape_vertex_counts_len();
+        return this.getInt32Array(ptr, len);
+    }
+
+    public getShapeVertexBoxCoords(): Float32Array {
+        const ptr = this.context.get_shape_vertex_box_coords_buf();
+        const len = this.context.get_shape_vertex_box_coords_len();
+        return this.getFloat32Array(ptr, len);
+    }
+
+    public getShapeVertices(): Float32Array {
+        const ptr = this.context.get_shape_vertices_buf();
+        const len = this.context.get_shape_vertices_len();
+        return this.getFloat32Array(ptr, len);
     }
 
     /**
@@ -160,6 +178,10 @@ export class SSRuntimeManager {
 
     public getFloat32Array(ptr: number, len: number): Float32Array {
         return new Float32Array(getWasmMemory().buffer, ptr, len);
+    }
+
+    public getInt32Array(ptr: number, len: number): Int32Array {
+        return new Int32Array(getWasmMemory().buffer, ptr, len);
     }
 
     public getUint16Array(ptr: number, len: number): Uint16Array {

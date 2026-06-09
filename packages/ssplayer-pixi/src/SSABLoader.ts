@@ -2,6 +2,8 @@ import { ExtensionType, ExtensionMetadata } from 'pixi.js';
 import { SSABResource } from '@spritestudio/ssplayer-core';
 
 export const SSABLoader = {
+    name: 'ssab-parser',
+    id: 'ssab-parser',
     extension: {
         type: ExtensionType.LoadParser,
         priority: 2,
