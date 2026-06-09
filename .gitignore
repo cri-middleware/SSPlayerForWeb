@@ -813,3 +813,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Ignore generated SpriteStudio assets
+examples/pixi-example/public/
