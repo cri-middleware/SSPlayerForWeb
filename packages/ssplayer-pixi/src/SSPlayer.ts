@@ -57,13 +57,13 @@ export class SSPlayer extends Container {
     private update(ticker: Ticker) {
         if (!this._isPlaying || this._isPausing) return;
         
-        const deltaSeconds = ticker.deltaMS / 1000.0;
+        const deltaMs = ticker.deltaMS;
         
         // Update wasm state
-        this.ssManager.context.update(deltaSeconds);
+        this.ssManager.context.update(deltaMs);
         const frameNo = Math.floor(this.ssManager.context.get_frame_no());
         
-        this.debugText.text = `Frame: ${frameNo} (dt: ${deltaSeconds.toFixed(4)})`;
+        this.debugText.text = `Frame: ${frameNo} (dt: ${deltaMs.toFixed(2)}ms)`;
         
         this.renderFrame(frameNo);
     }
