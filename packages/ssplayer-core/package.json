@@ -8,10 +8,11 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    }
+    },
+    "./wasm/*": "./wasm/*"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts"
+    "build": "tsup src/index.ts --format esm --dts && cp wasm/*.wasm dist/"
   },
   "dependencies": {
     "flatbuffers": "^25.9.23"
