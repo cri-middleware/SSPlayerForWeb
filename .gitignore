@@ -816,3 +816,6 @@ vite.config.ts.timestamp-*
 
 # Ignore generated SpriteStudio assets
 examples/pixi-example/public/
+
+# Generated WASM files
+packages/ssplayer-core/wasm/
