@@ -178,10 +178,18 @@ export class SSPlayer extends Container {
             mesh.texture = texture;
             mesh.blendMode = this.getPixiBlendMode(batch.blendType());
             
-            // In PixiJS v8, assigning new arrays handles buffer resize natively
-            mesh.geometry.positions = batchPositions;
-            mesh.geometry.uvs = batchUVs;
-            mesh.geometry.indices = batchIndices;
+            // In PixiJS v8, explicitly update buffers
+            const posBuffer = mesh.geometry.getBuffer('aPosition');
+            posBuffer.data = batchPositions;
+            posBuffer.update();
+
+            const uvBuffer = mesh.geometry.getBuffer('aUV');
+            uvBuffer.data = batchUVs;
+            uvBuffer.update();
+
+            const indexBuffer = mesh.geometry.getIndex();
+            indexBuffer.data = batchIndices;
+            indexBuffer.update();
             
             this.addChild(mesh);
         }
