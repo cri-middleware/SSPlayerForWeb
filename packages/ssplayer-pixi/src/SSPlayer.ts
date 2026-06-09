@@ -5,6 +5,7 @@ export class SSPlayer extends Container {
     public readonly ssManager: SSRuntimeManager;
     
     private positionData: Float32Array = new Float32Array(0);
+    private worldPositions: Float32Array = new Float32Array(0);
     private uvData: Float32Array = new Float32Array(0);
     private colorData: Float32Array = new Float32Array(0);
     
@@ -26,6 +27,7 @@ export class SSPlayer extends Container {
         super();
         this.ssManager = ssManager;
         this.ssManager.context.set_render_mode(0); // 0 corresponds to RenderMode::Direct
+        this.ssManager.context.set_coordinate_system(1); // 1 = YDown
         
         this.on('added', () => Ticker.shared.add(this.update, this));
         this.on('removed', () => Ticker.shared.remove(this.update, this));
@@ -83,6 +85,30 @@ export class SSPlayer extends Container {
         const drawOrder = frameData.drawOrderArray();
         if (!drawOrder) return;
 
+        const matrices = this.ssManager.getWorldMatrices();
+        if (this.worldPositions.length !== this.positionData.length) {
+            this.worldPositions = new Float32Array(this.positionData.length);
+        }
+
+        const partCount = this.positionData.length / 10;
+        for (let i = 0; i < partCount; i++) {
+            const mOff = i * 16;
+            const vOff = i * 10;
+            const m00 = matrices[mOff + 0];
+            const m10 = matrices[mOff + 1];
+            const m01 = matrices[mOff + 4];
+            const m11 = matrices[mOff + 5];
+            const tx  = matrices[mOff + 12];
+            const ty  = matrices[mOff + 13];
+
+            for (let v = 0; v < 5; v++) {
+                const vx = this.positionData[vOff + v * 2];
+                const vy = this.positionData[vOff + v * 2 + 1];
+                this.worldPositions[vOff + v * 2] = vx * m00 + vy * m01 + tx;
+                this.worldPositions[vOff + v * 2 + 1] = vx * m10 + vy * m11 + ty;
+            }
+        }
+
         this.activeMeshes = 0;
         this.removeChildren();
 
@@ -121,14 +147,14 @@ export class SSPlayer extends Container {
                 indices[idxOffset++] = baseVert + 4;
                 
                 indices[idxOffset++] = baseVert + 1;
-                indices[idxOffset++] = baseVert + 2;
-                indices[idxOffset++] = baseVert + 4;
-                
-                indices[idxOffset++] = baseVert + 2;
                 indices[idxOffset++] = baseVert + 3;
                 indices[idxOffset++] = baseVert + 4;
                 
                 indices[idxOffset++] = baseVert + 3;
+                indices[idxOffset++] = baseVert + 2;
+                indices[idxOffset++] = baseVert + 4;
+                
+                indices[idxOffset++] = baseVert + 2;
                 indices[idxOffset++] = baseVert + 0;
                 indices[idxOffset++] = baseVert + 4;
             }
@@ -138,7 +164,7 @@ export class SSPlayer extends Container {
             mesh.blendMode = this.getPixiBlendMode(batch.blendType());
             
             const posBuffer = mesh.geometry.getBuffer('aPosition');
-            posBuffer.data = this.positionData;
+            posBuffer.data = this.worldPositions;
             posBuffer.update();
             
             const uvBuffer = mesh.geometry.getBuffer('aUV');
