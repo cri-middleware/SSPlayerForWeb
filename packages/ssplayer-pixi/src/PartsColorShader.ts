@@ -27,6 +27,7 @@ export const PartsColorShader = {
     in vec4 vVarg;
 
     uniform sampler2D uTexture;
+    uniform vec4 uColor; // PixiJS automatically provides this with (tint.rgb * worldAlpha, worldAlpha)
 
     void main() {
         vec4 texColor = texture(uTexture, vUV);
@@ -49,7 +50,7 @@ export const PartsColorShader = {
         // Output color
         vec3 outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
 
-        finalColor = vec4(outRgb * texColor.a, texColor.a);
+        finalColor = vec4(outRgb * texColor.a, texColor.a) * uColor;
     }
 `
 };

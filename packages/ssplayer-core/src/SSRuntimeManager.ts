@@ -1,7 +1,10 @@
-import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem } from '../wasm/ssruntime.js';
+import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, WebEffectEventInfo } from '../wasm/ssruntime.js';
 import * as flatbuffers from 'flatbuffers';
 import { FrameData } from './fbs/ss/runtime/frame-data.js';
 import { SsAnimeBinary } from './fbs/ss/format/ss-anime-binary.js';
+import { EffectDrawPlan } from './fbs/ss/runtime/effect-draw-plan.js';
+import { PartType } from './fbs/ss/format/part-type.js';
+import { PartTypeEffect } from './fbs/ss/format/part-type-effect.js';
 
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
@@ -49,6 +52,9 @@ export class SSABResource {
 
 export class SSRuntimeManager {
     public context: SSRuntimeContext;
+    private effectSlots: Map<number, {slot: SSRuntimeEffectSlot, visible: boolean}> = new Map();
+    private resource: SSABResource | null = null;
+    private currentAnimationFps: number = 30;
 
     constructor() {
         this.context = new SSRuntimeContext();
@@ -56,6 +62,7 @@ export class SSRuntimeManager {
     }
 
     public bindResource(resource: SSABResource) {
+        this.resource = resource;
         this.context.bind_resource(resource.raw);
     }
 
@@ -63,9 +70,90 @@ export class SSRuntimeManager {
         return this.context.load_ssab_borrow(data);
     }
 
+    public setupAnimation(animationName: string) {
+        this.context.setup_animation(animationName);
+        
+        // Cleanup old effect slots
+        this.effectSlots.forEach(slot => {
+            if ((slot as any).free) (slot as any).free();
+        });
+        this.effectSlots.clear();
 
-    public update(deltaSeconds: number) {
+        if (!this.resource) return;
+
+        try {
+            const ptr = this.context.get_ssab_buf();
+            const len = this.context.get_ssab_len();
+            if (ptr === 0 || len === 0) return;
+
+            const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+            const bb = new flatbuffers.ByteBuffer(buf);
+            const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+
+            let effectCount = 0;
+            for (let i = 0; i < ssab.partsLength(); i++) {
+                const part = ssab.parts(i);
+                if (!part) continue;
+                if (part.partTypeType() === PartType.PartTypeEffect) {
+                    const effectPart = part.partType(new PartTypeEffect());
+                    if (effectPart) {
+                        const refHash = effectPart.refEffectNameHash();
+                        // simple seed logic similar to SpriteStudio standard
+                        const seed = (i >>> 0) ^ (refHash >>> 0); 
+                        try {
+                            const slot = SSRuntimeEffectSlot.create(this.resource.raw, refHash, seed);
+                            this.effectSlots.set(i, { slot, visible: false });
+                            effectCount++;
+                        } catch (e) {
+                            console.error(`Failed to create EffectSlot for part ${i}`, e);
+                        }
+                    }
+                }
+            }
+            console.log(`[SSRuntimeManager] setupAnimation: created ${effectCount} EffectSlots`);
+        } catch (e) {
+            console.warn("Failed to parse SSAB for Effect parts setup.", e);
+        }
+
+        this.currentAnimationFps = this.context.get_fps();
+    }
+
+
+    public update(delta: number) {
+        // Assume delta is in seconds if it's very small (< 1.0)
+        // If delta is around 16.66 (milliseconds), convert to seconds.
+        const deltaSeconds = delta > 1.0 ? delta / 1000.0 : delta;
+
         this.context.update(deltaSeconds);
+
+        if (this.effectSlots.size > 0) {
+            const frame = this.context.get_frame_no();
+            const isLooped = this.context.is_looped();
+
+            for (const [partIndex, item] of this.effectSlots.entries()) {
+                const ev = this.context.get_active_effect_event(partIndex);
+                if (ev) {
+                    // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
+                    item.visible = item.slot.step(ev, frame, deltaSeconds, this.currentAnimationFps, isLooped, true, 2);
+                    if ((ev as any).free) (ev as any).free();
+                } else {
+                    item.visible = false;
+                }
+            }
+        }
+    }
+
+    public getEffectDrawPlan(partIndex: number): EffectDrawPlan | null {
+        const item = this.effectSlots.get(partIndex);
+        if (!item || !item.visible) return null;
+
+        const ptr = item.slot.get_draw_plan_buf();
+        const len = item.slot.get_draw_plan_len();
+        if (ptr === 0 || len === 0) return null;
+
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        const bb = new flatbuffers.ByteBuffer(buf);
+        return EffectDrawPlan.getRootAsEffectDrawPlan(bb);
     }
 
     public getWorldMatrices(): Float32Array {
@@ -190,6 +278,11 @@ export class SSRuntimeManager {
 
     public destroy() {
         if (this.context) {
+            this.effectSlots.forEach(slot => {
+                if ((slot as any).free) (slot as any).free();
+            });
+            this.effectSlots.clear();
+
             finalizationRegistry.unregister(this);
             this.context.free();
             // @ts-ignore

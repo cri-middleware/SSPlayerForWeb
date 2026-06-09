@@ -134,7 +134,7 @@ export class SSPlayer extends Container {
 
         await Promise.all(promises);
 
-        this.ssManager.context.setup_animation(animationName);
+        this.ssManager.setupAnimation(animationName);
         this.ssManager.context.set_loop(loop);
         
         // Ensure geometry buffers are re-allocated/cleared if needed?
@@ -156,17 +156,56 @@ export class SSPlayer extends Container {
         this._isPlaying = false;
     }
     
+    public resume() {
+        if (!this._isLoaded) return;
+        this._isPausing = false;
+    }
+
+    public get frame(): number {
+        return this.ssManager.context.get_frame_no();
+    }
+
+    public set frame(value: number) {
+        this.ssManager.context.set_frame_no(value);
+    }
+
+    public get startFrame(): number {
+        return this.ssManager.context.get_start_frame();
+    }
+
+    public get endFrame(): number {
+        return this.ssManager.context.get_end_frame();
+    }
+
+    public get fps(): number {
+        return this.ssManager.context.get_fps();
+    }
+
+    public get isPlaying(): boolean {
+        return this._isPlaying;
+    }
+
+    public get isPausing(): boolean {
+        return this._isPausing;
+    }
+
+    
     public setTexture(textureHash: number, texture: Texture) {
         this.textures.set(textureHash, texture);
     }
 
     private update(ticker: Ticker) {
-        if (!this._isPlaying || this._isPausing || !this._isLoaded) return;
+        if (!this._isPlaying || !this._isLoaded) return;
         
         const deltaMs = ticker.deltaMS;
         
-        // Update wasm state
-        this.ssManager.context.update(deltaMs);
+        // Update wasm state only if not paused
+        if (!this._isPausing) {
+            // Note: deltaMs is usually expected to be in seconds by ssruntime if it's named delta, 
+            // but we keep existing behavior. We convert to seconds for effect slots inside SSRuntimeManager.
+            this.ssManager.update(deltaMs / 1000.0);
+        }
+        
         const frameNo = Math.floor(this.ssManager.context.get_frame_no());
         
         if (this.debugText.visible) {
@@ -241,7 +280,7 @@ export class SSPlayer extends Container {
             if (!batch) continue;
             
             const kind = batch.kind();
-            if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape) continue;
+            if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect) continue;
             
             const textureHash = batch.textureHash();
             const texture = this.textures.get(textureHash) || Texture.WHITE;
@@ -395,6 +434,8 @@ export class SSPlayer extends Container {
                         const clb = toColor(pc.lb()); lbColor = clb.c; lbRate = clb.r;
                         const crb = toColor(pc.rb()); rbColor = crb.c; rbRate = crb.r;
                     }
+                    console.log(`[Shape] partIdx=${partIdx}, textureHash=${batch.textureHash()}, blendType=${pc_blendType}, rate=(lt:${ltRate},rt:${rtRate},lb:${lbRate},rb:${rbRate}), cell=${partState ? partState.cell() : 'none'}`);
+
 
                     const mOff = partIdx * 16;
                     const m00 = matrices[mOff + 0];
@@ -568,32 +609,142 @@ export class SSPlayer extends Container {
                     mesh.visible = true;
                     this.addChild(mesh);
                 }
+            } else if (kind === DrawBatchKind.Effect) {
+                // Effect rendering temporarily removed at user's request
+                /*
+                for (let c = 0; c < count; c++) {
+                    const partIdx = drawOrder[startRank + c];
+                    const partState = frameData.parts(partIdx);
+                    const alpha = partState ? partState.alpha() : 1.0;
+                    if (alpha <= 0) continue;
+
+                    const plan = this.ssManager.getEffectDrawPlan(partIdx);
+                    if (!plan) continue;
+
+                    const planVerts = plan.vertsArray();
+                    const planUvs = plan.uvsArray();
+                    const planColors = plan.colorsArray();
+                    const planIndices = plan.indicesArray();
+                    if (!planVerts || !planUvs || !planColors || !planIndices) continue;
+
+                    const mOff = partIdx * 16;
+                    const m00 = matrices[mOff + 0];
+                    const m10 = matrices[mOff + 1];
+                    const m01 = matrices[mOff + 4];
+                    const m11 = matrices[mOff + 5];
+                    const tx  = matrices[mOff + 12];
+                    const ty  = matrices[mOff + 13];
+
+                    const cmdCount = plan.commandsLength();
+                    for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
+                        const cmd = plan.commands(cmdIdx);
+                        if (!cmd) continue;
+
+                        const texHash = cmd.cellmapHash();
+                        const effectTex = this.textures.get(texHash) || Texture.WHITE;
+                        const texW = effectTex.width;
+                        const texH = effectTex.height;
+                        const invTexW = texW > 0 ? 1.0 / texW : 1.0;
+                        const invTexH = texH > 0 ? 1.0 / texH : 1.0;
+
+                        const isAdditive = cmd.blend() === 1;
+                        const blendMode = isAdditive ? 'add' : 'normal';
+                        const batchShader = this.getPartsColorShader(effectTex);
+
+                        const quadCount = cmd.quadCount();
+                        const pOff = cmd.particleOffset();
+                        const vOff = pOff * 4;
+                        const iOff = pOff * 6;
+
+                        const pCount = quadCount * 4;
+                        const iCount = quadCount * 6;
+
+                        const mesh = this.getMeshFromPool(this.activeMeshes, pCount, iCount);
+                        this.activeMeshes++;
+                        mesh.shader = batchShader as any;
+                        mesh.blendMode = blendMode as any;
+                        mesh.visible = true;
+
+                        const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
+                        const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
+                        const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
+                        const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
+                        const indices = mesh.geometry.getIndex().data as Uint32Array;
+
+                        for (let v = 0; v < pCount; v++) {
+                            const globalV = vOff + v;
+                            const vx = planVerts[globalV * 2 + 0];
+                            const vy = planVerts[globalV * 2 + 1];
+                            positions[v * 2 + 0] = m00 * vx + m01 * vy + tx;
+                            positions[v * 2 + 1] = m10 * vx + m11 * vy + ty;
+                            
+                            uvs[v * 2 + 0] = planUvs[globalV * 2 + 0] * invTexW;
+                            uvs[v * 2 + 1] = planUvs[globalV * 2 + 1] * invTexH;
+                            
+                            colors[v * 4 + 0] = planColors[globalV * 4 + 0];
+                            colors[v * 4 + 1] = planColors[globalV * 4 + 1];
+                            colors[v * 4 + 2] = planColors[globalV * 4 + 2];
+                            colors[v * 4 + 3] = planColors[globalV * 4 + 3];
+
+                            vargs[v * 4 + 0] = 1.0; 
+                            vargs[v * 4 + 1] = isAdditive ? 0.0 : 1.0; 
+                            vargs[v * 4 + 2] = 0.0; 
+                            vargs[v * 4 + 3] = isAdditive ? 1.0 : 0.0; 
+                        }
+
+                        // planIndices is quad-local 0-based (each quad has indices 0..3)
+                        for (let q = 0; q < quadCount; q++) {
+                            for (let j = 0; j < 6; j++) {
+                                indices[q * 6 + j] = planIndices[iOff + q * 6 + j] + (q * 4);
+                            }
+                        }
+
+                        mesh.geometry.getBuffer('aPosition').update();
+                        mesh.geometry.getBuffer('aUV').update();
+                        mesh.geometry.getBuffer('aColor').update();
+                        mesh.geometry.getBuffer('aVarg').update();
+                        mesh.geometry.getIndex().update();
+                        
+                        mesh.shader = batchShader as any;
+                        mesh.blendMode = blendMode;
+                        mesh.alpha = alpha;
+                        mesh.visible = true;
+                        this.addChild(mesh);
+                    }
+                }
+                */
             }
         }
     }
 
     private getMeshFromPool(index: number, requiredVertices: number = 5, requiredIndices: number = 12): Mesh {
         if (index < this.meshPool.length) {
-            const m = this.meshPool[index];
+            let m = this.meshPool[index];
             const pBuf = m.geometry.getBuffer('aPosition');
             const iBuf = m.geometry.getIndex();
             if (pBuf.data.length !== requiredVertices * 2 || iBuf.data.length !== requiredIndices) {
-                pBuf.data = new Float32Array(requiredVertices * 2);
-                m.geometry.getBuffer('aUV').data = new Float32Array(requiredVertices * 2);
-                m.geometry.getBuffer('aColor').data = new Float32Array(requiredVertices * 4);
-                m.geometry.getBuffer('aVarg').data = new Float32Array(requiredVertices * 4);
-                iBuf.data = new Uint32Array(requiredIndices);
+                m.destroy({ children: true, texture: false, textureSource: false });
+                m = this.createNewMesh(requiredVertices, requiredIndices);
+                this.meshPool[index] = m;
             }
             if (requiredIndices === 12) {
-                const indices = iBuf.data as Uint32Array;
+                const indices = m.geometry.getIndex().data as Uint32Array;
                 indices[0] = 0; indices[1] = 1; indices[2] = 4;
                 indices[3] = 1; indices[4] = 3; indices[5] = 4;
                 indices[6] = 3; indices[7] = 2; indices[8] = 4;
                 indices[9] = 2; indices[10] = 0; indices[11] = 4;
             }
+            (m as any).size = requiredIndices; // Tell PixiJS how many indices to draw
             return m;
         }
         
+        const m = this.createNewMesh(requiredVertices, requiredIndices);
+        (m as any).size = requiredIndices;
+        this.meshPool.push(m);
+        return m;
+    }
+
+    private createNewMesh(requiredVertices: number, requiredIndices: number): Mesh {
         const geometry = new MeshGeometry({
             positions: new Float32Array(requiredVertices * 2),
             uvs: new Float32Array(requiredVertices * 2),
@@ -615,7 +766,6 @@ export class SSPlayer extends Container {
             texture: Texture.WHITE
         });
         
-        this.meshPool.push(mesh);
         return mesh;
     }
 
