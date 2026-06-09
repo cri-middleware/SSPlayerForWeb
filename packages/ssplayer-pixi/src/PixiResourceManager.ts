@@ -2,13 +2,21 @@ import { Assets, Texture } from 'pixi.js';
 import { IResourceManager } from '@spritestudio/ssplayer-core';
 
 export class PixiResourceManager implements IResourceManager {
-    private textures: Map<number, Texture> = new Map();
+    private loadedAliases: Set<string> = new Set();
 
     public async loadTexture(url: string, hash: number): Promise<void> {
-        if (!this.textures.has(hash)) {
+        const alias = hash.toString();
+        
+        // Register the URL with the hash alias if not already registered
+        if (!Assets.resolver.hasKey(alias)) {
+            Assets.add({ alias: alias, src: url });
+        }
+
+        // If it's not loaded/cached yet, load it
+        if (!Assets.cache.has(alias)) {
             try {
-                const tex = await Assets.load<Texture>(url);
-                this.textures.set(hash, tex);
+                await Assets.load<Texture>(alias);
+                this.loadedAliases.add(alias);
             } catch (e) {
                 console.error(`Failed to load texture: ${url}`, e);
             }
@@ -16,13 +24,13 @@ export class PixiResourceManager implements IResourceManager {
     }
 
     public getTexture(hash: number): Texture | undefined {
-        return this.textures.get(hash);
+        return Assets.get<Texture>(hash.toString());
     }
 
     public destroy(): void {
-        this.textures.forEach(tex => {
-            tex.destroy(true);
+        this.loadedAliases.forEach(alias => {
+            Assets.unload(alias);
         });
-        this.textures.clear();
+        this.loadedAliases.clear();
     }
 }
