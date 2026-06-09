@@ -1,0 +1,11 @@
+{
+  "name": "ssplayer-for-web-monorepo",
+  "private": true,
+  "scripts": {
+    "build:wasm": "bash scripts/build-runtime.sh"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
+  }
+}

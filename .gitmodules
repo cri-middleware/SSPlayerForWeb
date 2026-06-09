@@ -1,0 +1,3 @@
+[submodule "SpriteStudio7-SDK"]
+	path = SpriteStudio7-SDK
+	url = https://github.com/SpriteStudio/SpriteStudio7-SDK.git
