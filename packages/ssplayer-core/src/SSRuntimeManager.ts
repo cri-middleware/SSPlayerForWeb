@@ -1,4 +1,5 @@
-import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, WebEffectEventInfo } from '../wasm/ssruntime.js';
+import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, WebEffectEventInfo, WebPlaybackDirection, WebPlaybackStyle } from '../wasm/ssruntime.js';
+export { WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle };
 import * as flatbuffers from 'flatbuffers';
 import { FrameData } from './fbs/ss/runtime/frame-data.js';
 import { SsAnimeBinary } from './fbs/ss/format/ss-anime-binary.js';
@@ -51,14 +52,21 @@ export class SSABResource {
 }
 
 export class SSRuntimeManager {
-    public context: SSRuntimeContext;
+    public context!: SSRuntimeContext;
     private effectSlots: Map<number, {slot: SSRuntimeEffectSlot, visible: boolean}> = new Map();
     private resource: SSABResource | null = null;
     private currentAnimationFps: number = 30;
 
     constructor() {
-        this.context = new SSRuntimeContext();
-        finalizationRegistry.register(this, this.context);
+        // Defer SSRuntimeContext creation to init()
+    }
+
+    public async init() {
+        if (!this.context) {
+            await initializeWasm();
+            this.context = new SSRuntimeContext();
+            finalizationRegistry.register(this, this.context);
+        }
     }
 
     public bindResource(resource: SSABResource) {
@@ -255,13 +263,18 @@ export class SSRuntimeManager {
     }
 
     public getFrameData(frame: number): FrameData | null {
-        const ptr = this.context.get_frame_data_buf(frame);
-        const len = this.context.get_frame_data_len(frame);
-        if (ptr === 0 || len === 0) return null;
-        
-        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
-        const bb = new flatbuffers.ByteBuffer(buf);
-        return FrameData.getRootAsFrameData(bb);
+        try {
+            const ptr = this.context.get_frame_data_buf(frame);
+            const len = this.context.get_frame_data_len(frame);
+            if (ptr === 0 || len === 0) return null;
+            
+            const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+            const bb = new flatbuffers.ByteBuffer(buf);
+            return FrameData.getRootAsFrameData(bb);
+        } catch (e) {
+            console.error(`WASM get_frame_data error at frame ${frame}:`, e);
+            return null;
+        }
     }
 
     public getFloat32Array(ptr: number, len: number): Float32Array {
@@ -291,4 +304,4 @@ export class SSRuntimeManager {
     }
 }
 
-export { WebCoordinateSystem, SSRuntimeContext, SSRuntimeResource };
+export { SSRuntimeContext, SSRuntimeResource };

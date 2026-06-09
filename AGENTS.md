@@ -1,74 +1,30 @@
-# SSPlayerForWeb - Developer & AI Agent Guide
+# Instructions for AI Agents
 
-Welcome, Agent. This file contains critical technical context, architectural overviews, and debugging history for `SSPlayerForWeb`. If you are picking up this project from a cold start, read this carefully.
+This file contains rules, context, and guidelines for AI agents working on the **SSPlayerForWeb** repository. When performing tasks in this workspace, strictly adhere to the following principles.
 
-## Architecture
+## Operating rules
 
-1. **WASM Core (`SpriteStudio7-SDK/libs/ssruntime`)**:
-   - Built in Rust. It evaluates SpriteStudio FlatBuffers (`.ssab`) per frame.
-   - It outputs transformed geometry into continuous `f32` memory buffers: `get_local_uvs_ptr`, `get_shape_vertices_buf`, `get_shape_vertex_box_coords_buf`, etc.
-   - It handles all hierarchical inheritance (Transforms, Alpha, etc.) and evaluates `PartsColor` animation data.
+- Keep changes scoped to the requested task.
+- Do not commit unless the user explicitly asks.
+- Before editing, read enough surrounding context to understand callers and invariants; if the read tool truncated the file, read the remaining ranges before making non-trivial changes.
+- Follow existing code style in touched files (naming, type usage, control flow, error handling).
 
-2. **TypeScript Core (`packages/ssplayer-core`)**:
-   - A pure TypeScript wrapper (`SSRuntimeManager.ts`) around the WASM module.
-   - Decodes FlatBuffers using `flatbuffers.js` to inspect `PartState` without bridging heavy JS <-> Rust calls.
+## 1. Core Architectural Constraints
 
-3. **PixiJS Renderer (`packages/ssplayer-pixi`)**:
-   - Implements `SSPlayer.ts` which consumes `SSRuntimeManager`.
-   - Renders geometry using PixiJS `Mesh` objects. We pool meshes (`this.activeMeshes`) to reduce garbage collection.
-   - Includes a custom `PartsColorShader` to emulate SpriteStudio's 4-corner `PartsColor` blending (Mix, Mul, Add, Sub).
+- **Absolute Decoupling in Core**: The `@spritestudio/ssplayer-core` package MUST remain completely decoupled from any rendering engine (e.g., PixiJS, Three.js) or browser-specific DOM APIs. It acts solely as a wrapper for the Rust WebAssembly logic.
+- **Zero-Copy Memory Management**: When transferring data between WebAssembly and JavaScript, prioritize zero-copy techniques. Use `Float32Array` or similar TypedArrays referencing the `wasmMemory.buffer` directly to prevent unnecessary memory allocation and Garbage Collection (GC) pauses.
+- **Memory Safety**: WASM memory is not automatically garbage-collected by JS. Implement safeguards using JS `FinalizationRegistry` to automatically call WASM `free()` when objects are garbage-collected, preventing memory leaks.
+- **Render Modes**: Understand the difference between `RenderMode::Direct` (used for high-performance batching in PixiJS v8) and `RenderMode::SceneGraph` (used for hierarchy-based rendering in RPG Maker MZ).
 
-## Memory Layouts & Strides
+## 2. Monorepo Guidelines
 
-- **Shape Parts (`DrawBatchKind.Shape`)**:
-  - `SHAPE_VERTICES_STRIDE` is `24` (floats), representing up to `12` vertices per shape.
-  - `shapeVertices` provides local `(x, y)` coordinates. They MUST be multiplied by the WASM output `matrices` (16 floats per part) to get world positions.
-  - `shapeVertexBoxCoords` provides local bounding box coords `(fx, fy)` from `0.0` to `1.0`. These are used to bilinearly interpolate 4-corner `PartsColor` and `UV` values.
-  
-- **Normal Parts (`DrawBatchKind.Normal`)**:
-  - Already transformed into world space by WASM (`getMeshVerticesX`, `getMeshVerticesY`).
+- The project uses `pnpm` workspaces. Ensure any dependency modifications are made correctly within the context of a monorepo (e.g., `pnpm add <pkg> --filter <workspace>`).
+- **Packages**: Located in `packages/`.
+- **Examples/Testing**: Located in `examples/`.
+- **Rust Core**: Located in the `SpriteStudio7-SDK` Git submodule. Do not alter the submodule structure without explicit instruction.
 
-## Custom PixiJS Shader (`PartsColorShader`)
+## 3. Development & Tooling Rules
 
-- PixiJS handles texture sampling. `PartsColorShader` receives:
-  - `aPosition` (vec2)
-  - `aUV` (vec2)
-  - `aColor` (vec4) - Pre-interpolated 4-corner `PartsColor`
-  - `aVarg` (vec4) - `[rate, isMix, isMul, isAddSub]`
-- The shader reads the base texture, then blends `aColor` on top of it according to the `rate` and blending flag.
-
-## Current Debugging Context / Known Issues
-
-### The "3rd Row Green Rectangle" Issue
-In the `pixi-example`, we are rendering a test animation. The expected output (`currect.png`) contains:
-- 1st Row: 4 arrows with solid colored backgrounds.
-- 2nd Row: 4 arrows with gradient backgrounds.
-- 3rd Row: **A single solid Green rectangle**.
-- 4th Row: 4 gradient squares.
-
-Currently (`pixi4.png`), the 3rd Row renders as four distinct squares (`Light Green, Green, White, Magenta`). 
-**What we know:**
-- The 3rd row parts are `DrawBatchKind.Shape`.
-- My recent updates mapped the UVs of the Shape correctly, but it still outputs four distinct colors instead of solid green.
-- `PartsColor` is evaluating to `Light Green, Green, White, Magenta` for the 3rd row parts because those values *are* present in the animation binary (`ssab`).
-- The official SpriteStudio engine (`currect.png`) ignores those `PartsColors` or overrides them for the 3rd row, resulting in pure Green.
-
-**Your Next Steps:**
-1. Investigate how SpriteStudio evaluates "Color" for `Shape` parts. There might be a native Fill Color or Cell Color that overrides `PartsColor` under specific blend modes.
-2. Check if the 3rd row is actually pointing to a specific `textureHash` (Green Cell map) and why `mixRate` might be `0` or effectively ignored in the official player.
-3. Review `part-state.ts` and `framedata.rs` to see if there is an undocumented flag (e.g. `ColorBlend`) or if `PartsColor` evaluation needs to check an inheritance flag.
-
-## Useful Commands
-
-```bash
-# Build WASM core
-cd SpriteStudio7-SDK/libs/ssruntime
-wasm-pack build --target web
-
-# Build TypeScript packages
-npm run build --prefix packages/ssplayer-core
-npm run build --prefix packages/ssplayer-pixi
-
-# Run the dev server
-npm run dev --prefix examples/pixi-example
-```
+- **User Global Rules**: The user has configured `rtk` (Rust Token Killer) as a CLI proxy. All command-line operations should ideally respect this hook-based usage implicitly, but keep in mind that `rtk` handles token-saving analytics.
+- **TypeScript**: Use strict typing. Avoid `any` where possible.
+- **Rust**: Ensure any modifications to the `ssruntime` expose a C-API/FFI compatible with `wasm-bindgen`.

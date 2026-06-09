@@ -1,0 +1,19 @@
+{
+  "name": "rmmz-example",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "echo \"rmmz-example not implemented yet\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@spritestudio/ssplayer-core": "workspace:*",
+    "@spritestudio/ssplayer-rmmz": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^5.0.0"
+  }
+}

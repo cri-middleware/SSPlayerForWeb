@@ -1,54 +1,37 @@
 # SSPlayerForWeb
 
-SSPlayerForWeb is a Web-based runtime for **OPTPiX SpriteStudio 7** animations. It leverages a high-performance Rust/WebAssembly core to evaluate animations and provides TypeScript packages for seamless integration with WebGL renderers like PixiJS.
+SpriteStudio7-SDK Player for Web.
 
-## Project Structure
+## Overview
 
-The project is structured as a monorepo containing the following key components:
+SSPlayerForWeb is a high-performance, WebAssembly-powered player for SpriteStudio 7 animations. It is designed to be highly adaptable and deployable across various Web graphics engines, ranging from modern PixiJS to legacy environments like RPG Maker MZ (PixiJS v5) and Three.js.
 
-- **`SpriteStudio7-SDK/libs/ssruntime`**: The core Rust implementation. It handles the parsing of SSAB (SpriteStudio Animation Binary) files, flatbuffer decoding, frame state evaluation, geometry computation, and interpolation. It is compiled to WebAssembly (WASM).
-- **`packages/ssplayer-core`**: The core TypeScript library. It wraps the WASM module and provides a high-level API for loading SSAB data, advancing time, and extracting the computed draw batches (Vertices, Indices, UVs).
-- **`packages/ssplayer-pixi`**: A PixiJS integration layer. It provides the `SSPlayer` class, which extends a PixiJS container, enabling you to directly add SpriteStudio animations to your PixiJS scene graph. It handles custom WebGL shaders for SpriteStudio's `PartsColor` blending and `DrawBatchKind` geometry rendering.
-- **`examples/pixi-example`**: A minimal Vite + PixiJS example application demonstrating how to load and play an animation using `ssplayer-pixi`.
+## Key Features
 
-## Requirements
+- **Multi-Engine Support (Package Separation):** A completely independent core logic package with multiple engine-specific rendering packages.
+- **Hybrid Architecture (WASM Brain + JS Body):** WebAssembly (Rust) handles heavy interpolation and matrix calculations, while JavaScript handles the final rendering, achieving zero unnecessary object creation (GC-free updates).
+- **Optimized Rendering:** Supports both "Direct Drawing" (Batch Rendering) for high-performance modern engines and "SceneGraph Drawing" for legacy compatibility.
 
-- Node.js (v18 or newer recommended)
-- Rust (Cargo)
-- `wasm-pack` (for building the Rust core)
+## Monorepo Structure
 
-## Build Instructions
+This project uses `pnpm` workspaces for package management.
 
-1. **Build the WASM Core**:
-   Navigate to `SpriteStudio7-SDK/libs/ssruntime` and use `wasm-pack` or your preferred WASM build tool to compile the Rust codebase.
-   
-2. **Build the TypeScript Packages**:
-   At the repository root (or inside the packages), run:
-   ```bash
-   npm install
-   
-   # Build core first
-   cd packages/ssplayer-core
-   npm run build
-   
-   # Build PixiJS wrapper
-   cd ../ssplayer-pixi
-   npm run build
-   ```
+### Core
+- **`@spritestudio/ssplayer-core`**: The engine-agnostic core logic layer. Manages WASM initialization, time updates, and zero-copy data extraction. It has zero dependencies on DOM APIs or specific rendering engines.
 
-3. **Run the Example**:
-   ```bash
-   cd examples/pixi-example
-   npm install
-   npm run dev
-   ```
-   This will start a local development server on `http://localhost:5173`.
+### Renderers (Engine Bindings)
+- **`@spritestudio/ssplayer-pixi`**: Optimized for PixiJS v8. Uses direct drawing (BatchRenderer) for maximum performance.
+- **`@spritestudio/ssplayer-rmmz`**: Designed for RPG Maker MZ (PixiJS v5). Uses SceneGraph drawing for seamless integration with the engine's Sprite tree.
 
-## Current Status
+## Development
 
-- Core animation playback, transformations, and hierarchical rendering are fully functional.
-- `DrawBatchKind.Normal`, `DrawBatchKind.Mesh`, and `DrawBatchKind.Shape` are supported.
-- Custom PixiJS Shaders (`PartsColorShader`) have been implemented to support SpriteStudio's advanced vertex color blending (`Mix`, `Mul`, `Add`, `Sub`).
+### Prerequisites
+- Node.js & `pnpm`
+- Rust & `wasm-pack`
 
-## License
-Refer to the individual packages for licensing information.
+### Building WASM
+```bash
+pnpm run build:wasm
+```
+
+For more detailed architectural design, refer to [MEMO_SSPlayerForWeb.md](./MEMO_SSPlayerForWeb.md).

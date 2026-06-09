@@ -1,0 +1,25 @@
+{
+  "name": "ssruntime",
+  "type": "module",
+  "collaborators": [
+    "CRI Middleware Co., Ltd."
+  ],
+  "description": "Software development kit for OPTPiX SpriteStudio 7 projects",
+  "version": "7.0.0-alpha01",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SpriteStudio/SpriteStudio7-SDK"
+  },
+  "files": [
+    "ssruntime_bg.wasm",
+    "ssruntime.js",
+    "ssruntime.d.ts"
+  ],
+  "main": "ssruntime.js",
+  "homepage": "https://www.webtech.co.jp/eng/spritestudio/",
+  "types": "ssruntime.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

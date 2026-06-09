@@ -1,2 +1,2 @@
 export * from './SSPlayer.js';
-export * from './SSABLoader.js';
+export * from './PixiResourceManager.js';

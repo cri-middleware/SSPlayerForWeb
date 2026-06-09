@@ -2,6 +2,7 @@
   "name": "ssplayer-for-web-monorepo",
   "private": true,
   "scripts": {
+    "build": "pnpm -r run build",
     "build:wasm": "bash scripts/build-runtime.sh"
   },
   "devDependencies": {

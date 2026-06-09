@@ -1,6 +1,7 @@
 export * from './SSRuntimeManager.js';
-export * from '../wasm/ssruntime.js';
-export { default } from '../wasm/ssruntime.js';
+export * from './IResourceManager.js';
+export * from './DirectInternalPlayer.js';
+export * from './GeometryBuilder.js';
 export * as ssFormat from './fbs/ss/format.js';
 export * as ssRuntime from './fbs/ss/runtime.js';
 export * from './fbs/ss/runtime/frame-data.js';
