@@ -38,10 +38,16 @@ async function main() {
 
     // Setup animation. Basic.ssae has an animation named "anime_1"
     manager.context.setup_animation("anime_1");
+    manager.context.set_loop(0); // Infinite loop
     manager.context.play();
     
     player.position.set(400, 300);
     app.stage.addChild(player);
+    
+    // Debug frame progression
+    setInterval(() => {
+        console.log("Current frame:", manager.context.get_frame_no());
+    }, 1000);
     
     console.log("SSPlayer initialized successfully.");
     

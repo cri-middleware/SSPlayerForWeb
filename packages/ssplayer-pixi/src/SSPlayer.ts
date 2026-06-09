@@ -1,4 +1,4 @@
-import { Container, Mesh, MeshGeometry, Texture, BLEND_MODES, Ticker } from 'pixi.js';
+import { Container, Mesh, MeshGeometry, Texture, BLEND_MODES, Ticker, Text } from 'pixi.js';
 import { SSRuntimeManager, BlendType, DrawBatchKind } from '@spritestudio/ssplayer-core';
 
 export class SSPlayer extends Container {
@@ -13,6 +13,7 @@ export class SSPlayer extends Container {
     private activeMeshes: number = 0;
     
     private textures: Map<number, Texture> = new Map();
+    private debugText: Text;
     
     private _startFrame: number = 0;
     private _endFrame: number = 0;
@@ -29,8 +30,11 @@ export class SSPlayer extends Container {
         this.ssManager.context.set_render_mode(0); // 0 corresponds to RenderMode::Direct
         this.ssManager.context.set_coordinate_system(1); // 1 = YDown
         
-        this.on('added', () => Ticker.shared.add(this.update, this));
-        this.on('removed', () => Ticker.shared.remove(this.update, this));
+        this.debugText = new Text({ text: "Frame: 0", style: { fill: 0xffffff } });
+        this.addChild(this.debugText);
+
+        // Add to ticker directly
+        Ticker.shared.add(this.update, this);
     }
 
     public play() {
@@ -58,6 +62,8 @@ export class SSPlayer extends Container {
         // Update wasm state
         this.ssManager.context.update(deltaSeconds);
         const frameNo = Math.floor(this.ssManager.context.get_frame_no());
+        
+        this.debugText.text = `Frame: ${frameNo} (dt: ${deltaSeconds.toFixed(4)})`;
         
         this.renderFrame(frameNo);
     }
@@ -111,6 +117,7 @@ export class SSPlayer extends Container {
 
         this.activeMeshes = 0;
         this.removeChildren();
+        this.addChild(this.debugText);
 
         for (let i = 0; i < drawBatchesLength; i++) {
             const batch = frameData.drawBatches(i);
