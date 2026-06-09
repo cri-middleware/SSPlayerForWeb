@@ -18,8 +18,8 @@ async function main() {
     const player = new SSPlayer();
     
     console.log("Loading animation...");
-    await player.load('/Basic.ssab');
-    await player.setAnimation("anime_1");
+    await player.load('/Ringo.ssab');
+    await player.setAnimation("run");
 
     // Enable subframe (interpolation)
     player.subframe = true;
