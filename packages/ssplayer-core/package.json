@@ -2,17 +2,17 @@
   "name": "@spritestudio/ssplayer-core",
   "version": "1.0.0",
   "description": "Engine-agnostic WebAssembly core for SpriteStudio7-SDK player",
-  "types": "dist/index.d.ts",
+  "types": "dist/index.d.mts",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
     },
     "./wasm/*": "./wasm/*"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts && cp wasm/*.wasm dist/"
+    "build": "tsdown src/index.ts --format esm --dts && cp wasm/*.wasm dist/"
   },
   "dependencies": {
     "flatbuffers": "^25.9.23"

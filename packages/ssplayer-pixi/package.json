@@ -2,13 +2,13 @@
   "name": "@spritestudio/ssplayer-pixi",
   "version": "1.0.0",
   "description": "PixiJS renderer for SpriteStudio7-SDK player",
-  "main": "index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.mjs",
+  "types": "dist/index.d.mts",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
     }
   },
   "peerDependencies": {
@@ -18,11 +18,10 @@
     "@spritestudio/ssplayer-core": "workspace:*"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts"
+    "build": "tsdown src/index.ts --format esm --dts"
   },
   "devDependencies": {
     "pixi.js": "^8.19.0",
-    "tsup": "^8.5.1",
     "typescript": "^6.0.3"
   },
   "license": "BSD-3-Clause"
