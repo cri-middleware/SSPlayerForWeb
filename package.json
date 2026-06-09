@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "pnpm -r run build",
-    "build:wasm": "bash scripts/build-runtime.sh"
+    "build:wasm": "bash scripts/build-runtime.sh",
+    "build:wasm:win": "powershell -ExecutionPolicy Bypass -File scripts/build-runtime.ps1"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

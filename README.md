@@ -29,9 +29,79 @@ This project uses `pnpm` workspaces for package management.
 - Node.js & `pnpm`
 - Rust & `wasm-pack`
 
-### Building WASM
-```bash
-pnpm run build:wasm
+### Development Workflow
+
+1. **Build WASM (if Rust code is modified)**
+   ```bash
+   pnpm run build:wasm
+   ```
+   *(For Windows users, use: `pnpm run build:wasm:win`)*
+
+2. **Build TypeScript Packages**
+   ```bash
+   pnpm run build
+   ```
+
+3. **Run Examples (Dev Server)**
+   You can test your changes using the Vite dev server provided in the `examples` directory.
+   ```bash
+   cd examples/pixi-example
+   pnpm run dev
+   ```
+   *(Note: Since the examples consume the built packages via workspace references, you must re-run `pnpm run build` from the project root whenever you modify the TypeScript source code in `packages/`.)*
+
+## Architecture
+
+### 3-Layer Architecture
+
+```mermaid
+graph TD
+    classDef rust fill:#dea584,stroke:#333,stroke-width:2px,color:black;
+    classDef pixi fill:#e91e63,stroke:#333,stroke-width:2px,color:white;
+    classDef rmmz fill:#8e44ad,stroke:#333,stroke-width:2px,color:white;
+    classDef core fill:#83cc83,stroke:#333,stroke-width:2px,color:black;
+    classDef ffi fill:#e6e6e6,stroke:#333,stroke-width:2px,color:black,stroke-dasharray: 5 5;
+
+    subgraph L3 ["Layer 3: Engine Bindings"]
+        P1["ssplayer-pixi<br/>(PixiJS / BatchRenderer)"]:::pixi
+        P2["ssplayer-rmmz<br/>(MZ / SceneGraph)"]:::rmmz
+    end
+
+    subgraph L2 ["Layer 2: Common Logic (@spritestudio/ssplayer-core)"]
+        D1["DirectInternalPlayer<br/>(Player Facade)"]:::core
+        S1["SceneGraphInternalPlayer<br/>(Future Facade)"]:::core
+        G1["GeometryBuilder<br/>(Vertex/Index Builder)"]:::core
+        I1["SSRuntimeManager<br/>(WASM State Wrapper)"]:::core
+        J1["Zero-copy Data<br/>(Float32Array / FlatBuffers)"]:::core
+    end
+
+    subgraph L1 ["Layer 1: WebAssembly Bindings"]
+        B1["ssruntime_bg.wasm / .js<br/>(wasm-bindgen)"]:::ffi
+    end
+
+    subgraph Native ["Rust Native Plugin"]
+        R1["libssruntime<br/>(Core Engine)"]:::rust
+    end
+
+    P1 -->|"Call Play/Update"| D1
+    P2 -.->|"Call Play/Update"| S1
+    
+    D1 -->|"Manage"| G1
+    D1 -->|"Manage"| I1
+    S1 -.->|"Manage"| I1
+    
+    I1 -->|"Call WASM"| B1
+    B1 -->|"Return Data Pointer"| J1
+    
+    J1 -.->|"Read Reference"| G1
+    G1 -.->|"Return Geometry"| P1
+    J1 -.->|"Read Reference"| S1
+    S1 -.->|"Return State"| P2
+    B1 <-->|"Rust C-API"| R1
 ```
 
-For more detailed architectural design, refer to [MEMO_SSPlayerForWeb.md](./MEMO_SSPlayerForWeb.md).
+### Robustness & Zero-Copy
+
+- **Memory Leak Prevention:** Uses `FinalizationRegistry` to automatically call WASM `free()` when JS objects are garbage-collected.
+- **Zero-Duplication:** Uses `Float32Array` mapped directly to `wasmMemory.buffer` to pass transformation matrices without copying memory.
+- **Asset Pipeline:** Caches parsed `SSRuntimeResource` instances so multiple player instances share the same WASM memory footprint for assets.
