@@ -1,6 +1,6 @@
-import { Container, Mesh, MeshGeometry, Texture, Ticker, Text, Shader } from 'pixi.js';
+import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage } from 'pixi.js';
 import { DirectInternalPlayer, BlendType, DrawBatchKind, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
-import { PartsColorShader } from './PartsColorShader.js';
+import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
 
 export class SSPlayer extends Container {
@@ -10,7 +10,7 @@ export class SSPlayer extends Container {
 
     public internalPlayer: DirectInternalPlayer;
 
-    private meshPool: Mesh[] = [];
+    private meshPool: Mesh<any>[] = [];
     private activeMeshes: number = 0;
 
     private pixiResourceManager: PixiResourceManager;
@@ -36,11 +36,10 @@ export class SSPlayer extends Container {
         if (!shader) {
             shader = Shader.from({
                 gl: PartsColorShader,
+                gpu: PartsColorShaderWGSL,
                 resources: {
                     uTexture: texture.source,
-                    textureUniforms: {
-                        uTextureMatrix: { type: 'mat3x3<f32>', value: texture.textureMatrix.mapCoord }
-                    }
+                    uTextureSampler: texture.source.style
                 }
             });
             this.partsColorShaders.set(texture, shader);
@@ -486,14 +485,39 @@ export class SSPlayer extends Container {
         return m;
     }
 
-    private createNewMesh(requiredVertices: number, requiredIndices: number): Mesh {
-        const geometry = new MeshGeometry({
-            positions: new Float32Array(requiredVertices * 2),
-            uvs: new Float32Array(requiredVertices * 2),
-            indices: new Uint32Array(requiredIndices),
+    private createNewMesh(requiredVertices: number, requiredIndices: number): Mesh<any> {
+        const positionsBuffer = new Buffer({
+            data: new Float32Array(requiredVertices * 2),
+            usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
         });
-        geometry.addAttribute('aColor', { buffer: new Float32Array(requiredVertices * 4), size: 4 } as any);
-        geometry.addAttribute('aVarg', { buffer: new Float32Array(requiredVertices * 4), size: 4 } as any);
+        const uvsBuffer = new Buffer({
+            data: new Float32Array(requiredVertices * 2),
+            usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+        });
+        const indicesBuffer = new Buffer({
+            data: new Uint32Array(requiredIndices),
+            usage: BufferUsage.INDEX | BufferUsage.COPY_DST
+        });
+
+        const geometry = new Geometry();
+        geometry.addAttribute('aPosition', { buffer: positionsBuffer, size: 2 });
+        geometry.addAttribute('aUV', { buffer: uvsBuffer, size: 2 });
+        geometry.addIndex(indicesBuffer);
+        
+        geometry.addAttribute('aColor', { 
+            buffer: new Buffer({
+                data: new Float32Array(requiredVertices * 4),
+                usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+            }), 
+            size: 4 
+        } as any);
+        geometry.addAttribute('aVarg', { 
+            buffer: new Buffer({
+                data: new Float32Array(requiredVertices * 4),
+                usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+            }), 
+            size: 4 
+        } as any);
         
         if (requiredIndices === 12) {
             const indices = geometry.getIndex().data as Uint32Array;
@@ -504,11 +528,10 @@ export class SSPlayer extends Container {
         }
         
         const mesh = new Mesh({
-            geometry: geometry,
-            texture: Texture.WHITE
+            geometry: geometry
         });
         
-        return mesh;
+        return mesh as Mesh<any>;
     }
 
 

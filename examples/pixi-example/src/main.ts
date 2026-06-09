@@ -5,7 +5,7 @@ async function main() {
 
     // 2. Setup PixiJS Application
     const app = new Application();
-    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgl' });
+    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgpu' });
     
     const container = document.getElementById('canvas-container');
     if (container) {
