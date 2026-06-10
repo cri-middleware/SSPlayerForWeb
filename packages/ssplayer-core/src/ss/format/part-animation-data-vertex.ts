@@ -78,6 +78,7 @@ static addEasingRate(builder:flatbuffers.Builder, easingRate:number) {
 
 static endPartAnimationDataVertex(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 8) // value
   return offset;
 }
 

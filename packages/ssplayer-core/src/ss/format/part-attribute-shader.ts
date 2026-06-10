@@ -156,6 +156,7 @@ static addMap1NameHash(builder:flatbuffers.Builder, map1NameHash:number) {
 
 static endPartAttributeShader(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // id
   return offset;
 }
 

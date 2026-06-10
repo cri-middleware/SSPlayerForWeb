@@ -70,6 +70,8 @@ static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
 
 static endSignalCommandParam(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // param_id
+  builder.requiredField(offset, 10) // value
   return offset;
 }
 

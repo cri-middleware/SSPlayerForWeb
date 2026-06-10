@@ -70,6 +70,7 @@ static startSequenceListVector(builder:flatbuffers.Builder, numElems:number) {
 
 static endSsSequenceBinary(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // sequence_list
   return offset;
 }
 

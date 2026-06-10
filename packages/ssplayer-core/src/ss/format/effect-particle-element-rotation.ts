@@ -49,6 +49,8 @@ static addRotationAddValue(builder:flatbuffers.Builder, rotationAddValueOffset:f
 
 static endEffectParticleElementRotation(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // rotation_value
+  builder.requiredField(offset, 6) // rotation_add_value
   return offset;
 }
 

@@ -127,6 +127,9 @@ static startCellsVector(builder:flatbuffers.Builder, numElems:number) {
 
 static endCellMap(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // name
+  builder.requiredField(offset, 8) // image_path
+  builder.requiredField(offset, 12) // size_original
   return offset;
 }
 

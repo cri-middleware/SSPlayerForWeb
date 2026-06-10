@@ -49,6 +49,7 @@ static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
 
 static endEventUserData(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // value
   return offset;
 }
 

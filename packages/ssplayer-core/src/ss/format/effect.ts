@@ -114,6 +114,9 @@ static startEffectNodeVector(builder:flatbuffers.Builder, numElems:number) {
 
 static endEffect(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // name
+  builder.requiredField(offset, 14) // layout_scale
+  builder.requiredField(offset, 16) // effect_node
   return offset;
 }
 

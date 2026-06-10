@@ -144,6 +144,7 @@ static addPartType(builder:flatbuffers.Builder, partTypeOffset:flatbuffers.Offse
 
 static endPartData(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // name
   return offset;
 }
 

@@ -57,6 +57,7 @@ static addTime(builder:flatbuffers.Builder, time:number) {
 
 static endLabel(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // name
   return offset;
 }
 

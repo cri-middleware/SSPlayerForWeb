@@ -306,6 +306,9 @@ static startEmbeddedAssetsVector(builder:flatbuffers.Builder, numElems:number) {
 
 static endSsAnimeBinary(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // name
+  builder.requiredField(offset, 10) // parts
+  builder.requiredField(offset, 12) // animations
   return offset;
 }
 

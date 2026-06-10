@@ -50,6 +50,7 @@ static addScaleFactorValue(builder:flatbuffers.Builder, scaleFactorValueOffset:f
 
 static endRectAndVec2ValueTable(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // scale_factor_value
   return offset;
 }
 

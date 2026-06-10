@@ -68,6 +68,8 @@ static addRefAnimeNameHash(builder:flatbuffers.Builder, refAnimeNameHash:number)
 
 static endPartTypeInstance(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // ref_anime_pack
+  builder.requiredField(offset, 8) // ref_anime_name
   return offset;
 }
 

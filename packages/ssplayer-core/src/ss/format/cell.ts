@@ -187,6 +187,9 @@ static startTableIndexVertexVector(builder:flatbuffers.Builder, numElems:number)
 
 static endCell(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // name
+  builder.requiredField(offset, 8) // rectangle
+  builder.requiredField(offset, 10) // pivot
   return offset;
 }
 

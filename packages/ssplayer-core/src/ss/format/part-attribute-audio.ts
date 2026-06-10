@@ -66,6 +66,7 @@ static addLoopNum(builder:flatbuffers.Builder, loopNum:number) {
 
 static endPartAttributeAudio(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 8) // sound_name
   return offset;
 }
 

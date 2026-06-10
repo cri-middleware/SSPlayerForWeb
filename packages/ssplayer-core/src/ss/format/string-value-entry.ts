@@ -39,6 +39,7 @@ static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
 
 static endStringValueEntry(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // value
   return offset;
 }
 

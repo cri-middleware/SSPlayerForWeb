@@ -77,6 +77,8 @@ static addRepeatCount(builder:flatbuffers.Builder, repeatCount:number) {
 
 static endSequenceItem(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // ref_anime_pack
+  builder.requiredField(offset, 8) // ref_anime_name
   return offset;
 }
 

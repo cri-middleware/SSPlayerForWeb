@@ -49,6 +49,7 @@ static addPower(builder:flatbuffers.Builder, power:number) {
 
 static endEffectParticlePointGravity(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 4) // position
   return offset;
 }
 

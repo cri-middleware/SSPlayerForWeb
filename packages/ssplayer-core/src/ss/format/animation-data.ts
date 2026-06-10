@@ -232,6 +232,9 @@ static addCanvas(builder:flatbuffers.Builder, canvasOffset:flatbuffers.Offset) {
 static endAnimationData(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   builder.requiredField(offset, 4) // name
+  builder.requiredField(offset, 8) // parts_initial_attributes
+  builder.requiredField(offset, 10) // parts_animation_data
+  builder.requiredField(offset, 26) // canvas
   return offset;
 }
 

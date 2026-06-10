@@ -77,6 +77,8 @@ static startParamsVector(builder:flatbuffers.Builder, numElems:number) {
 
 static endPartAttributeSignal(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
+  builder.requiredField(offset, 6) // command_id
+  builder.requiredField(offset, 8) // params
   return offset;
 }
 
