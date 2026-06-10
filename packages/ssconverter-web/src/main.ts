@@ -1,12 +1,13 @@
 import wasmUrl from '../wasm/ssconverter_bg.wasm?url';
 import init, { convert, version } from '../wasm/ssconverter.js';
+import JSZip from 'jszip';
 import pkg from '../package.json';
 import './style.css';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div class="header">
     <h1>SSConverter Web</h1>
-    <p>Convert SpriteStudio project (.sspj) to binary (.ssab)</p>
+    <p>Convert SpriteStudio project (.sspj) to binaries (.ssab)</p>
   </div>
   
   <div class="panel">
@@ -24,11 +25,10 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       </div>
     </div>
     
-    <div class="form-group" style="margin-top: 1.5rem;">
-      <label>Output Folder</label>
+    <div class="form-group" id="outGroup">
+      <label>Output ZIP File</label>
       <div class="input-row">
-        <input type="text" id="outDirDisplay" readonly placeholder="(Default: Same as input folder)">
-        <button class="btn" id="btnSelectOut">Browse...</button>
+        <input type="text" id="outDirDisplay" readonly placeholder="Automatically generated as .zip">
       </div>
     </div>
 
@@ -36,10 +36,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <label class="checkbox-label">
         <input type="checkbox" id="chkEmbedded">
         Embedded Assets
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="chkDebug">
-        Debug Info
       </label>
     </div>
 
@@ -55,7 +51,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </div>
     
     <button class="btn btn-success btn-full" id="btnConvert" disabled>
-      ⚡ Convert & Save
+      ⚡ Convert & Download
     </button>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: -1rem;">
@@ -77,32 +73,33 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 
 const dropZoneIn = document.getElementById('dropZoneIn')!;
 const btnClear = document.getElementById('btnClear') as HTMLButtonElement;
+const outDirDisplay = document.getElementById('outDirDisplay') as HTMLInputElement;
 const btnSelectIn = document.getElementById('btnSelectIn') as HTMLButtonElement;
-const btnSelectOut = document.getElementById('btnSelectOut') as HTMLButtonElement;
 const btnConvert = document.getElementById('btnConvert') as HTMLButtonElement;
 const btnCopyLog = document.getElementById('btnCopyLog') as HTMLButtonElement;
 const btnClearLog = document.getElementById('btnClearLog') as HTMLButtonElement;
 const btnCopyVersion = document.getElementById('btnCopyVersion') as HTMLButtonElement;
 const inDirDisplay = document.getElementById('inDirDisplay') as HTMLInputElement;
-const outDirDisplay = document.getElementById('outDirDisplay') as HTMLInputElement;
 const wasmStatus = document.getElementById('wasmStatus')!;
 const convertStatus = document.getElementById('convertStatus')!;
 const logArea = document.getElementById('logArea')!;
 const versionDisplay = document.getElementById('versionDisplay')!;
 const appVersionDisplay = document.getElementById('appVersionDisplay')!;
+appVersionDisplay.textContent = `${pkg.name} Version: ${pkg.version}`;
 
-appVersionDisplay.textContent = `App Version: ${pkg.version}`;
-
-// Options
 const chkEmbedded = document.getElementById('chkEmbedded') as HTMLInputElement;
-const chkDebug = document.getElementById('chkDebug') as HTMLInputElement;
 
 let isWasmReady = false;
 let inDirHandle: FileSystemDirectoryHandle | null = null;
-let outDirHandle: FileSystemDirectoryHandle | null = null;
 let sourceFiles: Map<string, File> = new Map();
 let currentSspjStem = '';
 let currentSspjDir: string[] = [];
+
+function getTimestamp(): string {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+}
 
 function log(msg: string, type: 'info' | 'error' | 'warning' | 'success' = 'info') {
     console.log(msg);
@@ -135,13 +132,11 @@ function updateConvertButton() {
 
 function resetState() {
     inDirHandle = null;
-    outDirHandle = null;
     currentSspjStem = '';
     currentSspjDir = [];
     sourceFiles.clear();
     inDirDisplay.value = '';
     outDirDisplay.value = '';
-    // Logs are NOT cleared here anymore
     updateBadge(convertStatus, 'Waiting', 'pending');
     updateConvertButton();
 }
@@ -155,7 +150,7 @@ async function initWasm() {
         btnCopyVersion.style.display = 'inline-flex';
         btnCopyVersion.onclick = async () => {
             try {
-                const textToCopy = `App Version: ${pkg.version}\nConverter Version: ${ver}`;
+                const textToCopy = `${pkg.name} Version: ${pkg.version}\nConverter Version: ${ver}`;
                 await navigator.clipboard.writeText(textToCopy);
                 const orig = btnCopyVersion.textContent;
                 btnCopyVersion.textContent = 'Copied!';
@@ -218,12 +213,11 @@ async function handleInputDirectory(handle: FileSystemDirectoryHandle) {
         }
         
         log(`Found project: ${currentSspjStem}`);
-        const autoName = chkEmbedded.checked ? `${currentSspjStem}_emb_ssab` : `${currentSspjStem}_ssab`;
-        const previewPath = currentSspjDir.length > 0 ? `${currentSspjDir.join('/')}/${autoName}` : autoName;
-        log(`Default output will be generated at: ${handle.name}/${previewPath}`);
-        
-        if (!outDirHandle) {
-            outDirDisplay.value = `(Auto-create) ${handle.name}/${previewPath}`;
+        const timestamp = getTimestamp();
+        if (chkEmbedded.checked) {
+            outDirDisplay.value = `${currentSspjStem}_emb_${timestamp}.zip`;
+        } else {
+            outDirDisplay.value = `${currentSspjStem}_${timestamp}.zip`;
         }
         
         updateConvertButton();
@@ -246,27 +240,12 @@ btnSelectIn.addEventListener('click', async () => {
     }
 });
 
-btnSelectOut.addEventListener('click', async () => {
-    try {
-        // @ts-ignore
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        outDirHandle = handle;
-        outDirDisplay.value = handle.name;
-        log(`Output directory selected: ${handle.name}`);
-    } catch (e: any) {
-        if (e.name !== 'AbortError') log(`Error: ${e.message || e}`);
-    }
-});
-
 btnConvert.addEventListener('click', async () => {
     if (!inDirHandle) return;
     
     try {
         btnConvert.disabled = true;
         btnSelectIn.disabled = true;
-        btnSelectOut.disabled = true;
-        // Do not clear sourceFiles or logArea here, we want to keep logs intact
-        // sourceFiles will just be overwritten by readDirectoryRecursive
         
         updateBadge(convertStatus, 'Reading Files...', 'active');
         log(`Reading folder: ${inDirHandle.name}`);
@@ -289,44 +268,20 @@ btnConvert.addEventListener('click', async () => {
         }
         
         const startTime = performance.now();
-        // The optimize option is always set to true for production usage
-        // The split option is always set to false as it is not implemented yet
-        const result = convert(filesMap, chkEmbedded.checked, chkDebug.checked, false, true);
+        const result = convert(filesMap, chkEmbedded.checked, false, false, true);
         const endTime = performance.now();
         log(`Conversion completed in ${(endTime - startTime).toFixed(2)} ms.`);
         
         // Output phase
-        updateBadge(convertStatus, 'Saving...', 'active');
-        
-        let writeDir = outDirHandle;
-        
-        if (!writeDir) {
-            // Navigate to the directory where the .sspj file resides
-            let targetDirHandle = inDirHandle;
-            for (const dirName of currentSspjDir) {
-                targetDirHandle = await targetDirHandle.getDirectoryHandle(dirName);
-            }
-            
-            const outDirName = chkEmbedded.checked ? `${currentSspjStem}_emb_ssab` : `${currentSspjStem}_ssab`;
-            log(`Creating output folder "${outDirName}" next to the .sspj file...`);
-            // Need readwrite permission on the input directory to create a subfolder
-            // @ts-ignore
-            if (await targetDirHandle.queryPermission({mode: 'readwrite'}) !== 'granted') {
-                // @ts-ignore
-                await targetDirHandle.requestPermission({mode: 'readwrite'});
-            }
-            writeDir = await targetDirHandle.getDirectoryHandle(outDirName, { create: true });
-        }
-        
-        log(`Writing to: ${writeDir.name}`);
+        updateBadge(convertStatus, 'Generating ZIP...', 'active');
+        const rootDirName = chkEmbedded.checked ? `${currentSspjStem}_emb` : currentSspjStem;
+        const zip = new JSZip();
+        const rootFolder = zip.folder(rootDirName)!;
         
         // Write generated files
         for (const [filename, data] of result.output.entries()) {
-            log(`Writing ${filename}...`);
-            const fileHandle = await writeDir.getFileHandle(filename, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(data);
-            await writable.close();
+            log(`Adding ${filename} to zip...`);
+            rootFolder.file(filename, data, { unixPermissions: "644" });
         }
         
         // Write referenced assets
@@ -336,33 +291,39 @@ btnConvert.addEventListener('click', async () => {
                 const fullSrcPath = currentSspjDir.length > 0 ? `${currentSspjDir.join('/')}/${srcPath}` : srcPath;
                 const srcFile = sourceFiles.get(fullSrcPath);
                 if (srcFile) {
-                    log(`Copying asset ${fullSrcPath} -> ${destPath}...`);
-                    const destParts = destPath.split('/');
-                    let currentDirHandle = writeDir;
-                    for (let i = 0; i < destParts.length - 1; i++) {
-                        currentDirHandle = await currentDirHandle.getDirectoryHandle(destParts[i], { create: true });
-                    }
-                    const filename = destParts[destParts.length - 1];
-                    const fileHandle = await currentDirHandle.getFileHandle(filename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(await srcFile.arrayBuffer());
-                    await writable.close();
+                    log(`Adding asset ${fullSrcPath} -> ${destPath} to zip...`);
+                    const buffer = await srcFile.arrayBuffer();
+                    rootFolder.file(destPath, buffer, { unixPermissions: "644" });
                 } else {
-                    log(`WARNING: Referenced asset not found in source: ${srcPath}`);
+                    log(`WARNING: Source asset not found: ${fullSrcPath}`);
                 }
             }
         }
         
+        log('Generating ZIP file...');
+        const zipBlob = await zip.generateAsync({
+            type: 'blob',
+            platform: 'UNIX'
+        });
+        
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        const zipFileName = outDirDisplay.value || `${rootDirName}_${getTimestamp()}.zip`;
+        a.download = zipFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
         updateBadge(convertStatus, 'Success', 'success');
-        log('All files saved successfully!');
-        // Removed auto-clear logic to retain logs and form state
+        log(`Successfully downloaded ${zipFileName}`, 'success');
     } catch (e: any) {
         log(`Error: ${e.message || e}`);
         updateBadge(convertStatus, 'Failed', 'error');
     } finally {
         updateConvertButton();
         btnSelectIn.disabled = false;
-        btnSelectOut.disabled = false;
     }
 });
 
@@ -396,11 +357,13 @@ dropZoneIn.addEventListener('drop', async (e) => {
 });
 
 chkEmbedded.addEventListener('change', () => {
-    if (inDirHandle && !outDirHandle && currentSspjStem) {
-        const autoName = chkEmbedded.checked ? `${currentSspjStem}_emb_ssab` : `${currentSspjStem}_ssab`;
-        const previewPath = currentSspjDir.length > 0 ? `${currentSspjDir.join('/')}/${autoName}` : autoName;
-        outDirDisplay.value = `(Auto-create) ${inDirHandle.name}/${previewPath}`;
-        log(`Default output will be generated at: ${inDirHandle.name}/${previewPath}`);
+    if (inDirHandle && currentSspjStem) {
+        const timestamp = getTimestamp();
+        if (chkEmbedded.checked) {
+            outDirDisplay.value = `${currentSspjStem}_emb_${timestamp}.zip`;
+        } else {
+            outDirDisplay.value = `${currentSspjStem}_${timestamp}.zip`;
+        }
     }
 });
 
