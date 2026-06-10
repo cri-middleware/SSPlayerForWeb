@@ -1,6 +1,6 @@
 import { SSRuntimeManager } from './SSRuntimeManager.js';
-import { FrameData } from './fbs/ss/runtime/frame-data.js';
-import { BlendType } from './fbs/ss/format/blend-type.js';
+import { FrameData } from './ss/runtime/frame-data.js';
+import { BlendType } from './ss/format/blend-type.js';
 
 /**
  * Encapsulates purely mathematical geometry operations:

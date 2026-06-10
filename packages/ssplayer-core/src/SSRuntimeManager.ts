@@ -1,11 +1,11 @@
 import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, WebEffectEventInfo, WebPlaybackDirection, WebPlaybackStyle } from '../wasm/ssruntime.js';
 export { WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle };
 import * as flatbuffers from 'flatbuffers';
-import { FrameData } from './fbs/ss/runtime/frame-data.js';
-import { SsAnimeBinary } from './fbs/ss/format/ss-anime-binary.js';
-import { EffectDrawPlan } from './fbs/ss/runtime/effect-draw-plan.js';
-import { PartType } from './fbs/ss/format/part-type.js';
-import { PartTypeEffect } from './fbs/ss/format/part-type-effect.js';
+import { FrameData } from './ss/runtime/frame-data.js';
+import { SsAnimeBinary } from './ss/format/ss-anime-binary.js';
+import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
+import { PartType } from './ss/format/part-type.js';
+import { PartTypeEffect } from './ss/format/part-type-effect.js';
 
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;

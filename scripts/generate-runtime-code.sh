@@ -11,8 +11,38 @@ echo "Generating FlatBuffers TypeScript code..."
 # Create target directory if it doesn't exist
 mkdir -p "${TARGET_DIR}"
 
-# Run flatc to compile .fbs schemas
-# We find all .fbs files in the SDK's libs directories
-find "${SDK_DIR}/libs/ssab/fbs" "${SDK_DIR}/libs/ssruntime/fbs" -name "*.fbs" | xargs flatc --ts -o "${TARGET_DIR}"
+for f in "${SDK_DIR}/libs/ssruntime/fbs/"*.fbs; do
+    flatc --ts -o "${TARGET_DIR}" "$f"
+done
 
-echo "FlatBuffers generation complete. Output saved to ${TARGET_DIR}/fbs"
+for f in "${SDK_DIR}/libs/ssab/fbs/"*.fbs; do
+    flatc --ts -o "${TARGET_DIR}" "$f"
+done
+
+# flatc overwrites namespace entrypoints (like ss/runtime.ts and ss/format.ts)
+# when run in a loop or with multiple files having the same namespace.
+# We manually regenerate them to include all generated files.
+for namespace in "runtime" "format"; do
+    ENTRYPOINT="${TARGET_DIR}/ss/${namespace}.ts"
+    echo "// Auto-generated entrypoint" > "${ENTRYPOINT}"
+    echo "/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */" >> "${ENTRYPOINT}"
+    for f in "${TARGET_DIR}/ss/${namespace}/"*.ts; do
+        if [ -f "$f" ]; then
+            name=$(basename "$f" .ts)
+            # Find the exported classes/enums/functions in the file
+            exports=$(grep -E "^export (class|enum|function) " "$f" | awk '{
+                if ($2 == "function") {
+                    split($3, a, "(");
+                    print a[1];
+                } else {
+                    print $3;
+                }
+            }')
+            for exp in $exports; do
+                echo "export { ${exp} } from './${namespace}/${name}.js';" >> "${ENTRYPOINT}"
+            done
+        fi
+    done
+done
+
+echo "FlatBuffers generation complete. Output saved to ${TARGET_DIR}"
