@@ -1,6 +1,7 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage } from 'pixi.js';
 import { DirectInternalPlayer, BlendType, DrawBatchKind, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
+import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
 
 export class SSPlayer extends Container {
@@ -16,6 +17,7 @@ export class SSPlayer extends Container {
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
     private partsColorShaders: Map<Texture, Shader> = new Map();
+    private effectShaders: Map<Texture, Shader> = new Map();
     public get subframe(): boolean {
         return this.internalPlayer.subFrameEnabled;
     }
@@ -43,6 +45,22 @@ export class SSPlayer extends Container {
                 }
             });
             this.partsColorShaders.set(texture, shader);
+        }
+        return shader;
+    }
+
+    private getEffectShader(texture: Texture): Shader {
+        let shader = this.effectShaders.get(texture);
+        if (!shader) {
+            shader = Shader.from({
+                gl: EffectShader,
+                gpu: EffectShaderWGSL,
+                resources: {
+                    uTexture: texture.source,
+                    uTextureSampler: texture.source.style
+                }
+            });
+            this.effectShaders.set(texture, shader);
         }
         return shader;
     }
@@ -217,7 +235,9 @@ export class SSPlayer extends Container {
             if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect) continue;
             
             const textureHash = batch.textureHash();
-            const texture = this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE;
+            // Effect batches (and root/null parts) carry textureHash 0; their real
+            // texture is resolved per draw command, so avoid the missing-asset warning.
+            const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE) : Texture.WHITE;
             
             const startRank = batch.startRank();
             const count = batch.count();
@@ -351,8 +371,11 @@ export class SSPlayer extends Container {
                     this.addChild(mesh);
                 }
             } else if (kind === DrawBatchKind.Effect) {
-                // Effect rendering temporarily removed at user's request
-                /*
+                // Particle geometry is simulated in the WASM runtime and returned as an
+                // EffectDrawPlan per effect part: one command per (cellmap, blend) emitter
+                // group, slicing shared flat buffers. The per-vertex math lives in core's
+                // GeometryBuilder.buildEffectCommand; here we only resolve the texture,
+                // blend and shader and push the geometry to a pooled PixiJS Mesh.
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
                     const partState = frameData.parts(partIdx);
@@ -362,98 +385,43 @@ export class SSPlayer extends Container {
                     const plan = this.internalPlayer.runtimeManager.getEffectDrawPlan(partIdx);
                     if (!plan) continue;
 
-                    const planVerts = plan.vertsArray();
-                    const planUvs = plan.uvsArray();
-                    const planColors = plan.colorsArray();
-                    const planIndices = plan.indicesArray();
-                    if (!planVerts || !planUvs || !planColors || !planIndices) continue;
-
-                    const mOff = partIdx * 16;
-                    const m00 = matrices[mOff + 0];
-                    const m10 = matrices[mOff + 1];
-                    const m01 = matrices[mOff + 4];
-                    const m11 = matrices[mOff + 5];
-                    const tx  = matrices[mOff + 12];
-                    const ty  = matrices[mOff + 13];
-
                     const cmdCount = plan.commandsLength();
                     for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
                         const cmd = plan.commands(cmdIdx);
                         if (!cmd) continue;
 
-                        const texHash = cmd.cellmapHash();
-                        const effectTex = this.textures.get(texHash) || Texture.WHITE;
-                        const texW = effectTex.width;
-                        const texH = effectTex.height;
-                        const invTexW = texW > 0 ? 1.0 / texW : 1.0;
-                        const invTexH = texH > 0 ? 1.0 / texH : 1.0;
-
-                        const isAdditive = cmd.blend() === 1;
-                        const blendMode = isAdditive ? 'add' : 'normal';
-                        const batchShader = this.getPartsColorShader(effectTex);
-
                         const quadCount = cmd.quadCount();
-                        const pOff = cmd.particleOffset();
-                        const vOff = pOff * 4;
-                        const iOff = pOff * 6;
+                        if (quadCount === 0) continue;
 
                         const pCount = quadCount * 4;
                         const iCount = quadCount * 6;
 
                         const mesh = this.getMeshFromPool(this.activeMeshes, pCount, iCount);
                         this.activeMeshes++;
-                        mesh.shader = batchShader as any;
-                        mesh.blendMode = blendMode as any;
-                        mesh.visible = true;
 
                         const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                         const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
                         const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
-                        const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
                         const indices = mesh.geometry.getIndex().data as Uint32Array;
 
-                        for (let v = 0; v < pCount; v++) {
-                            const globalV = vOff + v;
-                            const vx = planVerts[globalV * 2 + 0];
-                            const vy = planVerts[globalV * 2 + 1];
-                            positions[v * 2 + 0] = m00 * vx + m01 * vy + tx;
-                            positions[v * 2 + 1] = m10 * vx + m11 * vy + ty;
-                            
-                            uvs[v * 2 + 0] = planUvs[globalV * 2 + 0] * invTexW;
-                            uvs[v * 2 + 1] = planUvs[globalV * 2 + 1] * invTexH;
-                            
-                            colors[v * 4 + 0] = planColors[globalV * 4 + 0];
-                            colors[v * 4 + 1] = planColors[globalV * 4 + 1];
-                            colors[v * 4 + 2] = planColors[globalV * 4 + 2];
-                            colors[v * 4 + 3] = planColors[globalV * 4 + 3];
-
-                            vargs[v * 4 + 0] = 1.0; 
-                            vargs[v * 4 + 1] = isAdditive ? 0.0 : 1.0; 
-                            vargs[v * 4 + 2] = 0.0; 
-                            vargs[v * 4 + 3] = isAdditive ? 1.0 : 0.0; 
-                        }
-
-                        // planIndices is quad-local 0-based (each quad has indices 0..3)
-                        for (let q = 0; q < quadCount; q++) {
-                            for (let j = 0; j < 6; j++) {
-                                indices[q * 6 + j] = planIndices[iOff + q * 6 + j] + (q * 4);
-                            }
-                        }
+                        this.internalPlayer.geometryBuilder.buildEffectCommand(
+                            partIdx, plan, cmd, positions, uvs, colors, indices
+                        );
 
                         mesh.geometry.getBuffer('aPosition').update();
                         mesh.geometry.getBuffer('aUV').update();
                         mesh.geometry.getBuffer('aColor').update();
-                        mesh.geometry.getBuffer('aVarg').update();
                         mesh.geometry.getIndex().update();
-                        
-                        mesh.shader = batchShader as any;
-                        mesh.blendMode = blendMode;
+
+                        const effectTex = this.pixiResourceManager.getTexture(cmd.cellmapHash()) || Texture.WHITE;
+                        mesh.shader = this.getEffectShader(effectTex) as any;
+                        // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
+                        mesh.blendMode = cmd.blend() === 1 ? 'add' : 'normal';
                         mesh.alpha = alpha;
                         mesh.visible = true;
                         this.addChild(mesh);
                     }
                 }
-                */
             }
         }
     }

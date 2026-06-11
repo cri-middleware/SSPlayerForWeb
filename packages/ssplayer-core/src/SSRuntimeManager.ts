@@ -6,6 +6,7 @@ import { SsAnimeBinary } from './ss/format/ss-anime-binary.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
 import { PartType } from './ss/format/part-type.js';
 import { PartTypeEffect } from './ss/format/part-type-effect.js';
+import { DrawBatchKind } from './ss/runtime/draw-batch-kind.js';
 
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
@@ -74,12 +75,14 @@ export class SSRuntimeManager {
 
     public setupAnimation(animationName: string) {
         this.context.setup_animation(animationName);
-        
-        // Cleanup old effect slots
-        this.effectSlots.forEach(slot => {
-            if ((slot as any).free) (slot as any).free();
+
+        // Cleanup old effect slots (map value is { slot, visible }).
+        this.effectSlots.forEach(item => {
+            try { (item.slot as any)?.free?.(); } catch { /* ignore */ }
         });
         this.effectSlots.clear();
+
+        this.currentAnimationFps = this.context.get_fps();
 
         if (!this.resource) return;
 
@@ -92,55 +95,94 @@ export class SSRuntimeManager {
             const bb = new flatbuffers.ByteBuffer(buf);
             const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
 
-            let effectCount = 0;
+            // Collect each effect part's ref-effect hash from the parts table.
+            const refHashByPart = new Map<number, number>();
+            let fallbackHash = 0;
             for (let i = 0; i < ssab.partsLength(); i++) {
                 const part = ssab.parts(i);
-                if (!part) continue;
-                if (part.partTypeType() === PartType.PartTypeEffect) {
+                if (part && part.partTypeType() === PartType.PartTypeEffect) {
                     const effectPart = part.partType(new PartTypeEffect());
                     if (effectPart) {
-                        const refHash = effectPart.refEffectNameHash();
-                        // simple seed logic similar to SpriteStudio standard
-                        const seed = (i >>> 0) ^ (refHash >>> 0); 
-                        try {
-                            const slot = SSRuntimeEffectSlot.create(this.resource.raw, refHash, seed);
-                            this.effectSlots.set(i, { slot, visible: false });
-                            effectCount++;
-                        } catch (e) {
-                            console.error(`Failed to create EffectSlot for part ${i}`, e);
-                        }
+                        const h = effectPart.refEffectNameHash() >>> 0;
+                        refHashByPart.set(i, h);
+                        fallbackHash = h;
                     }
                 }
             }
-            console.log(`[SSRuntimeManager] setupAnimation: created ${effectCount} EffectSlots`);
+            // Single-effect assets: fall back to the lone effect definition's hash.
+            if (fallbackHash === 0 && ssab.effectsLength() > 0) {
+                fallbackHash = (ssab.effects(0)?.nameHash() ?? 0) >>> 0;
+            }
+
+            // Authoritative enumeration: the runtime emits a DrawBatchKind.Effect
+            // batch for every effect part. Union it with the parts-table scan so
+            // we never miss a part the table walk under-reported.
+            const effectParts = new Set<number>(refHashByPart.keys());
+            const fd = this.getFrameData(this.context.get_start_frame());
+            const drawOrder = fd?.drawOrderArray();
+            if (fd && drawOrder) {
+                for (let b = 0; b < fd.drawBatchesLength(); b++) {
+                    const batch = fd.drawBatches(b);
+                    if (batch && batch.kind() === DrawBatchKind.Effect) {
+                        const start = batch.startRank();
+                        for (let c = 0; c < batch.count(); c++) effectParts.add(drawOrder[start + c]);
+                    }
+                }
+            }
+
+            for (const idx of effectParts) {
+                const hash = refHashByPart.get(idx) ?? fallbackHash;
+                if (!hash) continue;
+                // simple seed logic similar to SpriteStudio standard
+                const seed = (idx >>> 0) ^ (hash >>> 0);
+                try {
+                    const slot = SSRuntimeEffectSlot.create(this.resource.raw, hash, seed);
+                    this.effectSlots.set(idx, { slot, visible: false });
+                } catch (e) {
+                    console.error(`Failed to create EffectSlot for part ${idx}`, e);
+                }
+            }
         } catch (e) {
             console.warn("Failed to parse SSAB for Effect parts setup.", e);
         }
-
-        this.currentAnimationFps = this.context.get_fps();
     }
 
 
-    public update(delta: number) {
-        // Assume delta is in seconds if it's very small (< 1.0)
-        // If delta is around 16.66 (milliseconds), convert to seconds.
-        const deltaSeconds = delta > 1.0 ? delta / 1000.0 : delta;
+    public update(deltaMs: number) {
+        // The runtime's playback controller measures time in milliseconds
+        // (update_interval = 1000 / fps), so the raw delta is passed straight
+        // through. Effect slots, however, simulate in seconds
+        // (delta_frames = delta_seconds * fps), so they get the converted value.
+        this.context.update(deltaMs);
+        this.stepEffectSlots(deltaMs / 1000.0, this.context.is_looped());
+    }
 
-        this.context.update(deltaSeconds);
+    /**
+     * Jump the playhead and re-evaluate effects for that frame, mirroring the
+     * Godot player's `_seek_and_redraw(frame, delta=0, parent_looped=false)`.
+     * Effect slots are otherwise only advanced during playback `update()`, so
+     * without this a seek would leave particles frozen at their last frame.
+     * delta_seconds = 0 means dependent effects snap deterministically to the
+     * seeked frame, while the independent real-time clock does not advance
+     * (independent effects cannot be seeked — see docs/00_limitations).
+     */
+    public seekTo(frame: number) {
+        this.context.set_frame_no(frame);
+        this.stepEffectSlots(0, false);
+    }
 
-        if (this.effectSlots.size > 0) {
-            const frame = this.context.get_frame_no();
-            const isLooped = this.context.is_looped();
+    private stepEffectSlots(deltaSeconds: number, parentLooped: boolean) {
+        if (this.effectSlots.size === 0) return;
 
-            for (const [partIndex, item] of this.effectSlots.entries()) {
-                const ev = this.context.get_active_effect_event(partIndex);
-                if (ev) {
-                    // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
-                    item.visible = item.slot.step(ev, frame, deltaSeconds, this.currentAnimationFps, isLooped, true, 2);
-                    if ((ev as any).free) (ev as any).free();
-                } else {
-                    item.visible = false;
-                }
+        const frame = this.context.get_frame_no();
+        for (const [partIndex, item] of this.effectSlots.entries()) {
+            const ev = this.context.get_active_effect_event(partIndex);
+            if (ev) {
+                // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
+                item.visible = item.slot.step(ev, frame, deltaSeconds, this.currentAnimationFps, parentLooped, true, 2);
+                if ((ev as any).free) (ev as any).free();
+            } else {
+                item.visible = false;
             }
         }
     }
@@ -258,8 +300,17 @@ export class SSRuntimeManager {
 
     public getFrameData(frame: number): FrameData | null {
         try {
-            const ptr = this.context.get_frame_data_buf(frame);
-            const len = this.context.get_frame_data_len(frame);
+            // Subframe playback advances the playhead continuously, so at the
+            // end/loop boundary get_frame_no() briefly returns a value in
+            // (end_frame, end_frame + 1). The runtime only accepts
+            // [start_frame, end_frame] and otherwise errors with InvalidParameter,
+            // which would blank the whole frame. Clamp the boundary overshoot to
+            // the last real frame; in-range subframe values pass through unchanged.
+            const start = this.context.get_start_frame();
+            const end = this.context.get_end_frame();
+            const clamped = frame < start ? start : (frame > end ? end : frame);
+            const ptr = this.context.get_frame_data_buf(clamped);
+            const len = this.context.get_frame_data_len(clamped);
             if (ptr === 0 || len === 0) return null;
             
             const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
@@ -285,8 +336,8 @@ export class SSRuntimeManager {
 
     public destroy() {
         if (this.context) {
-            this.effectSlots.forEach(slot => {
-                if ((slot as any).free) (slot as any).free();
+            this.effectSlots.forEach(item => {
+                try { (item.slot as any)?.free?.(); } catch { /* ignore */ }
             });
             this.effectSlots.clear();
 

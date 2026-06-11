@@ -145,7 +145,9 @@ export class DirectInternalPlayer {
      */
     public update(deltaMs: number) {
         if (!this.isPlaying || this.isPausing) return;
-        this.runtimeManager.context.update(deltaMs);
+        // Delegate to the manager so animation playback AND effect-slot
+        // simulation advance together (slots are stepped inside update()).
+        this.runtimeManager.update(deltaMs);
     }
 
     /**
@@ -181,7 +183,9 @@ export class DirectInternalPlayer {
     }
 
     public setFrame(frame: number) {
-        this.runtimeManager.context.set_frame_no(frame);
+        // Re-evaluates effect slots for the seeked frame (matches Godot's
+        // seek-and-redraw); a plain set_frame_no would freeze particles.
+        this.runtimeManager.seekTo(frame);
     }
 
     public getFrame(): number {

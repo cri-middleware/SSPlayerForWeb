@@ -1,6 +1,8 @@
 import { SSRuntimeManager } from './SSRuntimeManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { BlendType } from './ss/format/blend-type.js';
+import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
+import { EffectDrawCommand } from './ss/runtime/effect-draw-command.js';
 
 /**
  * Encapsulates purely mathematical geometry operations:
@@ -324,6 +326,70 @@ export class GeometryBuilder {
         }
         for (let j = 0; j < iCount; j++) {
             outIndices[j] = meshIdx[i0 + j];
+        }
+    }
+
+    /**
+     * Builds geometry for a single Effect draw command (one emitter group of
+     * particle quads) out of an EffectDrawPlan.
+     *
+     * The plan's flat verts/uvs/colors/indices arrays are sliced by the
+     * command's particleOffset/quadCount. Particle vertices are produced by the
+     * WASM runtime in the effect's local space (y-flip already applied), so the
+     * effect part's world matrix is baked in here, matching buildNormal/
+     * buildShape/buildMesh. UVs and colors are emitted normalized (0..1) by the
+     * runtime and copied through unchanged. Indices are command-local 0-based,
+     * so they map directly onto the per-command output buffer.
+     */
+    public buildEffectCommand(
+        partIdx: number,
+        plan: EffectDrawPlan,
+        cmd: EffectDrawCommand,
+        outPositions: Float32Array,
+        outUvs: Float32Array,
+        outColors: Float32Array,
+        outIndices: Uint32Array | Uint16Array
+    ): void {
+        const planVerts = plan.vertsArray();
+        const planUvs = plan.uvsArray();
+        const planColors = plan.colorsArray();
+        const planIndices = plan.indicesArray();
+        if (!planVerts || !planUvs || !planColors || !planIndices) return;
+
+        const matrices = this.runtimeManager.getWorldMatrices();
+        const mOff = partIdx * 16;
+        const m00 = matrices[mOff + 0];
+        const m10 = matrices[mOff + 1];
+        const m01 = matrices[mOff + 4];
+        const m11 = matrices[mOff + 5];
+        const tx  = matrices[mOff + 12];
+        const ty  = matrices[mOff + 13];
+
+        const stride = plan.vertStride() === 3 ? 3 : 2;
+        const quadCount = cmd.quadCount();
+        const vBase = cmd.particleOffset() * 4; // first vertex (quad-offset * 4 verts)
+        const iBase = cmd.particleOffset() * 6; // first index (quad-offset * 6 indices)
+        const pCount = quadCount * 4;
+        const iCount = quadCount * 6;
+
+        for (let v = 0; v < pCount; v++) {
+            const gv = vBase + v;
+            const vx = planVerts[gv * stride + 0];
+            const vy = planVerts[gv * stride + 1];
+            outPositions[v * 2 + 0] = m00 * vx + m01 * vy + tx;
+            outPositions[v * 2 + 1] = m10 * vx + m11 * vy + ty;
+
+            outUvs[v * 2 + 0] = planUvs[gv * 2 + 0];
+            outUvs[v * 2 + 1] = planUvs[gv * 2 + 1];
+
+            outColors[v * 4 + 0] = planColors[gv * 4 + 0];
+            outColors[v * 4 + 1] = planColors[gv * 4 + 1];
+            outColors[v * 4 + 2] = planColors[gv * 4 + 2];
+            outColors[v * 4 + 3] = planColors[gv * 4 + 3];
+        }
+
+        for (let k = 0; k < iCount; k++) {
+            outIndices[k] = planIndices[iBase + k];
         }
     }
 }
