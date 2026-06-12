@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
@@ -213,36 +213,87 @@ export class SSPlayer extends Container {
         const frameData = this.internalPlayer.runtimeManager.getFrameData(frameNo);
         if (!frameData) return;
 
-        this.internalPlayer.geometryBuilder.updateWorldPositions();
-
-        const drawOrder = frameData.drawOrderArray();
-        if (!drawOrder) return;
-        
         for (let i = 0; i < this.meshPool.length; i++) {
             this.meshPool[i].visible = false;
         }
-        
+
         this.activeMeshes = 0;
         this.removeChildren();
         this.addChild(this.debugText);
-        
+
+        // The root animation renders with no parent transform and full alpha;
+        // instance-part children recurse through here with their accumulated
+        // transform and alpha.
+        this.renderContext(
+            this.internalPlayer.runtimeManager,
+            this.internalPlayer.geometryBuilder,
+            frameData,
+            null,
+            1.0
+        );
+    }
+
+    /**
+     * Render one runtime context (the root, or an instance-part child) into the
+     * shared mesh pool. `parentMatrix` (a 2D affine, or null at the root) places
+     * the context under its parent instance part, and `parentAlpha` folds the
+     * parent chain's opacity into every emitted mesh. Instance batches recurse,
+     * composing the instance part's world matrix and alpha as they descend.
+     */
+    private renderContext(
+        manager: SSRuntimeManager,
+        geometryBuilder: GeometryBuilder,
+        frameData: FrameData,
+        parentMatrix: Float32Array | null,
+        parentAlpha: number
+    ) {
+        geometryBuilder.parentMatrix = parentMatrix;
+        geometryBuilder.updateWorldPositions();
+
+        const drawOrder = frameData.drawOrderArray();
+        if (!drawOrder) return;
+
         const drawBatchesLength = frameData.drawBatchesLength();
         for (let i = 0; i < drawBatchesLength; i++) {
             const batch = frameData.drawBatches(i);
             if (!batch) continue;
-            
+
             const kind = batch.kind();
-            if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect) continue;
-            
+            if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect && kind !== DrawBatchKind.Instance) continue;
+
+            const startRank = batch.startRank();
+            const count = batch.count();
+            if (count === 0) continue;
+
+            // Instance batches carry no texture/blend of their own — each is a
+            // single instance part whose referenced animation is rendered here
+            // by recursing into its child context.
+            if (kind === DrawBatchKind.Instance) {
+                for (let c = 0; c < count; c++) {
+                    const partIdx = drawOrder[startRank + c];
+                    const partState = frameData.parts(partIdx);
+                    const alpha = partState ? partState.alpha() : 1.0;
+                    if (alpha <= 0) continue;
+
+                    const child = manager.getInstanceChild(partIdx);
+                    if (!child || !child.visible) continue;
+
+                    const childFrame = child.manager.context.get_frame_no();
+                    const childFrameData = child.manager.getFrameData(childFrame);
+                    if (!childFrameData) continue;
+
+                    const instMat = manager.getWorldMatrix2D(partIdx);
+                    const composed = GeometryBuilder.composeAffine(parentMatrix, instMat);
+                    this.renderContext(child.manager, child.geometryBuilder, childFrameData, composed, parentAlpha * alpha);
+                }
+                continue;
+            }
+
             const textureHash = batch.textureHash();
             // Effect batches (and root/null parts) carry textureHash 0; their real
             // texture is resolved per draw command, so avoid the missing-asset warning.
             const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE) : Texture.WHITE;
-            
-            const startRank = batch.startRank();
-            const count = batch.count();
-            if (count === 0) continue;
-            
+
             let blendMode: any = 'normal';
             switch (batch.blendType()) {
                 case BlendType.Mix: blendMode = 'normal'; break;
@@ -272,7 +323,7 @@ export class SSPlayer extends Container {
                     const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
                     const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
                     
-                    this.internalPlayer.geometryBuilder.buildNormal(
+                    geometryBuilder.buildNormal(
                         partIdx, frameData, invTexW, invTexH,
                         positions, uvs, colors, vargs
                     );
@@ -283,12 +334,12 @@ export class SSPlayer extends Container {
                     
                     mesh.shader = batchShader as any;
                     mesh.blendMode = blendMode;
-                    mesh.alpha = alpha;
+                    mesh.alpha = alpha * parentAlpha;
                     mesh.visible = true;
                     this.addChild(mesh);
                 }
             } else if (kind === DrawBatchKind.Shape) {
-                const shapeVertexCounts = this.internalPlayer.runtimeManager.getShapeVertexCounts();
+                const shapeVertexCounts = manager.getShapeVertexCounts();
                 
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
@@ -309,7 +360,7 @@ export class SSPlayer extends Container {
                     const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
                     const indices = mesh.geometry.getIndex().data as Uint32Array;
 
-                    this.internalPlayer.geometryBuilder.buildShape(
+                    geometryBuilder.buildShape(
                         partIdx, frameData, numVerts, invTexW, invTexH,
                         positions, uvs, colors, vargs, indices
                     );
@@ -322,13 +373,13 @@ export class SSPlayer extends Container {
                     
                     mesh.shader = batchShader as any;
                     mesh.blendMode = blendMode;
-                    mesh.alpha = alpha;
+                    mesh.alpha = alpha * parentAlpha;
                     mesh.visible = true;
                     this.addChild(mesh);
                 }
             } else if (kind === DrawBatchKind.Mesh) {
-                const meshVOff = this.internalPlayer.runtimeManager.getMeshVertexOffsets();
-                const meshIOff = this.internalPlayer.runtimeManager.getMeshIndexOffsets();
+                const meshVOff = manager.getMeshVertexOffsets();
+                const meshIOff = manager.getMeshIndexOffsets();
 
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
@@ -354,7 +405,7 @@ export class SSPlayer extends Container {
                     const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
                     const indices = mesh.geometry.getIndex().data as Uint32Array;
 
-                    this.internalPlayer.geometryBuilder.buildMesh(
+                    geometryBuilder.buildMesh(
                         partIdx, frameData, pCount, iCount, invTexW, invTexH,
                         positions, uvs, colors, vargs, indices
                     );
@@ -366,7 +417,7 @@ export class SSPlayer extends Container {
                     
                     mesh.shader = batchShader as any;
                     mesh.blendMode = blendMode;
-                    mesh.alpha = alpha;
+                    mesh.alpha = alpha * parentAlpha;
                     mesh.visible = true;
                     this.addChild(mesh);
                 }
@@ -382,7 +433,7 @@ export class SSPlayer extends Container {
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
-                    const plan = this.internalPlayer.runtimeManager.getEffectDrawPlan(partIdx);
+                    const plan = manager.getEffectDrawPlan(partIdx);
                     if (!plan) continue;
 
                     const cmdCount = plan.commandsLength();
@@ -404,7 +455,7 @@ export class SSPlayer extends Container {
                         const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
                         const indices = mesh.geometry.getIndex().data as Uint32Array;
 
-                        this.internalPlayer.geometryBuilder.buildEffectCommand(
+                        geometryBuilder.buildEffectCommand(
                             partIdx, plan, cmd, positions, uvs, colors, indices
                         );
 
@@ -417,7 +468,7 @@ export class SSPlayer extends Container {
                         mesh.shader = this.getEffectShader(effectTex) as any;
                         // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
                         mesh.blendMode = cmd.blend() === 1 ? 'add' : 'normal';
-                        mesh.alpha = alpha;
+                        mesh.alpha = alpha * parentAlpha;
                         mesh.visible = true;
                         this.addChild(mesh);
                     }

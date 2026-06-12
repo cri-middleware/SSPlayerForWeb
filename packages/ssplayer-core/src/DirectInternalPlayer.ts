@@ -17,6 +17,8 @@ export class DirectInternalPlayer {
     private _textureBaseUrl: string = '';
     private _texturePaths: { hash: number, path: string }[] = [];
     private _ssabResource: SSABResource | null = null;
+    private _ssabBuffer: Uint8Array | null = null;
+    private _instancePackResources: Map<number, SSABResource> = new Map();
     private _animationName: string = '';
     public geometryBuilder: GeometryBuilder;
     public subFrameEnabled: boolean = false;
@@ -64,6 +66,7 @@ export class DirectInternalPlayer {
             this._ssabResource.destroy();
         }
         this._ssabResource = new SSABResource(buffer);
+        this._ssabBuffer = buffer;
         this.runtimeManager.bindResource(this._ssabResource);
         this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer.buffer as ArrayBuffer);
     }
@@ -95,8 +98,76 @@ export class DirectInternalPlayer {
      */
     public async setAnimation(animationName: string, textureBaseUrl?: string) {
         await this.loadTextures(textureBaseUrl);
+        await this.loadInstancePacks(textureBaseUrl);
+        this.runtimeManager.setInstancePackResources(this._instancePackResources);
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
+    }
+
+    /**
+     * Resolve and load every animation pack referenced by `PartType::Instance`
+     * parts, transitively. Referenced packs are fetched as sibling `.ssab`
+     * files (`<textureBaseUrl>/<packName>.ssab`) and their textures are loaded
+     * into the shared (hash-keyed) ResourceManager cache so instanced
+     * sub-animations resolve their cells. The parent pack is registered under
+     * its own hash so same-pack references reuse the already-bound resource.
+     * Resulting resources are stored in `_instancePackResources` and handed to
+     * the runtime manager, which creates the child contexts on `setupAnimation`.
+     */
+    private async loadInstancePacks(textureBaseUrl?: string): Promise<void> {
+        // Release previously loaded external packs (parent stays in _ssabResource).
+        for (const res of this._instancePackResources.values()) {
+            if (res !== this._ssabResource) {
+                try { res.destroy(); } catch { /* ignore */ }
+            }
+        }
+        this._instancePackResources.clear();
+
+        if (!this._ssabBuffer || !this._ssabResource) return;
+
+        const base = textureBaseUrl || this._textureBaseUrl;
+        const prefix = base && !base.endsWith('/') ? base + '/' : base;
+
+        // Register the parent pack under its own hash for same-pack references.
+        const parentInfo = SSRuntimeManager.extractPackInfo(this._ssabBuffer.buffer as ArrayBuffer);
+        this._instancePackResources.set(parentInfo.hash, this._ssabResource);
+
+        // Breadth-first transitive closure over referenced instance packs.
+        const queue = SSRuntimeManager.extractInstancePackRefs(this._ssabBuffer.buffer as ArrayBuffer);
+        const seen = new Set<number>([parentInfo.hash]);
+
+        while (queue.length > 0) {
+            const ref = queue.shift()!;
+            if (this._instancePackResources.has(ref.hash) || seen.has(ref.hash)) continue;
+            seen.add(ref.hash);
+
+            try {
+                const url = prefix + ref.name + '.ssab';
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.warn(`Failed to load instance pack "${ref.name}" from ${url}: ${response.statusText}`);
+                    continue;
+                }
+                const buf = new Uint8Array(await response.arrayBuffer());
+                const resource = new SSABResource(buf);
+                this._instancePackResources.set(ref.hash, resource);
+
+                // Load the referenced pack's textures into the shared cache.
+                if (this._resourceManager) {
+                    const texPaths = SSRuntimeManager.extractTexturePaths(buf.buffer as ArrayBuffer);
+                    await Promise.all(texPaths.map(info => this._resourceManager!.loadTexture(prefix + info.path, info.hash)));
+                }
+
+                // Enqueue packs referenced by this pack (nested instances).
+                for (const nested of SSRuntimeManager.extractInstancePackRefs(buf.buffer as ArrayBuffer)) {
+                    if (!this._instancePackResources.has(nested.hash) && !seen.has(nested.hash)) {
+                        queue.push(nested);
+                    }
+                }
+            } catch (e) {
+                console.error(`Error loading instance pack "${ref.name}"`, e);
+            }
+        }
     }
 
     /**
@@ -253,10 +324,21 @@ export class DirectInternalPlayer {
      * Frees the allocated memory.
      */
     public destroy() {
+        // Free child instance contexts first (they reference the pack resources).
+        this.runtimeManager.destroy();
+
+        // Release external instance pack resources (the parent is freed below).
+        for (const res of this._instancePackResources.values()) {
+            if (res !== this._ssabResource) {
+                try { res.destroy(); } catch { /* ignore */ }
+            }
+        }
+        this._instancePackResources.clear();
+
         if (this._ssabResource) {
             this._ssabResource.destroy();
             this._ssabResource = null;
         }
-        this.runtimeManager.destroy();
+        this._ssabBuffer = null;
     }
 }

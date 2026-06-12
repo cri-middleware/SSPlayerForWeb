@@ -1,4 +1,4 @@
-import { SSRuntimeManager } from './SSRuntimeManager.js';
+import type { SSRuntimeManager } from './SSRuntimeManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { BlendType } from './ss/format/blend-type.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
@@ -15,8 +15,38 @@ export class GeometryBuilder {
     private runtimeManager: SSRuntimeManager;
     private worldPositions: Float32Array = new Float32Array(0);
 
+    /**
+     * Optional parent 2D-affine applied to every emitted world position, packed
+     * as [m00, m01, m10, m11, tx, ty]. Used when this builder renders an
+     * instance-part child animation: the child computes its geometry in its own
+     * local space, and this matrix (the parent instance part's world transform,
+     * accumulated through any nesting) places it under the parent. `null` = the
+     * builder renders a root animation and emits world positions unchanged.
+     */
+    public parentMatrix: Float32Array | null = null;
+
     constructor(runtimeManager: SSRuntimeManager) {
         this.runtimeManager = runtimeManager;
+    }
+
+    /**
+     * Compose two 2D affines (each [m00, m01, m10, m11, tx, ty]) so the result
+     * applied to a point equals `parent(child(point))`. Returns `child`
+     * unchanged when `parent` is null (the identity case), so a root render
+     * incurs no allocation.
+     */
+    public static composeAffine(parent: Float32Array | null, child: Float32Array, out?: Float32Array): Float32Array {
+        if (!parent) return child;
+        const r = out ?? new Float32Array(6);
+        const p00 = parent[0], p01 = parent[1], p10 = parent[2], p11 = parent[3], ptx = parent[4], pty = parent[5];
+        const c00 = child[0], c01 = child[1], c10 = child[2], c11 = child[3], ctx = child[4], cty = child[5];
+        r[0] = p00 * c00 + p01 * c10;
+        r[1] = p00 * c01 + p01 * c11;
+        r[2] = p10 * c00 + p11 * c10;
+        r[3] = p10 * c01 + p11 * c11;
+        r[4] = p00 * ctx + p01 * cty + ptx;
+        r[5] = p10 * ctx + p11 * cty + pty;
+        return r;
     }
 
     /**
@@ -109,9 +139,17 @@ export class GeometryBuilder {
             ];
         }
 
+        const pm = this.parentMatrix;
         for (let j = 0; j < 5; j++) {
-            outPositions[j * 2] = this.worldPositions[srcBase + j * 2];
-            outPositions[j * 2 + 1] = this.worldPositions[srcBase + j * 2 + 1];
+            const wx = this.worldPositions[srcBase + j * 2];
+            const wy = this.worldPositions[srcBase + j * 2 + 1];
+            if (pm) {
+                outPositions[j * 2] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[j * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+            } else {
+                outPositions[j * 2] = wx;
+                outPositions[j * 2 + 1] = wy;
+            }
             outUvs[j * 2] = uvData[srcBase + j * 2] * invTexW;
             outUvs[j * 2 + 1] = uvData[srcBase + j * 2 + 1] * invTexH;
             
@@ -188,6 +226,7 @@ export class GeometryBuilder {
         const m11 = matrices[mOff + 5];
         const tx  = matrices[mOff + 12];
         const ty  = matrices[mOff + 13];
+        const pm = this.parentMatrix;
 
         for (let v = 0; v < numVerts; v++) {
             const vx = shapeVertices[srcBase + v * 2 + 0];
@@ -218,9 +257,16 @@ export class GeometryBuilder {
             const bottomRate = lbRate + (rbRate - lbRate) * fx;
             const mixRate = topRate + (bottomRate - topRate) * fy;
 
-            outPositions[v * 2 + 0] = m00 * vx + m01 * vy + tx;
-            outPositions[v * 2 + 1] = m10 * vx + m11 * vy + ty;
-            
+            const wx = m00 * vx + m01 * vy + tx;
+            const wy = m10 * vx + m11 * vy + ty;
+            if (pm) {
+                outPositions[v * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[v * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+            } else {
+                outPositions[v * 2 + 0] = wx;
+                outPositions[v * 2 + 1] = wy;
+            }
+
             if (partState && partState.cell() >= 0) {
                 const uvBase = partIdx * 10;
                 const tlU = uvData[uvBase + 2]; const tlV = uvData[uvBase + 3];
@@ -304,9 +350,17 @@ export class GeometryBuilder {
             }
         }
 
+        const pm = this.parentMatrix;
         for (let v = 0; v < pCount; v++) {
-            outPositions[v * 2] = meshVx[v0 + v];
-            outPositions[v * 2 + 1] = meshVy[v0 + v];
+            const wx = meshVx[v0 + v];
+            const wy = meshVy[v0 + v];
+            if (pm) {
+                outPositions[v * 2] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[v * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+            } else {
+                outPositions[v * 2] = wx;
+                outPositions[v * 2 + 1] = wy;
+            }
             outUvs[v * 2] = meshUv[(v0 + v) * 2] * invTexW;
             outUvs[v * 2 + 1] = meshUv[(v0 + v) * 2 + 1] * invTexH;
             
@@ -371,13 +425,21 @@ export class GeometryBuilder {
         const iBase = cmd.particleOffset() * 6; // first index (quad-offset * 6 indices)
         const pCount = quadCount * 4;
         const iCount = quadCount * 6;
+        const pm = this.parentMatrix;
 
         for (let v = 0; v < pCount; v++) {
             const gv = vBase + v;
             const vx = planVerts[gv * stride + 0];
             const vy = planVerts[gv * stride + 1];
-            outPositions[v * 2 + 0] = m00 * vx + m01 * vy + tx;
-            outPositions[v * 2 + 1] = m10 * vx + m11 * vy + ty;
+            const wx = m00 * vx + m01 * vy + tx;
+            const wy = m10 * vx + m11 * vy + ty;
+            if (pm) {
+                outPositions[v * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[v * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+            } else {
+                outPositions[v * 2 + 0] = wx;
+                outPositions[v * 2 + 1] = wy;
+            }
 
             outUvs[v * 2 + 0] = planUvs[gv * 2 + 0];
             outUvs[v * 2 + 1] = planUvs[gv * 2 + 1];
