@@ -15,6 +15,7 @@
   "type": "module",
   "dependencies": {
     "@spritestudio/ssplayer-pixi": "workspace:*",
+    "flatbuffers": "^25.9.23",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {

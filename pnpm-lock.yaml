@@ -23,6 +23,9 @@ importers:
       '@spritestudio/ssplayer-pixi':
         specifier: workspace:*
         version: link:../../packages/ssplayer-pixi
+      flatbuffers:
+        specifier: ^25.9.23
+        version: 25.9.23
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0

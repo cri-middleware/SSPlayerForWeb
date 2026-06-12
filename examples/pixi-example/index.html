@@ -94,12 +94,100 @@
             font-size: 14px;
             font-weight: 600;
         }
+
+        #ssab-select, #animation-select {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px;
+            font-family: inherit;
+            outline: none;
+            max-width: 150px;
+        }
+
+        #drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 600;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #drop-zone.active {
+            opacity: 1;
+        }
+
+        #toast-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .toast {
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 250px;
+            max-width: 400px;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            border-left: 4px solid #f87171;
+        }
+
+        .toast.warning {
+            border-left: 4px solid #fbbf24;
+        }
+
+        .toast.info {
+            border-left: 4px solid #60a5fa;
+        }
+
+        .toast.success {
+            border-left: 4px solid #34d399;
+        }
     </style>
 </head>
 <body>
     <div id="canvas-container">
+        <div id="drop-zone">Drop a directory containing .ssab and .png files</div>
         <!-- Canvas will be injected here -->
         <div id="controls">
+            <select id="ssab-select" style="display: none;">
+            </select>
+            <select id="animation-select">
+                <option value="run">run</option>
+            </select>
             <button id="btn-play-pause">Pause</button>
             
             <div class="control-group">
@@ -107,7 +195,12 @@
                 <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1">
             </div>
             
-            <div id="frame-display">0 / 0</div>
+            <div id="frame-display">0.0 / 0</div>
+
+            <div class="control-group">
+                <label for="subframe-check">Subframe</label>
+                <input type="checkbox" id="subframe-check" checked>
+            </div>
 
             <div class="control-group">
                 <label for="speed-bar">Speed: <span id="speed-display">1.0</span>x</label>
@@ -115,6 +208,10 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
