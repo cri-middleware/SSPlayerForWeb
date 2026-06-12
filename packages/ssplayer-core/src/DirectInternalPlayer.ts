@@ -3,6 +3,16 @@ import { IResourceManager } from './IResourceManager.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
 
 /**
+ * Host-supplied resolver for instance-referenced animation packs. Given the
+ * referenced pack's name and name-hash, returns the pack's raw SSAB bytes, or
+ * null/undefined to fall back to fetching `<base>/<name>.ssab`. Use this when
+ * packs are not URL-addressable (e.g. drag-and-drop / in-memory bundles); the
+ * host is then also responsible for loading those packs' textures (by cell-map
+ * hash) into the shared ResourceManager before `setAnimation`.
+ */
+export type InstancePackProvider = (name: string, hash: number) => Uint8Array | null | undefined | Promise<Uint8Array | null | undefined>;
+
+/**
  * Generic DirectInternalPlayer
  * Encapsulates the engine-independent playback logic (play, pause, stop, update, etc.)
  * and manages the SSRuntimeManager.
@@ -19,6 +29,7 @@ export class DirectInternalPlayer {
     private _ssabResource: SSABResource | null = null;
     private _ssabBuffer: Uint8Array | null = null;
     private _instancePackResources: Map<number, SSABResource> = new Map();
+    private _instancePackProvider: InstancePackProvider | null = null;
     private _animationName: string = '';
     public geometryBuilder: GeometryBuilder;
     public subFrameEnabled: boolean = false;
@@ -33,6 +44,17 @@ export class DirectInternalPlayer {
 
     public setResourceManager(resourceManager: IResourceManager) {
         this._resourceManager = resourceManager;
+    }
+
+    /**
+     * Supply a resolver for instance-referenced packs that aren't fetchable by
+     * `<base>/<name>.ssab` (e.g. drag-and-drop). Called by `loadInstancePacks`
+     * before falling back to fetch. When a pack is served this way the host
+     * must also register that pack's textures (by cell-map hash) into the
+     * ResourceManager beforehand, since the core won't fetch them.
+     */
+    public setInstancePackProvider(provider: InstancePackProvider | null) {
+        this._instancePackProvider = provider;
     }
 
     public get resourceManager(): IResourceManager | null {
@@ -142,18 +164,34 @@ export class DirectInternalPlayer {
             seen.add(ref.hash);
 
             try {
-                const url = prefix + ref.name + '.ssab';
-                const response = await fetch(url);
-                if (!response.ok) {
-                    console.warn(`Failed to load instance pack "${ref.name}" from ${url}: ${response.statusText}`);
-                    continue;
+                // Prefer a host-supplied provider (e.g. drag-and-drop bytes);
+                // fall back to fetching a sibling `<base>/<name>.ssab`.
+                let buf: Uint8Array | null = null;
+                let fromProvider = false;
+                if (this._instancePackProvider) {
+                    const provided = await this._instancePackProvider(ref.name, ref.hash);
+                    if (provided) {
+                        buf = provided;
+                        fromProvider = true;
+                    }
                 }
-                const buf = new Uint8Array(await response.arrayBuffer());
+                if (!buf) {
+                    const url = prefix + ref.name + '.ssab';
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        console.warn(`Failed to load instance pack "${ref.name}" from ${url}: ${response.statusText}`);
+                        continue;
+                    }
+                    buf = new Uint8Array(await response.arrayBuffer());
+                }
+
                 const resource = new SSABResource(buf);
                 this._instancePackResources.set(ref.hash, resource);
 
-                // Load the referenced pack's textures into the shared cache.
-                if (this._resourceManager) {
+                // Fetch the referenced pack's textures into the shared cache.
+                // Provider packs aren't URL-addressable, so their textures are
+                // the host's responsibility (registered before setAnimation).
+                if (!fromProvider && this._resourceManager) {
                     const texPaths = SSRuntimeManager.extractTexturePaths(buf.buffer as ArrayBuffer);
                     await Promise.all(texPaths.map(info => this._resourceManager!.loadTexture(prefix + info.path, info.hash)));
                 }
@@ -334,6 +372,7 @@ export class DirectInternalPlayer {
             }
         }
         this._instancePackResources.clear();
+        this._instancePackProvider = null;
 
         if (this._ssabResource) {
             this._ssabResource.destroy();
