@@ -21,13 +21,14 @@ export const EffectShader = {
     in vec4 aVarg;
 
     uniform mat3 uProjectionMatrix;
+    uniform mat3 uWorldTransformMatrix;
     uniform mat3 uTransformMatrix;
 
     out vec2 vUV;
     out vec4 vColor;
 
     void main() {
-        gl_Position = vec4((uProjectionMatrix * uTransformMatrix * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
+        gl_Position = vec4((uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
         vUV = aUV;
         vColor = aColor;
     }
@@ -80,7 +81,7 @@ struct VertexOutput {
 @vertex
 fn mainVert(in: VertexInput) -> VertexOutput {
   var out: VertexOutput;
-  let pos = globalUniforms.uProjectionMatrix * localUniforms.uTransformMatrix * vec3<f32>(in.aPosition, 1.0);
+  let pos = globalUniforms.uProjectionMatrix * globalUniforms.uWorldTransformMatrix * localUniforms.uTransformMatrix * vec3<f32>(in.aPosition, 1.0);
   out.position = vec4<f32>(pos.xy, 0.0, 1.0);
   out.vUV = in.aUV;
   out.vColor = in.aColor;

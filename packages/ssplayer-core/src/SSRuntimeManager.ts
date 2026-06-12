@@ -94,6 +94,16 @@ export class SSRuntimeManager {
     private resource: SSABResource | null = null;
     private currentAnimationFps: number = 30;
 
+    /**
+     * Per-part static mask flags, packed one byte per part index (parallel to
+     * the SSAB parts table). Bits: 0x01 visibleInsideMask, 0x02 maskWrite,
+     * 0x04 maskInfluence, 0x08 drawAsMask. Cached once per animation from the
+     * SSAB `PartData` so the renderer can resolve mask polarity per part
+     * without re-parsing the FlatBuffer each frame. `null` until an animation
+     * is set up. See `getPartMaskFlags`.
+     */
+    private partMaskFlags: Uint8Array | null = null;
+
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
         this.context = new SSRuntimeContext();
@@ -140,12 +150,23 @@ export class SSRuntimeManager {
             const bb = new flatbuffers.ByteBuffer(buf);
             const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
 
-            // Collect each effect part's ref-effect hash from the parts table.
+            // Collect each effect part's ref-effect hash from the parts table,
+            // and cache the static mask flags for every part in the same walk
+            // (both are allocation-free reads over the borrowed SSAB view).
+            const partsLen = ssab.partsLength();
+            const maskFlags = new Uint8Array(partsLen);
             const refHashByPart = new Map<number, number>();
             let fallbackHash = 0;
-            for (let i = 0; i < ssab.partsLength(); i++) {
+            for (let i = 0; i < partsLen; i++) {
                 const part = ssab.parts(i);
-                if (part && part.partTypeType() === PartType.PartTypeEffect) {
+                if (!part) continue;
+                let mf = 0;
+                if (part.visibleInsideMask()) mf |= 0x01;
+                if (part.maskWrite()) mf |= 0x02;
+                if (part.maskInfluence()) mf |= 0x04;
+                if (part.drawAsMask()) mf |= 0x08;
+                maskFlags[i] = mf;
+                if (part.partTypeType() === PartType.PartTypeEffect) {
                     const effectPart = part.partType(new PartTypeEffect());
                     if (effectPart) {
                         const h = effectPart.refEffectNameHash() >>> 0;
@@ -154,6 +175,7 @@ export class SSRuntimeManager {
                     }
                 }
             }
+            this.partMaskFlags = maskFlags;
             // Single-effect assets: fall back to the lone effect definition's hash.
             if (fallbackHash === 0 && ssab.effectsLength() > 0) {
                 fallbackHash = (ssab.effects(0)?.nameHash() ?? 0) >>> 0;
@@ -363,6 +385,20 @@ export class SSRuntimeManager {
      */
     public getInstanceChild(partIndex: number): InstanceChild | undefined {
         return this.instanceSlots.get(partIndex);
+    }
+
+    /**
+     * Static per-part mask flags for the current animation (one byte per part
+     * index, parallel to the SSAB parts table), or `null` before setup. Bits:
+     * 0x01 visibleInsideMask, 0x02 maskWrite, 0x04 maskInfluence,
+     * 0x08 drawAsMask. The renderer reads `visibleInsideMask` to decide a
+     * masked part's clip polarity (show inside vs. outside the mask region);
+     * the runtime already encodes per-part mask participation in the draw
+     * batches (`DrawBatchKind.Mask` for contributors, `flags & 0x01` for
+     * masked content), so this is only needed for the polarity bit.
+     */
+    public getPartMaskFlags(): Uint8Array | null {
+        return this.partMaskFlags;
     }
 
     /**
