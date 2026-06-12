@@ -41,7 +41,9 @@ export class SSABResource {
 
     constructor(data: Uint8Array) {
         this.raw = new SSRuntimeResource(data);
-        finalizationRegistry.register(this, this.raw);
+        // 3rd arg is the unregister token; without it destroy()'s unregister(this)
+        // is a no-op and the GC finalizer would double-free the raw handle.
+        finalizationRegistry.register(this, this.raw, this);
     }
 
     public destroy() {
@@ -68,6 +70,13 @@ export interface InstanceChild {
     /** Child frame_no before the most recent step — feeds independent loop-edge detection. */
     prevChildFrame: number;
     visible: boolean;
+    /**
+     * Persistent scratch holding this child's accumulated parent transform
+     * (2D affine, [m00,m01,m10,m11,tx,ty]) for the current frame. Owned per
+     * child so the renderer can compose into it without per-frame allocation;
+     * stable for the duration of the child's (possibly nested) render.
+     */
+    parentMatrix: Float32Array;
 }
 
 export class SSRuntimeManager {
@@ -88,7 +97,9 @@ export class SSRuntimeManager {
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
         this.context = new SSRuntimeContext();
-        finalizationRegistry.register(this, this.context);
+        // 3rd arg is the unregister token (see SSABResource) — required so
+        // destroy()'s unregister(this) actually cancels the GC finalizer.
+        finalizationRegistry.register(this, this.context, this);
     }
 
     public bindResource(resource: SSABResource) {
@@ -245,6 +256,7 @@ export class SSRuntimeManager {
                     geometryBuilder,
                     prevChildFrame: childManager.context.get_frame_no(),
                     visible: false,
+                    parentMatrix: new Float32Array(6),
                 });
             } catch (e) {
                 console.error(`Failed to create instance child for part ${ref.partIndex} ("${ref.animeName}")`, e);

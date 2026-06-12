@@ -3,6 +3,10 @@ import { FrameData } from './ss/runtime/frame-data.js';
 import { BlendType } from './ss/format/blend-type.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
 import { EffectDrawCommand } from './ss/runtime/effect-draw-command.js';
+import { PartState } from './ss/runtime/part-state.js';
+import { PartAttributePartColor } from './ss/runtime/part-attribute-part-color.js';
+import { SsAttributePartColorKeyValueColor } from './ss/runtime/ss-attribute-part-color-key-value-color.js';
+import { U8Rect } from './ss/runtime/u8-rect.js';
 
 /**
  * Encapsulates purely mathematical geometry operations:
@@ -25,18 +29,55 @@ export class GeometryBuilder {
      */
     public parentMatrix: Float32Array | null = null;
 
+    // Reused per-build scratch so the render hot path allocates nothing. The
+    // FlatBuffers wrappers are re-positioned in place via their `obj` param;
+    // the typed arrays hold the resolved 4 corner colors + center (×rgba) and
+    // their rates. A single part is built at a time, so sharing is safe.
+    private readonly _ps = new PartState();
+    private readonly _pc = new PartAttributePartColor();
+    private readonly _corner = new SsAttributePartColorKeyValueColor();
+    private readonly _rgba = new U8Rect();
+    private readonly _cornerColors = new Float32Array(20); // [LT,RT,LB,RB,center] × [r,g,b,a]
+    private readonly _cornerRates = new Float32Array(5);
+
     constructor(runtimeManager: SSRuntimeManager) {
         this.runtimeManager = runtimeManager;
     }
 
     /**
+     * Read one PartsColor corner into `_cornerColors`/`_cornerRates` at the
+     * given corner index (0=LT,1=RT,2=LB,3=RB). Uses the shared scratch
+     * wrappers, so the caller must consume the values before reading the next
+     * corner. Mirrors the SS6 default of opaque white / rate 0 when absent.
+     */
+    private readCorner(cornerIdx: number, corner: SsAttributePartColorKeyValueColor | null): void {
+        const base = cornerIdx * 4;
+        const c = this._cornerColors;
+        const rgba = corner ? corner.rgba(this._rgba) : null;
+        if (rgba) {
+            c[base + 0] = rgba.r() / 255.0;
+            c[base + 1] = rgba.g() / 255.0;
+            c[base + 2] = rgba.b() / 255.0;
+            c[base + 3] = rgba.a() / 255.0;
+        } else {
+            c[base + 0] = 1; c[base + 1] = 1; c[base + 2] = 1; c[base + 3] = 1;
+        }
+        this._cornerRates[cornerIdx] = corner ? corner.rate() : 0;
+    }
+
+    /**
      * Compose two 2D affines (each [m00, m01, m10, m11, tx, ty]) so the result
-     * applied to a point equals `parent(child(point))`. Returns `child`
-     * unchanged when `parent` is null (the identity case), so a root render
-     * incurs no allocation.
+     * applied to a point equals `parent(child(point))`. When `parent` is null
+     * (the identity case) the result is just `child`: copied into `out` when
+     * provided (so callers can keep a stable per-child buffer), else returned
+     * directly with no allocation.
      */
     public static composeAffine(parent: Float32Array | null, child: Float32Array, out?: Float32Array): Float32Array {
-        if (!parent) return child;
+        if (!parent) {
+            if (!out) return child;
+            out.set(child);
+            return out;
+        }
         const r = out ?? new Float32Array(6);
         const p00 = parent[0], p01 = parent[1], p10 = parent[2], p11 = parent[3], ptx = parent[4], pty = parent[5];
         const c00 = child[0], c01 = child[1], c10 = child[2], c11 = child[3], ctx = child[4], cty = child[5];
@@ -97,7 +138,7 @@ export class GeometryBuilder {
         outCustom0: Float32Array
     ): void {
         const srcBase = partIdx * 10;
-        const partState = frameData.parts(partIdx);
+        const partState = frameData.parts(partIdx, this._ps);
         if (!partState) return;
 
         const uvPtr = this.runtimeManager.context.get_local_uvs_buf();
@@ -105,39 +146,31 @@ export class GeometryBuilder {
         if (!uvPtr || uvLen === 0) return;
         const uvData = this.runtimeManager.getFloat32Array(uvPtr, uvLen);
 
-        const pc = (partState.partColor() >= 0) ? frameData.partsColor(partState.partColor()) : null;
-        
-        let pc_rates = [1, 1, 1, 1, 1];
-        let pc_colors = [[1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1]];
+        const pcIdx = partState.partColor();
+        const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+
+        const colors = this._cornerColors;
+        const rates = this._cornerRates;
         let pc_blendType = BlendType.Mix;
-        let hasPc = false;
+        const hasPc = !!pc;
 
         if (pc) {
-            hasPc = true;
             pc_blendType = pc.blendType();
-            const lt = pc.lt(); const lt_rgba = lt?.rgba();
-            const rt = pc.rt(); const rt_rgba = rt?.rgba();
-            const lb = pc.lb(); const lb_rgba = lb?.rgba();
-            const rb = pc.rb(); const rb_rgba = rb?.rgba();
-            
-            pc_rates[0] = lt?.rate() || 0;
-            pc_rates[1] = rt?.rate() || 0;
-            pc_rates[2] = lb?.rate() || 0;
-            pc_rates[3] = rb?.rate() || 0;
-            pc_rates[4] = (pc_rates[0] + pc_rates[1] + pc_rates[2] + pc_rates[3]) / 4.0;
-            
-            const toColor = (rgba: any) => rgba ? [rgba.r()/255.0, rgba.g()/255.0, rgba.b()/255.0, rgba.a()/255.0] : [1,1,1,1];
-            pc_colors[0] = toColor(lt_rgba);
-            pc_colors[1] = toColor(rt_rgba);
-            pc_colors[2] = toColor(lb_rgba);
-            pc_colors[3] = toColor(rb_rgba);
-            pc_colors[4] = [
-                (pc_colors[0][0] + pc_colors[1][0] + pc_colors[2][0] + pc_colors[3][0]) / 4.0,
-                (pc_colors[0][1] + pc_colors[1][1] + pc_colors[2][1] + pc_colors[3][1]) / 4.0,
-                (pc_colors[0][2] + pc_colors[1][2] + pc_colors[2][2] + pc_colors[3][2]) / 4.0,
-                (pc_colors[0][3] + pc_colors[1][3] + pc_colors[2][3] + pc_colors[3][3]) / 4.0,
-            ];
+            // Resolve each corner in place, then derive the center as the average.
+            this.readCorner(0, pc.lt(this._corner));
+            this.readCorner(1, pc.rt(this._corner));
+            this.readCorner(2, pc.lb(this._corner));
+            this.readCorner(3, pc.rb(this._corner));
+            colors[16] = (colors[0] + colors[4] + colors[8]  + colors[12]) * 0.25;
+            colors[17] = (colors[1] + colors[5] + colors[9]  + colors[13]) * 0.25;
+            colors[18] = (colors[2] + colors[6] + colors[10] + colors[14]) * 0.25;
+            colors[19] = (colors[3] + colors[7] + colors[11] + colors[15]) * 0.25;
+            rates[4] = (rates[0] + rates[1] + rates[2] + rates[3]) * 0.25;
         }
+
+        const mixF = pc_blendType === BlendType.Mix ? 1 : 0;
+        const mulF = pc_blendType === BlendType.Mul ? 1 : 0;
+        const addF = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
 
         const pm = this.parentMatrix;
         for (let j = 0; j < 5; j++) {
@@ -152,16 +185,17 @@ export class GeometryBuilder {
             }
             outUvs[j * 2] = uvData[srcBase + j * 2] * invTexW;
             outUvs[j * 2 + 1] = uvData[srcBase + j * 2 + 1] * invTexH;
-            
+
             if (hasPc) {
-                outColors[j * 4 + 0] = pc_colors[j][0];
-                outColors[j * 4 + 1] = pc_colors[j][1];
-                outColors[j * 4 + 2] = pc_colors[j][2];
-                outColors[j * 4 + 3] = pc_colors[j][3];
-                outCustom0[j * 4 + 0] = pc_rates[j];
-                outCustom0[j * 4 + 1] = pc_blendType === BlendType.Mix ? 1 : 0;
-                outCustom0[j * 4 + 2] = pc_blendType === BlendType.Mul ? 1 : 0;
-                outCustom0[j * 4 + 3] = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
+                const cb = j * 4;
+                outColors[j * 4 + 0] = colors[cb + 0];
+                outColors[j * 4 + 1] = colors[cb + 1];
+                outColors[j * 4 + 2] = colors[cb + 2];
+                outColors[j * 4 + 3] = colors[cb + 3];
+                outCustom0[j * 4 + 0] = rates[j];
+                outCustom0[j * 4 + 1] = mixF;
+                outCustom0[j * 4 + 2] = mulF;
+                outCustom0[j * 4 + 3] = addF;
             } else {
                 outColors[j * 4 + 0] = 1.0; outColors[j * 4 + 1] = 1.0; outColors[j * 4 + 2] = 1.0; outColors[j * 4 + 3] = 1.0;
                 outCustom0[j * 4 + 0] = 1.0; outCustom0[j * 4 + 1] = 0; outCustom0[j * 4 + 2] = 1.0; outCustom0[j * 4 + 3] = 0;
@@ -193,31 +227,34 @@ export class GeometryBuilder {
         if (!uvPtr || uvLen === 0) return;
         const uvData = this.runtimeManager.getFloat32Array(uvPtr, uvLen);
 
-        const SHAPE_VERTICES_STRIDE = 24; 
+        const SHAPE_VERTICES_STRIDE = 24;
         const srcBase = partIdx * SHAPE_VERTICES_STRIDE;
-        const partState = frameData.parts(partIdx);
-        
-        const pc = (partState && partState.partColor() >= 0) ? frameData.partsColor(partState.partColor()) : null;
-        
-        let ltColor = [1,1,1,1], rtColor = [1,1,1,1], lbColor = [1,1,1,1], rbColor = [1,1,1,1];
-        let ltRate = 0, rtRate = 0, lbRate = 0, rbRate = 0;
+        const partState = frameData.parts(partIdx, this._ps);
+
+        const pcIdx = partState ? partState.partColor() : -1;
+        const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+
+        // Corner colors/rates live in shared scratch ([LT,RT,LB,RB] × rgba);
+        // the per-vertex loop below interpolates them as scalars.
+        const cc = this._cornerColors;
+        const cr = this._cornerRates;
         let pc_blendType = BlendType.Mix;
-        
         if (pc) {
             pc_blendType = pc.blendType();
-            const toColor = (attr: any) => {
-                if (!attr || !attr.rgba()) return { c: [1,1,1,1], r: 0 };
-                const rgba = attr.rgba();
-                return {
-                    c: [rgba.r()/255.0, rgba.g()/255.0, rgba.b()/255.0, rgba.a()/255.0],
-                    r: attr.rate()
-                };
-            };
-            const clt = toColor(pc.lt()); ltColor = clt.c; ltRate = clt.r;
-            const crt = toColor(pc.rt()); rtColor = crt.c; rtRate = crt.r;
-            const clb = toColor(pc.lb()); lbColor = clb.c; lbRate = clb.r;
-            const crb = toColor(pc.rb()); rbColor = crb.c; rbRate = crb.r;
+            this.readCorner(0, pc.lt(this._corner));
+            this.readCorner(1, pc.rt(this._corner));
+            this.readCorner(2, pc.lb(this._corner));
+            this.readCorner(3, pc.rb(this._corner));
+        } else {
+            cc[0] = 1; cc[1] = 1; cc[2] = 1; cc[3] = 1;
+            cc[4] = 1; cc[5] = 1; cc[6] = 1; cc[7] = 1;
+            cc[8] = 1; cc[9] = 1; cc[10] = 1; cc[11] = 1;
+            cc[12] = 1; cc[13] = 1; cc[14] = 1; cc[15] = 1;
+            cr[0] = 0; cr[1] = 0; cr[2] = 0; cr[3] = 0;
         }
+        const shapeMixF = pc_blendType === BlendType.Mix ? 1 : 0;
+        const shapeMulF = pc_blendType === BlendType.Mul ? 1 : 0;
+        const shapeAddF = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
 
         const mOff = partIdx * 16;
         const m00 = matrices[mOff + 0];
@@ -233,28 +270,24 @@ export class GeometryBuilder {
             const vy = shapeVertices[srcBase + v * 2 + 1];
             const fx = shapeVertexBoxCoords[srcBase + v * 2 + 0];
             const fy = shapeVertexBoxCoords[srcBase + v * 2 + 1];
-            
-            // Bilinear interpolation for colors
-            const topColor = [
-                ltColor[0] + (rtColor[0] - ltColor[0]) * fx,
-                ltColor[1] + (rtColor[1] - ltColor[1]) * fx,
-                ltColor[2] + (rtColor[2] - ltColor[2]) * fx,
-                ltColor[3] + (rtColor[3] - ltColor[3]) * fx,
-            ];
-            const bottomColor = [
-                lbColor[0] + (rbColor[0] - lbColor[0]) * fx,
-                lbColor[1] + (rbColor[1] - lbColor[1]) * fx,
-                lbColor[2] + (rbColor[2] - lbColor[2]) * fx,
-                lbColor[3] + (rbColor[3] - lbColor[3]) * fx,
-            ];
-            
-            const cr = topColor[0] + (bottomColor[0] - topColor[0]) * fy;
-            const cg = topColor[1] + (bottomColor[1] - topColor[1]) * fy;
-            const cb = topColor[2] + (bottomColor[2] - topColor[2]) * fy;
-            const ca = topColor[3] + (bottomColor[3] - topColor[3]) * fy;
 
-            const topRate = ltRate + (rtRate - ltRate) * fx;
-            const bottomRate = lbRate + (rbRate - lbRate) * fx;
+            // Bilinear interpolation for colors (scalar, from corner scratch).
+            const topR = cc[0] + (cc[4] - cc[0]) * fx;
+            const topG = cc[1] + (cc[5] - cc[1]) * fx;
+            const topB = cc[2] + (cc[6] - cc[2]) * fx;
+            const topA = cc[3] + (cc[7] - cc[3]) * fx;
+            const botR = cc[8]  + (cc[12] - cc[8])  * fx;
+            const botG = cc[9]  + (cc[13] - cc[9])  * fx;
+            const botB = cc[10] + (cc[14] - cc[10]) * fx;
+            const botA = cc[11] + (cc[15] - cc[11]) * fx;
+
+            const cr_ = topR + (botR - topR) * fy;
+            const cg = topG + (botG - topG) * fy;
+            const cb = topB + (botB - topB) * fy;
+            const ca = topA + (botA - topA) * fy;
+
+            const topRate = cr[0] + (cr[1] - cr[0]) * fx;
+            const bottomRate = cr[2] + (cr[3] - cr[2]) * fx;
             const mixRate = topRate + (bottomRate - topRate) * fy;
 
             const wx = m00 * vx + m01 * vy + tx;
@@ -286,15 +319,15 @@ export class GeometryBuilder {
                 outUvs[v * 2 + 1] = 0.5;
             }
             
-            outColors[v * 4 + 0] = cr;
+            outColors[v * 4 + 0] = cr_;
             outColors[v * 4 + 1] = cg;
             outColors[v * 4 + 2] = cb;
             outColors[v * 4 + 3] = ca;
-            
+
             outCustom0[v * 4 + 0] = mixRate;
-            outCustom0[v * 4 + 1] = pc_blendType === BlendType.Mix ? 1 : 0;
-            outCustom0[v * 4 + 2] = pc_blendType === BlendType.Mul ? 1 : 0;
-            outCustom0[v * 4 + 3] = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
+            outCustom0[v * 4 + 1] = shapeMixF;
+            outCustom0[v * 4 + 2] = shapeMulF;
+            outCustom0[v * 4 + 3] = shapeAddF;
         }
 
         // Triangle Fan
@@ -332,23 +365,27 @@ export class GeometryBuilder {
         const v0 = meshVOff[partIdx];
         const i0 = meshIOff[partIdx];
 
-        const partState = frameData.parts(partIdx);
-        const pc = (partState && partState.partColor() >= 0) ? frameData.partsColor(partState.partColor()) : null;
-        
+        const partState = frameData.parts(partIdx, this._ps);
+        const pcIdx = partState ? partState.partColor() : -1;
+        const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+
         let pc_rate = 1;
-        let pc_color = [1,1,1,1];
+        let pcR = 1, pcG = 1, pcB = 1, pcA = 1;
         let pc_blendType = BlendType.Mix;
-        let hasPc = false;
+        const hasPc = !!pc;
 
         if (pc) {
-            hasPc = true;
             pc_blendType = pc.blendType();
-            const lt = pc.lt(); const lt_rgba = lt?.rgba();
-            pc_rate = lt?.rate() || 0;
-            if (lt_rgba) {
-                pc_color = [lt_rgba.r()/255.0, lt_rgba.g()/255.0, lt_rgba.b()/255.0, lt_rgba.a()/255.0];
+            const lt = pc.lt(this._corner);
+            pc_rate = lt ? lt.rate() : 0;
+            const rgba = lt ? lt.rgba(this._rgba) : null;
+            if (rgba) {
+                pcR = rgba.r() / 255.0; pcG = rgba.g() / 255.0; pcB = rgba.b() / 255.0; pcA = rgba.a() / 255.0;
             }
         }
+        const meshMixF = pc_blendType === BlendType.Mix ? 1 : 0;
+        const meshMulF = pc_blendType === BlendType.Mul ? 1 : 0;
+        const meshAddF = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
 
         const pm = this.parentMatrix;
         for (let v = 0; v < pCount; v++) {
@@ -363,16 +400,16 @@ export class GeometryBuilder {
             }
             outUvs[v * 2] = meshUv[(v0 + v) * 2] * invTexW;
             outUvs[v * 2 + 1] = meshUv[(v0 + v) * 2 + 1] * invTexH;
-            
+
             if (hasPc) {
-                outColors[v * 4 + 0] = pc_color[0];
-                outColors[v * 4 + 1] = pc_color[1];
-                outColors[v * 4 + 2] = pc_color[2];
-                outColors[v * 4 + 3] = pc_color[3];
+                outColors[v * 4 + 0] = pcR;
+                outColors[v * 4 + 1] = pcG;
+                outColors[v * 4 + 2] = pcB;
+                outColors[v * 4 + 3] = pcA;
                 outCustom0[v * 4 + 0] = pc_rate;
-                outCustom0[v * 4 + 1] = pc_blendType === BlendType.Mix ? 1 : 0;
-                outCustom0[v * 4 + 2] = pc_blendType === BlendType.Mul ? 1 : 0;
-                outCustom0[v * 4 + 3] = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
+                outCustom0[v * 4 + 1] = meshMixF;
+                outCustom0[v * 4 + 2] = meshMulF;
+                outCustom0[v * 4 + 3] = meshAddF;
             } else {
                 outColors[v * 4 + 0] = 1.0; outColors[v * 4 + 1] = 1.0; outColors[v * 4 + 2] = 1.0; outColors[v * 4 + 3] = 1.0;
                 outCustom0[v * 4 + 0] = 1.0; outCustom0[v * 4 + 1] = 0; outCustom0[v * 4 + 2] = 1.0; outCustom0[v * 4 + 3] = 0;

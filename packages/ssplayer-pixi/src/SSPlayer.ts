@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
@@ -13,6 +13,12 @@ export class SSPlayer extends Container {
 
     private meshPool: Mesh<any>[] = [];
     private activeMeshes: number = 0;
+
+    // Reused per-frame scratch so the render hot path allocates nothing: a
+    // shared PartState wrapper (re-positioned per part) and a transient 2D
+    // affine for an instance part's own world matrix before composition.
+    private readonly scratchPartState = new PartState();
+    private readonly scratchInstMat = new Float32Array(6);
 
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
@@ -271,7 +277,7 @@ export class SSPlayer extends Container {
             if (kind === DrawBatchKind.Instance) {
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    const partState = frameData.parts(partIdx);
+                    const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
@@ -282,8 +288,8 @@ export class SSPlayer extends Container {
                     const childFrameData = child.manager.getFrameData(childFrame);
                     if (!childFrameData) continue;
 
-                    const instMat = manager.getWorldMatrix2D(partIdx);
-                    const composed = GeometryBuilder.composeAffine(parentMatrix, instMat);
+                    manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
+                    const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
                     this.renderContext(child.manager, child.geometryBuilder, childFrameData, composed, parentAlpha * alpha);
                 }
                 continue;
@@ -311,7 +317,7 @@ export class SSPlayer extends Container {
             if (kind === DrawBatchKind.Normal) {
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    const partState = frameData.parts(partIdx);
+                    const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
                     
@@ -346,7 +352,7 @@ export class SSPlayer extends Container {
                     const numVerts = shapeVertexCounts[partIdx];
                     if (numVerts < 3) continue;
 
-                    const partState = frameData.parts(partIdx);
+                    const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
@@ -383,7 +389,7 @@ export class SSPlayer extends Container {
 
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    const partState = frameData.parts(partIdx);
+                    const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
                     
@@ -429,7 +435,7 @@ export class SSPlayer extends Container {
                 // blend and shader and push the geometry to a pooled PixiJS Mesh.
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    const partState = frameData.parts(partIdx);
+                    const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
