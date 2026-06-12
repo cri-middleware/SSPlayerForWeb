@@ -460,6 +460,19 @@ async function main() {
 
             loadedFiles = allFiles;
             ssabFiles = allFiles.filter(f => f.path.endsWith('.ssab'));
+            
+            // ディレクトリ、ファイルの順でソート
+            ssabFiles.sort((a, b) => {
+                const partsA = a.path.split('/');
+                const partsB = b.path.split('/');
+                const len = Math.min(partsA.length, partsB.length);
+                for (let i = 0; i < len; i++) {
+                    if (partsA[i] !== partsB[i]) {
+                        return partsA[i].localeCompare(partsB[i]);
+                    }
+                }
+                return partsA.length - partsB.length;
+            });
 
             if (ssabFiles.length === 0) {
                 showToast('Validation Error: No .ssab file found in dropped items.', 'error');
