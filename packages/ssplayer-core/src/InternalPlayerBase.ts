@@ -78,8 +78,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _textureBaseUrl: string = '';
     private _texturePaths: { hash: number, path: string }[] = [];
     private _ssabResource: SSABResource | null = null;
-    private _instancePackResources: Map<number, SSABResource> = new Map();
-    private _instancePackProvider: InstancePackProvider | null = null;
+    public _isChildPlayer: boolean = false;
+    public _instancePackResources: Map<number, SSABResource> = new Map();
+    public _instancePackProvider: InstancePackProvider | null = null;
     private _animationName: string = '';
     public subFrameEnabled: boolean = false;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
@@ -138,8 +139,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         if (this._ssabResource) {
             this._ssabResource.destroy();
         }
+        this._instancePackResources.forEach(res => res.destroy());
+        this._instancePackResources.clear();
         this._ssabResource = new SSABResource(buffer);
-this.runtimeManager.bindResource(this._ssabResource);
+        this.runtimeManager.bindResource(this._ssabResource);
         this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer);
     }
 
@@ -212,6 +215,7 @@ this.runtimeManager.bindResource(this._ssabResource);
 
             try {
                 const childPlayer = this.createChildPlayer(this._resourceManager || undefined);
+                childPlayer._isChildPlayer = true;
                 // Child needs to share the loaded packs registry so nested instances work
                 childPlayer._instancePackResources = this._instancePackResources;
                 childPlayer.bindSharedResource(resource);
@@ -560,12 +564,15 @@ this.runtimeManager.bindResource(this._ssabResource);
         this.runtimeManager.destroy();
 
         // Release external instance pack resources (the parent is freed below).
-        for (const res of this._instancePackResources.values()) {
-            if (res !== this._ssabResource) {
-                try { res.destroy(); } catch { /* ignore */ }
+        // Only the root player owns this map; child players share it and should not clear it.
+        if (!this._isChildPlayer) {
+            for (const res of this._instancePackResources.values()) {
+                if (res !== this._ssabResource) {
+                    try { res.destroy(); } catch { /* ignore */ }
+                }
             }
+            this._instancePackResources.clear();
         }
-        this._instancePackResources.clear();
         this._instancePackProvider = null;
 
         if (this._ssabResource) {
