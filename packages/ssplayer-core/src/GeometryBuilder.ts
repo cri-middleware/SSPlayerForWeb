@@ -96,11 +96,8 @@ export class GeometryBuilder {
      */
     public updateWorldPositions(): void {
         const matrices = this.runtimeManager.getWorldMatrices();
-        const posPtr = this.runtimeManager.context.get_local_vertices_buf();
-        const posLen = this.runtimeManager.context.get_local_vertices_len();
-        if (!posPtr || posLen === 0) return;
-
-        const positionData = this.runtimeManager.getFloat32Array(posPtr, posLen);
+        const positionData = this.runtimeManager.getLocalVertices();
+        if (positionData.length === 0) return;
         if (this.worldPositions.length !== positionData.length) {
             this.worldPositions = new Float32Array(positionData.length);
         }
@@ -141,10 +138,8 @@ export class GeometryBuilder {
         const partState = frameData.parts(partIdx, this._ps);
         if (!partState) return;
 
-        const uvPtr = this.runtimeManager.context.get_local_uvs_buf();
-        const uvLen = this.runtimeManager.context.get_local_uvs_len();
-        if (!uvPtr || uvLen === 0) return;
-        const uvData = this.runtimeManager.getFloat32Array(uvPtr, uvLen);
+        const uvData = this.runtimeManager.getLocalUVs();
+        if (uvData.length === 0) return;
 
         const pcIdx = partState.partColor();
         const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
@@ -222,10 +217,8 @@ export class GeometryBuilder {
         const shapeVertexBoxCoords = this.runtimeManager.getShapeVertexBoxCoords();
         const matrices = this.runtimeManager.getWorldMatrices();
 
-        const uvPtr = this.runtimeManager.context.get_local_uvs_buf();
-        const uvLen = this.runtimeManager.context.get_local_uvs_len();
-        if (!uvPtr || uvLen === 0) return;
-        const uvData = this.runtimeManager.getFloat32Array(uvPtr, uvLen);
+        const uvData = this.runtimeManager.getLocalUVs();
+        if (uvData.length === 0) return;
 
         const SHAPE_VERTICES_STRIDE = 24;
         const srcBase = partIdx * SHAPE_VERTICES_STRIDE;

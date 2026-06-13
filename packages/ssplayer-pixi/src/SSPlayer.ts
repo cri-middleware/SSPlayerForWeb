@@ -1,8 +1,35 @@
-import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
+import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
+import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
+
+// MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
+
+// Per-context mask coverage produced by the pre-pass: the offscreen texture,
+// the affine that maps a part's player-local position into the coverage's
+// [0,1] UV space, and the writer metadata replayed by the masked shader.
+interface MaskCoverage {
+    rt: RenderTexture;
+    minX: number;
+    minY: number;
+    invW: number;
+    invH: number;
+    meta: Float32Array; // MAX_MASK_WRITERS * vec4 (drawRank, bit, opInvert, isClipping)
+    count: number;
+}
+
+// Mask inherited by an instance-part child from its parent (09_mask.ja.md §3-2-2).
+// A masked instance part clips its WHOLE referenced sub-animation against the
+// parent's coverage, judged once by the instance part's own draw rank and
+// visible_inside_mask polarity (single level — the sub-anime is one target).
+interface InheritedMask {
+    cov: MaskCoverage; // the parent context's coverage (same player-local space as the child's composited positions)
+    rank: number;      // the instance part's rank in the parent draw order
+    mode: number;      // the instance part's visible_inside_mask polarity (1 = inside, 0 = outside)
+}
 
 export class SSPlayer extends Container {
     public static async initialize(wasmUrl?: string | URL) {
@@ -24,6 +51,44 @@ export class SSPlayer extends Container {
     private debugText: Text;
     private partsColorShaders: Map<Texture, Shader> = new Map();
     private effectShaders: Map<Texture, Shader> = new Map();
+
+    // --- Mask coverage state (see 09_mask.ja.md §3-2) ---
+    // The renderer, captured lazily on the first render via onRender; the
+    // coverage pre-pass needs it to rasterise into RenderTextures, and it runs
+    // before the stage render (in the ticker) so coverage is ready by draw time.
+    private renderer: Renderer | null = null;
+    private maskRenderRoot = new Container();
+    // Separate pools so each pool's vertex layout matches its shader exactly:
+    // coverage meshes (MaskWrite) share the normal layout; masked-content
+    // meshes carry the extra aMaskUV attribute (MaskedPartsColor).
+    private maskMeshPool: Mesh<any>[] = [];
+    private activeMaskMeshes: number = 0;
+    private maskedMeshPool: Mesh<any>[] = [];
+    private activeMaskedMeshes: number = 0;
+    // Pooled offscreen coverage textures (one per mask-bearing context per frame).
+    private rtPool: RenderTexture[] = [];
+    // Pooled per-context coverage records, indexed in lockstep with rtPool.
+    private covPool: MaskCoverage[] = [];
+    private activeRTs: number = 0;
+    // Bbox→RT mapping for the coverage pass, passed as the render-root transform
+    // (a render-group root's own scale/position are ignored by renderer.render).
+    private readonly scratchCovTransform = new Matrix();
+    // Engine-agnostic mask writer planner (core) + its FrameData adapter. The
+    // planner does all writer selection/classification; this class only
+    // rasterises the resulting plan into the coverage bitmap.
+    private readonly maskPlanner = new MaskPlanner();
+    private readonly maskSource = new FrameDataMaskSource();
+    private maskWriteShaders: Map<Texture, Shader> = new Map();
+    // Masked-content shaders keyed by `${contentTexUid}_${coverageRtUid}` so the
+    // bound coverage sampler (a per-context resource) stays consistent.
+    private maskedShaders: Map<string, Shader> = new Map();
+    private maskWritersExceeded: boolean = false;
+    /**
+     * Enables SpriteStudio mask / clipping rendering (the coverage pre-pass and
+     * per-part clipping). On by default; set false to draw every part unclipped
+     * (mask parts themselves stay hidden, as they carry no colour).
+     */
+    public maskEnabled: boolean = true;
     public get subframe(): boolean {
         return this.internalPlayer.subFrameEnabled;
     }
@@ -79,6 +144,13 @@ export class SSPlayer extends Container {
         this.debugText.visible = false;
         this.addChild(this.debugText);
 
+        // Capture the renderer the first time we're drawn. The mask coverage
+        // pre-pass renders to offscreen textures and needs a renderer; running
+        // it from the ticker (before the stage render) keeps coverage ready by
+        // the time our masked children are drawn. Masking therefore starts on
+        // the second frame (the first has no renderer yet) — harmless.
+        this.onRender = (renderer: Renderer) => { this.renderer = renderer; };
+
         Ticker.shared.add(this.update, this);
     }
     
@@ -87,6 +159,16 @@ export class SSPlayer extends Container {
         if (this.internalPlayer) {
             this.internalPlayer.destroy();
         }
+        for (const rt of this.rtPool) rt.destroy(true);
+        this.rtPool.length = 0;
+
+        for (const m of this.meshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        for (const m of this.maskedMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        for (const m of this.maskMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        this.meshPool.length = 0;
+        this.maskedMeshPool.length = 0;
+        this.maskMeshPool.length = 0;
+
         super.destroy(options);
     }
     
@@ -190,11 +272,6 @@ export class SSPlayer extends Container {
         this.internalPlayer.setSkipFrames(value);
     }
 
-    
-    public setTexture(textureHash: number, texture: Texture) {
-        // Obsolete or adapt if needed, or pass directly to PixiResourceManager
-    }
-
     private update(ticker: Ticker) {
         // console.log("update tick", this.internalPlayer.isPlaying, this.internalPlayer.isPausing, this.internalPlayer.getFrameNo());
         if (!this.internalPlayer.isPlaying) return;
@@ -222,8 +299,14 @@ export class SSPlayer extends Container {
         for (let i = 0; i < this.meshPool.length; i++) {
             this.meshPool[i].visible = false;
         }
+        for (let i = 0; i < this.maskedMeshPool.length; i++) {
+            this.maskedMeshPool[i].visible = false;
+        }
 
         this.activeMeshes = 0;
+        this.activeMaskedMeshes = 0;
+        this.activeMaskMeshes = 0;
+        this.activeRTs = 0;
         this.removeChildren();
         this.addChild(this.debugText);
 
@@ -231,9 +314,9 @@ export class SSPlayer extends Container {
         // instance-part children recurse through here with their accumulated
         // transform and alpha.
         this.renderContext(
-            this.internalPlayer.runtimeManager,
-            this.internalPlayer.geometryBuilder,
+            this.internalPlayer,
             frameData,
+            frameNo,
             null,
             1.0
         );
@@ -247,17 +330,46 @@ export class SSPlayer extends Container {
      * composing the instance part's world matrix and alpha as they descend.
      */
     private renderContext(
-        manager: SSRuntimeManager,
-        geometryBuilder: GeometryBuilder,
+        player: DirectInternalPlayer,
         frameData: FrameData,
+        frameNo: number,
         parentMatrix: Float32Array | null,
-        parentAlpha: number
+        parentAlpha: number,
+        inheritedMask: InheritedMask | null = null
     ) {
+        const manager = player.runtimeManager;
+        const geometryBuilder = player.geometryBuilder;
+
         geometryBuilder.parentMatrix = parentMatrix;
         geometryBuilder.updateWorldPositions();
 
-        const drawOrder = frameData.drawOrderArray();
+        let drawOrder = frameData.drawOrderArray();
         if (!drawOrder) return;
+
+        // `frameData` (a FlatBuffer ByteBuffer) and `drawOrder` are zero-copy
+        // views over the WASM memory buffer. An instance child's getFrameData()
+        // in the batch loop below can grow WASM memory, which detaches the old
+        // ArrayBuffer (grow preserves contents but swaps the buffer object) and
+        // leaves these views reading garbage for this context's remaining
+        // batches. We track the buffer identity and re-derive both whenever it
+        // changes after recursing — zero cost unless a grow actually happened.
+        // See the wasm-buffer-detach-on-grow project note.
+        let memBuf = getWasmMemory().buffer;
+
+        const maskFlags = manager.getPartMaskFlags();
+
+        // Mask coverage pre-pass: rasterise this context's mask contributors
+        // (DrawBatchKind.Mask batches) into an offscreen coverage texture, then
+        // masked content samples it below. Null when the context has no masks or
+        // no renderer is available yet (the first frame) — masked parts then draw
+        // unclipped. Runs here, in the ticker, so coverage is ready before the
+        // stage render draws our children. See buildMaskCoverage / 09_mask.ja.md.
+        const cov = (this.renderer && this.maskEnabled) ? this.buildMaskCoverage(manager, geometryBuilder, frameData, drawOrder) : null;
+
+        // When this context is a masked instance child, every drawn part is
+        // clipped by the inherited (parent) coverage instead of this context's
+        // own; otherwise parts use this context's own coverage per-part (§3-2-2).
+        const effCov = inheritedMask ? inheritedMask.cov : cov;
 
         const drawBatchesLength = frameData.drawBatchesLength();
         for (let i = 0; i < drawBatchesLength; i++) {
@@ -265,6 +377,7 @@ export class SSPlayer extends Container {
             if (!batch) continue;
 
             const kind = batch.kind();
+            // DrawBatchKind.Mask is consumed by the coverage pre-pass above.
             if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect && kind !== DrawBatchKind.Instance) continue;
 
             const startRank = batch.startRank();
@@ -281,16 +394,42 @@ export class SSPlayer extends Container {
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
-                    const child = manager.getInstanceChild(partIdx);
+                    const child = player.getInstanceChild(partIdx);
                     if (!child || !child.visible) continue;
 
-                    const childFrame = child.manager.context.get_frame_no();
-                    const childFrameData = child.manager.getFrameData(childFrame);
+                    const childFrame = child.player.runtimeManager.context.get_frame_no();
+                    const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
                     if (!childFrameData) continue;
 
                     manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
                     const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
-                    this.renderContext(child.manager, child.geometryBuilder, childFrameData, composed, parentAlpha * alpha);
+
+                    // §3-2-2 instance mask inheritance: if this context produced
+                    // coverage and the instance part is a mask target
+                    // (mask_influence, bit 0x04), the whole sub-animation is
+                    // clipped by THIS coverage, judged by the instance part's own
+                    // rank and visible_inside_mask polarity (single level). The
+                    // child's composited positions are already in this coverage's
+                    // space, so its parts can sample `cov` directly.
+                    const childInherited: InheritedMask | null =
+                        (cov && maskFlags && (maskFlags[partIdx] & 0x04) !== 0)
+                            ? { cov, rank: startRank + c, mode: (maskFlags[partIdx] & 0x01) !== 0 ? 1 : 0 }
+                            : null;
+                    this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha, childInherited);
+
+                    // The child's getFrameData()/recursion may have grown WASM
+                    // memory and detached our frameData/drawOrder views. Re-derive
+                    // from the current buffer (contents are preserved) before
+                    // reading more of this context's frame. Only runs on actual
+                    // growth, so steady-state instance rendering pays nothing.
+                    if (getWasmMemory().buffer !== memBuf) {
+                        const fresh = manager.getFrameData(frameNo);
+                        const freshOrder = fresh?.drawOrderArray();
+                        if (!fresh || !freshOrder) return;
+                        frameData = fresh;
+                        drawOrder = freshOrder;
+                        memBuf = getWasmMemory().buffer;
+                    }
                 }
                 continue;
             }
@@ -312,23 +451,31 @@ export class SSPlayer extends Container {
             const invTexW = 1.0 / texture.width;
             const invTexH = 1.0 / texture.height;
             
-            const batchShader = this.getPartsColorShader(texture);
-            
+            // Parts in this batch are clipped by the mask when the runtime set
+            // FLAG_MASK_INFLUENCE (0x01) and this context produced coverage, or
+            // unconditionally when this whole context is a masked instance child
+            // (inherited mask — §3-2-2). Masked parts use a separate pool
+            // (carrying aMaskUV) and shader.
+            const masked = inheritedMask !== null || (cov !== null && (batch.flags() & 0x01) !== 0);
+
             if (kind === DrawBatchKind.Normal) {
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
+                    // draw_as_mask parts are pure masks: coverage only, no colour.
+                    if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
                     const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
-                    
-                    let mesh = this.getMeshFromPool(this.activeMeshes);
-                    this.activeMeshes++;
-                    
+
+                    const mesh = masked
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, 5, 12, true)
+                        : this.acquireMesh(this.meshPool, this.activeMeshes++, 5, 12, false);
+
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
                     const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
                     const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
-                    
+
                     geometryBuilder.buildNormal(
                         partIdx, frameData, invTexW, invTexH,
                         positions, uvs, colors, vargs
@@ -337,18 +484,18 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aUV').update();
                     mesh.geometry.getBuffer('aColor').update();
                     mesh.geometry.getBuffer('aVarg').update();
-                    
-                    mesh.shader = batchShader as any;
-                    mesh.blendMode = blendMode;
-                    mesh.alpha = alpha * parentAlpha;
-                    mesh.visible = true;
-                    this.addChild(mesh);
+
+                    this.finishPart(mesh, 5, masked,
+                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        effCov, texture, blendMode, alpha * parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Shape) {
                 const shapeVertexCounts = manager.getShapeVertexCounts();
-                
+
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
+                    if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
                     const numVerts = shapeVertexCounts[partIdx];
                     if (numVerts < 3) continue;
 
@@ -357,9 +504,10 @@ export class SSPlayer extends Container {
                     if (alpha <= 0) continue;
 
                     const numIndices = (numVerts - 2) * 3;
-                    let mesh = this.getMeshFromPool(this.activeMeshes, numVerts, numIndices);
-                    this.activeMeshes++;
-                    
+                    const mesh = masked
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, numVerts, numIndices, true)
+                        : this.acquireMesh(this.meshPool, this.activeMeshes++, numVerts, numIndices, false);
+
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
                     const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
@@ -376,12 +524,11 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aColor').update();
                     mesh.geometry.getBuffer('aVarg').update();
                     mesh.geometry.getIndex().update();
-                    
-                    mesh.shader = batchShader as any;
-                    mesh.blendMode = blendMode;
-                    mesh.alpha = alpha * parentAlpha;
-                    mesh.visible = true;
-                    this.addChild(mesh);
+
+                    this.finishPart(mesh, numVerts, masked,
+                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        effCov, texture, blendMode, alpha * parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Mesh) {
                 const meshVOff = manager.getMeshVertexOffsets();
@@ -389,22 +536,24 @@ export class SSPlayer extends Container {
 
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
+                    if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
                     const partState = frameData.parts(partIdx, this.scratchPartState);
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
-                    
+
                     const v0 = meshVOff[partIdx];
                     const v1 = meshVOff[partIdx + 1];
                     const i0 = meshIOff[partIdx];
                     const i1 = meshIOff[partIdx + 1];
-                    
+
                     const pCount = v1 - v0;
                     const iCount = i1 - i0;
                     if (pCount === 0 || iCount === 0) continue;
-                    
-                    let mesh = this.getMeshFromPool(this.activeMeshes, pCount, iCount);
-                    this.activeMeshes++;
-                    
+
+                    const mesh = masked
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, pCount, iCount, true)
+                        : this.acquireMesh(this.meshPool, this.activeMeshes++, pCount, iCount, false);
+
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
                     const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
@@ -420,12 +569,11 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aColor').update();
                     mesh.geometry.getBuffer('aVarg').update();
                     mesh.geometry.getIndex().update();
-                    
-                    mesh.shader = batchShader as any;
-                    mesh.blendMode = blendMode;
-                    mesh.alpha = alpha * parentAlpha;
-                    mesh.visible = true;
-                    this.addChild(mesh);
+
+                    this.finishPart(mesh, pCount, masked,
+                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        effCov, texture, blendMode, alpha * parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Effect) {
                 // Particle geometry is simulated in the WASM runtime and returned as an
@@ -439,7 +587,7 @@ export class SSPlayer extends Container {
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
-                    const plan = manager.getEffectDrawPlan(partIdx);
+                    const plan = player.getEffectDrawPlan(partIdx);
                     if (!plan) continue;
 
                     const cmdCount = plan.commandsLength();
@@ -483,15 +631,278 @@ export class SSPlayer extends Container {
         }
     }
 
+    /**
+     * Set shader / blend / alpha for a content part and add it to the display
+     * list. For masked parts, binds the masked shader (with this context's
+     * coverage + writer metadata) and fills the per-vertex coverage UVs; for
+     * unmasked parts, the plain PartsColor shader.
+     */
+    private finishPart(
+        mesh: Mesh<any>,
+        numVerts: number,
+        masked: boolean,
+        maskRank: number,
+        maskMode: number,
+        cov: MaskCoverage | null,
+        texture: Texture,
+        blendMode: any,
+        alpha: number
+    ): void {
+        if (masked && cov) {
+            // maskMode = visible_inside_mask: show inside (1) vs outside (0).
+            this.fillMaskUV(mesh, numVerts, maskRank, maskMode, cov);
+            mesh.shader = this.getMaskedShader(texture, cov) as any;
+        } else {
+            mesh.shader = this.getPartsColorShader(texture) as any;
+        }
+        mesh.blendMode = blendMode;
+        mesh.alpha = alpha;
+        mesh.visible = true;
+        this.addChild(mesh);
+    }
+
+    /** Write per-vertex aMaskUV (coverage uv, rank, polarity) for a masked part. */
+    private fillMaskUV(mesh: Mesh<any>, numVerts: number, thisRank: number, mode: number, cov: MaskCoverage): void {
+        const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
+        const buf = mesh.geometry.getBuffer('aMaskUV');
+        const muv = buf.data as Float32Array;
+        for (let v = 0; v < numVerts; v++) {
+            const x = positions[v * 2];
+            const y = positions[v * 2 + 1];
+            muv[v * 4 + 0] = (x - cov.minX) * cov.invW;
+            muv[v * 4 + 1] = (y - cov.minY) * cov.invH;
+            muv[v * 4 + 2] = thisRank;
+            muv[v * 4 + 3] = mode;
+        }
+        buf.update();
+    }
+
+    /**
+     * Rasterise this context's mask contributors (DrawBatchKind.Mask batches)
+     * into an offscreen coverage texture using the bit-packed bitmap method
+     * (09_mask.ja.md §3-2): each writer gets one bit (0..23) packed into the
+     * R/G/B channels via additive blending, cut out by its alpha threshold.
+     * Returns the coverage texture, the bbox→UV mapping, and the per-writer
+     * metadata replayed by the masked shader; null when there are no active
+     * writers. Rendered immediately (we run before the stage render), so the
+     * texture is ready when masked content samples it.
+     */
+    private buildMaskCoverage(
+        manager: SSRuntimeManager,
+        geometryBuilder: GeometryBuilder,
+        frameData: FrameData,
+        drawOrder: Uint16Array
+    ): MaskCoverage | null {
+        const slot = this.activeRTs;
+        const covObj = this.ensureCov(slot);
+
+        // Engine-agnostic planning (core): select writers, classify OP / scope /
+        // clipping, resolve cutout threshold + geometry kind, assign coverage
+        // bits and the replay meta. This class only rasterises the plan below.
+        const planner = this.maskPlanner;
+        this.maskSource.bind(frameData, drawOrder, manager);
+        const count = planner.plan(this.maskSource);
+        if (count === 0) return null;
+        if (planner.exceeded && !this.maskWritersExceeded) {
+            this.maskWritersExceeded = true;
+            console.warn(`[SSPlayer] mask writers exceeded ${MAX_MASK_WRITERS}; extra masks ignored.`);
+        }
+
+        const root = this.maskRenderRoot;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        // Rasterise each planned writer into the coverage bitmap: its geometry,
+        // with its coverage bit pre-encoded into one R/G/B channel and its cutout
+        // threshold in aVarg.x, additive-blended so disjoint bits OR together
+        // (09_mask.ja.md §3-2). Cutout texture comes from the planner's
+        // DrawBatch.textureHash (0 = pure mask/shape → no cutout, geometry is the mask).
+        for (let w = 0; w < count; w++) {
+            const partIdx = planner.partIdx[w];
+            const geomKind = planner.geomKind[w];
+            const numVerts = planner.numVerts[w];
+            const numIndices = planner.numIndices[w];
+            const texHash = planner.textureHash[w];
+            const threshold = planner.threshold[w];
+            const bit = planner.bit[w];
+
+            const texture = texHash !== 0 ? (this.pixiResourceManager.getTexture(texHash) || Texture.WHITE) : Texture.WHITE;
+            const invTexW = 1.0 / texture.width;
+            const invTexH = 1.0 / texture.height;
+
+            const mesh = this.acquireMesh(this.maskMeshPool, this.activeMaskMeshes++, numVerts, numIndices, false);
+            const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
+            const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
+            const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
+            const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
+
+            if (geomKind === 1) {
+                const indices = mesh.geometry.getIndex().data as Uint32Array;
+                geometryBuilder.buildShape(partIdx, frameData, numVerts, invTexW, invTexH, positions, uvs, colors, vargs, indices);
+                mesh.geometry.getIndex().update();
+            } else if (geomKind === 2) {
+                const indices = mesh.geometry.getIndex().data as Uint32Array;
+                geometryBuilder.buildMesh(partIdx, frameData, numVerts, numIndices, invTexW, invTexH, positions, uvs, colors, vargs, indices);
+                mesh.geometry.getIndex().update();
+            } else {
+                geometryBuilder.buildNormal(partIdx, frameData, invTexW, invTexH, positions, uvs, colors, vargs);
+            }
+
+            // Pre-encode this writer's bit into aColor (one R/G/B channel) and its
+            // cutout threshold into aVarg.x; accumulate the bbox.
+            const chan = (bit / 8) | 0;
+            const bitVal = (1 << (bit % 8)) / 255;
+            const br = chan === 0 ? bitVal : 0;
+            const bg = chan === 1 ? bitVal : 0;
+            const bb = chan === 2 ? bitVal : 0;
+            for (let v = 0; v < numVerts; v++) {
+                colors[v * 4 + 0] = br; colors[v * 4 + 1] = bg; colors[v * 4 + 2] = bb; colors[v * 4 + 3] = 1;
+                vargs[v * 4 + 0] = threshold;
+                const x = positions[v * 2], y = positions[v * 2 + 1];
+                if (x < minX) minX = x; if (x > maxX) maxX = x;
+                if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+            mesh.geometry.getBuffer('aPosition').update();
+            mesh.geometry.getBuffer('aUV').update();
+            mesh.geometry.getBuffer('aColor').update();
+            mesh.geometry.getBuffer('aVarg').update();
+
+            mesh.shader = this.getMaskWriteShader(texture) as any;
+            mesh.blendMode = 'add';
+            mesh.alpha = 1;
+            mesh.visible = true;
+            root.addChild(mesh);
+        }
+
+        // The planner's `meta` is reusable scratch (overwritten by the next
+        // plan() — e.g. an instance child's). Copy it into the pooled per-slot
+        // record so an inheriting child (§3-2-2) can replay this coverage at draw
+        // time, after the child's own plan() has run.
+        covObj.meta.set(planner.meta);
+
+        // Pad 1px so the mask's own edge texels aren't clipped; guard degeneracy.
+        minX -= 1; minY -= 1; maxX += 1; maxY += 1;
+        let boxW = maxX - minX;
+        let boxH = maxY - minY;
+        if (boxW < 1) boxW = 1;
+        if (boxH < 1) boxH = 1;
+
+        const rt = this.acquireCoverageRT(slot, boxW, boxH);
+
+        // Map the bbox onto the full RT: (minX,minY) → pixel (0,0), (maxX,maxY)
+        // → (rtW,rtH). The masked shader's coverage uv = (pos - min) / box ∈ [0,1].
+        // The container passed to renderer.render() is a render-group root whose
+        // OWN transform is ignored, so the bbox mapping must go through the
+        // RenderOptions `transform` instead of root.scale/position.
+        const sx = rt.width / boxW;
+        const sy = rt.height / boxH;
+        this.scratchCovTransform.set(sx, 0, 0, sy, -minX * sx, -minY * sy);
+
+        this.renderer!.render({ container: root, target: rt, clear: true, clearColor: [0, 0, 0, 0], transform: this.scratchCovTransform });
+        root.removeChildren();
+
+        covObj.rt = rt;
+        covObj.minX = minX;
+        covObj.minY = minY;
+        covObj.invW = 1 / boxW;
+        covObj.invH = 1 / boxH;
+        covObj.count = count;
+        this.activeRTs = slot + 1;
+        return covObj;
+    }
+
+    /** Pooled MaskCoverage record for a context slot (its meta array is reused). */
+    private ensureCov(slot: number): MaskCoverage {
+        let c = this.covPool[slot];
+        if (!c) {
+            c = { rt: null as any, minX: 0, minY: 0, invW: 0, invH: 0, meta: new Float32Array(MAX_MASK_WRITERS * 4), count: 0 };
+            this.covPool[slot] = c;
+        }
+        return c;
+    }
+
+    /** Pooled offscreen coverage texture for a slot, resized (pow2, clamped) as needed. */
+    private acquireCoverageRT(slot: number, boxW: number, boxH: number): RenderTexture {
+        const qw = SSPlayer.quantizeMaskSize(boxW);
+        const qh = SSPlayer.quantizeMaskSize(boxH);
+        let rt = this.rtPool[slot];
+        if (!rt) {
+            rt = RenderTexture.create({ width: qw, height: qh, scaleMode: 'nearest', antialias: false });
+            this.rtPool[slot] = rt;
+        } else if (rt.width !== qw || rt.height !== qh) {
+            rt.resize(qw, qh);
+        }
+        return rt;
+    }
+
+    // Coverage resolution: 1:1 with the bbox, rounded up to a power of two and
+    // clamped to [64, 1024] per axis (09_mask.ja.md §3-2 sizing note).
+    private static quantizeMaskSize(v: number): number {
+        let s = Math.ceil(v);
+        if (s < 64) s = 64;
+        if (s >= 1024) return 1024;
+        let p = 64;
+        while (p < s) p <<= 1;
+        return p;
+    }
+
+    private getMaskWriteShader(texture: Texture): Shader {
+        let shader = this.maskWriteShaders.get(texture);
+        if (!shader) {
+            shader = Shader.from({
+                gl: MaskWriteShader,
+                gpu: MaskWriteShaderWGSL,
+                resources: {
+                    uTexture: texture.source,
+                    uTextureSampler: texture.source.style
+                }
+            });
+            this.maskWriteShaders.set(texture, shader);
+        }
+        return shader;
+    }
+
+    private getMaskedShader(texture: Texture, cov: MaskCoverage): Shader {
+        const key = `${(texture.source as any).uid}_${(cov.rt.source as any).uid}`;
+        let shader = this.maskedShaders.get(key);
+        if (!shader) {
+            const maskUniforms = new UniformGroup({
+                uMaskMeta: { value: new Float32Array(MAX_MASK_WRITERS * 4), type: 'vec4<f32>', size: MAX_MASK_WRITERS },
+                uMaskCount: { value: 0, type: 'f32' }
+            });
+            shader = Shader.from({
+                gl: MaskedPartsColorShader,
+                gpu: MaskedPartsColorShaderWGSL,
+                resources: {
+                    uTexture: texture.source,
+                    uTextureSampler: texture.source.style,
+                    uMaskTexture: cov.rt.source,
+                    uMaskSampler: cov.rt.source.style,
+                    maskUniforms
+                }
+            });
+            this.maskedShaders.set(key, shader);
+        }
+        // Refresh this context's writer metadata (changes every frame).
+        const mu = shader.resources.maskUniforms as UniformGroup;
+        (mu.uniforms.uMaskMeta as Float32Array).set(cov.meta);
+        mu.uniforms.uMaskCount = cov.count;
+        mu.update();
+        return shader;
+    }
+
     private getMeshFromPool(index: number, requiredVertices: number = 5, requiredIndices: number = 12): Mesh {
-        if (index < this.meshPool.length) {
-            let m = this.meshPool[index];
+        return this.acquireMesh(this.meshPool, index, requiredVertices, requiredIndices, false);
+    }
+
+    private acquireMesh(pool: Mesh<any>[], index: number, requiredVertices: number, requiredIndices: number, withMaskUV: boolean): Mesh {
+        if (index < pool.length) {
+            let m = pool[index];
             const pBuf = m.geometry.getBuffer('aPosition');
             const iBuf = m.geometry.getIndex();
             if (pBuf.data.length !== requiredVertices * 2 || iBuf.data.length !== requiredIndices) {
                 m.destroy({ children: true, texture: false, textureSource: false });
-                m = this.createNewMesh(requiredVertices, requiredIndices);
-                this.meshPool[index] = m;
+                m = this.createNewMesh(requiredVertices, requiredIndices, withMaskUV);
+                pool[index] = m;
             }
             if (requiredIndices === 12) {
                 const indices = m.geometry.getIndex().data as Uint32Array;
@@ -503,14 +914,14 @@ export class SSPlayer extends Container {
             (m as any).size = requiredIndices; // Tell PixiJS how many indices to draw
             return m;
         }
-        
-        const m = this.createNewMesh(requiredVertices, requiredIndices);
+
+        const m = this.createNewMesh(requiredVertices, requiredIndices, withMaskUV);
         (m as any).size = requiredIndices;
-        this.meshPool.push(m);
+        pool.push(m);
         return m;
     }
 
-    private createNewMesh(requiredVertices: number, requiredIndices: number): Mesh<any> {
+    private createNewMesh(requiredVertices: number, requiredIndices: number, withMaskUV: boolean = false): Mesh<any> {
         const positionsBuffer = new Buffer({
             data: new Float32Array(requiredVertices * 2),
             usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
@@ -528,22 +939,34 @@ export class SSPlayer extends Container {
         geometry.addAttribute('aPosition', { buffer: positionsBuffer, size: 2 });
         geometry.addAttribute('aUV', { buffer: uvsBuffer, size: 2 });
         geometry.addIndex(indicesBuffer);
-        
-        geometry.addAttribute('aColor', { 
+
+        geometry.addAttribute('aColor', {
             buffer: new Buffer({
                 data: new Float32Array(requiredVertices * 4),
                 usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
-            }), 
-            size: 4 
+            }),
+            size: 4
         } as any);
-        geometry.addAttribute('aVarg', { 
+        geometry.addAttribute('aVarg', {
             buffer: new Buffer({
                 data: new Float32Array(requiredVertices * 4),
                 usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
-            }), 
-            size: 4 
+            }),
+            size: 4
         } as any);
-        
+
+        // Masked-content meshes carry an extra per-vertex attribute (coverage
+        // uv + rank + polarity) consumed by MaskedPartsColorShader at location 4.
+        if (withMaskUV) {
+            geometry.addAttribute('aMaskUV', {
+                buffer: new Buffer({
+                    data: new Float32Array(requiredVertices * 4),
+                    usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+                }),
+                size: 4
+            } as any);
+        }
+
         if (requiredIndices === 12) {
             const indices = geometry.getIndex().data as Uint32Array;
             indices[0] = 0; indices[1] = 1; indices[2] = 4;
@@ -551,11 +974,11 @@ export class SSPlayer extends Container {
             indices[6] = 3; indices[7] = 2; indices[8] = 4;
             indices[9] = 2; indices[10] = 0; indices[11] = 4;
         }
-        
+
         const mesh = new Mesh({
             geometry: geometry
         });
-        
+
         return mesh as Mesh<any>;
     }
 
