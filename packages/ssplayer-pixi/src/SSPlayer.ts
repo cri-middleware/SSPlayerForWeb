@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, initializeWasm, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
@@ -309,6 +309,7 @@ export class SSPlayer extends Container {
         this.renderContext(
             this.internalPlayer,
             frameData,
+            frameNo,
             null,
             1.0
         );
@@ -324,6 +325,7 @@ export class SSPlayer extends Container {
     private renderContext(
         player: DirectInternalPlayer,
         frameData: FrameData,
+        frameNo: number,
         parentMatrix: Float32Array | null,
         parentAlpha: number
     ) {
@@ -333,8 +335,18 @@ export class SSPlayer extends Container {
         geometryBuilder.parentMatrix = parentMatrix;
         geometryBuilder.updateWorldPositions();
 
-        const drawOrder = frameData.drawOrderArray();
+        let drawOrder = frameData.drawOrderArray();
         if (!drawOrder) return;
+
+        // `frameData` (a FlatBuffer ByteBuffer) and `drawOrder` are zero-copy
+        // views over the WASM memory buffer. An instance child's getFrameData()
+        // in the batch loop below can grow WASM memory, which detaches the old
+        // ArrayBuffer (grow preserves contents but swaps the buffer object) and
+        // leaves these views reading garbage for this context's remaining
+        // batches. We track the buffer identity and re-derive both whenever it
+        // changes after recursing — zero cost unless a grow actually happened.
+        // See the wasm-buffer-detach-on-grow project note.
+        let memBuf = getWasmMemory().buffer;
 
         const maskFlags = manager.getPartMaskFlags();
 
@@ -378,7 +390,21 @@ export class SSPlayer extends Container {
 
                     manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
                     const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
-                    this.renderContext(child.player, childFrameData, composed, parentAlpha * alpha);
+                    this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha);
+
+                    // The child's getFrameData()/recursion may have grown WASM
+                    // memory and detached our frameData/drawOrder views. Re-derive
+                    // from the current buffer (contents are preserved) before
+                    // reading more of this context's frame. Only runs on actual
+                    // growth, so steady-state instance rendering pays nothing.
+                    if (getWasmMemory().buffer !== memBuf) {
+                        const fresh = manager.getFrameData(frameNo);
+                        const freshOrder = fresh?.drawOrderArray();
+                        if (!fresh || !freshOrder) return;
+                        frameData = fresh;
+                        drawOrder = freshOrder;
+                        memBuf = getWasmMemory().buffer;
+                    }
                 }
                 continue;
             }

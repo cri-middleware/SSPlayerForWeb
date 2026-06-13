@@ -1,53 +1,8 @@
 import * as flatbuffers from 'flatbuffers';
-import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, SSRuntimeEffectSlot, EffectDrawPlan, getWasmMemory, finalizationRegistry } from './SSRuntimeManager.js';
+import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, EffectDrawPlan, getWasmMemory } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
-
-/**
- * Host-supplied resolver for instance-referenced animation packs. Given the
- * referenced pack's name and name-hash, returns the pack's raw SSAB bytes, or
- * null/undefined to fall back to fetching `<base>/<name>.ssab`. Use this when
- * packs are not URL-addressable (e.g. drag-and-drop / in-memory bundles); the
- * host is then also responsible for loading those packs' textures (by cell-map
- * hash) into the shared ResourceManager before `setAnimation`.
- */
-export type InstancePackProvider = (name: string, hash: number) => Uint8Array | null | undefined | Promise<Uint8Array | null | undefined>;
-
-export class InstanceSlotHandle {
-    public raw: SSRuntimeInstanceSlot;
-
-    constructor() {
-        this.raw = SSRuntimeInstanceSlot.create();
-        finalizationRegistry.register(this, this.raw, this);
-    }
-
-    public destroy() {
-        if (this.raw) {
-            finalizationRegistry.unregister(this);
-            this.raw.free();
-            // @ts-ignore
-            this.raw = null;
-        }
-    }
-}
-
-
-export class EffectSlotHandle {
-    public raw: SSRuntimeEffectSlot;
-
-    constructor(resourceRaw: any, hash: number, seed: number) {
-        this.raw = SSRuntimeEffectSlot.create(resourceRaw, hash, seed);
-        finalizationRegistry.register(this, this.raw, this);
-    }
-
-    public destroy() {
-        if (this.raw) {
-            finalizationRegistry.unregister(this);
-            this.raw.free();
-            // @ts-ignore
-            this.raw = null;
-        }
-    }
-}
+import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
+import { InstancePackProvider, resolveInstancePacks } from './PackResolver.js';
 
 export interface EffectChildState {
     slot: EffectSlotHandle;
@@ -269,75 +224,21 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Resolve and load every animation pack referenced by `PartType::Instance`
-     * parts, transitively. Referenced packs are fetched as sibling `.ssab`
-     * files (`<textureBaseUrl>/<packName>.ssab`) and their textures are loaded
-     * into the shared (hash-keyed) ResourceManager cache so instanced
-     * sub-animations resolve their cells. The parent pack is registered under
-     * its own hash so same-pack references reuse the already-bound resource.
-     * Resulting resources are stored in `_instancePackResources` and handed to
-     * the runtime manager, which creates the child contexts on `setupAnimation`.
+     * parts, transitively, into the shared `_instancePackResources` registry
+     * (delegated to the engine-agnostic `resolveInstancePacks`). The runtime
+     * manager then creates the child contexts on `setupAnimation`.
      */
     private async loadInstancePacks(textureBaseUrl?: string): Promise<void> {
         const buf = this.getSsabBuffer();
         if (!buf) return;
 
-        const parentInfo = SSRuntimeManager.extractPackInfo(buf);
-        const queue = SSRuntimeManager.extractInstancePackRefs(buf);
-        const seen = new Set<number>([parentInfo.hash]);
-
-        const base = textureBaseUrl || this._textureBaseUrl;
-        const prefix = base && !base.endsWith('/') ? base + '/' : base;
-
-        while (queue.length > 0) {
-            const ref = queue.shift()!;
-            if (this._instancePackResources.has(ref.hash) || seen.has(ref.hash)) continue;
-            seen.add(ref.hash);
-
-            try {
-                // Prefer a host-supplied provider (e.g. drag-and-drop bytes);
-                // fall back to fetching a sibling `<base>/<name>.ssab`.
-                let subBuf: Uint8Array | null = null;
-                let fromProvider = false;
-                if (this._instancePackProvider) {
-                    const provided = await this._instancePackProvider(ref.name, ref.hash);
-                    if (provided) {
-                        subBuf = provided;
-                        fromProvider = true;
-                    }
-                }
-                if (!subBuf) {
-                    const url = prefix + ref.name + '.ssab';
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        console.warn(`Failed to load instance pack "${ref.name}" from ${url}: ${response.statusText}`);
-                        continue;
-                    }
-                    subBuf = new Uint8Array(await response.arrayBuffer());
-                }
-
-                const resource = new SSABResource(subBuf);
-                this._instancePackResources.set(ref.hash, resource);
-
-                // Fetch the referenced pack's textures into the shared cache.
-                // Provider packs aren't URL-addressable, so their textures are
-                // the host's responsibility (registered before setAnimation).
-                if (!fromProvider && this._resourceManager) {
-                    const texPaths = SSRuntimeManager.extractTexturePaths(subBuf);
-                    await Promise.all(texPaths.map(info => this._resourceManager!.loadTexture(prefix + info.path, info.hash)));
-                }
-
-                // Enqueue packs referenced by this pack (nested instances).
-                if (this._resourceManager) {
-                    for (const nested of SSRuntimeManager.extractInstancePackRefs(subBuf)) {
-                        if (!this._instancePackResources.has(nested.hash)) {
-                            queue.push(nested);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error(`Error loading instance pack "${ref.name}"`, e);
-            }
-        }
+        await resolveInstancePacks({
+            rootSsab: buf,
+            textureBaseUrl: textureBaseUrl || this._textureBaseUrl,
+            provider: this._instancePackProvider,
+            resourceManager: this._resourceManager,
+            into: this._instancePackResources,
+        });
     }
 
     /**
