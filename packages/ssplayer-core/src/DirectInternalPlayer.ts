@@ -1,4 +1,4 @@
-import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, getWasmMemory } from './SSRuntimeManager.js';
+import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, getWasmMemory, finalizationRegistry } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
 
@@ -12,8 +12,26 @@ import { GeometryBuilder } from './GeometryBuilder.js';
  */
 export type InstancePackProvider = (name: string, hash: number) => Uint8Array | null | undefined | Promise<Uint8Array | null | undefined>;
 
+export class InstanceSlotHandle {
+    public raw: SSRuntimeInstanceSlot;
+
+    constructor() {
+        this.raw = SSRuntimeInstanceSlot.create();
+        finalizationRegistry.register(this, this.raw, this);
+    }
+
+    public destroy() {
+        if (this.raw) {
+            finalizationRegistry.unregister(this);
+            this.raw.free();
+            // @ts-ignore
+            this.raw = null;
+        }
+    }
+}
+
 export interface InstanceChildState {
-    slot: SSRuntimeInstanceSlot;
+    slot: InstanceSlotHandle;
     player: DirectInternalPlayer;
     prevChildFrame: number;
     visible: boolean;
@@ -35,7 +53,6 @@ export class DirectInternalPlayer {
     private _textureBaseUrl: string = '';
     private _texturePaths: { hash: number, path: string }[] = [];
     private _ssabResource: SSABResource | null = null;
-    private _ssabBuffer: Uint8Array | null = null;
     private _instancePackResources: Map<number, SSABResource> = new Map();
     private _instancePackProvider: InstancePackProvider | null = null;
     private _animationName: string = '';
@@ -97,9 +114,8 @@ export class DirectInternalPlayer {
             this._ssabResource.destroy();
         }
         this._ssabResource = new SSABResource(buffer);
-        this._ssabBuffer = buffer;
-        this.runtimeManager.bindResource(this._ssabResource);
-        this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer.buffer as ArrayBuffer);
+this.runtimeManager.bindResource(this._ssabResource);
+        this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer);
     }
 
     /**
@@ -163,7 +179,7 @@ export class DirectInternalPlayer {
                 childPlayer._animationName = ref.animeName;
                 childPlayer.setupInstanceChildren(); // Recurse
 
-                const slot = SSRuntimeInstanceSlot.create();
+                const slot = new InstanceSlotHandle();
                 this._instanceChildren.set(ref.partIndex, {
                     slot,
                     player: childPlayer,
@@ -187,12 +203,15 @@ export class DirectInternalPlayer {
         }
         this._ssabResource = resource;
         this.runtimeManager.bindResource(resource);
-        
-        // Don't set _ssabBuffer here because we don't own it in the same way, but we can set it for extract purposes.
+        this._texturePaths = []; // Handled by parent
+    }
+
+    private getSsabBuffer(): Uint8Array | null {
+        if (!this._ssabResource) return null;
         const ptr = this.runtimeManager.context.get_ssab_buf();
         const len = this.runtimeManager.context.get_ssab_len();
-        this._ssabBuffer = new Uint8Array(getWasmMemory().buffer, ptr, len);
-        this._texturePaths = []; // Handled by parent
+        if (ptr === 0 || len === 0) return null;
+        return new Uint8Array(getWasmMemory().buffer, ptr, len);
     }
 
     /**
@@ -206,26 +225,15 @@ export class DirectInternalPlayer {
      * the runtime manager, which creates the child contexts on `setupAnimation`.
      */
     private async loadInstancePacks(textureBaseUrl?: string): Promise<void> {
-        // Release previously loaded external packs (parent stays in _ssabResource).
-        for (const res of this._instancePackResources.values()) {
-            if (res !== this._ssabResource) {
-                try { res.destroy(); } catch { /* ignore */ }
-            }
-        }
-        this._instancePackResources.clear();
+        const buf = this.getSsabBuffer();
+        if (!buf) return;
 
-        if (!this._ssabBuffer || !this._ssabResource) return;
+        const parentInfo = SSRuntimeManager.extractPackInfo(buf);
+        const queue = SSRuntimeManager.extractInstancePackRefs(buf);
+        const seen = new Set<number>([parentInfo.hash]);
 
         const base = textureBaseUrl || this._textureBaseUrl;
         const prefix = base && !base.endsWith('/') ? base + '/' : base;
-
-        // Register the parent pack under its own hash for same-pack references.
-        const parentInfo = SSRuntimeManager.extractPackInfo(this._ssabBuffer.buffer as ArrayBuffer);
-        this._instancePackResources.set(parentInfo.hash, this._ssabResource);
-
-        // Breadth-first transitive closure over referenced instance packs.
-        const queue = SSRuntimeManager.extractInstancePackRefs(this._ssabBuffer.buffer as ArrayBuffer);
-        const seen = new Set<number>([parentInfo.hash]);
 
         while (queue.length > 0) {
             const ref = queue.shift()!;
@@ -235,40 +243,42 @@ export class DirectInternalPlayer {
             try {
                 // Prefer a host-supplied provider (e.g. drag-and-drop bytes);
                 // fall back to fetching a sibling `<base>/<name>.ssab`.
-                let buf: Uint8Array | null = null;
+                let subBuf: Uint8Array | null = null;
                 let fromProvider = false;
                 if (this._instancePackProvider) {
                     const provided = await this._instancePackProvider(ref.name, ref.hash);
                     if (provided) {
-                        buf = provided;
+                        subBuf = provided;
                         fromProvider = true;
                     }
                 }
-                if (!buf) {
+                if (!subBuf) {
                     const url = prefix + ref.name + '.ssab';
                     const response = await fetch(url);
                     if (!response.ok) {
                         console.warn(`Failed to load instance pack "${ref.name}" from ${url}: ${response.statusText}`);
                         continue;
                     }
-                    buf = new Uint8Array(await response.arrayBuffer());
+                    subBuf = new Uint8Array(await response.arrayBuffer());
                 }
 
-                const resource = new SSABResource(buf);
+                const resource = new SSABResource(subBuf);
                 this._instancePackResources.set(ref.hash, resource);
 
                 // Fetch the referenced pack's textures into the shared cache.
                 // Provider packs aren't URL-addressable, so their textures are
                 // the host's responsibility (registered before setAnimation).
                 if (!fromProvider && this._resourceManager) {
-                    const texPaths = SSRuntimeManager.extractTexturePaths(buf.buffer as ArrayBuffer);
+                    const texPaths = SSRuntimeManager.extractTexturePaths(subBuf);
                     await Promise.all(texPaths.map(info => this._resourceManager!.loadTexture(prefix + info.path, info.hash)));
                 }
 
                 // Enqueue packs referenced by this pack (nested instances).
-                for (const nested of SSRuntimeManager.extractInstancePackRefs(buf.buffer as ArrayBuffer)) {
-                    if (!this._instancePackResources.has(nested.hash) && !seen.has(nested.hash)) {
-                        queue.push(nested);
+                if (this._resourceManager) {
+                    for (const nested of SSRuntimeManager.extractInstancePackRefs(subBuf)) {
+                        if (!this._instancePackResources.has(nested.hash)) {
+                            queue.push(nested);
+                        }
                     }
                 }
             } catch (e) {
@@ -435,19 +445,19 @@ export class DirectInternalPlayer {
         const parentFrame = this.runtimeManager.context.get_frame_no();
         for (const [partIndex, childState] of this._instanceChildren.entries()) {
             const ev = this.runtimeManager.context.get_active_event_instance(partIndex);
-            const visible = childState.slot.step(ev, childState.player.runtimeManager.context, childState.prevChildFrame, parentFrame, deltaSeconds, parentLooped);
+            const visible = childState.slot.raw.step(ev, childState.player.runtimeManager.context, childState.prevChildFrame, parentFrame, deltaSeconds, parentLooped);
             if ((ev as any).free) (ev as any).free();
 
             childState.visible = visible;
-            if (childState.slot.transitioned()) {
+            if (childState.slot.raw.transitioned()) {
                 childState.player.runtimeManager.context.play();
             }
             childState.prevChildFrame = childState.player.runtimeManager.context.get_frame_no();
 
             // Advance the child's own effects
-            childState.player.runtimeManager.stepDependents(deltaSeconds, childState.slot.child_looped());
+            childState.player.runtimeManager.stepDependents(deltaSeconds, childState.slot.raw.child_looped());
             // Advance the child's own instance children recursively
-            childState.player.stepInstanceSlots(deltaSeconds, childState.slot.child_looped());
+            childState.player.stepInstanceSlots(deltaSeconds, childState.slot.raw.child_looped());
         }
     }
 
@@ -461,7 +471,7 @@ export class DirectInternalPlayer {
     public destroy() {
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
-            try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
+            try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
 
@@ -481,6 +491,5 @@ export class DirectInternalPlayer {
             this._ssabResource.destroy();
             this._ssabResource = null;
         }
-        this._ssabBuffer = null;
     }
 }

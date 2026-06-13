@@ -28,7 +28,7 @@ export function getWasmMemory(): WebAssembly.Memory {
     return wasmMemory;
 }
 
-const finalizationRegistry = new FinalizationRegistry((heldValue: { free: () => void }) => {
+export const finalizationRegistry = new FinalizationRegistry((heldValue: { free: () => void }) => {
     try {
         heldValue.free();
     } catch (e) {
@@ -364,8 +364,8 @@ export class SSRuntimeManager {
     /**
      * Parse the SSAB buffer and extract the image paths and their name hashes.
      */
-    public static extractTexturePaths(ssabBuffer: ArrayBuffer): { hash: number, path: string }[] {
-        const bb = new flatbuffers.ByteBuffer(new Uint8Array(ssabBuffer));
+    public static extractTexturePaths(ssabBuffer: Uint8Array): { hash: number, path: string }[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const results: { hash: number, path: string }[] = [];
         
@@ -386,8 +386,8 @@ export class SSRuntimeManager {
     /**
      * Read a pack's own name and name-hash from its SSAB buffer.
      */
-    public static extractPackInfo(ssabBuffer: ArrayBuffer): { hash: number, name: string | null } {
-        const bb = new flatbuffers.ByteBuffer(new Uint8Array(ssabBuffer));
+    public static extractPackInfo(ssabBuffer: Uint8Array): { hash: number, name: string | null } {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         return { hash: ssab.nameHash() >>> 0, name: ssab.name() };
     }
@@ -397,8 +397,8 @@ export class SSRuntimeManager {
      * by `PartType::Instance` parts (the referenced animation may live in an
      * external pack that the host must load before setup).
      */
-    public static extractInstancePackRefs(ssabBuffer: ArrayBuffer): { hash: number, name: string }[] {
-        const bb = new flatbuffers.ByteBuffer(new Uint8Array(ssabBuffer));
+    public static extractInstancePackRefs(ssabBuffer: Uint8Array): { hash: number, name: string }[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const seen = new Set<number>();
         const out: { hash: number, name: string }[] = [];
