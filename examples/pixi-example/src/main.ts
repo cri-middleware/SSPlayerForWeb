@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js';
+import { Application, Rectangle } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 import { UIManager } from './ui/UIManager.js';
 import { DropLoader } from './loader/DropLoader.js';
@@ -28,6 +28,31 @@ async function main() {
     player.subframe = true;
     player.position.set(640, 480);
     app.stage.addChild(player);
+    
+    // --- Setup Drag and Drop for SSPlayer ---
+    player.eventMode = 'dynamic';
+    player.cursor = 'pointer';
+
+    let dragging = false;
+    let dragOffset = { x: 0, y: 0 };
+
+    player.on('pointerdown', (e) => {
+        dragging = true;
+        dragOffset.x = player.position.x - e.global.x;
+        dragOffset.y = player.position.y - e.global.y;
+    });
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = new Rectangle(0, 0, 1280, 960);
+
+    app.stage.on('pointerup', () => { dragging = false; });
+    app.stage.on('pointerupoutside', () => { dragging = false; });
+    app.stage.on('pointermove', (e) => {
+        if (dragging) {
+            player.position.set(e.global.x + dragOffset.x, e.global.y + dragOffset.y);
+        }
+    });
+    // ----------------------------------------
     
     console.log("SSPlayer initialized successfully.");
     player.play();

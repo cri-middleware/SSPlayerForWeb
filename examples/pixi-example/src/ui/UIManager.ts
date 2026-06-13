@@ -103,6 +103,7 @@ export class UIManager {
             if (animName) {
                 await this.player.setAnimation(animName);
                 this.seekBar.max = this.player.endFrame.toString();
+                this.player.position.set(640, 480);
                 this.player.play();
                 this.btnPlayPause.textContent = 'Pause';
             }
