@@ -95,10 +95,6 @@ export class SSRuntimeManager {
         this.context.setup_animation(animationName);
 
         // Cleanup old effect slots (map value is { slot, visible }).
-        this.effectSlots.forEach(item => {
-            try { (item.slot as any)?.free?.(); } catch { /* ignore */ }
-        });
-        this.effectSlots.clear();
 
         this.currentAnimationFps = this.context.get_fps();
 
@@ -160,21 +156,20 @@ export class SSRuntimeManager {
                 }
             }
 
+            this.effectPartRefs = [];
             for (const idx of effectParts) {
                 const hash = refHashByPart.get(idx) ?? fallbackHash;
                 if (!hash) continue;
-                // simple seed logic similar to SpriteStudio standard
                 const seed = (idx >>> 0) ^ (hash >>> 0);
-                try {
-                    const slot = SSRuntimeEffectSlot.create(this.resource.raw, hash, seed);
-                    this.effectSlots.set(idx, { slot, visible: false });
-                } catch (e) {
-                    console.error(`Failed to create EffectSlot for part ${idx}`, e);
-                }
+                this.effectPartRefs.push({ partIndex: idx, hash, seed });
             }
         } catch (e) {
             console.warn("Failed to parse SSAB for Effect parts setup.", e);
         }
+    }
+
+    public getEffectParts(): { partIndex: number, hash: number, seed: number }[] {
+        return this.effectPartRefs;
     }
 
     public getInstanceParts(): { partIndex: number, packHash: number, animeName: string, packName: string | null }[] {
@@ -415,10 +410,6 @@ export class SSRuntimeManager {
 
     public destroy() {
         if (this.context) {
-            this.effectSlots.forEach(item => {
-                try { (item.slot as any)?.free?.(); } catch { /* ignore */ }
-            });
-            this.effectSlots.clear();
 
             finalizationRegistry.unregister(this);
             this.context.free();

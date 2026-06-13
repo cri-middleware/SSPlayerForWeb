@@ -64,7 +64,7 @@ export interface InstanceChildState<T> {
 }
 
 /**
- * Generic DirectInternalPlayer
+ * Generic InternalPlayerBase
  * Encapsulates the engine-independent playback logic (play, pause, stop, update, etc.)
  * and manages the SSRuntimeManager.
  * Rendering engine wrappers (e.g., PixiJS, RMMZ) can hold or inherit this class
@@ -149,7 +149,7 @@ this.runtimeManager.bindResource(this._ssabResource);
      */
     public async loadTextures(textureBaseUrl?: string): Promise<void> {
         if (!this._resourceManager) {
-            throw new Error("ResourceManager is not set on DirectInternalPlayer.");
+            throw new Error("ResourceManager is not set on InternalPlayerBase.");
         }
         
         const base = textureBaseUrl || this._textureBaseUrl;
@@ -211,7 +211,7 @@ this.runtimeManager.bindResource(this._ssabResource);
             }
 
             try {
-                const childPlayer = new DirectInternalPlayer(this._resourceManager || undefined);
+                const childPlayer = this.createChildPlayer(this._resourceManager || undefined);
                 // Child needs to share the loaded packs registry so nested instances work
                 childPlayer._instancePackResources = this._instancePackResources;
                 childPlayer.bindSharedResource(resource);
@@ -222,6 +222,7 @@ this.runtimeManager.bindResource(this._ssabResource);
                 childPlayer.runtimeManager.setupAnimation(ref.animeName);
                 childPlayer._animationName = ref.animeName;
                 childPlayer.setupInstanceChildren(); // Recurse
+                childPlayer.setupEffectChildren();
 
                 const slot = new InstanceSlotHandle();
                 this._instanceChildren.set(ref.partIndex, {
@@ -377,9 +378,9 @@ this.runtimeManager.bindResource(this._ssabResource);
      */
     public update(deltaMs: number) {
         if (!this.isPlaying || this.isPausing) return;
-        // Delegate to the manager so animation playback AND effect-slot
-        // simulation advance together (slots are stepped inside update()).
+        // Delegate to the manager so animation playback advances
         this.runtimeManager.update(deltaMs);
+        this.stepEffectSlots(deltaMs / 1000.0, this.runtimeManager.context.is_looped());
         this.stepInstanceSlots(deltaMs / 1000.0, this.runtimeManager.context.is_looped());
     }
 
@@ -519,6 +520,9 @@ this.runtimeManager.bindResource(this._ssabResource);
         for (const [partIndex, childState] of this._instanceChildren.entries()) {
             const ev = this.runtimeManager.context.get_active_event_instance(partIndex);
             const visible = childState.slot.raw.step(ev, childState.player.runtimeManager.context, childState.prevChildFrame, parentFrame, deltaSeconds, parentLooped);
+
+            const childDeltaSeconds = ev ? deltaSeconds * Math.abs(ev.speed) : deltaSeconds;
+
             if ((ev as any).free) (ev as any).free();
 
             childState.visible = visible;
@@ -528,9 +532,9 @@ this.runtimeManager.bindResource(this._ssabResource);
             childState.prevChildFrame = childState.player.runtimeManager.context.get_frame_no();
 
             // Advance the child's own effects
-            childState.player.stepEffectSlots(deltaSeconds, childState.slot.raw.child_looped());
+            childState.player.stepEffectSlots(childDeltaSeconds, childState.slot.raw.child_looped());
             // Advance the child's own instance children recursively
-            childState.player.stepInstanceSlots(deltaSeconds, childState.slot.raw.child_looped());
+            childState.player.stepInstanceSlots(childDeltaSeconds, childState.slot.raw.child_looped());
         }
     }
 
@@ -541,7 +545,7 @@ this.runtimeManager.bindResource(this._ssabResource);
     /**
      * Frees the allocated memory.
      */
-    protected abstract createChildPlayer(manager: SSRuntimeManager): T;
+    protected abstract createChildPlayer(resourceManager?: IResourceManager): T;
 
     public destroy() {
         this._instanceChildren.forEach(child => {
