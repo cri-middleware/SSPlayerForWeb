@@ -60,7 +60,7 @@ export class SSABResource {
 
 export class SSRuntimeManager {
     public context: SSRuntimeContext;
-    private effectSlots: Map<number, {slot: SSRuntimeEffectSlot, visible: boolean}> = new Map();
+    private effectPartRefs: { partIndex: number, hash: number, seed: number }[] = [];
     private resource: SSABResource | null = null;
     private currentAnimationFps: number = 30;
 
@@ -200,23 +200,14 @@ export class SSRuntimeManager {
     }
 
 
-    public update(deltaMs: number) {
-        // The runtime's playback controller measures time in milliseconds
-        // (update_interval = 1000 / fps), so the raw delta is passed straight
-        // through. Effect/instance slots, however, simulate in seconds
-        // (delta_frames = delta_seconds * fps), so they get the converted value.
-        this.context.update(deltaMs);
-        this.stepDependents(deltaMs / 1000.0, this.context.is_looped());
+    public update(deltaMs: number): boolean {
+        return this.context.update(deltaMs);
     }
 
     /**
      * Advance everything that derives from this context's current frame:
      * effect particle slots. Shared by playback `update()` and `seekTo()`.
      */
-    public stepDependents(deltaSeconds: number, parentLooped: boolean) {
-        this.stepEffectSlots(deltaSeconds, parentLooped);
-    }
-
     /**
      * Jump the playhead and re-evaluate effects for that frame, mirroring the
      * Godot player's `_seek_and_redraw(frame, delta=0, parent_looped=false)`.
@@ -226,28 +217,6 @@ export class SSRuntimeManager {
      * seeked frame, while the independent real-time clock does not advance
      * (independent effects cannot be seeked — see docs/00_limitations).
      */
-    public seekTo(frame: number) {
-        this.context.set_frame_no(frame);
-        this.stepDependents(0, false);
-    }
-
-    private stepEffectSlots(deltaSeconds: number, parentLooped: boolean) {
-        if (this.effectSlots.size === 0) return;
-
-        const frame = this.context.get_frame_no();
-        for (const [partIndex, item] of this.effectSlots.entries()) {
-            const ev = this.context.get_active_effect_event(partIndex);
-            if (ev) {
-                // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
-                item.visible = item.slot.step(ev, frame, deltaSeconds, this.currentAnimationFps, parentLooped, true, 2);
-                if ((ev as any).free) (ev as any).free();
-            } else {
-                item.visible = false;
-            }
-        }
-    }
-
-
 
     /**
      * Static per-part mask flags for the current animation (one byte per part
@@ -274,19 +243,6 @@ export class SSRuntimeManager {
         const r = out ?? new Float32Array(6);
         r[0] = m[o + 0]; r[1] = m[o + 4]; r[2] = m[o + 1]; r[3] = m[o + 5]; r[4] = m[o + 12]; r[5] = m[o + 13];
         return r;
-    }
-
-    public getEffectDrawPlan(partIndex: number): EffectDrawPlan | null {
-        const item = this.effectSlots.get(partIndex);
-        if (!item || !item.visible) return null;
-
-        const ptr = item.slot.get_draw_plan_buf();
-        const len = item.slot.get_draw_plan_len();
-        if (ptr === 0 || len === 0) return null;
-
-        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
-        const bb = new flatbuffers.ByteBuffer(buf);
-        return EffectDrawPlan.getRootAsEffectDrawPlan(bb);
     }
 
     public getWorldMatrices(): Float32Array {
@@ -472,4 +428,4 @@ export class SSRuntimeManager {
     }
 }
 
-export { SSRuntimeContext, SSRuntimeResource, SSRuntimeInstanceSlot };
+export { SSRuntimeContext, SSRuntimeResource, SSRuntimeInstanceSlot, SSRuntimeEffectSlot, EffectDrawPlan };

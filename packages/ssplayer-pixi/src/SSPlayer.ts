@@ -530,7 +530,7 @@ export class SSPlayer extends Container {
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
-                    const plan = manager.getEffectDrawPlan(partIdx);
+                    const plan = player.getEffectDrawPlan(partIdx);
                     if (!plan) continue;
 
                     const cmdCount = plan.commandsLength();

@@ -1,4 +1,5 @@
-import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, getWasmMemory, finalizationRegistry } from './SSRuntimeManager.js';
+import * as flatbuffers from 'flatbuffers';
+import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, SSRuntimeEffectSlot, EffectDrawPlan, getWasmMemory, finalizationRegistry } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
 
@@ -30,6 +31,30 @@ export class InstanceSlotHandle {
     }
 }
 
+
+export class EffectSlotHandle {
+    public raw: SSRuntimeEffectSlot;
+
+    constructor(resourceRaw: any, hash: number, seed: number) {
+        this.raw = SSRuntimeEffectSlot.create(resourceRaw, hash, seed);
+        finalizationRegistry.register(this, this.raw, this);
+    }
+
+    public destroy() {
+        if (this.raw) {
+            finalizationRegistry.unregister(this);
+            this.raw.free();
+            // @ts-ignore
+            this.raw = null;
+        }
+    }
+}
+
+export interface EffectChildState {
+    slot: EffectSlotHandle;
+    visible: boolean;
+}
+
 export interface InstanceChildState {
     slot: InstanceSlotHandle;
     player: DirectInternalPlayer;
@@ -59,6 +84,7 @@ export class DirectInternalPlayer {
     public geometryBuilder: GeometryBuilder;
     public subFrameEnabled: boolean = false;
     private _instanceChildren: Map<number, InstanceChildState> = new Map();
+    private _effectChildren: Map<number, EffectChildState> = new Map();
 
     constructor(resourceManager?: IResourceManager) {
         this.runtimeManager = new SSRuntimeManager();
@@ -149,6 +175,23 @@ this.runtimeManager.bindResource(this._ssabResource);
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
         this.setupInstanceChildren();
+        this.setupEffectChildren();
+    }
+
+        private setupEffectChildren() {
+        this._effectChildren.forEach(child => child.slot.destroy());
+        this._effectChildren.clear();
+        if (!this._ssabResource) return;
+
+        const parts = this.runtimeManager.getEffectParts();
+        for (const part of parts) {
+            try {
+                const slot = new EffectSlotHandle(this._ssabResource.raw, part.hash, part.seed);
+                this._effectChildren.set(part.partIndex, { slot, visible: false });
+            } catch (e) {
+                console.error(`Failed to create EffectSlot for part ${part.partIndex}`, e);
+            }
+        }
     }
 
     private setupInstanceChildren() {
@@ -157,6 +200,8 @@ this.runtimeManager.bindResource(this._ssabResource);
             try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
+        this._effectChildren.forEach(child => child.slot.destroy());
+        this._effectChildren.clear();
 
         const refs = this.runtimeManager.getInstanceParts();
         for (const ref of refs) {
@@ -371,10 +416,23 @@ this.runtimeManager.bindResource(this._ssabResource);
         return this._speedRate;
     }
 
+    
+    public getEffectDrawPlan(partIndex: number): EffectDrawPlan | null {
+        const item = this._effectChildren.get(partIndex);
+        if (!item || !item.visible) return null;
+
+        const ptr = item.slot.raw.get_draw_plan_buf();
+        const len = item.slot.raw.get_draw_plan_len();
+        if (ptr === 0 || len === 0) return null;
+
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        const bb = new flatbuffers.ByteBuffer(buf);
+        return EffectDrawPlan.getRootAsEffectDrawPlan(bb);
+    }
+
     public setFrame(frame: number) {
-        // Re-evaluates effect slots for the seeked frame (matches Godot's
-        // seek-and-redraw); a plain set_frame_no would freeze particles.
-        this.runtimeManager.seekTo(frame);
+        this.runtimeManager.context.set_frame_no(frame);
+        this.stepEffectSlots(0, false);
         this.stepInstanceSlots(0, false);
     }
 
@@ -439,6 +497,22 @@ this.runtimeManager.bindResource(this._ssabResource);
         return this.runtimeManager.context.get_skip_frames();
     }
 
+        private stepEffectSlots(deltaSeconds: number, parentLooped: boolean) {
+        if (this._effectChildren.size === 0) return;
+
+        const frame = this.runtimeManager.context.get_frame_no();
+        for (const [partIndex, item] of this._effectChildren.entries()) {
+            const ev = this.runtimeManager.context.get_active_effect_event(partIndex);
+            if (ev) {
+                // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
+                item.visible = item.slot.raw.step(ev, frame, deltaSeconds, this.getFrameRate(), parentLooped, true, 2);
+                if ((ev as any).free) (ev as any).free();
+            } else {
+                item.visible = false;
+            }
+        }
+    }
+
     private stepInstanceSlots(deltaSeconds: number, parentLooped: boolean) {
         if (this._instanceChildren.size === 0) return;
 
@@ -455,7 +529,7 @@ this.runtimeManager.bindResource(this._ssabResource);
             childState.prevChildFrame = childState.player.runtimeManager.context.get_frame_no();
 
             // Advance the child's own effects
-            childState.player.runtimeManager.stepDependents(deltaSeconds, childState.slot.raw.child_looped());
+            childState.player.stepEffectSlots(deltaSeconds, childState.slot.raw.child_looped());
             // Advance the child's own instance children recursively
             childState.player.stepInstanceSlots(deltaSeconds, childState.slot.raw.child_looped());
         }
@@ -474,6 +548,8 @@ this.runtimeManager.bindResource(this._ssabResource);
             try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
+        this._effectChildren.forEach(child => child.slot.destroy());
+        this._effectChildren.clear();
 
         // Free child instance contexts first (they reference the pack resources).
         this.runtimeManager.destroy();
