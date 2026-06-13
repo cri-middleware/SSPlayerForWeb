@@ -82,7 +82,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public _instancePackResources: Map<number, SSABResource> = new Map();
     public _instancePackProvider: InstancePackProvider | null = null;
     private _animationName: string = '';
-    public subFrameEnabled: boolean = false;
+    private _subFrameEnabled: boolean = false;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
 
@@ -216,6 +216,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             try {
                 const childPlayer = this.createChildPlayer(this._resourceManager || undefined);
                 childPlayer._isChildPlayer = true;
+                childPlayer.subFrameEnabled = this.subFrameEnabled;
                 // Child needs to share the loaded packs registry so nested instances work
                 childPlayer._instancePackResources = this._instancePackResources;
                 childPlayer.bindSharedResource(resource);
@@ -444,9 +445,20 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.context.get_frame_no();
     }
 
+    public get subFrameEnabled(): boolean {
+        return this._subFrameEnabled;
+    }
+
+    public set subFrameEnabled(value: boolean) {
+        this._subFrameEnabled = value;
+        this._instanceChildren.forEach(child => {
+            child.player.subFrameEnabled = value;
+        });
+    }
+
     public getFrameNo(): number {
         const frameNo = this.runtimeManager.context.get_frame_no();
-        return this.subFrameEnabled ? frameNo : Math.floor(frameNo);
+        return this._subFrameEnabled ? frameNo : Math.floor(frameNo);
     }
 
     public getTotalFrames(): number {
