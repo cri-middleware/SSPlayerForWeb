@@ -8,6 +8,7 @@ import { PartType } from './ss/format/part-type.js';
 import { PartTypeEffect } from './ss/format/part-type-effect.js';
 import { PartTypeInstance } from './ss/format/part-type-instance.js';
 import { DrawBatchKind } from './ss/runtime/draw-batch-kind.js';
+import { WasmViewCache } from './WasmViewCache.js';
 
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
@@ -73,6 +74,11 @@ export class SSRuntimeManager {
      */
     private partMaskFlags: Uint8Array | null = null;
 
+    // Reuses one TypedArray view per WASM buffer so per-frame reads allocate
+    // nothing, and auto-invalidates on memory growth (detach-safe by
+    // construction). See WasmViewCache.
+    private readonly viewCache = new WasmViewCache(getWasmMemory);
+
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
         this.context = new SSRuntimeContext();
@@ -92,6 +98,8 @@ export class SSRuntimeManager {
 
     public setupAnimation(animationName: string) {
         this.context.setup_animation(animationName);
+        // Part counts and buffer layouts change per animation; drop stale views.
+        this.viewCache.clear();
 
         // Cleanup old effect slots (map value is { slot, visible }).
 
@@ -240,75 +248,51 @@ export class SSRuntimeManager {
     }
 
     public getWorldMatrices(): Float32Array {
-        const ptr = this.context.get_world_matrices_buf();
-        const len = this.context.get_world_matrices_len();
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('worldMatrices', this.context.get_world_matrices_buf(), this.context.get_world_matrices_len(), Float32Array);
     }
 
     public getLocalVertices(): Float32Array {
-        const ptr = this.context.get_local_vertices_buf();
-        const len = this.context.get_local_vertices_len();
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('localVertices', this.context.get_local_vertices_buf(), this.context.get_local_vertices_len(), Float32Array);
     }
 
     public getLocalUVs(): Float32Array {
-        const ptr = this.context.get_local_uvs_buf();
-        const len = this.context.get_local_uvs_len();
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('localUVs', this.context.get_local_uvs_buf(), this.context.get_local_uvs_len(), Float32Array);
     }
 
     public getMeshVerticesX(): Float32Array {
-        const ptr = this.context.get_mesh_vertices_x_buf();
-        const len = this.context.get_mesh_vertices_x_len();
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('meshVerticesX', this.context.get_mesh_vertices_x_buf(), this.context.get_mesh_vertices_x_len(), Float32Array);
     }
 
     public getMeshVerticesY(): Float32Array {
-        const ptr = this.context.get_mesh_vertices_y_buf();
-        const len = this.context.get_mesh_vertices_y_len();
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('meshVerticesY', this.context.get_mesh_vertices_y_buf(), this.context.get_mesh_vertices_y_len(), Float32Array);
     }
 
     public getMeshUVs(): Float32Array {
-        const ptr = this.context.get_mesh_uvs_buf();
-        const len = this.context.get_mesh_uvs_len();
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('meshUVs', this.context.get_mesh_uvs_buf(), this.context.get_mesh_uvs_len(), Float32Array);
     }
 
     public getMeshIndices(): Int32Array {
-        const ptr = this.context.get_mesh_indices_buf();
-        const len = this.context.get_mesh_indices_len();
-        return new Int32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('meshIndices', this.context.get_mesh_indices_buf(), this.context.get_mesh_indices_len(), Int32Array);
     }
 
     public getMeshVertexOffsets(): Uint32Array {
-        const ptr = this.context.get_mesh_vertex_offsets_buf();
-        const len = this.context.get_mesh_vertex_offsets_len();
-        return new Uint32Array(getWasmMemory().buffer, ptr, len);
+        return this.viewCache.view('meshVertexOffsets', this.context.get_mesh_vertex_offsets_buf(), this.context.get_mesh_vertex_offsets_len(), Uint32Array);
     }
 
     public getMeshIndexOffsets(): Int32Array {
-        const ptr = this.context.get_mesh_index_offsets_buf();
-        const len = this.context.get_mesh_index_offsets_len();
-        return this.getInt32Array(ptr, len);
+        return this.viewCache.view('meshIndexOffsets', this.context.get_mesh_index_offsets_buf(), this.context.get_mesh_index_offsets_len(), Int32Array);
     }
 
     public getShapeVertexCounts(): Int32Array {
-        const ptr = this.context.get_shape_vertex_counts_buf();
-        const len = this.context.get_shape_vertex_counts_len();
-        return this.getInt32Array(ptr, len);
+        return this.viewCache.view('shapeVertexCounts', this.context.get_shape_vertex_counts_buf(), this.context.get_shape_vertex_counts_len(), Int32Array);
     }
 
     public getShapeVertexBoxCoords(): Float32Array {
-        const ptr = this.context.get_shape_vertex_box_coords_buf();
-        const len = this.context.get_shape_vertex_box_coords_len();
-        return this.getFloat32Array(ptr, len);
+        return this.viewCache.view('shapeVertexBoxCoords', this.context.get_shape_vertex_box_coords_buf(), this.context.get_shape_vertex_box_coords_len(), Float32Array);
     }
 
     public getShapeVertices(): Float32Array {
-        const ptr = this.context.get_shape_vertices_buf();
-        const len = this.context.get_shape_vertices_len();
-        return this.getFloat32Array(ptr, len);
+        return this.viewCache.view('shapeVertices', this.context.get_shape_vertices_buf(), this.context.get_shape_vertices_len(), Float32Array);
     }
 
     /**
@@ -417,21 +401,9 @@ export class SSRuntimeManager {
         }
     }
 
-    public getFloat32Array(ptr: number, len: number): Float32Array {
-        return new Float32Array(getWasmMemory().buffer, ptr, len);
-    }
-
-    public getInt32Array(ptr: number, len: number): Int32Array {
-        return new Int32Array(getWasmMemory().buffer, ptr, len);
-    }
-
-    public getUint16Array(ptr: number, len: number): Uint16Array {
-        return new Uint16Array(getWasmMemory().buffer, ptr, len);
-    }
-
     public destroy() {
         if (this.context) {
-
+            this.viewCache.clear();
             finalizationRegistry.unregister(this);
             this.context.free();
             // @ts-ignore
