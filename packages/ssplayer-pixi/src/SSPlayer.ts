@@ -312,8 +312,7 @@ export class SSPlayer extends Container {
         // instance-part children recurse through here with their accumulated
         // transform and alpha.
         this.renderContext(
-            this.internalPlayer.runtimeManager,
-            this.internalPlayer.geometryBuilder,
+            this.internalPlayer,
             frameData,
             null,
             1.0
@@ -328,12 +327,14 @@ export class SSPlayer extends Container {
      * composing the instance part's world matrix and alpha as they descend.
      */
     private renderContext(
-        manager: SSRuntimeManager,
-        geometryBuilder: GeometryBuilder,
+        player: DirectInternalPlayer,
         frameData: FrameData,
         parentMatrix: Float32Array | null,
         parentAlpha: number
     ) {
+        const manager = player.runtimeManager;
+        const geometryBuilder = player.geometryBuilder;
+
         geometryBuilder.parentMatrix = parentMatrix;
         geometryBuilder.updateWorldPositions();
 
@@ -373,16 +374,16 @@ export class SSPlayer extends Container {
                     const alpha = partState ? partState.alpha() : 1.0;
                     if (alpha <= 0) continue;
 
-                    const child = manager.getInstanceChild(partIdx);
+                    const child = player.getInstanceChild(partIdx);
                     if (!child || !child.visible) continue;
 
-                    const childFrame = child.manager.context.get_frame_no();
-                    const childFrameData = child.manager.getFrameData(childFrame);
+                    const childFrame = child.player.runtimeManager.context.get_frame_no();
+                    const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
                     if (!childFrameData) continue;
 
                     manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
                     const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
-                    this.renderContext(child.manager, child.geometryBuilder, childFrameData, composed, parentAlpha * alpha);
+                    this.renderContext(child.player, childFrameData, composed, parentAlpha * alpha);
                 }
                 continue;
             }

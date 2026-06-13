@@ -1,4 +1,4 @@
-import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle } from './SSRuntimeManager.js';
+import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, getWasmMemory } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
 
@@ -11,6 +11,14 @@ import { GeometryBuilder } from './GeometryBuilder.js';
  * hash) into the shared ResourceManager before `setAnimation`.
  */
 export type InstancePackProvider = (name: string, hash: number) => Uint8Array | null | undefined | Promise<Uint8Array | null | undefined>;
+
+export interface InstanceChildState {
+    slot: SSRuntimeInstanceSlot;
+    player: DirectInternalPlayer;
+    prevChildFrame: number;
+    visible: boolean;
+    parentMatrix: Float32Array;
+}
 
 /**
  * Generic DirectInternalPlayer
@@ -33,6 +41,7 @@ export class DirectInternalPlayer {
     private _animationName: string = '';
     public geometryBuilder: GeometryBuilder;
     public subFrameEnabled: boolean = false;
+    private _instanceChildren: Map<number, InstanceChildState> = new Map();
 
     constructor(resourceManager?: IResourceManager) {
         this.runtimeManager = new SSRuntimeManager();
@@ -121,9 +130,69 @@ export class DirectInternalPlayer {
     public async setAnimation(animationName: string, textureBaseUrl?: string) {
         await this.loadTextures(textureBaseUrl);
         await this.loadInstancePacks(textureBaseUrl);
-        this.runtimeManager.setInstancePackResources(this._instancePackResources);
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
+        this.setupInstanceChildren();
+    }
+
+    private setupInstanceChildren() {
+        this._instanceChildren.forEach(child => {
+            try { child.player.destroy(); } catch { /* ignore */ }
+            try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
+        });
+        this._instanceChildren.clear();
+
+        const refs = this.runtimeManager.getInstanceParts();
+        for (const ref of refs) {
+            const resource = this._instancePackResources.get(ref.packHash);
+            if (!resource) {
+                console.warn(`Instance part ${ref.partIndex} references pack "${ref.packName}" (hash ${ref.packHash}) which is not loaded; skipping.`);
+                continue;
+            }
+
+            try {
+                const childPlayer = new DirectInternalPlayer(this._resourceManager || undefined);
+                // Child needs to share the loaded packs registry so nested instances work
+                childPlayer._instancePackResources = this._instancePackResources;
+                childPlayer.bindSharedResource(resource);
+                childPlayer.setCoordinateSystem(this.runtimeManager.context.get_coordinate_system());
+                childPlayer.runtimeManager.context.set_render_mode(this.runtimeManager.context.get_render_mode());
+                
+                // Because we use shared resources, we must directly call runtimeManager.setupAnimation and setupInstanceChildren
+                childPlayer.runtimeManager.setupAnimation(ref.animeName);
+                childPlayer._animationName = ref.animeName;
+                childPlayer.setupInstanceChildren(); // Recurse
+
+                const slot = SSRuntimeInstanceSlot.create();
+                this._instanceChildren.set(ref.partIndex, {
+                    slot,
+                    player: childPlayer,
+                    prevChildFrame: childPlayer.runtimeManager.context.get_frame_no(),
+                    visible: false,
+                    parentMatrix: new Float32Array(6),
+                });
+            } catch (e) {
+                console.error(`Failed to create instance child for part ${ref.partIndex} ("${ref.animeName}")`, e);
+            }
+        }
+    }
+
+    /**
+     * Binds an already loaded SSABResource to the player (used by instance children).
+     * @param resource The shared SSABResource.
+     */
+    public bindSharedResource(resource: SSABResource) {
+        if (this._ssabResource && this._ssabResource !== resource) {
+            this._ssabResource.destroy();
+        }
+        this._ssabResource = resource;
+        this.runtimeManager.bindResource(resource);
+        
+        // Don't set _ssabBuffer here because we don't own it in the same way, but we can set it for extract purposes.
+        const ptr = this.runtimeManager.context.get_ssab_buf();
+        const len = this.runtimeManager.context.get_ssab_len();
+        this._ssabBuffer = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        this._texturePaths = []; // Handled by parent
     }
 
     /**
@@ -257,6 +326,7 @@ export class DirectInternalPlayer {
         // Delegate to the manager so animation playback AND effect-slot
         // simulation advance together (slots are stepped inside update()).
         this.runtimeManager.update(deltaMs);
+        this.stepInstanceSlots(deltaMs / 1000.0, this.runtimeManager.context.is_looped());
     }
 
     /**
@@ -295,6 +365,7 @@ export class DirectInternalPlayer {
         // Re-evaluates effect slots for the seeked frame (matches Godot's
         // seek-and-redraw); a plain set_frame_no would freeze particles.
         this.runtimeManager.seekTo(frame);
+        this.stepInstanceSlots(0, false);
     }
 
     public getFrame(): number {
@@ -358,10 +429,42 @@ export class DirectInternalPlayer {
         return this.runtimeManager.context.get_skip_frames();
     }
 
+    private stepInstanceSlots(deltaSeconds: number, parentLooped: boolean) {
+        if (this._instanceChildren.size === 0) return;
+
+        const parentFrame = this.runtimeManager.context.get_frame_no();
+        for (const [partIndex, childState] of this._instanceChildren.entries()) {
+            const ev = this.runtimeManager.context.get_active_event_instance(partIndex);
+            const visible = childState.slot.step(ev, childState.player.runtimeManager.context, childState.prevChildFrame, parentFrame, deltaSeconds, parentLooped);
+            if ((ev as any).free) (ev as any).free();
+
+            childState.visible = visible;
+            if (childState.slot.transitioned()) {
+                childState.player.runtimeManager.context.play();
+            }
+            childState.prevChildFrame = childState.player.runtimeManager.context.get_frame_no();
+
+            // Advance the child's own effects
+            childState.player.runtimeManager.stepDependents(deltaSeconds, childState.slot.child_looped());
+            // Advance the child's own instance children recursively
+            childState.player.stepInstanceSlots(deltaSeconds, childState.slot.child_looped());
+        }
+    }
+
+    public getInstanceChild(partIndex: number): InstanceChildState | undefined {
+        return this._instanceChildren.get(partIndex);
+    }
+
     /**
      * Frees the allocated memory.
      */
     public destroy() {
+        this._instanceChildren.forEach(child => {
+            try { child.player.destroy(); } catch { /* ignore */ }
+            try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
+        });
+        this._instanceChildren.clear();
+
         // Free child instance contexts first (they reference the pack resources).
         this.runtimeManager.destroy();
 

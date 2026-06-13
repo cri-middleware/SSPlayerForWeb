@@ -56,41 +56,11 @@ export class SSABResource {
     }
 }
 
-/**
- * A live instance-part child. Each `PartType::Instance` part in an animation
- * references another animation; we play that reference in its own
- * `SSRuntimeManager` (so the child's own effects and nested instances recurse
- * naturally) driven by an `SSRuntimeInstanceSlot`. The slot resolves the child
- * frame from the parent's per-frame `EventInstance` data and timing.
- */
-export interface InstanceChild {
-    slot: SSRuntimeInstanceSlot;
-    manager: SSRuntimeManager;
-    geometryBuilder: GeometryBuilder;
-    /** Child frame_no before the most recent step — feeds independent loop-edge detection. */
-    prevChildFrame: number;
-    visible: boolean;
-    /**
-     * Persistent scratch holding this child's accumulated parent transform
-     * (2D affine, [m00,m01,m10,m11,tx,ty]) for the current frame. Owned per
-     * child so the renderer can compose into it without per-frame allocation;
-     * stable for the duration of the child's (possibly nested) render.
-     */
-    parentMatrix: Float32Array;
-}
+
 
 export class SSRuntimeManager {
     public context: SSRuntimeContext;
     private effectSlots: Map<number, {slot: SSRuntimeEffectSlot, visible: boolean}> = new Map();
-    private instanceSlots: Map<number, InstanceChild> = new Map();
-    /**
-     * pack-name-hash -> resource for every animation pack reachable from this
-     * animation through instance references (including this manager's own pack).
-     * Shared by reference with every child so nested instances resolve against
-     * the same loaded set. Populated by the host (DirectInternalPlayer) which
-     * owns fetching; this manager only reads it to bind child contexts.
-     */
-    private instancePackResources: Map<number, SSABResource> = new Map();
     private resource: SSABResource | null = null;
     private currentAnimationFps: number = 30;
 
@@ -129,13 +99,6 @@ export class SSRuntimeManager {
             try { (item.slot as any)?.free?.(); } catch { /* ignore */ }
         });
         this.effectSlots.clear();
-
-        // Cleanup old instance children (free child runtimes recursively + slots).
-        this.instanceSlots.forEach(child => {
-            try { child.manager.destroy(); } catch { /* ignore */ }
-            try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
-        });
-        this.instanceSlots.clear();
 
         this.currentAnimationFps = this.context.get_fps();
 
@@ -209,40 +172,20 @@ export class SSRuntimeManager {
                     console.error(`Failed to create EffectSlot for part ${idx}`, e);
                 }
             }
-
-            this.setupInstanceChildren();
         } catch (e) {
-            console.warn("Failed to parse SSAB for Effect/Instance parts setup.", e);
+            console.warn("Failed to parse SSAB for Effect parts setup.", e);
         }
     }
 
-    /**
-     * Walk the parts table and create a child runtime for every
-     * `PartType::Instance` part. The referenced animation is looked up in
-     * `instancePackResources` by its pack-name-hash; the child binds that
-     * resource, inherits this manager's coordinate system / render mode, and is
-     * set up recursively (so the child's own effects and nested instances are
-     * created too). Resolution of the per-frame playback parameters is left to
-     * the runtime via `get_active_event_instance` at step time.
-     */
-    private setupInstanceChildren() {
-        if (!this.resource) return;
+    public getInstanceParts(): { partIndex: number, packHash: number, animeName: string, packName: string | null }[] {
+        if (!this.resource) return [];
 
-        // Re-derive a fresh SSAB view: earlier effect-slot creation may have
-        // grown (and detached) the WASM-memory buffer the parser reads from.
         const ptr = this.context.get_ssab_buf();
         const len = this.context.get_ssab_len();
-        if (ptr === 0 || len === 0) return;
+        if (ptr === 0 || len === 0) return [];
         const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(new flatbuffers.ByteBuffer(buf));
 
-        // Snapshot every instance part's reference into plain JS values FIRST.
-        // `ssab` is a view over WASM memory; creating a child context below
-        // allocates WASM memory, which may grow (and detach) the backing buffer
-        // — so reading `ssab` after the first child would yield garbage. (Reads
-        // here are allocation-free, so the snapshot completes against a valid
-        // view.) The effect-slot setup above uses the same collect-then-create
-        // pattern.
         const refs: { partIndex: number, packHash: number, animeName: string, packName: string | null }[] = [];
         for (let i = 0; i < ssab.partsLength(); i++) {
             const part = ssab.parts(i);
@@ -253,46 +196,7 @@ export class SSRuntimeManager {
             if (!animeName) continue;
             refs.push({ partIndex: i, packHash: inst.refAnimePackHash() >>> 0, animeName, packName: inst.refAnimePack() });
         }
-
-        for (const ref of refs) {
-            const resource = this.instancePackResources.get(ref.packHash);
-            if (!resource) {
-                console.warn(`Instance part ${ref.partIndex} references pack "${ref.packName}" (hash ${ref.packHash}) which is not loaded; skipping.`);
-                continue;
-            }
-
-            try {
-                const childManager = new SSRuntimeManager();
-                // Share the loaded-pack registry so nested instances resolve.
-                childManager.instancePackResources = this.instancePackResources;
-                childManager.bindResource(resource);
-                childManager.context.set_coordinate_system(this.context.get_coordinate_system());
-                childManager.context.set_render_mode(this.context.get_render_mode());
-                childManager.setupAnimation(ref.animeName);
-
-                const slot = SSRuntimeInstanceSlot.create();
-                const geometryBuilder = new GeometryBuilder(childManager);
-                this.instanceSlots.set(ref.partIndex, {
-                    slot,
-                    manager: childManager,
-                    geometryBuilder,
-                    prevChildFrame: childManager.context.get_frame_no(),
-                    visible: false,
-                    parentMatrix: new Float32Array(6),
-                });
-            } catch (e) {
-                console.error(`Failed to create instance child for part ${ref.partIndex} ("${ref.animeName}")`, e);
-            }
-        }
-    }
-
-    /**
-     * Register the pack-hash -> resource map used to resolve instance-part
-     * references. Must be called before `setupAnimation` so child runtimes can
-     * be bound. The map is shared by reference with all descendant children.
-     */
-    public setInstancePackResources(resources: Map<number, SSABResource>) {
-        this.instancePackResources = resources;
+        return refs;
     }
 
 
@@ -307,12 +211,10 @@ export class SSRuntimeManager {
 
     /**
      * Advance everything that derives from this context's current frame:
-     * effect particle slots and instance-part children (each recursing into
-     * its own dependents). Shared by playback `update()` and `seekTo()`.
+     * effect particle slots. Shared by playback `update()` and `seekTo()`.
      */
     public stepDependents(deltaSeconds: number, parentLooped: boolean) {
         this.stepEffectSlots(deltaSeconds, parentLooped);
-        this.stepInstanceSlots(deltaSeconds, parentLooped);
     }
 
     /**
@@ -345,47 +247,7 @@ export class SSRuntimeManager {
         }
     }
 
-    /**
-     * Drive each instance-part child for one tick. For every instance part we
-     * fetch its resolved per-frame `EventInstance` (the runtime returns SS6
-     * synthetic defaults when none is authored) and hand it, with the child
-     * context and timing, to the slot — which configures the child's playback
-     * on transition edges and advances its frame (synced seek or independent
-     * delta-time). On a transition we mirror the reference player's host-side
-     * `play()` so the child snaps to its section start and begins advancing.
-     * Each child then recurses into its own dependents using the child frame
-     * and the slot's reported loop state.
-     */
-    private stepInstanceSlots(deltaSeconds: number, parentLooped: boolean) {
-        if (this.instanceSlots.size === 0) return;
 
-        const parentFrame = this.context.get_frame_no();
-        for (const [partIndex, child] of this.instanceSlots.entries()) {
-            const ev = this.context.get_active_event_instance(partIndex);
-            const visible = child.slot.step(ev, child.manager.context, child.prevChildFrame, parentFrame, deltaSeconds, parentLooped);
-            if ((ev as any).free) (ev as any).free();
-
-            child.visible = visible;
-            if (child.slot.transitioned()) {
-                child.manager.context.play();
-            }
-            child.prevChildFrame = child.manager.context.get_frame_no();
-
-            // Advance the child's own effects / nested instances relative to the
-            // child's frame and loop state.
-            child.manager.stepDependents(deltaSeconds, child.slot.child_looped());
-        }
-    }
-
-    /**
-     * The live child runtime for an instance part (or undefined for a
-     * non-instance / unresolved part). Renderers read `visible`, the child
-     * `manager` (its frame data, world matrices, buffers) and the child's
-     * dedicated `geometryBuilder`.
-     */
-    public getInstanceChild(partIndex: number): InstanceChild | undefined {
-        return this.instanceSlots.get(partIndex);
-    }
 
     /**
      * Static per-part mask flags for the current animation (one byte per part
@@ -602,14 +464,6 @@ export class SSRuntimeManager {
             });
             this.effectSlots.clear();
 
-            // Free instance children recursively (child contexts + their slots).
-            // The bound pack resources are owned by the host, not freed here.
-            this.instanceSlots.forEach(child => {
-                try { child.manager.destroy(); } catch { /* ignore */ }
-                try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
-            });
-            this.instanceSlots.clear();
-
             finalizationRegistry.unregister(this);
             this.context.free();
             // @ts-ignore
@@ -618,4 +472,4 @@ export class SSRuntimeManager {
     }
 }
 
-export { SSRuntimeContext, SSRuntimeResource };
+export { SSRuntimeContext, SSRuntimeResource, SSRuntimeInstanceSlot };
