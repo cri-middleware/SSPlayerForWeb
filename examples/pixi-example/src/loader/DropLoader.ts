@@ -1,13 +1,12 @@
 import { Assets } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
-import * as flatbuffers from 'flatbuffers';
-import { SsAnimeBinary } from '../format/ss-anime-binary.js';
 import { UIManager, showToast } from '../ui/UIManager.js';
 import {
     extractAnimationNames,
     extractInstancePackRefs,
     extractPackInfo,
-    extractTexturePaths
+    extractTexturePaths,
+    isSsab
 } from '../utils/ssabExtractor.js';
 
 export function resolveRelativePath(baseDir: string, relativePath: string): string {
@@ -174,8 +173,7 @@ export class DropLoader {
             showToast(`Loading SSAB: ${ssabObj.file.name}`, 'info');
             const buffer = await ssabObj.file.arrayBuffer();
 
-            const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-            if (!SsAnimeBinary.bufferHasIdentifier(bb)) {
+            if (!isSsab(buffer)) {
                 showToast(`Invalid format: ${ssabObj.file.name} does not have the SSAB identifier.`, 'error');
                 return;
             }

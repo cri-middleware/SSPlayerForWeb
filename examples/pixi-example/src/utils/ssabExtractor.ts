@@ -1,81 +1,53 @@
 import * as flatbuffers from 'flatbuffers';
-import { SsAnimeBinary } from '../format/ss-anime-binary.js';
-import { SsSequenceBinary } from '../format/ss-sequence-binary.js';
-import { PartType } from '../format/part-type.js';
-import { PartTypeInstance } from '../format/part-type-instance.js';
+// Introspection helpers come from ssplayer-pixi, which re-exports the
+// engine-agnostic core — so the demo depends only on the renderer package.
+import { SSRuntimeManager, ssFormat } from '@spritestudio/ssplayer-pixi';
+
+// SSAB / SSQB introspection for the demo UI. The FlatBuffers schema classes are
+// owned by ssplayer-core (generated from the same .fbs the WASM is built
+// against) and re-exported as `ssFormat`, so the app keeps no copy of them —
+// only the `flatbuffers` runtime, for ByteBuffer + file-identifier checks. The
+// SSAB walks delegate to core's static extractors (single source of truth, and
+// guaranteed version-locked to the WASM binary).
+
+/** True when the buffer carries the SSAB FlatBuffers file identifier. */
+export function isSsab(buffer: ArrayBuffer): boolean {
+    const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
+    return ssFormat.SsAnimeBinary.bufferHasIdentifier(bb);
+}
 
 export function extractTexturePaths(buffer: ArrayBuffer): { hash: number, path: string }[] {
-    const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
-    
-    const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
-    const results: { hash: number, path: string }[] = [];
-    for (let i = 0; i < ssab.cellmapsLength(); i++) {
-        const cellmap = ssab.cellmaps(i);
-        if (cellmap) {
-            const path = cellmap.imagePath();
-            const hash = cellmap.nameHash();
-            if (path) results.push({ hash, path });
-        }
-    }
-    return results;
+    if (!isSsab(buffer)) return [];
+    return SSRuntimeManager.extractTexturePaths(new Uint8Array(buffer));
 }
 
 export function extractAnimationNames(buffer: ArrayBuffer): string[] {
-    const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
-    
-    const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
-    const results: string[] = [];
-    for (let i = 0; i < ssab.animationsLength(); i++) {
-        const anim = ssab.animations(i);
-        if (anim) {
-            const name = anim.name();
-            if (name) results.push(name);
-        }
-    }
-    return results;
+    if (!isSsab(buffer)) return [];
+    return SSRuntimeManager.extractAnimationNames(new Uint8Array(buffer));
 }
 
 export function extractPackInfo(buffer: ArrayBuffer): { hash: number, name: string | null } {
-    const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    if (!SsAnimeBinary.bufferHasIdentifier(bb)) return { hash: 0, name: null };
-    const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
-    return { hash: ssab.nameHash() >>> 0, name: ssab.name() };
+    if (!isSsab(buffer)) return { hash: 0, name: null };
+    return SSRuntimeManager.extractPackInfo(new Uint8Array(buffer));
 }
 
-// Animation packs referenced by this pack's instance parts (the referenced
-// animation may live in a separate .ssab pack that must be supplied too).
 export function extractInstancePackRefs(buffer: ArrayBuffer): { hash: number, name: string }[] {
-    const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
-    const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
-    const seen = new Set<number>();
-    const out: { hash: number, name: string }[] = [];
-    for (let i = 0; i < ssab.partsLength(); i++) {
-        const part = ssab.parts(i);
-        if (!part || part.partTypeType() !== PartType.PartTypeInstance) continue;
-        const inst = part.partType(new PartTypeInstance()) as PartTypeInstance | null;
-        if (!inst) continue;
-        const hash = inst.refAnimePackHash() >>> 0;
-        const name = inst.refAnimePack();
-        if (name && !seen.has(hash)) { seen.add(hash); out.push({ hash, name }); }
-    }
-    return out;
+    if (!isSsab(buffer)) return [];
+    return SSRuntimeManager.extractInstancePackRefs(new Uint8Array(buffer));
 }
 
+// Sequence (.ssqb) listing. Core doesn't expose an SSQB extractor yet (deferred),
+// so this stays app-side — but it uses core's exported `SsSequenceBinary` class
+// rather than a local schema copy. Swap to a core helper once core gains SSQB
+// support (see the NOTE in SSRuntimeManager).
 export function extractSequenceNames(buffer: ArrayBuffer): string[] {
     const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    if (!SsSequenceBinary.bufferHasIdentifier(bb)) return [];
-    
-    const ssqb = SsSequenceBinary.getRootAsSsSequenceBinary(bb);
-    const results: string[] = [];
+    if (!ssFormat.SsSequenceBinary.bufferHasIdentifier(bb)) return [];
+    const ssqb = ssFormat.SsSequenceBinary.getRootAsSsSequenceBinary(bb);
+    const out: string[] = [];
     for (let i = 0; i < ssqb.sequenceListLength(); i++) {
-        const seq = ssqb.sequenceList(i);
-        if (seq) {
-            const name = seq.name();
-            if (name) results.push(name);
-        }
+        const name = ssqb.sequenceList(i)?.name();
+        if (name) out.push(name);
     }
-    return results;
+    return out;
 }

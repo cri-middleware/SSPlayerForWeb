@@ -13,10 +13,12 @@
   },
   "scripts": {
     "build": "tsdown && cp wasm/*.wasm dist/",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "flatbuffers": "^25.9.23"
+    "flatbuffers": "^25.9.23",
+    "vitest": "^3.0.0"
   },
   "license": "BSD-3-Clause"
 }

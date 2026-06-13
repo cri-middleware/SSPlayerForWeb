@@ -367,6 +367,28 @@ export class SSRuntimeManager {
         return out;
     }
 
+    /**
+     * Parse the SSAB buffer and list its animation names in table order.
+     * Engine-agnostic introspection for host UIs (e.g. an animation picker),
+     * so consumers don't have to re-implement the FlatBuffer walk.
+     */
+    public static extractAnimationNames(ssabBuffer: Uint8Array): string[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const out: string[] = [];
+        for (let i = 0; i < ssab.animationsLength(); i++) {
+            const name = ssab.animations(i)?.name();
+            if (name) out.push(name);
+        }
+        return out;
+    }
+
+    // NOTE: Sequence (.ssqb / SsSequenceBinary) introspection is intentionally
+    // not provided here yet (deferred). When added, mirror the SSAB extractors
+    // above against the already-exported `ssFormat.SsSequenceBinary` (e.g. a
+    // static `extractSequenceNames(ssqbBuffer)`); the schema class is in place,
+    // so it is purely additive.
+
     public setCoordinateSystem(system: WebCoordinateSystem) {
         this.context.set_coordinate_system(system);
     }
