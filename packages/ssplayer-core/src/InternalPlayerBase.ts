@@ -436,6 +436,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     public setFrame(frame: number) {
+        if (!this._subFrameEnabled) {
+            frame = Math.floor(frame);
+        }
         this.runtimeManager.context.set_frame_no(frame);
         this.stepEffectSlots(0, false);
         this.stepInstanceSlots(0, false);
