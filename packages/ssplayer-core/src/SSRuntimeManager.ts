@@ -8,7 +8,6 @@ import { PartType } from './ss/format/part-type.js';
 import { PartTypeEffect } from './ss/format/part-type-effect.js';
 import { PartTypeInstance } from './ss/format/part-type-instance.js';
 import { DrawBatchKind } from './ss/runtime/draw-batch-kind.js';
-import { GeometryBuilder } from './GeometryBuilder.js';
 
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;

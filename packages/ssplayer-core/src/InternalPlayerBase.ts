@@ -1,7 +1,6 @@
 import * as flatbuffers from 'flatbuffers';
 import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, SSRuntimeInstanceSlot, SSRuntimeEffectSlot, EffectDrawPlan, getWasmMemory, finalizationRegistry } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
-import { GeometryBuilder } from './GeometryBuilder.js';
 
 /**
  * Host-supplied resolver for instance-referenced animation packs. Given the
@@ -199,7 +198,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private setupInstanceChildren() {
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
-            try { (child.slot as any)?.free?.(); } catch { /* ignore */ }
+            // child.slot is an InstanceSlotHandle (destroy() frees the WASM
+            // handle and unregisters the finalizer). The previous `.free?.()`
+            // was a no-op — the handle has no `free`, only `raw.free` — which
+            // leaked the slot until GC on every re-`setAnimation`.
+            try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
         this._effectChildren.forEach(child => child.slot.destroy());

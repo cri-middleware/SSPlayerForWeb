@@ -265,11 +265,6 @@ export class SSPlayer extends Container {
         this.internalPlayer.setSkipFrames(value);
     }
 
-    
-    public setTexture(textureHash: number, texture: Texture) {
-        // Obsolete or adapt if needed, or pass directly to PixiResourceManager
-    }
-
     private update(ticker: Ticker) {
         // console.log("update tick", this.internalPlayer.isPlaying, this.internalPlayer.isPausing, this.internalPlayer.getFrameNo());
         if (!this.internalPlayer.isPlaying) return;
