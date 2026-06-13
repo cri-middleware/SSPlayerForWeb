@@ -1,15 +1,12 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
 import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
 
-// Max simultaneous mask writers per context: one bit each, packed into the
-// R/G/B channels of an RGBA8 coverage texture (8 bits x 3 = 24). Matches the
-// runtime contract in 09_mask.ja.md §3-2.
-const MAX_MASK_WRITERS = 24;
+// MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
 
 // Per-context mask coverage produced by the pre-pass: the offscreen texture,
 // the affine that maps a part's player-local position into the coverage's
@@ -22,6 +19,16 @@ interface MaskCoverage {
     invH: number;
     meta: Float32Array; // MAX_MASK_WRITERS * vec4 (drawRank, bit, opInvert, isClipping)
     count: number;
+}
+
+// Mask inherited by an instance-part child from its parent (09_mask.ja.md §3-2-2).
+// A masked instance part clips its WHOLE referenced sub-animation against the
+// parent's coverage, judged once by the instance part's own draw rank and
+// visible_inside_mask polarity (single level — the sub-anime is one target).
+interface InheritedMask {
+    cov: MaskCoverage; // the parent context's coverage (same player-local space as the child's composited positions)
+    rank: number;      // the instance part's rank in the parent draw order
+    mode: number;      // the instance part's visible_inside_mask polarity (1 = inside, 0 = outside)
 }
 
 export class SSPlayer extends Container {
@@ -66,11 +73,11 @@ export class SSPlayer extends Container {
     // Bbox→RT mapping for the coverage pass, passed as the render-root transform
     // (a render-group root's own scale/position are ignored by renderer.render).
     private readonly scratchCovTransform = new Matrix();
-    // Writer selection scratch: (partIdx, rankPos, opInvert, isClipping) × MAX,
-    // plus the writer's batch texture hash (masks resolve their cutout texture
-    // from their own DrawBatch, like the Godot/Unity reference players).
-    private readonly scratchWriterSel = new Int32Array(MAX_MASK_WRITERS * 4);
-    private readonly scratchWriterTex = new Uint32Array(MAX_MASK_WRITERS);
+    // Engine-agnostic mask writer planner (core) + its FrameData adapter. The
+    // planner does all writer selection/classification; this class only
+    // rasterises the resulting plan into the coverage bitmap.
+    private readonly maskPlanner = new MaskPlanner();
+    private readonly maskSource = new FrameDataMaskSource();
     private maskWriteShaders: Map<Texture, Shader> = new Map();
     // Masked-content shaders keyed by `${contentTexUid}_${coverageRtUid}` so the
     // bound coverage sampler (a per-context resource) stays consistent.
@@ -327,7 +334,8 @@ export class SSPlayer extends Container {
         frameData: FrameData,
         frameNo: number,
         parentMatrix: Float32Array | null,
-        parentAlpha: number
+        parentAlpha: number,
+        inheritedMask: InheritedMask | null = null
     ) {
         const manager = player.runtimeManager;
         const geometryBuilder = player.geometryBuilder;
@@ -357,6 +365,11 @@ export class SSPlayer extends Container {
         // unclipped. Runs here, in the ticker, so coverage is ready before the
         // stage render draws our children. See buildMaskCoverage / 09_mask.ja.md.
         const cov = (this.renderer && this.maskEnabled) ? this.buildMaskCoverage(manager, geometryBuilder, frameData, drawOrder) : null;
+
+        // When this context is a masked instance child, every drawn part is
+        // clipped by the inherited (parent) coverage instead of this context's
+        // own; otherwise parts use this context's own coverage per-part (§3-2-2).
+        const effCov = inheritedMask ? inheritedMask.cov : cov;
 
         const drawBatchesLength = frameData.drawBatchesLength();
         for (let i = 0; i < drawBatchesLength; i++) {
@@ -390,7 +403,19 @@ export class SSPlayer extends Container {
 
                     manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
                     const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
-                    this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha);
+
+                    // §3-2-2 instance mask inheritance: if this context produced
+                    // coverage and the instance part is a mask target
+                    // (mask_influence, bit 0x04), the whole sub-animation is
+                    // clipped by THIS coverage, judged by the instance part's own
+                    // rank and visible_inside_mask polarity (single level). The
+                    // child's composited positions are already in this coverage's
+                    // space, so its parts can sample `cov` directly.
+                    const childInherited: InheritedMask | null =
+                        (cov && maskFlags && (maskFlags[partIdx] & 0x04) !== 0)
+                            ? { cov, rank: startRank + c, mode: (maskFlags[partIdx] & 0x01) !== 0 ? 1 : 0 }
+                            : null;
+                    this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha, childInherited);
 
                     // The child's getFrameData()/recursion may have grown WASM
                     // memory and detached our frameData/drawOrder views. Re-derive
@@ -427,9 +452,11 @@ export class SSPlayer extends Container {
             const invTexH = 1.0 / texture.height;
             
             // Parts in this batch are clipped by the mask when the runtime set
-            // FLAG_MASK_INFLUENCE (0x01) and this context produced coverage.
-            // Masked parts use a separate pool (carrying aMaskUV) and shader.
-            const masked = cov !== null && (batch.flags() & 0x01) !== 0;
+            // FLAG_MASK_INFLUENCE (0x01) and this context produced coverage, or
+            // unconditionally when this whole context is a masked instance child
+            // (inherited mask — §3-2-2). Masked parts use a separate pool
+            // (carrying aMaskUV) and shader.
+            const masked = inheritedMask !== null || (cov !== null && (batch.flags() & 0x01) !== 0);
 
             if (kind === DrawBatchKind.Normal) {
                 for (let c = 0; c < count; c++) {
@@ -458,7 +485,10 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aColor').update();
                     mesh.geometry.getBuffer('aVarg').update();
 
-                    this.finishPart(mesh, 5, masked, partIdx, startRank + c, cov, texture, blendMode, alpha * parentAlpha, maskFlags);
+                    this.finishPart(mesh, 5, masked,
+                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        effCov, texture, blendMode, alpha * parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Shape) {
                 const shapeVertexCounts = manager.getShapeVertexCounts();
@@ -495,7 +525,10 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aVarg').update();
                     mesh.geometry.getIndex().update();
 
-                    this.finishPart(mesh, numVerts, masked, partIdx, startRank + c, cov, texture, blendMode, alpha * parentAlpha, maskFlags);
+                    this.finishPart(mesh, numVerts, masked,
+                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        effCov, texture, blendMode, alpha * parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Mesh) {
                 const meshVOff = manager.getMeshVertexOffsets();
@@ -537,7 +570,10 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aVarg').update();
                     mesh.geometry.getIndex().update();
 
-                    this.finishPart(mesh, pCount, masked, partIdx, startRank + c, cov, texture, blendMode, alpha * parentAlpha, maskFlags);
+                    this.finishPart(mesh, pCount, masked,
+                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        effCov, texture, blendMode, alpha * parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Effect) {
                 // Particle geometry is simulated in the WASM runtime and returned as an
@@ -605,18 +641,16 @@ export class SSPlayer extends Container {
         mesh: Mesh<any>,
         numVerts: number,
         masked: boolean,
-        partIdx: number,
-        thisRank: number,
+        maskRank: number,
+        maskMode: number,
         cov: MaskCoverage | null,
         texture: Texture,
         blendMode: any,
-        alpha: number,
-        maskFlags: Uint8Array | null
+        alpha: number
     ): void {
         if (masked && cov) {
-            // visible_inside_mask (bit 0x01) → show inside (1) vs outside (0).
-            const mode = (maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0;
-            this.fillMaskUV(mesh, numVerts, thisRank, mode, cov);
+            // maskMode = visible_inside_mask: show inside (1) vs outside (0).
+            this.fillMaskUV(mesh, numVerts, maskRank, maskMode, cov);
             mesh.shader = this.getMaskedShader(texture, cov) as any;
         } else {
             mesh.shader = this.getPartsColorShader(texture) as any;
@@ -661,162 +695,89 @@ export class SSPlayer extends Container {
     ): MaskCoverage | null {
         const slot = this.activeRTs;
         const covObj = this.ensureCov(slot);
-        const meta = covObj.meta;
-        const maskFlags = manager.getPartMaskFlags();
 
-        const root = this.maskRenderRoot;
-
-        const drawBatchesLength = frameData.drawBatchesLength();
-        const shapeVertexCounts = manager.getShapeVertexCounts();
-        const meshVOff = manager.getMeshVertexOffsets();
-        const meshIOff = manager.getMeshIndexOffsets();
-
-        let count = 0;
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-        // Select writers in draw order (09_mask.ja.md §1-2):
-        //   pure masks  — DrawBatchKind.Mask batches emitted by the runtime
-        //                 (PartTypeMask / draw_as_mask); OP rides in the batch
-        //                 flag (0x01: 0 = increment, 1 = invert, §2-3).
-        //   clipping    — drawn parts with mask_write (runtime emits NO twin
-        //                 batch for these), detected via the cached PartData
-        //                 flags; their mask_influence doubles as the OP (§1-2),
-        //                 and they scope FORWARD (rank > writer, §2-1).
-        // (partIdx, rankPos, opInvert, isClipping) per writer.
-        const sel = this.scratchWriterSel;
-        const selTex = this.scratchWriterTex;
-        for (let i = 0; i < drawBatchesLength && count < MAX_MASK_WRITERS; i++) {
-            const batch = frameData.drawBatches(i);
-            if (!batch) continue;
-            const kind = batch.kind();
-            const rank = batch.startRank();
-            const bcount = batch.count();
-            // The writer's cutout texture comes from its own DrawBatch, exactly
-            // like the Godot/Unity reference players (no extra runtime API). A
-            // pure-mask (Mask) batch carries textureHash 0, so pure masks get no
-            // alpha cutout — their geometry is the mask.
-            const texHash = batch.textureHash() >>> 0;
-
-            if (kind === DrawBatchKind.Mask) {
-                const opInvert = (batch.flags() & 0x01) !== 0 ? 1 : 0;
-                for (let c = 0; c < bcount && count < MAX_MASK_WRITERS; c++) {
-                    const partIdx = drawOrder[rank + c];
-                    sel[count * 4 + 0] = partIdx;
-                    sel[count * 4 + 1] = rank + c;
-                    sel[count * 4 + 2] = opInvert;
-                    sel[count * 4 + 3] = 0;
-                    selTex[count] = texHash;
-                    count++;
-                }
-            } else if (maskFlags && (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Shape || kind === DrawBatchKind.Mesh)) {
-                for (let c = 0; c < bcount && count < MAX_MASK_WRITERS; c++) {
-                    const partIdx = drawOrder[rank + c];
-                    const mf = maskFlags[partIdx];
-                    // mask_write drawn part = clipping writer (draw_as_mask
-                    // parts are pure masks and already covered above).
-                    if ((mf & 0x02) === 0 || (mf & 0x08) !== 0) continue;
-                    sel[count * 4 + 0] = partIdx;
-                    sel[count * 4 + 1] = rank + c;
-                    sel[count * 4 + 2] = (mf & 0x04) !== 0 ? 1 : 0;
-                    sel[count * 4 + 3] = 1;
-                    selTex[count] = texHash;
-                    count++;
-                }
-            }
-        }
-
-        const selected = count;
-        count = 0;
-        for (let w = 0; w < selected; w++) {
-            {
-                const partIdx = sel[w * 4 + 0];
-                const rankPos = sel[w * 4 + 1];
-                const opInvert = sel[w * 4 + 2];
-                const isClipping = sel[w * 4 + 3];
-                const partState = frameData.parts(partIdx, this.scratchPartState);
-                if (!partState) continue;
-                const maskVal = partState.mask();
-                if (maskVal <= 0) continue; // §2-2: mask == 0 writer is inert.
-
-                // Cutout texture from the writer's DrawBatch (§2-5). 0 = no cell
-                // (pure masks, shapes) → no cutout, geometry is the mask.
-                const texHash = selTex[w];
-                const texture = texHash !== 0 ? (this.pixiResourceManager.getTexture(texHash) || Texture.WHITE) : Texture.WHITE;
-                const invTexW = 1.0 / texture.width;
-                const invTexH = 1.0 / texture.height;
-                const threshold = texHash !== 0 ? (255 - maskVal) / 255 : -1.0;
-
-                // Resolve the writer's geometry kind (the Mask batch doesn't
-                // carry it): shape vertex count, then mesh slice, else a quad.
-                const shapeVerts = shapeVertexCounts[partIdx];
-                const meshVCount = meshVOff[partIdx + 1] - meshVOff[partIdx];
-                let numVerts: number;
-                let numIndices: number;
-                let geomKind: 0 | 1 | 2; // 0 normal, 1 shape, 2 mesh
-                if (shapeVerts >= 3) { numVerts = shapeVerts; numIndices = (shapeVerts - 2) * 3; geomKind = 1; }
-                else if (meshVCount > 0) { numVerts = meshVCount; numIndices = meshIOff[partIdx + 1] - meshIOff[partIdx]; geomKind = 2; }
-                else { numVerts = 5; numIndices = 12; geomKind = 0; }
-                if (numIndices <= 0) continue;
-
-                const mesh = this.acquireMesh(this.maskMeshPool, this.activeMaskMeshes++, numVerts, numIndices, false);
-                const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
-                const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
-                const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
-                const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
-
-                if (geomKind === 1) {
-                    const indices = mesh.geometry.getIndex().data as Uint32Array;
-                    geometryBuilder.buildShape(partIdx, frameData, numVerts, invTexW, invTexH, positions, uvs, colors, vargs, indices);
-                    mesh.geometry.getIndex().update();
-                } else if (geomKind === 2) {
-                    const indices = mesh.geometry.getIndex().data as Uint32Array;
-                    geometryBuilder.buildMesh(partIdx, frameData, numVerts, numIndices, invTexW, invTexH, positions, uvs, colors, vargs, indices);
-                    mesh.geometry.getIndex().update();
-                } else {
-                    geometryBuilder.buildNormal(partIdx, frameData, invTexW, invTexH, positions, uvs, colors, vargs);
-                }
-
-                // Pre-encode this writer's bit into aColor (one R/G/B channel)
-                // and its cutout threshold into aVarg.x; accumulate the bbox.
-                const bit = count;
-                const chan = (bit / 8) | 0;
-                const bitVal = (1 << (bit % 8)) / 255;
-                const br = chan === 0 ? bitVal : 0;
-                const bg = chan === 1 ? bitVal : 0;
-                const bb = chan === 2 ? bitVal : 0;
-                for (let v = 0; v < numVerts; v++) {
-                    colors[v * 4 + 0] = br; colors[v * 4 + 1] = bg; colors[v * 4 + 2] = bb; colors[v * 4 + 3] = 1;
-                    vargs[v * 4 + 0] = threshold;
-                    const x = positions[v * 2], y = positions[v * 2 + 1];
-                    if (x < minX) minX = x; if (x > maxX) maxX = x;
-                    if (y < minY) minY = y; if (y > maxY) maxY = y;
-                }
-                mesh.geometry.getBuffer('aPosition').update();
-                mesh.geometry.getBuffer('aUV').update();
-                mesh.geometry.getBuffer('aColor').update();
-                mesh.geometry.getBuffer('aVarg').update();
-
-                mesh.shader = this.getMaskWriteShader(texture) as any;
-                mesh.blendMode = 'add';
-                mesh.alpha = 1;
-                mesh.visible = true;
-                root.addChild(mesh);
-
-                // meta[i] = (drawRank, bit, opInvert, isClipping); replayed by
-                // the masked shader in writer order (§2-1/§2-3).
-                meta[count * 4 + 0] = rankPos;
-                meta[count * 4 + 1] = bit;
-                meta[count * 4 + 2] = opInvert;
-                meta[count * 4 + 3] = isClipping;
-                count++;
-            }
-        }
-
+        // Engine-agnostic planning (core): select writers, classify OP / scope /
+        // clipping, resolve cutout threshold + geometry kind, assign coverage
+        // bits and the replay meta. This class only rasterises the plan below.
+        const planner = this.maskPlanner;
+        this.maskSource.bind(frameData, drawOrder, manager);
+        const count = planner.plan(this.maskSource);
         if (count === 0) return null;
-        if (count >= MAX_MASK_WRITERS && !this.maskWritersExceeded) {
+        if (planner.exceeded && !this.maskWritersExceeded) {
             this.maskWritersExceeded = true;
             console.warn(`[SSPlayer] mask writers exceeded ${MAX_MASK_WRITERS}; extra masks ignored.`);
         }
+
+        const root = this.maskRenderRoot;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        // Rasterise each planned writer into the coverage bitmap: its geometry,
+        // with its coverage bit pre-encoded into one R/G/B channel and its cutout
+        // threshold in aVarg.x, additive-blended so disjoint bits OR together
+        // (09_mask.ja.md §3-2). Cutout texture comes from the planner's
+        // DrawBatch.textureHash (0 = pure mask/shape → no cutout, geometry is the mask).
+        for (let w = 0; w < count; w++) {
+            const partIdx = planner.partIdx[w];
+            const geomKind = planner.geomKind[w];
+            const numVerts = planner.numVerts[w];
+            const numIndices = planner.numIndices[w];
+            const texHash = planner.textureHash[w];
+            const threshold = planner.threshold[w];
+            const bit = planner.bit[w];
+
+            const texture = texHash !== 0 ? (this.pixiResourceManager.getTexture(texHash) || Texture.WHITE) : Texture.WHITE;
+            const invTexW = 1.0 / texture.width;
+            const invTexH = 1.0 / texture.height;
+
+            const mesh = this.acquireMesh(this.maskMeshPool, this.activeMaskMeshes++, numVerts, numIndices, false);
+            const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
+            const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
+            const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
+            const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
+
+            if (geomKind === 1) {
+                const indices = mesh.geometry.getIndex().data as Uint32Array;
+                geometryBuilder.buildShape(partIdx, frameData, numVerts, invTexW, invTexH, positions, uvs, colors, vargs, indices);
+                mesh.geometry.getIndex().update();
+            } else if (geomKind === 2) {
+                const indices = mesh.geometry.getIndex().data as Uint32Array;
+                geometryBuilder.buildMesh(partIdx, frameData, numVerts, numIndices, invTexW, invTexH, positions, uvs, colors, vargs, indices);
+                mesh.geometry.getIndex().update();
+            } else {
+                geometryBuilder.buildNormal(partIdx, frameData, invTexW, invTexH, positions, uvs, colors, vargs);
+            }
+
+            // Pre-encode this writer's bit into aColor (one R/G/B channel) and its
+            // cutout threshold into aVarg.x; accumulate the bbox.
+            const chan = (bit / 8) | 0;
+            const bitVal = (1 << (bit % 8)) / 255;
+            const br = chan === 0 ? bitVal : 0;
+            const bg = chan === 1 ? bitVal : 0;
+            const bb = chan === 2 ? bitVal : 0;
+            for (let v = 0; v < numVerts; v++) {
+                colors[v * 4 + 0] = br; colors[v * 4 + 1] = bg; colors[v * 4 + 2] = bb; colors[v * 4 + 3] = 1;
+                vargs[v * 4 + 0] = threshold;
+                const x = positions[v * 2], y = positions[v * 2 + 1];
+                if (x < minX) minX = x; if (x > maxX) maxX = x;
+                if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+            mesh.geometry.getBuffer('aPosition').update();
+            mesh.geometry.getBuffer('aUV').update();
+            mesh.geometry.getBuffer('aColor').update();
+            mesh.geometry.getBuffer('aVarg').update();
+
+            mesh.shader = this.getMaskWriteShader(texture) as any;
+            mesh.blendMode = 'add';
+            mesh.alpha = 1;
+            mesh.visible = true;
+            root.addChild(mesh);
+        }
+
+        // The planner's `meta` is reusable scratch (overwritten by the next
+        // plan() — e.g. an instance child's). Copy it into the pooled per-slot
+        // record so an inheriting child (§3-2-2) can replay this coverage at draw
+        // time, after the child's own plan() has run.
+        covObj.meta.set(planner.meta);
 
         // Pad 1px so the mask's own edge texels aren't clipped; guard degeneracy.
         minX -= 1; minY -= 1; maxX += 1; maxY += 1;

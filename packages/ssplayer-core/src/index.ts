@@ -12,4 +12,6 @@ export * from './ss/runtime/draw-batch-kind.js';
 
 export * from './SlotHandles.js';
 export * from './PackResolver.js';
+export * from './MaskPlanner.js';
+export * from './FrameDataMaskSource.js';
 export * from './InternalPlayerBase.js';
