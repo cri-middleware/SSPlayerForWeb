@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-pixi",
   "version": "1.0.0",
-  "description": "PixiJS renderer for SpriteStudio7-SDK player",
+  "description": "PixiJS renderer for SpriteStudio-SDK player",
   "main": "index.js",
   "types": "dist/index.d.ts",
   "type": "module",

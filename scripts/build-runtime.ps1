@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $RootDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$SdkDir = Join-Path $RootDir "SpriteStudio7-SDK"
+$SdkDir = Join-Path $RootDir "SpriteStudio-SDK"
 $SsruntimeDir = Join-Path $SdkDir "libs\ssruntime"
 $SdkReleaseDir = Join-Path $SdkDir "pkg\runtime-web\release"
 $OutDir = Join-Path $RootDir "packages\ssplayer-core\wasm"

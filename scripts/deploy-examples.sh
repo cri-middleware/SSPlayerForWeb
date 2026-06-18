@@ -2,7 +2,7 @@
 set -e
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SDK_DIR="$ROOT_DIR/SpriteStudio7-SDK"
+SDK_DIR="$ROOT_DIR/SpriteStudio-SDK"
 PUBLIC_DIR="$ROOT_DIR/examples/pixi-example/public"
 
 mkdir -p "$PUBLIC_DIR"

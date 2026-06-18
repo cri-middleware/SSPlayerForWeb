@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-core",
   "version": "1.0.0",
-  "description": "Engine-agnostic WebAssembly core for SpriteStudio7-SDK player",
+  "description": "Engine-agnostic WebAssembly core for SpriteStudio-SDK player",
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {

@@ -3,7 +3,7 @@ set -e
 
 # Setup paths
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
-SDK_DIR="${PROJECT_ROOT}/SpriteStudio7-SDK"
+SDK_DIR="${PROJECT_ROOT}/SpriteStudio-SDK"
 TARGET_DIR="${PROJECT_ROOT}/packages/ssplayer-core/src"
 
 echo "Generating FlatBuffers TypeScript code..."

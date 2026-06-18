@@ -1,6 +1,6 @@
 # SSPlayerForWeb
 
-SpriteStudio7-SDK Player for Web.
+SpriteStudio-SDK Player for Web.
 
 ## Overview
 

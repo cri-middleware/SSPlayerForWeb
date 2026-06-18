@@ -27,7 +27,7 @@ This file contains rules, context, and guidelines for AI agents working on the *
 - **Examples (`examples/`)**:
   - `pixi-example`: Vite-based test server for PixiJS.
   - `rmmz-example`: Test environment for RPG Maker MZ.
-- **Rust Core**: Located in the `SpriteStudio7-SDK` Git submodule. Do not alter the submodule structure without explicit instruction.
+- **Rust Core**: Located in the `SpriteStudio-SDK` Git submodule. Do not alter the submodule structure without explicit instruction.
 
 ## 3. Development & Tooling Rules
 

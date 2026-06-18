@@ -1,5 +1,5 @@
 // Shader for the SpriteStudio mask *coverage* pass (bit-packed bitmap method;
-// see SpriteStudio7-SDK/libs/ssruntime/docs/09_mask.ja.md §3-2).
+// see SpriteStudio-SDK/libs/ssruntime/docs/09_mask.ja.md §3-2).
 //
 // Each mask writer (a PartType-Mask part, or a draw-as-mask Shape) is assigned
 // one bit (0..23) and rasterised into an offscreen RGBA8 RenderTexture with
