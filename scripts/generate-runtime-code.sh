@@ -45,15 +45,4 @@ for namespace in "runtime" "format"; do
     done
 done
 
-echo "Deploying format definitions to examples/pixi-example..."
-EXAMPLE_DIR="${PROJECT_ROOT}/examples/pixi-example/src/format"
-mkdir -p "${EXAMPLE_DIR}"
-cp -r "${TARGET_DIR}/ss/format/"* "${EXAMPLE_DIR}/"
-# Fix relative imports inside the copied files
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' 's|../../ss/format/|./|g' "${EXAMPLE_DIR}/"*.ts
-else
-    sed -i 's|../../ss/format/|./|g' "${EXAMPLE_DIR}/"*.ts
-fi
-
-echo "FlatBuffers generation complete. Output saved to ${TARGET_DIR} and ${EXAMPLE_DIR}"
+echo "FlatBuffers generation complete. Output saved to ${TARGET_DIR}"
