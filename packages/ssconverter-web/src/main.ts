@@ -1,5 +1,5 @@
 import wasmUrl from '../wasm/ssconverter_bg.wasm?url';
-import init, { convert, version } from '../wasm/ssconverter.js';
+import init, { convert, version, ssab_schema_version } from '../wasm/ssconverter.js';
 import JSZip from 'jszip';
 import pkg from '../package.json';
 import './style.css';
@@ -146,11 +146,12 @@ async function initWasm() {
         log('Initializing WebAssembly runtime...');
         await init(wasmUrl);
         const ver = version();
-        versionDisplay.textContent = `Converter Version: ${ver}`;
+        const ssabSchemaVer = ssab_schema_version();
+        versionDisplay.textContent = `Converter Version: ${ver} (ssab v${ssabSchemaVer})`;
         btnCopyVersion.style.display = 'inline-flex';
         btnCopyVersion.onclick = async () => {
             try {
-                const textToCopy = `${pkg.name} Version: ${pkg.version}\nConverter Version: ${ver}`;
+                const textToCopy = `${pkg.name} Version: ${pkg.version}\nConverter Version: ${ver} (ssab v${ssabSchemaVer})`;
                 await navigator.clipboard.writeText(textToCopy);
                 const orig = btnCopyVersion.textContent;
                 btnCopyVersion.textContent = 'Copied!';
@@ -159,7 +160,7 @@ async function initWasm() {
                 log('Failed to copy version.');
             }
         };
-        log(`WASM Runtime loaded. Converter version: ${ver}`);
+        log(`WASM Runtime loaded. Converter version: ${ver} (ssab v${ssabSchemaVer})`);
         updateBadge(wasmStatus, 'Ready', 'success');
         isWasmReady = true;
         updateConvertButton();
