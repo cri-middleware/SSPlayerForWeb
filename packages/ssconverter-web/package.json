@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "bin": {
+    "ssconverter-web-cli": "./scripts/cli.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
