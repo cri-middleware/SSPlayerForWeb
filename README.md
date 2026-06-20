@@ -23,6 +23,9 @@ This project uses `pnpm` workspaces for package management.
 - **`@spritestudio/ssplayer-pixi`**: Optimized for PixiJS v8. Uses direct drawing (BatchRenderer) for maximum performance.
 - **`@spritestudio/ssplayer-rmmz`**: Designed for RPG Maker MZ (PixiJS v5). Uses SceneGraph drawing for seamless integration with the engine's Sprite tree.
 
+### Tools
+- **`ssconverter-web`**: Web-based converter tool and Node.js CLI script that converts `.sspj` to `.ssab` using WebAssembly.
+
 ## Development
 
 ### Prerequisites
@@ -35,7 +38,6 @@ This project uses `pnpm` workspaces for package management.
    ```bash
    pnpm run build:wasm
    ```
-   *(For Windows users, use: `pnpm run build:wasm:win`)*
 
 2. **Build TypeScript Packages**
    ```bash
