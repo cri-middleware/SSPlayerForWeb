@@ -3,8 +3,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm -r run build",
-    "build:wasm": "bash scripts/build-runtime.sh",
-    "build:wasm:win": "powershell -ExecutionPolicy Bypass -File scripts/build-runtime.ps1",
+    "build:wasm": "node scripts/build-wasm.js",
     "test": "pnpm -r run test",
     "clean": "pnpm -r run clean"
   },
