@@ -4,6 +4,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "build:wasm": "node scripts/build-wasm.js",
+    "deploy-examples": "node scripts/deploy-examples.js",
     "test": "pnpm -r run test",
     "clean": "pnpm -r run clean"
   },
