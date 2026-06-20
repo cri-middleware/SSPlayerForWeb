@@ -6,17 +6,19 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SSRUNTIME_DIR="$ROOT_DIR/SpriteStudio-SDK/libs/ssruntime"
 OUT_DIR="$ROOT_DIR/packages/ssplayer-core/wasm"
 
-echo "Building WASM runtime via release-web.sh..."
-bash "$ROOT_DIR/SpriteStudio-SDK/scripts/release-web.sh"
+MODE=${1:-release}
+
+echo "Building WASM runtime via release-web.sh in $MODE mode..."
+bash "$ROOT_DIR/SpriteStudio-SDK/scripts/release-web.sh" "$MODE"
 
 echo "Copying generated WASM files..."
 mkdir -p "$OUT_DIR"
-cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/runtime-web/release/"* "$OUT_DIR/"
+cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/runtime-web/$MODE/"* "$OUT_DIR/"
 
 CONVERTER_OUT_DIR="$ROOT_DIR/packages/ssconverter-web/wasm"
 echo "Copying generated converter WASM files..."
 mkdir -p "$CONVERTER_OUT_DIR"
-cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/converter-web/release/"* "$CONVERTER_OUT_DIR/"
+cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/converter-web/$MODE/"* "$CONVERTER_OUT_DIR/"
 
 echo "Copying licenses..."
 cp "$ROOT_DIR/SpriteStudio-SDK/LICENSE.md" "$OUT_DIR/"

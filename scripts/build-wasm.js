@@ -3,11 +3,15 @@ const os = require('os');
 
 const isWin = os.platform() === 'win32';
 const command = isWin ? 'powershell' : 'bash';
-const args = isWin 
-    ? ['-ExecutionPolicy', 'Bypass', '-File', 'scripts/build-runtime.ps1'] 
-    : ['scripts/build-runtime.sh'];
 
-console.log(`[build:wasm] Running on ${os.platform()}... executing ${args[args.length - 1]}`);
+const isRelease = process.argv.includes('--release');
+const mode = isRelease ? 'release' : 'debug';
+
+const args = isWin 
+    ? ['-ExecutionPolicy', 'Bypass', '-File', 'scripts/build-runtime.ps1', mode] 
+    : ['scripts/build-runtime.sh', mode];
+
+console.log(`[build:wasm] Running on ${os.platform()}... executing ${args[isWin ? 3 : 0]} in ${mode} mode`);
 
 const result = spawnSync(command, args, { stdio: 'inherit' });
 

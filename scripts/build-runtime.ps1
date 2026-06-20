@@ -1,17 +1,21 @@
+param (
+    [string]$Mode = "release"
+)
+
 $ErrorActionPreference = "Stop"
 
 $RootDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $SdkDir = Join-Path $RootDir "SpriteStudio-SDK"
 $SsruntimeDir = Join-Path $SdkDir "libs\ssruntime"
-$SdkReleaseDir = Join-Path $SdkDir "pkg\runtime-web\release"
+$SdkReleaseDir = Join-Path $SdkDir "pkg\runtime-web\$Mode"
 $OutDir = Join-Path $RootDir "packages\ssplayer-core\wasm"
 
-Write-Host "Building WASM runtime (Windows)..."
+Write-Host "Building WASM runtime (Windows) in $Mode mode..."
 
 # Build using bash
 Push-Location $SdkDir
 try {
-    $process = Start-Process bash -ArgumentList "scripts/release-web.sh" -Wait -NoNewWindow -PassThru
+    $process = Start-Process bash -ArgumentList "scripts/release-web.sh", $Mode -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
         throw "release-web.sh failed."
     }
@@ -27,7 +31,7 @@ if (-not (Test-Path $OutDir)) {
 Copy-Item -Path (Join-Path $SdkReleaseDir "*") -Destination $OutDir -Recurse -Force
 
 $ConverterOutDir = Join-Path $RootDir "packages\ssconverter-web\wasm"
-$ConverterSdkReleaseDir = Join-Path $SdkDir "pkg\converter-web\release"
+$ConverterSdkReleaseDir = Join-Path $SdkDir "pkg\converter-web\$Mode"
 Write-Host "Copying generated converter WASM files..."
 if (-not (Test-Path $ConverterOutDir)) {
     New-Item -ItemType Directory -Path $ConverterOutDir | Out-Null
