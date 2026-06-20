@@ -1,6 +1,6 @@
 import wasmUrl from '../wasm/ssconverter_bg.wasm?url';
 import init, { convert, version, ssab_schema_version } from '../wasm/ssconverter.js';
-import JSZip from 'jszip';
+import * as fflate from 'fflate';
 import pkg from '../package.json';
 import './style.css';
 
@@ -276,13 +276,12 @@ btnConvert.addEventListener('click', async () => {
         // Output phase
         updateBadge(convertStatus, 'Generating ZIP...', 'active');
         const rootDirName = chkEmbedded.checked ? `${currentSspjStem}_emb` : currentSspjStem;
-        const zip = new JSZip();
-        const rootFolder = zip.folder(rootDirName)!;
+        const zipData: Record<string, Uint8Array> = {};
         
         // Write generated files
         for (const [filename, data] of result.output.entries()) {
             log(`Adding ${filename} to zip...`);
-            rootFolder.file(filename, data, { unixPermissions: "644" });
+            zipData[`${rootDirName}/${filename}`] = data;
         }
         
         // Write referenced assets
@@ -294,7 +293,7 @@ btnConvert.addEventListener('click', async () => {
                 if (srcFile) {
                     log(`Adding asset ${fullSrcPath} -> ${destPath} to zip...`);
                     const buffer = await srcFile.arrayBuffer();
-                    rootFolder.file(destPath, buffer, { unixPermissions: "644" });
+                    zipData[`${rootDirName}/${destPath}`] = new Uint8Array(buffer);
                 } else {
                     log(`WARNING: Source asset not found: ${fullSrcPath}`);
                 }
@@ -302,10 +301,8 @@ btnConvert.addEventListener('click', async () => {
         }
         
         log('Generating ZIP file...');
-        const zipBlob = await zip.generateAsync({
-            type: 'blob',
-            platform: 'UNIX'
-        });
+        const zippedBuffer = fflate.zipSync(zipData, { level: 6 });
+        const zipBlob = new Blob([zippedBuffer], { type: 'application/zip' });
         
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
