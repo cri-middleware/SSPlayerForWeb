@@ -3,6 +3,7 @@ export { WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle };
 import * as flatbuffers from 'flatbuffers';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { SsAnimeBinary } from './ss/format/ss-anime-binary.js';
+import { AnimationData } from './ss/format/animation-data.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
 import { PartType } from './ss/format/part-type.js';
 import { PartTypeEffect } from './ss/format/part-type-effect.js';
@@ -74,6 +75,23 @@ export class SSRuntimeManager {
      */
     private partMaskFlags: Uint8Array | null = null;
 
+    /**
+     * Index of the currently set-up animation within the SSAB `animations`
+     * table, or -1 before setup / if the name didn't resolve. Event polling
+     * uses it to read that animation's per-frame events table. Stored as an
+     * index (not a FlatBuffer view) so it survives WASM memory growth — the
+     * view is re-derived on demand in `getCurrentAnimationData`.
+     */
+    private currentAnimationIndex: number = -1;
+
+    /**
+     * Part names indexed by part index (parallel to the SSAB parts table),
+     * cached once per animation so the event dispatch path can attach a part
+     * name without decoding a fresh FlatBuffer string per event. `null` before
+     * setup. See `getPartName`.
+     */
+    private partNames: (string | null)[] | null = null;
+
     // Reuses one TypedArray view per WASM buffer so per-frame reads allocate
     // nothing, and auto-invalidates on memory growth (detach-safe by
     // construction). See WasmViewCache.
@@ -105,6 +123,10 @@ export class SSRuntimeManager {
 
         this.currentAnimationFps = this.context.get_fps();
 
+        // Reset per-animation event-resolution caches; repopulated below.
+        this.currentAnimationIndex = -1;
+        this.partNames = null;
+
         if (!this.resource) return;
 
         try {
@@ -121,6 +143,7 @@ export class SSRuntimeManager {
             // (both are allocation-free reads over the borrowed SSAB view).
             const partsLen = ssab.partsLength();
             const maskFlags = new Uint8Array(partsLen);
+            const partNames: (string | null)[] = new Array(partsLen).fill(null);
             const refHashByPart = new Map<number, number>();
             let fallbackHash = 0;
             for (let i = 0; i < partsLen; i++) {
@@ -132,6 +155,7 @@ export class SSRuntimeManager {
                 if (part.maskInfluence()) mf |= 0x04;
                 if (part.drawAsMask()) mf |= 0x08;
                 maskFlags[i] = mf;
+                partNames[i] = part.name();
                 if (part.partTypeType() === PartType.PartTypeEffect) {
                     const effectPart = part.partType(new PartTypeEffect());
                     if (effectPart) {
@@ -142,6 +166,18 @@ export class SSRuntimeManager {
                 }
             }
             this.partMaskFlags = maskFlags;
+            this.partNames = partNames;
+
+            // Cache the index of the animation just set up so event polling can
+            // resolve its per-frame events table (matched by name, mirroring the
+            // runtime's own name-based setup).
+            for (let i = 0; i < ssab.animationsLength(); i++) {
+                if (ssab.animations(i)?.name() === animationName) {
+                    this.currentAnimationIndex = i;
+                    break;
+                }
+            }
+
             // Single-effect assets: fall back to the lone effect definition's hash.
             if (fallbackHash === 0 && ssab.effectsLength() > 0) {
                 fallbackHash = (ssab.effects(0)?.nameHash() ?? 0) >>> 0;
@@ -202,7 +238,7 @@ export class SSRuntimeManager {
     }
 
 
-    public update(deltaMs: number): boolean {
+    public update(deltaMs: number): number {
         return this.context.update(deltaMs);
     }
 
@@ -232,6 +268,32 @@ export class SSRuntimeManager {
      */
     public getPartMaskFlags(): Uint8Array | null {
         return this.partMaskFlags;
+    }
+
+    /**
+     * SSAB `AnimationData` for the currently set-up animation, re-derived from
+     * the (borrowed) SSAB buffer on each call so the view stays valid across
+     * WASM memory growth. `null` before setup or if the name didn't resolve.
+     * Event polling reads its per-frame events table via `events(eventIndex)`.
+     * Pass `out` to reuse a scratch object and avoid allocation.
+     */
+    public getCurrentAnimationData(out?: AnimationData): AnimationData | null {
+        if (this.currentAnimationIndex < 0 || !this.resource) return null;
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return null;
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(new flatbuffers.ByteBuffer(buf));
+        return ssab.animations(this.currentAnimationIndex, out);
+    }
+
+    /**
+     * Cached name of the part at `partIndex` (SSAB parts-table order), or
+     * `null` if out of range / before an animation is set up.
+     */
+    public getPartName(partIndex: number): string | null {
+        const names = this.partNames;
+        return names && partIndex >= 0 && partIndex < names.length ? names[partIndex] : null;
     }
 
     /**

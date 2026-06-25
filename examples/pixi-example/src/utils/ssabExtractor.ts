@@ -13,7 +13,7 @@ import { SSRuntimeManager, ssFormat } from '@spritestudio/ssplayer-pixi';
 /** True when the buffer carries the SSAB FlatBuffers file identifier. */
 export function isSsab(buffer: ArrayBuffer): boolean {
     const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    return ssFormat.SsAnimeBinary.bufferHasIdentifier(bb);
+    return ssFormat.SsAnimeBinary.bufferHasIdentifier(bb as any);
 }
 
 export function extractTexturePaths(buffer: ArrayBuffer): { hash: number, path: string }[] {
@@ -42,8 +42,8 @@ export function extractInstancePackRefs(buffer: ArrayBuffer): { hash: number, na
 // support (see the NOTE in SSRuntimeManager).
 export function extractSequenceNames(buffer: ArrayBuffer): string[] {
     const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
-    if (!ssFormat.SsSequenceBinary.bufferHasIdentifier(bb)) return [];
-    const ssqb = ssFormat.SsSequenceBinary.getRootAsSsSequenceBinary(bb);
+    if (!ssFormat.SsSequenceBinary.bufferHasIdentifier(bb as any)) return [];
+    const ssqb = ssFormat.SsSequenceBinary.getRootAsSsSequenceBinary(bb as any);
     const out: string[] = [];
     for (let i = 0; i < ssqb.sequenceListLength(); i++) {
         const name = ssqb.sequenceList(i)?.name();

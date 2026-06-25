@@ -1,6 +1,6 @@
 import { Application, Rectangle } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
-import { UIManager } from './ui/UIManager.js';
+import { UIManager, showToast } from './ui/UIManager.js';
 import { DropLoader } from './loader/DropLoader.js';
 import { extractAnimationNames } from './utils/ssabExtractor.js';
 
@@ -55,6 +55,27 @@ async function main() {
     // ----------------------------------------
     
     console.log("SSPlayer initialized successfully.");
+
+    // --- Animation event listeners (06_playback_control) ---
+    // The runtime fires UserData / Signal / Audio events on the frames they were
+    // authored; end/loop are derived from playback state. Drag-drop e.g.
+    // UserData.ssab / Signal.ssab / Sound.ssab to see these fire. The runtime
+    // plays no audio itself — onAudio hands the sound reference to the host.
+    player.onAnimationEnd(() => console.log('[SS][end] animation finished'));
+    player.onAnimationLoop(() => console.log('[SS][loop] animation looped'));
+    player.onUserData((e) => {
+        console.log('[SS][userData]', e);
+        showToast(`UserData @${e.partName ?? e.partIndex}`, 'info');
+    });
+    player.onSignal((e) => {
+        console.log('[SS][signal]', e);
+        showToast(`Signal "${e.commandId}" @${e.partName ?? e.partIndex}`, 'info');
+    });
+    player.onAudio((e) => {
+        console.log('[SS][audio]', e);
+        showToast(`Audio "${e.soundName ?? e.soundNameHash}" (loop ${e.loopNum})`, 'success');
+    });
+
     player.play();
 
     // 3. Initialize UI Manager
