@@ -151,6 +151,10 @@ export class GeometryBuilder {
 
         if (pc) {
             pc_blendType = pc.blendType();
+            // PartColor blend is only valid for Mix/Mul/Add/Sub (0..3). Any other
+            // BlendType value (Mulalpha, Screen, …) must clamp to Mix, else no
+            // flag below matches and the shader outputs black (10_parts_color §1-1).
+            if (pc_blendType > BlendType.Sub) pc_blendType = BlendType.Mix;
             // Resolve each corner in place, then derive the center as the average.
             this.readCorner(0, pc.lt(this._corner));
             this.readCorner(1, pc.rt(this._corner));
@@ -231,13 +235,18 @@ export class GeometryBuilder {
         // the per-vertex loop below interpolates them as scalars.
         const cc = this._cornerColors;
         const cr = this._cornerRates;
-        let pc_blendType = BlendType.Mix;
         if (pc) {
-            pc_blendType = pc.blendType();
+            // Shape bypasses the PartColor blend formula: blend is forced to Mix
+            // and rate to 1.0, so the shape renders as the (bilinearly
+            // interpolated) parts colour itself, ignoring parts_color.blend_type
+            // (10_parts_color.ja.md §1-2 table / §1-2-3).
             this.readCorner(0, pc.lt(this._corner));
             this.readCorner(1, pc.rt(this._corner));
             this.readCorner(2, pc.lb(this._corner));
             this.readCorner(3, pc.rb(this._corner));
+            // Override the per-corner rates so the bilinear interpolation below
+            // yields 1.0 at every vertex (rate is forced to 1.0 for shapes).
+            cr[0] = 1; cr[1] = 1; cr[2] = 1; cr[3] = 1;
         } else {
             cc[0] = 1; cc[1] = 1; cc[2] = 1; cc[3] = 1;
             cc[4] = 1; cc[5] = 1; cc[6] = 1; cc[7] = 1;
@@ -245,9 +254,8 @@ export class GeometryBuilder {
             cc[12] = 1; cc[13] = 1; cc[14] = 1; cc[15] = 1;
             cr[0] = 0; cr[1] = 0; cr[2] = 0; cr[3] = 0;
         }
-        const shapeMixF = pc_blendType === BlendType.Mix ? 1 : 0;
-        const shapeMulF = pc_blendType === BlendType.Mul ? 1 : 0;
-        const shapeAddF = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
+        // Shape always uses the Mix path (forced above); flags are constant.
+        const shapeMixF = 1, shapeMulF = 0, shapeAddF = 0;
 
         const mOff = partIdx * 16;
         const m00 = matrices[mOff + 0];
@@ -369,6 +377,8 @@ export class GeometryBuilder {
 
         if (pc) {
             pc_blendType = pc.blendType();
+            // Clamp invalid PartColor blend modes (>=4) to Mix (10_parts_color §1-1).
+            if (pc_blendType > BlendType.Sub) pc_blendType = BlendType.Mix;
             const lt = pc.lt(this._corner);
             pc_rate = lt ? lt.rate() : 0;
             const rgba = lt ? lt.rgba(this._rgba) : null;

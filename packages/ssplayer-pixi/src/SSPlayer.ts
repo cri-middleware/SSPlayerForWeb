@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
@@ -7,6 +7,58 @@ import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPart
 import { PixiResourceManager } from './PixiResourceManager.js';
 
 // MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
+
+// --- Animation event payloads (06_playback_control.ja.md) ---
+// Event extraction lives here in the renderer package (not core): it reads the
+// SSAB events table for the current animation via the runtime manager's
+// introspection accessors, parses the FlatBuffer payloads, and dispatches typed
+// callbacks. Driven once per frame from the ticker (see pollEvents / update).
+
+/**
+ * A user-data event fired by a part on the frame it was authored. Optional
+ * fields mirror the SSAB payload: each is present only if that value type was
+ * authored (an authored integer of `0` is still present, distinct from absent).
+ */
+export interface SSUserDataEvent {
+    partIndex: number;
+    partName: string | null;
+    integer?: number;
+    str?: string;
+    /** User-data rectangle as authored (left/top/right/bottom). */
+    rect?: { x1: number; y1: number; x2: number; y2: number };
+    /** User-data point as authored. */
+    point?: { x: number; y: number };
+}
+
+/**
+ * A signal event fired by a part. `params` maps each command parameter id to
+ * its authored value (bool / int / float / string). Only **active** signals are
+ * dispatched (mirroring the Godot / Unity players and the porting guide).
+ */
+export interface SSSignalEvent {
+    partIndex: number;
+    partName: string | null;
+    active: boolean;
+    commandId: string | null;
+    params: Record<string, boolean | number | string>;
+}
+
+/**
+ * An audio event fired by a part: the SSAB sound reference (hashes + alias
+ * name) plus loop count. The runtime plays no audio — the host resolves the
+ * sound and plays it on its own audio engine (11_optional_features.ja.md).
+ */
+export interface SSAudioEvent {
+    partIndex: number;
+    partName: string | null;
+    soundListNameHash: number;
+    soundNameHash: number;
+    soundName: string | null;
+    loopNum: number;
+}
+
+/** Unsubscribe handle returned by the `onX` event-registration methods. */
+export type Unsubscribe = () => void;
 
 // Per-context mask coverage produced by the pre-pass: the offscreen texture,
 // the affine that maps a part's player-local position into the coverage's
@@ -49,6 +101,17 @@ export class SSPlayer extends Container {
 
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
+
+    // --- Animation event listeners (06_playback_control.ja.md) ---
+    private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
+    private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
+    private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
+    private readonly _animEndListeners = new Set<() => void>();
+    private readonly _animLoopListeners = new Set<() => void>();
+    // Rising-edge memory for onAnimationEnd (!playing && end-reached): the
+    // runtime leaves is_end_frame_reached() asserted after stopping, so we
+    // notify once on the false→true transition.
+    private _prevFinished = false;
     private partsColorShaders: Map<Texture, Shader> = new Map();
     private effectShaders: Map<Texture, Shader> = new Map();
 
@@ -272,6 +335,176 @@ export class SSPlayer extends Container {
         this.internalPlayer.setSkipFrames(value);
     }
 
+    // --- Animation events (06_playback_control.ja.md) ---
+    //
+    // Listeners are drained each frame by the ticker via pollEvents() (see
+    // update()). Each registration returns an unsubscribe function. The runtime
+    // plays no audio — onAudio hands the sound reference to the host.
+
+    /** Registers a user-data event listener. Returns an unsubscribe function. */
+    public onUserData(listener: (e: SSUserDataEvent) => void): Unsubscribe {
+        this._userDataListeners.add(listener);
+        return () => { this._userDataListeners.delete(listener); };
+    }
+
+    /** Registers a signal event listener (active signals only). Returns an unsubscribe function. */
+    public onSignal(listener: (e: SSSignalEvent) => void): Unsubscribe {
+        this._signalListeners.add(listener);
+        return () => { this._signalListeners.delete(listener); };
+    }
+
+    /** Registers an audio event listener. Returns an unsubscribe function. */
+    public onAudio(listener: (e: SSAudioEvent) => void): Unsubscribe {
+        this._audioListeners.add(listener);
+        return () => { this._audioListeners.delete(listener); };
+    }
+
+    /** Fires once when a non-looping animation reaches its end and stops. */
+    public onAnimationEnd(listener: () => void): Unsubscribe {
+        this._animEndListeners.add(listener);
+        return () => { this._animEndListeners.delete(listener); };
+    }
+
+    /** Fires on each loop boundary crossing. */
+    public onAnimationLoop(listener: () => void): Unsubscribe {
+        this._animLoopListeners.add(listener);
+        return () => { this._animLoopListeners.delete(listener); };
+    }
+
+    /**
+     * Drain and dispatch the events accumulated by the last runtime update:
+     * user-data / signal / audio, plus animation end (edge) and loop (pulse).
+     * Called from the ticker right after `internalPlayer.update()`, while the
+     * runtime's passed-event buffer is still valid. Reads event payloads from
+     * the current animation's SSAB events table via the runtime manager's
+     * introspection accessors. Safe with no listeners / no animation.
+     */
+    private pollEvents(): void {
+        const ctx = this.internalPlayer.runtimeManager.context;
+
+        // onAnimationEnd: rising edge of "stopped at end" (the runtime leaves
+        // is_end_frame_reached() asserted after stopping, so notify once).
+        const finished = !ctx.is_playing() && ctx.is_end_frame_reached();
+        if (finished && !this._prevFinished && this._animEndListeners.size > 0) {
+            this._animEndListeners.forEach(cb => cb());
+        }
+        this._prevFinished = finished;
+
+        // onAnimationLoop: is_looped() pulses true for the single update that
+        // crossed a loop boundary, so dispatch it verbatim.
+        if (this._animLoopListeners.size > 0 && ctx.is_looped()) {
+            this._animLoopListeners.forEach(cb => cb());
+        }
+
+        const count = ctx.get_passed_event_count();
+        if (count <= 0) return;
+        if (this._userDataListeners.size === 0 && this._signalListeners.size === 0 && this._audioListeners.size === 0) return;
+
+        const anim = this.internalPlayer.runtimeManager.getCurrentAnimationData();
+        if (!anim) return;
+
+        for (let i = 0; i < count; i++) {
+            // get_passed_event_index returns the index into this animation's
+            // per-frame events table (single-source playback: always primary).
+            const eventIdx = ctx.get_passed_event_index(i);
+            const events = anim.events(eventIdx);
+            if (!events) continue;
+            if (this._userDataListeners.size > 0) this.dispatchUserData(events);
+            if (this._signalListeners.size > 0) this.dispatchSignals(events);
+            if (this._audioListeners.size > 0) this.dispatchAudios(events);
+        }
+    }
+
+    private dispatchUserData(events: ssFormat.EventsPerFrame): void {
+        const mgr = this.internalPlayer.runtimeManager;
+        const n = events.usersLength();
+        for (let j = 0; j < n; j++) {
+            const user = events.users(j);
+            const val = user?.value();
+            if (!user || !val) continue;
+            const partIndex = user.partIndex();
+            const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex) };
+            const intEntry = val.integer();
+            if (intEntry) ev.integer = intEntry.value();
+            const str = val.str();
+            if (str !== null) ev.str = str;
+            const rect = val.rect();
+            if (rect) ev.rect = { x1: rect.x1(), y1: rect.y1(), x2: rect.x2(), y2: rect.y2() };
+            const point = val.point();
+            if (point) ev.point = { x: point.v1(), y: point.v2() };
+            this._userDataListeners.forEach(cb => cb(ev));
+        }
+    }
+
+    private dispatchSignals(events: ssFormat.EventsPerFrame): void {
+        const mgr = this.internalPlayer.runtimeManager;
+        const n = events.signalsLength();
+        for (let j = 0; j < n; j++) {
+            const sig = events.signals(j);
+            const val = sig?.value();
+            if (!sig || !val) continue;
+            // Skip inactive signals (Godot / Unity / porting-guide behaviour).
+            if (!val.active()) continue;
+
+            const params: Record<string, boolean | number | string> = {};
+            const pn = val.paramsLength();
+            for (let k = 0; k < pn; k++) {
+                const param = val.params(k);
+                if (!param) continue;
+                const paramId = param.paramId();
+                if (paramId === null) continue;
+
+                // Resolve the param's union value (Bool/Index/Integer/Floating/Text).
+                let boxed: boolean | number | string | undefined;
+                switch (param.valueType()) {
+                    case ssFormat.SignalCommandParamValue.Bool:
+                        boxed = (param.value(new ssFormat.BoolValueEntry()) as ssFormat.BoolValueEntry | null)?.value(); break;
+                    case ssFormat.SignalCommandParamValue.Index:
+                    case ssFormat.SignalCommandParamValue.Integer:
+                        boxed = (param.value(new ssFormat.IntValueEntry()) as ssFormat.IntValueEntry | null)?.value(); break;
+                    case ssFormat.SignalCommandParamValue.Floating:
+                        boxed = (param.value(new ssFormat.FloatValueEntry()) as ssFormat.FloatValueEntry | null)?.value(); break;
+                    case ssFormat.SignalCommandParamValue.Text: {
+                        const s = (param.value(new ssFormat.StringValueEntry()) as ssFormat.StringValueEntry | null)?.value();
+                        boxed = s ?? undefined; break;
+                    }
+                    default: continue;
+                }
+                if (boxed !== undefined) params[paramId] = boxed;
+            }
+
+            const partIndex = sig.partIndex();
+            const ev: SSSignalEvent = {
+                partIndex,
+                partName: mgr.getPartName(partIndex),
+                active: true,
+                commandId: val.commandId(),
+                params,
+            };
+            this._signalListeners.forEach(cb => cb(ev));
+        }
+    }
+
+    private dispatchAudios(events: ssFormat.EventsPerFrame): void {
+        const mgr = this.internalPlayer.runtimeManager;
+        const n = events.audiosLength();
+        for (let j = 0; j < n; j++) {
+            const audio = events.audios(j);
+            const val = audio?.value();
+            if (!audio || !val) continue;
+            const partIndex = audio.partIndex();
+            const ev: SSAudioEvent = {
+                partIndex,
+                partName: mgr.getPartName(partIndex),
+                soundListNameHash: val.soundListNameHash(),
+                soundNameHash: val.soundNameHash(),
+                soundName: val.soundName(),
+                loopNum: val.loopNum(),
+            };
+            this._audioListeners.forEach(cb => cb(ev));
+        }
+    }
+
     private update(ticker: Ticker) {
         // console.log("update tick", this.internalPlayer.isPlaying, this.internalPlayer.isPausing, this.internalPlayer.getFrameNo());
         if (!this.internalPlayer.isPlaying) return;
@@ -281,8 +514,14 @@ export class SSPlayer extends Container {
         // Update wasm state only if not paused
         if (!this.internalPlayer.isPausing) {
             this.internalPlayer.update(deltaMs);
+            // Drain the events accumulated by this update (user-data / signal /
+            // audio + animation end/loop) right away, while the runtime's
+            // passed-event buffer is still valid. Must run on the same tick that
+            // advanced — including the tick a non-looping animation finishes on,
+            // since the next tick early-returns on !isPlaying.
+            this.pollEvents();
         }
-        
+
         const frameNo = this.internalPlayer.getFrameNo();
         
         if (this.debugText.visible) {
