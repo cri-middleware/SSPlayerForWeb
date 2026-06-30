@@ -353,6 +353,14 @@ export class SSPlayer extends Container {
         this.internalPlayer.setSkipFrames(value);
     }
 
+    public getPartIndexFromName(partName: string): number {
+        return this.internalPlayer.runtimeManager.getPartIndexFromName(partName);
+    }
+
+    public getPartsCount(): number {
+        return this.internalPlayer.runtimeManager.getPartsCount();
+    }
+
     // --- Animation events (06_playback_control.ja.md) ---
     //
     // Listeners are drained each frame by the ticker via pollEvents() (see

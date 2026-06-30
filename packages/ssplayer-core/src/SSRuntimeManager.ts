@@ -297,6 +297,23 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Retrieves the index of a part based on its name.
+     */
+    public getPartIndexFromName(partName: string): number {
+        const names = this.partNames;
+        if (!names) return -1;
+        return names.indexOf(partName);
+    }
+
+    /**
+     * Returns the total number of parts in the current animation.
+     */
+    public getPartsCount(): number {
+        return this.partNames ? this.partNames.length : 0;
+    }
+
+
+    /**
      * Extract the 2D affine of a part's world matrix as [m00, m01, m10, m11,
      * tx, ty] (copied out of WASM memory, so safe to retain). Used to place an
      * instance-part child under its parent. Pass `out` to avoid allocation.
