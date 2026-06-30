@@ -19,7 +19,7 @@ export interface ResolveInstancePacksOptions {
      */
     rootSsab: Uint8Array;
     /** Base URL siblings are fetched from (`<base>/<name>.ssab`). */
-    textureBaseUrl: string;
+    assetBaseUrl: string;
     /** Host byte provider, tried before the fetch fallback. */
     provider: InstancePackProvider | null;
     /** Shared, hash-keyed texture cache (and the gate for fetching textures). */
@@ -31,7 +31,7 @@ export interface ResolveInstancePacksOptions {
 /**
  * Resolve and load every animation pack referenced by `PartType::Instance`
  * parts of `rootSsab`, transitively. Referenced packs are served by `provider`
- * or fetched as sibling `.ssab` files (`<textureBaseUrl>/<packName>.ssab`), and
+ * or fetched as sibling `.ssab` files (`<assetBaseUrl>/<packName>.ssab`), and
  * fetched packs' textures are loaded into the shared (hash-keyed) ResourceManager
  * cache so instanced sub-animations resolve their cells. Resolved resources are
  * stored in `into`, keyed by pack hash, so same-pack references reuse one
@@ -39,7 +39,7 @@ export interface ResolveInstancePacksOptions {
  * contexts on `setupAnimation`.
  */
 export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): Promise<void> {
-    const { rootSsab, textureBaseUrl, provider, resourceManager, into } = opts;
+    const { rootSsab, assetBaseUrl, provider, resourceManager, into } = opts;
 
     // Snapshot the root pack's refs into plain JS FIRST: `rootSsab` is a view
     // over WASM memory, and creating an SSABResource below grows WASM memory,
@@ -49,7 +49,7 @@ export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): P
     const queue = SSRuntimeManager.extractInstancePackRefs(rootSsab);
     const seen = new Set<number>([parentInfo.hash]);
 
-    const prefix = textureBaseUrl && !textureBaseUrl.endsWith('/') ? textureBaseUrl + '/' : textureBaseUrl;
+    const prefix = assetBaseUrl && !assetBaseUrl.endsWith('/') ? assetBaseUrl + '/' : assetBaseUrl;
 
     while (queue.length > 0) {
         const ref = queue.shift()!;

@@ -11,6 +11,8 @@ export * from './ss/runtime/part-state.js';
 export * from './ss/runtime/draw-batch-kind.js';
 
 export * from './SlotHandles.js';
+export * from './IResourceManager.js';
+export * from './IAudioManager.js';
 export * from './PackResolver.js';
 export * from './MaskPlanner.js';
 export * from './FrameDataMaskSource.js';
