@@ -1,5 +1,6 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager } from '@spritestudio/ssplayer-core';
+import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
@@ -177,6 +178,17 @@ export class SSPlayer extends Container {
      * (mask parts themselves stay hidden, as they carry no colour).
      */
     public maskEnabled: boolean = true;
+    
+    /**
+     * Optional AudioManager. If set, setAnimation will automatically preload sounds
+     * required by the current animation.
+     */
+    public get audioManager(): IAudioManager | null {
+        return this.internalPlayer.audioManager;
+    }
+    public set audioManager(value: IAudioManager | null) {
+        this.internalPlayer.audioManager = value;
+    }
     public get subframe(): boolean {
         return this.internalPlayer.subFrameEnabled;
     }
@@ -367,16 +379,25 @@ export class SSPlayer extends Container {
     /**
      * Loads the SSAB file and its associated textures.
      * @param ssabUrl URL to the .ssab file
-     * @param textureBaseUrl Base URL for textures (defaults to ssabUrl's directory)
+     * @param assetBaseUrl Base URL for assets (defaults to ssabUrl's directory)
      */
-    public async load(ssabUrl: string, textureBaseUrl?: string) {
-        await this.internalPlayer.load(ssabUrl, textureBaseUrl);
+    public async load(ssabUrl: string, assetBaseUrl?: string) {
+        await this.internalPlayer.load(ssabUrl, assetBaseUrl);
         this.internalPlayer.runtimeManager.context.set_render_mode(0); // 0 corresponds to RenderMode::Direct
         this.internalPlayer.runtimeManager.context.set_coordinate_system(1); // 1 = YDown
+
+        // Lazy initialize the audio manager only if the loaded SSAB contains sounds,
+        // so that projects without audio don't waste resources creating AudioContexts.
+        const sounds = this.internalPlayer.runtimeManager.getSounds();
+        if (sounds.length > 0 && !this.audioManager) {
+            const defaultAudioManager = new SSWebAudioManager();
+            defaultAudioManager.bindToPlayer(this);
+            this.audioManager = defaultAudioManager;
+        }
     }
 
-    public async setAnimation(animationName: string, loop: number = -1, textureBaseUrl?: string) {
-        await this.internalPlayer.setAnimation(animationName, textureBaseUrl);
+    public async setAnimation(animationName: string, loop: number = -1, assetBaseUrl?: string) {
+        await this.internalPlayer.setAnimation(animationName, assetBaseUrl);
         this.internalPlayer.setLoop(loop);
     }
 
@@ -385,6 +406,9 @@ export class SSPlayer extends Container {
     }
 
     public play(startFrame: number = -1) {
+        if (startFrame >= 0) {
+            this.syncAudioToFrame(startFrame);
+        }
         this.internalPlayer.play(startFrame);
     }
 
@@ -406,6 +430,63 @@ export class SSPlayer extends Container {
 
     public set frame(value: number) {
         this.internalPlayer.setFrame(value);
+        this.syncAudioToFrame(Math.floor(value));
+    }
+
+    private syncAudioToFrame(targetFrame: number) {
+        if (!this.audioManager || !this.audioManager.playWithOffset) return;
+
+        // When seeking, stop all current audio and recalculate
+        if (this.audioManager.stopAll) {
+            this.audioManager.stopAll();
+        }
+
+        const anim = this.internalPlayer.runtimeManager.getCurrentAnimationData();
+        if (!anim) return;
+
+        const fps = this.internalPlayer.getFrameRate();
+        const startFrame = this.internalPlayer.runtimeManager.context.get_start_frame();
+        const endFrame = this.internalPlayer.runtimeManager.context.get_end_frame();
+        
+        // Track the latest audio event for each part
+        const activeAudio = new Map<number, { soundName: string, loopNum: number, startFrame: number }>();
+
+        // Scan the entire timeline from the animation start frame up to the target frame.
+        // We read the FlatBuffers event table directly because `eventsLength()` contains all events in order.
+        const eventsCount = anim.eventsLength();
+        for (let i = 0; i < eventsCount; i++) {
+            const frameEvents = anim.events(i);
+            if (!frameEvents) continue;
+
+            const f = frameEvents.frameIndex();
+            // Only care about events that happen before or exactly at the target seek frame
+            if (f > targetFrame) break; // Assuming events are sorted by frameIndex
+            if (f < startFrame) continue; // Skip events before the play range
+
+            const audioCount = frameEvents.audiosLength();
+            for (let j = 0; j < audioCount; j++) {
+                const audio = frameEvents.audios(j);
+                const val = audio?.value();
+                if (!audio || !val) continue;
+
+                const partIndex = audio.partIndex();
+                const soundName = val.soundName();
+                if (soundName) {
+                    activeAudio.set(partIndex, {
+                        soundName,
+                        loopNum: val.loopNum(),
+                        startFrame: f
+                    });
+                }
+            }
+        }
+
+        // Now trigger them with the correct offset
+        activeAudio.forEach((data, partIndex) => {
+            const elapsedFrames = targetFrame - data.startFrame;
+            const elapsedSeconds = elapsedFrames / fps;
+            this.audioManager!.playWithOffset!(data.soundName, data.loopNum, partIndex, elapsedSeconds);
+        });
     }
 
     public get totalFrames(): number {
@@ -518,8 +599,13 @@ export class SSPlayer extends Container {
         // onAnimationEnd: rising edge of "stopped at end" (the runtime leaves
         // is_end_frame_reached() asserted after stopping, so notify once).
         const finished = !ctx.is_playing() && ctx.is_end_frame_reached();
-        if (finished && !this._prevFinished && this._animEndListeners.size > 0) {
-            this._animEndListeners.forEach(cb => cb());
+        if (finished && !this._prevFinished) {
+            if (this.audioManager && this.audioManager.stopAll) {
+                this.audioManager.stopAll();
+            }
+            if (this._animEndListeners.size > 0) {
+                this._animEndListeners.forEach(cb => cb());
+            }
         }
         this._prevFinished = finished;
 
@@ -544,7 +630,14 @@ export class SSPlayer extends Container {
             if (!events) continue;
             if (this._userDataListeners.size > 0) this.dispatchUserData(events);
             if (this._signalListeners.size > 0) this.dispatchSignals(events);
-            if (this._audioListeners.size > 0) this.dispatchAudios(events);
+            
+            // Only play audio if we are effectively playing forward.
+            // is_playing_forward() handles the Forward/Backward/PingPong direction state,
+            // while speedScale handles user-level time reversal.
+            const isPlayingForward = (ctx.is_playing_forward() === (this.speedScale >= 0));
+            if (this._audioListeners.size > 0 && isPlayingForward) {
+                this.dispatchAudios(events);
+            }
         }
     }
 

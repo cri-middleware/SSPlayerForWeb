@@ -1,6 +1,7 @@
 import * as flatbuffers from 'flatbuffers';
 import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, EffectDrawPlan, getWasmMemory } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
+import { IAudioManager } from './IAudioManager.js';
 import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
 import { InstancePackProvider, resolveInstancePacks } from './PackResolver.js';
 
@@ -26,10 +27,11 @@ export interface InstanceChildState<T> {
  */
 export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public runtimeManager: SSRuntimeManager;
+    public audioManager: IAudioManager | null = null;
     private _speedRate: number = 1.0;
     private _resourceManager: IResourceManager | null = null;
     private _ssabUrl: string = '';
-    private _textureBaseUrl: string = '';
+    private _assetBaseUrl: string = '';
     private _texturePaths: { hash: number, path: string }[] = [];
     private _ssabResource: SSABResource | null = null;
     public _isChildPlayer: boolean = false;
@@ -70,9 +72,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /**
      * Fetches and binds an SSAB file to the player.
      * @param ssabUrl The URL of the SSAB file.
-     * @param textureBaseUrl Optional base URL for textures. If omitted, uses the ssabUrl directory.
+     * @param assetBaseUrl Optional base URL for assets. If omitted, uses the ssabUrl directory.
      */
-    public async load(ssabUrl: string, textureBaseUrl?: string) {
+    public async load(ssabUrl: string, assetBaseUrl?: string) {
         const response = await fetch(ssabUrl);
         if (!response.ok) {
             throw new Error(`Failed to load SSAB: ${response.statusText}`);
@@ -80,7 +82,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const buffer = await response.arrayBuffer();
         
         this._ssabUrl = ssabUrl;
-        this._textureBaseUrl = textureBaseUrl || ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
+        this._assetBaseUrl = assetBaseUrl || ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
         
         this.bindResource(new Uint8Array(buffer));
     }
@@ -102,14 +104,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Loads all textures required by the bound SSAB resource via the ResourceManager.
-     * @param textureBaseUrl The base URL to prepend to the texture paths. If not provided, uses the URL inferred from load().
+     * @param assetBaseUrl The base URL to prepend to the texture paths. If not provided, uses the URL inferred from load().
      */
-    public async loadTextures(textureBaseUrl?: string): Promise<void> {
+    public async loadTextures(assetBaseUrl?: string): Promise<void> {
         if (!this._resourceManager) {
             throw new Error("ResourceManager is not set on InternalPlayerBase.");
         }
         
-        const base = textureBaseUrl || this._textureBaseUrl;
+        const base = assetBaseUrl || this._assetBaseUrl;
         const prefix = base && !base.endsWith('/') ? base + '/' : base;
 
         const promises = this._texturePaths.map(async (info) => {
@@ -123,13 +125,30 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /**
      * Helper to load textures and set the animation in one call.
      * @param animationName The name of the animation to set.
-     * @param textureBaseUrl The base URL for texture loading. If not provided, uses the URL inferred from load().
+     * @param assetBaseUrl The base URL for asset loading. If not provided, uses the URL inferred from load().
      */
-    public async setAnimation(animationName: string, textureBaseUrl?: string) {
-        await this.loadTextures(textureBaseUrl);
-        await this.loadInstancePacks(textureBaseUrl);
+    public async setAnimation(animationName: string, assetBaseUrl?: string) {
+        await this.loadTextures(assetBaseUrl);
+        await this.loadInstancePacks(assetBaseUrl);
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
+        
+        if (this.audioManager) {
+            if (this.audioManager.stopAll) {
+                this.audioManager.stopAll();
+            }
+            const sounds = this.runtimeManager.getSounds();
+            if (sounds.length > 0) {
+                const base = assetBaseUrl || this._assetBaseUrl;
+                const prefix = base && !base.endsWith('/') ? base + '/' : base;
+                const preppedSounds = sounds.map(s => ({
+                    name: s.name,
+                    path: prefix + s.path
+                }));
+                await this.audioManager.preload(preppedSounds);
+            }
+        }
+        
         this.setupInstanceChildren();
         this.setupEffectChildren();
     }
@@ -174,6 +193,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             try {
                 const childPlayer = this.createChildPlayer(this._resourceManager || undefined);
                 childPlayer._isChildPlayer = true;
+                childPlayer.audioManager = this.audioManager;
                 childPlayer.subFrameEnabled = this.subFrameEnabled;
                 // Child needs to share the loaded packs registry so nested instances work
                 childPlayer._instancePackResources = this._instancePackResources;
@@ -228,13 +248,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * (delegated to the engine-agnostic `resolveInstancePacks`). The runtime
      * manager then creates the child contexts on `setupAnimation`.
      */
-    private async loadInstancePacks(textureBaseUrl?: string): Promise<void> {
+    private async loadInstancePacks(assetBaseUrl?: string): Promise<void> {
         const buf = this.getSsabBuffer();
         if (!buf) return;
 
         await resolveInstancePacks({
             rootSsab: buf,
-            textureBaseUrl: textureBaseUrl || this._textureBaseUrl,
+            assetBaseUrl: assetBaseUrl || this._assetBaseUrl,
             provider: this._instancePackProvider,
             resourceManager: this._resourceManager,
             into: this._instancePackResources,
@@ -258,27 +278,45 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         } else {
             this.runtimeManager.context.play();
         }
+        
+        // Restarting playback should also reset independent slots (effects and instances)
+        this.setupInstanceChildren();
+        this.setupEffectChildren();
+
+        if (this.audioManager && this.audioManager.resume) {
+            this.audioManager.resume();
+        }
     }
 
     /**
      * Pauses the playback.
      */
     public pause() {
-        this.runtimeManager.context.pause();
+        if (!this.runtimeManager.context.is_pausing()) {
+            this.runtimeManager.context.pause();
+        }
+        if (this.audioManager && this.audioManager.pause) {
+            this.audioManager.pause();
+        }
     }
 
     /**
      * Resumes the playback from a paused state.
      */
     public resume() {
-        this.runtimeManager.context.play();
+        if (this.runtimeManager.context.is_pausing()) {
+            this.runtimeManager.context.pause(); // pause() in WASM toggles the state
+        }
+        if (this.audioManager && this.audioManager.resume) {
+            this.audioManager.resume();
+        }
     }
 
-    /**
-     * Stops the playback.
-     */
     public stop() {
         this.runtimeManager.context.stop();
+        if (this.audioManager && this.audioManager.stopAll) {
+            this.audioManager.stopAll();
+        }
     }
 
     /**
@@ -512,7 +550,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._instancePackProvider = null;
 
         if (this._ssabResource) {
-            this._ssabResource.destroy();
+            if (!this._isChildPlayer) {
+                this._ssabResource.destroy();
+            }
             this._ssabResource = null;
         }
     }

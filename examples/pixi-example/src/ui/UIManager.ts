@@ -35,6 +35,7 @@ export function showToast(message: string, type: 'info' | 'error' | 'warning' | 
 
 export class UIManager {
     private player: SSPlayer;
+    private btnRestart = document.getElementById('btn-restart') as HTMLButtonElement;
     private btnPlayPause = document.getElementById('btn-play-pause') as HTMLButtonElement;
     private seekBar = document.getElementById('seek-bar') as HTMLInputElement;
     private frameDisplay = document.getElementById('frame-display') as HTMLDivElement;
@@ -59,13 +60,21 @@ export class UIManager {
 
         this.seekBar.max = this.player.endFrame.toString();
 
+        this.btnRestart.addEventListener('click', () => {
+            this.player.play(this.player.startFrame);
+            this.btnPlayPause.textContent = '⏸ Pause';
+        });
+
         this.btnPlayPause.addEventListener('click', () => {
             if (this.player.isPausing) {
                 this.player.resume();
-                this.btnPlayPause.textContent = 'Pause';
+                this.btnPlayPause.textContent = '⏸ Pause';
+            } else if (!this.player.isPlaying) {
+                this.player.play(this.player.startFrame);
+                this.btnPlayPause.textContent = '⏸ Pause';
             } else {
                 this.player.pause();
-                this.btnPlayPause.textContent = 'Play';
+                this.btnPlayPause.textContent = '▶️ Play';
             }
         });
 
@@ -105,7 +114,7 @@ export class UIManager {
                 this.seekBar.max = this.player.endFrame.toString();
                 this.player.position.set(640, 480);
                 this.player.play();
-                this.btnPlayPause.textContent = 'Pause';
+                this.btnPlayPause.textContent = '⏸ Pause';
             }
         });
     }
@@ -139,6 +148,6 @@ export class UIManager {
     public syncAfterLoad() {
         this.seekBar.max = this.player.endFrame.toString();
         this.player.play();
-        this.btnPlayPause.textContent = 'Pause';
+        this.btnPlayPause.textContent = '⏸ Pause';
     }
 }

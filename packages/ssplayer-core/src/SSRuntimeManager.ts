@@ -1,6 +1,7 @@
 import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, SSRuntimeInstanceSlot, WebEffectEventInfo, WebPlaybackDirection, WebPlaybackStyle } from '../wasm/ssruntime.js';
 export { WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle };
 import * as flatbuffers from 'flatbuffers';
+import type { SoundAsset } from './IAudioManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { SsAnimeBinary } from './ss/format/ss-anime-binary.js';
 import { AnimationData } from './ss/format/animation-data.js';
@@ -288,6 +289,18 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Get all referenced sound assets (name and path) for the currently loaded SSAB.
+     */
+    public getSounds(): SoundAsset[] {
+        if (!this.resource) return [];
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return [];
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        return SSRuntimeManager.extractSounds(buf);
+    }
+
+    /**
      * Cached name of the part at `partIndex` (SSAB parts-table order), or
      * `null` if out of range / before an animation is set up.
      */
@@ -442,6 +455,31 @@ export class SSRuntimeManager {
         for (let i = 0; i < ssab.animationsLength(); i++) {
             const name = ssab.animations(i)?.name();
             if (name) out.push(name);
+        }
+        return out;
+    }
+
+    /**
+     * Parse the SSAB buffer and list all referenced sound assets (name and path).
+     * Useful for preloading audio files via the Web Audio API.
+     */
+    public static extractSounds(ssabBuffer: Uint8Array): SoundAsset[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const seen = new Set<string>();
+        const out: SoundAsset[] = [];
+        for (let i = 0; i < ssab.soundListsLength(); i++) {
+            const soundList = ssab.soundLists(i);
+            if (!soundList) continue;
+            for (let j = 0; j < soundList.tableDataLength(); j++) {
+                const soundFile = soundList.tableData(j);
+                const name = soundFile?.name();
+                const path = soundFile?.filePath();
+                if (name && path && !seen.has(name)) {
+                    seen.add(name);
+                    out.push({ name, path });
+                }
+            }
         }
         return out;
     }
