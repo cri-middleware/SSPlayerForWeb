@@ -2,7 +2,6 @@ import type { SSRuntimeManager } from './SSRuntimeManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { BlendType } from './ss/format/blend-type.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
-import { EffectDrawCommand } from './ss/runtime/effect-draw-command.js';
 import { PartState } from './ss/runtime/part-state.js';
 import { PartAttributePartColor } from './ss/runtime/part-attribute-part-color.js';
 import { SsAttributePartColorKeyValueColor } from './ss/runtime/ss-attribute-part-color-key-value-color.js';
@@ -171,6 +170,15 @@ export class GeometryBuilder {
         const mulF = pc_blendType === BlendType.Mul ? 1 : 0;
         const addF = pc_blendType === BlendType.Add ? 1 : (pc_blendType === BlendType.Sub ? -1 : 0);
 
+        // Per-vertex alpha carries this part's own (fully hierarchical) opacity:
+        // for part-colored parts the runtime already pre-multiplied state.alpha()
+        // into parts_color.rgba.a; for the default path we put state.alpha() here
+        // so the shader's output alpha (texColor.a * vColor.a) is the single alpha
+        // source and the renderer's mesh.alpha need only carry the parent chain
+        // (avoids double-applying state.alpha(); 10_parts_color §1-3 "do not
+        // re-multiply state->alpha()").
+        const stateAlpha = partState.alpha();
+
         const pm = this.parentMatrix;
         for (let j = 0; j < 5; j++) {
             const wx = this.worldPositions[srcBase + j * 2];
@@ -196,7 +204,7 @@ export class GeometryBuilder {
                 outCustom0[j * 4 + 2] = mulF;
                 outCustom0[j * 4 + 3] = addF;
             } else {
-                outColors[j * 4 + 0] = 1.0; outColors[j * 4 + 1] = 1.0; outColors[j * 4 + 2] = 1.0; outColors[j * 4 + 3] = 1.0;
+                outColors[j * 4 + 0] = 1.0; outColors[j * 4 + 1] = 1.0; outColors[j * 4 + 2] = 1.0; outColors[j * 4 + 3] = stateAlpha;
                 outCustom0[j * 4 + 0] = 1.0; outCustom0[j * 4 + 1] = 0; outCustom0[j * 4 + 2] = 1.0; outCustom0[j * 4 + 3] = 0;
             }
         }
@@ -230,6 +238,10 @@ export class GeometryBuilder {
 
         const pcIdx = partState ? partState.partColor() : -1;
         const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+        // This part's own (hierarchical) opacity — see buildNormal. For the
+        // no-PartColor path it becomes the corner alpha so output alpha is
+        // texColor.a * vColor.a with the parent chain applied once via mesh.alpha.
+        const stateAlpha = partState ? partState.alpha() : 1;
 
         // Corner colors/rates live in shared scratch ([LT,RT,LB,RB] × rgba);
         // the per-vertex loop below interpolates them as scalars.
@@ -248,10 +260,10 @@ export class GeometryBuilder {
             // yields 1.0 at every vertex (rate is forced to 1.0 for shapes).
             cr[0] = 1; cr[1] = 1; cr[2] = 1; cr[3] = 1;
         } else {
-            cc[0] = 1; cc[1] = 1; cc[2] = 1; cc[3] = 1;
-            cc[4] = 1; cc[5] = 1; cc[6] = 1; cc[7] = 1;
-            cc[8] = 1; cc[9] = 1; cc[10] = 1; cc[11] = 1;
-            cc[12] = 1; cc[13] = 1; cc[14] = 1; cc[15] = 1;
+            cc[0] = 1; cc[1] = 1; cc[2] = 1; cc[3] = stateAlpha;
+            cc[4] = 1; cc[5] = 1; cc[6] = 1; cc[7] = stateAlpha;
+            cc[8] = 1; cc[9] = 1; cc[10] = 1; cc[11] = stateAlpha;
+            cc[12] = 1; cc[13] = 1; cc[14] = 1; cc[15] = stateAlpha;
             cr[0] = 0; cr[1] = 0; cr[2] = 0; cr[3] = 0;
         }
         // Shape always uses the Mix path (forced above); flags are constant.
@@ -374,6 +386,8 @@ export class GeometryBuilder {
         let pcR = 1, pcG = 1, pcB = 1, pcA = 1;
         let pc_blendType = BlendType.Mix;
         const hasPc = !!pc;
+        // This part's own (hierarchical) opacity — see buildNormal.
+        const stateAlpha = partState ? partState.alpha() : 1;
 
         if (pc) {
             pc_blendType = pc.blendType();
@@ -414,7 +428,7 @@ export class GeometryBuilder {
                 outCustom0[v * 4 + 2] = meshMulF;
                 outCustom0[v * 4 + 3] = meshAddF;
             } else {
-                outColors[v * 4 + 0] = 1.0; outColors[v * 4 + 1] = 1.0; outColors[v * 4 + 2] = 1.0; outColors[v * 4 + 3] = 1.0;
+                outColors[v * 4 + 0] = 1.0; outColors[v * 4 + 1] = 1.0; outColors[v * 4 + 2] = 1.0; outColors[v * 4 + 3] = stateAlpha;
                 outCustom0[v * 4 + 0] = 1.0; outCustom0[v * 4 + 1] = 0; outCustom0[v * 4 + 2] = 1.0; outCustom0[v * 4 + 3] = 0;
             }
         }
@@ -432,17 +446,27 @@ export class GeometryBuilder {
      * WASM runtime in the effect's local space (y-flip already applied), so the
      * effect part's world matrix is baked in here, matching buildNormal/
      * buildShape/buildMesh. UVs and colors are emitted normalized (0..1) by the
-     * runtime and copied through unchanged. Indices are command-local 0-based,
-     * so they map directly onto the per-command output buffer.
+     * runtime and copied through unchanged. Indices are command-local 0-based.
+     *
+     * `vertexOffset` / `indexOffset` let several commands be packed into a single
+     * shared buffer (effect dynamic batching, 08_advanced_rendering §2): each
+     * command writes its vertices starting at `vertexOffset`, and its indices —
+     * rebased by `vertexOffset` — starting at `indexOffset`. `partAlpha` folds the
+     * effect part's own opacity into the per-vertex alpha so one merged Mesh can
+     * carry commands from parts with differing alpha under a single mesh alpha.
      */
     public buildEffectCommand(
         partIdx: number,
         plan: EffectDrawPlan,
-        cmd: EffectDrawCommand,
+        particleOffset: number,
+        quadCount: number,
         outPositions: Float32Array,
         outUvs: Float32Array,
         outColors: Float32Array,
-        outIndices: Uint32Array | Uint16Array
+        outIndices: Uint32Array | Uint16Array,
+        vertexOffset: number = 0,
+        indexOffset: number = 0,
+        partAlpha: number = 1
     ): void {
         const planVerts = plan.vertsArray();
         const planUvs = plan.uvsArray();
@@ -460,38 +484,42 @@ export class GeometryBuilder {
         const ty  = matrices[mOff + 13];
 
         const stride = plan.vertStride() === 3 ? 3 : 2;
-        const quadCount = cmd.quadCount();
-        const vBase = cmd.particleOffset() * 4; // first vertex (quad-offset * 4 verts)
-        const iBase = cmd.particleOffset() * 6; // first index (quad-offset * 6 indices)
+        const vBase = particleOffset * 4; // first vertex (quad-offset * 4 verts)
+        const iBase = particleOffset * 6; // first index (quad-offset * 6 indices)
         const pCount = quadCount * 4;
         const iCount = quadCount * 6;
         const pm = this.parentMatrix;
 
         for (let v = 0; v < pCount; v++) {
             const gv = vBase + v;
+            const ov = vertexOffset + v;
             const vx = planVerts[gv * stride + 0];
             const vy = planVerts[gv * stride + 1];
             const wx = m00 * vx + m01 * vy + tx;
             const wy = m10 * vx + m11 * vy + ty;
             if (pm) {
-                outPositions[v * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
-                outPositions[v * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+                outPositions[ov * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[ov * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
             } else {
-                outPositions[v * 2 + 0] = wx;
-                outPositions[v * 2 + 1] = wy;
+                outPositions[ov * 2 + 0] = wx;
+                outPositions[ov * 2 + 1] = wy;
             }
 
-            outUvs[v * 2 + 0] = planUvs[gv * 2 + 0];
-            outUvs[v * 2 + 1] = planUvs[gv * 2 + 1];
+            outUvs[ov * 2 + 0] = planUvs[gv * 2 + 0];
+            outUvs[ov * 2 + 1] = planUvs[gv * 2 + 1];
 
-            outColors[v * 4 + 0] = planColors[gv * 4 + 0];
-            outColors[v * 4 + 1] = planColors[gv * 4 + 1];
-            outColors[v * 4 + 2] = planColors[gv * 4 + 2];
-            outColors[v * 4 + 3] = planColors[gv * 4 + 3];
+            outColors[ov * 4 + 0] = planColors[gv * 4 + 0];
+            outColors[ov * 4 + 1] = planColors[gv * 4 + 1];
+            outColors[ov * 4 + 2] = planColors[gv * 4 + 2];
+            // Fold the effect part's own opacity into the vertex alpha. The effect
+            // shader premultiplies (rgb * a), so scaling only the alpha channel
+            // scales the whole premultiplied contribution — letting a merged mesh
+            // use a single (parent) alpha instead of a per-part mesh alpha.
+            outColors[ov * 4 + 3] = planColors[gv * 4 + 3] * partAlpha;
         }
 
         for (let k = 0; k < iCount; k++) {
-            outIndices[k] = planIndices[iBase + k];
+            outIndices[indexOffset + k] = planIndices[iBase + k] + vertexOffset;
         }
     }
 }

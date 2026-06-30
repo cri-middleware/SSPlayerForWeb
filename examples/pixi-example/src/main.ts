@@ -9,6 +9,10 @@ async function main() {
 
     // 1. Setup PixiJS Application
     const app = new Application();
+    // Opaque background. The SpriteStudio backdrop-reading blend modes (Screen /
+    // Exclusion / Invert) are now real fixed-function GPU blends that read the live
+    // framebuffer, so this background IS the backdrop they composite against — e.g.
+    // Invert/Exclusion over this blue invert it toward yellow, matching the editor.
     await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgpu' });
     
     const container = document.getElementById('canvas-container');
@@ -81,7 +85,48 @@ async function main() {
     // 3. Initialize UI Manager
     const uiManager = new UIManager(player);
 
-    // 4. Setup default animation select for Ringo
+    // 4. Populate the SSAB dropdown with the bundled sample assets so any of them
+    //    (BlendMode, PartsColor, Effect, Mask, …) can be loaded straight from the
+    //    UI, not only via drag & drop. Vite does not glob files under public/, so
+    //    the sample list is enumerated explicitly here.
+    const SAMPLE_SSABS = [
+        'Ringo.ssab', '01-new.ssab', 'Basic.ssab', 'BlendMode.ssab', 'Bounding.ssab',
+        'Effect.ssab', 'Instance.ssab', 'Instance_SourceAnime.ssab', 'Interpolation.ssab',
+        'Interpolation_Easing_v1.ssab', 'Mask.ssab', 'Mesh.ssab', 'NineSlice.ssab',
+        'PartsColor.ssab', 'Ringo_tyu.ssab', 'Shader.ssab', 'Shape.ssab', 'Signal.ssab',
+        'Sound.ssab', 'Text.ssab', 'TextureChange.ssab', 'UserData.ssab',
+    ];
+
+    // Load a bundled sample by filename (served from public/ at the site root).
+    // Textures and any external instance packs resolve by URL relative to root,
+    // matching how the bundled assets are laid out.
+    const loadSample = async (name: string) => {
+        try {
+            await player.load('/' + name);
+            const buffer = await (await fetch('/' + name)).arrayBuffer();
+            const anims = extractAnimationNames(buffer);
+            uiManager.updateAnimationSelect(anims, anims[0]);
+            if (anims.length > 0) await player.setAnimation(anims[0]);
+            player.position.set(640, 480);
+            // Refresh the seek-bar range / frame display for the new animation and
+            // start playback (the seek bar's max is otherwise stale from Ringo).
+            uiManager.syncAfterLoad();
+        } catch (e) {
+            console.error(`Failed to load sample "${name}"`, e);
+            showToast(`Failed to load ${name}`, 'error');
+        }
+    };
+
+    uiManager.updateSsabSelect(SAMPLE_SSABS, 'Ringo.ssab');
+    // The DropLoader also listens on this <select>, but its handler only matches
+    // dropped files; this one only matches the bundled sample names — so the two
+    // never act on the same change.
+    uiManager.ssabSelect.addEventListener('change', (e) => {
+        const name = (e.target as HTMLSelectElement).value;
+        if (SAMPLE_SSABS.includes(name)) void loadSample(name);
+    });
+
+    // Default animation list for the initially-loaded Ringo.
     try {
         const response = await fetch('/Ringo.ssab');
         const buffer = await response.arrayBuffer();
@@ -91,7 +136,8 @@ async function main() {
         console.warn("Failed to fetch default Ringo.ssab animations", e);
     }
 
-    // 5. Initialize Drag and Drop Loader
+    // 5. Initialize Drag and Drop Loader (dropping files repopulates the dropdown
+    //    with the dropped paths; its change handler ignores the bundled samples).
     new DropLoader(player, uiManager);
 }
 

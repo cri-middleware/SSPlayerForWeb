@@ -283,14 +283,31 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Updates the animation frame by the given delta time.
+     *
+     * When paused, the main timeline is NOT advanced, but the effect / instance
+     * slots are still stepped with the real delta so that `independent` parts keep
+     * running on their own clock (SpriteStudio independent semantics; mirrors
+     * SSPlayerForGodot). The runtime's `step()` ignores the delta for
+     * non-independent slots — they stay synced to the (frozen) parent frame — so
+     * passing the real delta unconditionally is safe. When fully stopped, nothing
+     * advances.
      * @param deltaMs The elapsed time since the last frame in milliseconds.
      */
     public update(deltaMs: number) {
-        if (!this.isPlaying || this.isPausing) return;
+        if (!this.isPlaying) return;
+        const deltaSeconds = deltaMs / 1000.0;
+
+        if (this.isPausing) {
+            // Paused: keep independent slots advancing; do not touch the timeline.
+            this.stepEffectSlots(deltaSeconds, false);
+            this.stepInstanceSlots(deltaSeconds, false);
+            return;
+        }
+
         // Delegate to the manager so animation playback advances
         this.runtimeManager.update(deltaMs);
-        this.stepEffectSlots(deltaMs / 1000.0, this.runtimeManager.context.is_looped());
-        this.stepInstanceSlots(deltaMs / 1000.0, this.runtimeManager.context.is_looped());
+        this.stepEffectSlots(deltaSeconds, this.runtimeManager.context.is_looped());
+        this.stepInstanceSlots(deltaSeconds, this.runtimeManager.context.is_looped());
     }
 
     /**

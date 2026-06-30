@@ -107,16 +107,19 @@ ${MASKED_GLSL_REPLAY}
         // 1. Un-premultiply texture color
         vec3 straightTexRGB = texColor.rgb / max(texColor.a, 0.0001);
 
-        // 2. Base blend colors
-        vec3 mixColor = mix(straightTexRGB, vColor.rgb, rate * vColor.a);
-        vec3 mulColor = straightTexRGB * mix(vec3(1.0), vColor.rgb, rate * vColor.a);
-        vec3 addSubColor = straightTexRGB + (vColor.rgb * rate * vColor.a * sign(isAddSub));
+        // 2. Base blend colors. Blend strength is 'rate' ALONE; parts-color alpha
+        // (vColor.a) drives output alpha, not tint strength (10_parts_color §1-4).
+        vec3 mixColor = mix(straightTexRGB, vColor.rgb, rate);
+        vec3 mulColor = straightTexRGB * mix(vec3(1.0), vColor.rgb, rate);
+        vec3 addSubColor = straightTexRGB + (vColor.rgb * rate * sign(isAddSub));
 
         // 3. Output straight color
         vec3 outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
 
-        // 4. Re-premultiply
-        finalColor = vec4(outRgb * texColor.a, texColor.a) * uColor;
+        // 4. Output alpha = texture alpha x parts-color alpha (§1-4); re-premultiply,
+        //    then fold hierarchy alpha / world tint via uColor.
+        float outA = texColor.a * vColor.a;
+        finalColor = vec4(outRgb * outA, outA) * uColor;
     }
 `
 };
@@ -242,16 +245,19 @@ fn mainFrag(in: VertexOutput) -> @location(0) vec4<f32> {
   // 1. Un-premultiply texture color
   let straightTexRGB = texColor.rgb / max(texColor.a, 0.0001);
 
-  // 2. Blend
-  let mixColor = mix(straightTexRGB, in.vColor.rgb, rate * in.vColor.a);
-  let mulColor = straightTexRGB * mix(vec3<f32>(1.0, 1.0, 1.0), in.vColor.rgb, rate * in.vColor.a);
-  let addSubColor = straightTexRGB + (in.vColor.rgb * rate * in.vColor.a * sign(isAddSub));
+  // 2. Blend strength is 'rate' ALONE; parts-color alpha (vColor.a) drives
+  // output alpha, not tint strength (10_parts_color §1-4).
+  let mixColor = mix(straightTexRGB, in.vColor.rgb, rate);
+  let mulColor = straightTexRGB * mix(vec3<f32>(1.0, 1.0, 1.0), in.vColor.rgb, rate);
+  let addSubColor = straightTexRGB + (in.vColor.rgb * rate * sign(isAddSub));
 
   // 3. Output straight color
   let outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
 
-  // 4. Re-premultiply
-  return vec4<f32>(outRgb * texColor.a, texColor.a) * localUniforms.uColor;
+  // 4. Output alpha = texture alpha x parts-color alpha (§1-4); re-premultiply,
+  //    then fold hierarchy alpha / world tint via uColor.
+  let outA = texColor.a * in.vColor.a;
+  return vec4<f32>(outRgb * outA, outA) * localUniforms.uColor;
 }
 `,
         entryPoint: 'mainFrag'

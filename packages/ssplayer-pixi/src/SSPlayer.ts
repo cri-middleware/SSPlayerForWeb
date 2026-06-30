@@ -1,10 +1,16 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
 import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
+// SpriteStudio framebuffer blend modes (Invert / Exclusion / Sub) registered as
+// fixed-function GPU blend states — the same mechanism SpriteStudio uses — rather
+// than PixiJS "advanced" filter blends (which don't reliably engage / read the
+// live framebuffer here). Importing registers the WebGPU entries; the WebGL map is
+// patched via registerSSBlendModesGL once the renderer is known. See SSBlendModes.
+import { SS_INVERT_BLEND, SS_EXCLUSION_BLEND, registerSSBlendModesGL } from './SSBlendModes.js';
 
 // MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
 
@@ -98,6 +104,13 @@ export class SSPlayer extends Container {
     // affine for an instance part's own world matrix before composition.
     private readonly scratchPartState = new PartState();
     private readonly scratchInstMat = new Float32Array(6);
+
+    // Reused per-frame scratch for effect draw-call batching: a pooled list of the
+    // current Effect batch's particle draw commands (descriptors), greedily merged
+    // by (cellmap, blend) at draw time. Pooled so steady-state rendering allocates
+    // nothing; only entries [0, _fxCount) are live each frame.
+    private readonly _fxDesc: { partIdx: number; plan: EffectDrawPlan; cellmap: number; blend: number; quadCount: number; particleOffset: number; partAlpha: number; }[] = [];
+    private _fxCount = 0;
 
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
@@ -212,7 +225,12 @@ export class SSPlayer extends Container {
         // it from the ticker (before the stage render) keeps coverage ready by
         // the time our masked children are drawn. Masking therefore starts on
         // the second frame (the first has no renderer yet) — harmless.
-        this.onRender = (renderer: Renderer) => { this.renderer = renderer; };
+        this.onRender = (renderer: Renderer) => {
+            this.renderer = renderer;
+            // WebGL: register the SS fixed-function blend modes into this renderer's
+            // blend map (idempotent; no-op on WebGPU, handled at import time).
+            registerSSBlendModesGL(renderer);
+        };
 
         Ticker.shared.add(this.update, this);
     }
@@ -508,17 +526,22 @@ export class SSPlayer extends Container {
     private update(ticker: Ticker) {
         // console.log("update tick", this.internalPlayer.isPlaying, this.internalPlayer.isPausing, this.internalPlayer.getFrameNo());
         if (!this.internalPlayer.isPlaying) return;
-        
+
         const deltaMs = ticker.deltaMS;
-        
-        // Update wasm state only if not paused
-        if (!this.internalPlayer.isPausing) {
-            this.internalPlayer.update(deltaMs);
+
+        // Advance every tick. While playing this steps the timeline; while paused
+        // internalPlayer.update() still advances `independent` effect / instance
+        // slots on their own clock (see InternalPlayerBase.update), so paused
+        // particles / sub-animations keep running and we re-render below.
+        const pausing = this.internalPlayer.isPausing;
+        this.internalPlayer.update(deltaMs);
+        if (!pausing) {
             // Drain the events accumulated by this update (user-data / signal /
             // audio + animation end/loop) right away, while the runtime's
             // passed-event buffer is still valid. Must run on the same tick that
             // advanced — including the tick a non-looping animation finishes on,
-            // since the next tick early-returns on !isPlaying.
+            // since the next tick early-returns on !isPlaying. Skipped while paused
+            // (the timeline did not move, so no events were passed).
             this.pollEvents();
         }
 
@@ -678,13 +701,36 @@ export class SSPlayer extends Container {
             // texture is resolved per draw command, so avoid the missing-asset warning.
             const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE) : Texture.WHITE;
 
+            // SpriteStudio framebuffer-composite blend (alpha_blend_type, 12 values)
+            // → PixiJS blend mode. See 10_parts_color §1-0: this is the framebuffer
+            // composite, distinct from the PartColor (vertex) blend.
+            // Factors verified against SS6PlayerForUnity. GPU-native pixi modes:
+            //  Mix→normal [one,1-srcA]; Add→add; Mul→multiply [dst,1-srcA];
+            //  Screen→screen (== SS [1-dst,one] for premultiplied). Mulalpha (SS
+            //  [zero,srcColor] = dst*src) == premultiplied multiply for opaque parts.
+            // Exclusion / Invert have no GPU-native pixi mode and are registered as
+            // fixed-function GPU blends (SSBlendModes) — NOT advanced filters. Sub is
+            // intentionally left as the original 'subtract' (which is not registered,
+            // so it falls back to 'normal') per user preference — the true SS
+            // reverse-subtract looked wrong (greyed-out) for the bundled asset.
             let blendMode: any = 'normal';
             switch (batch.blendType()) {
                 case BlendType.Mix: blendMode = 'normal'; break;
+                case BlendType.Mul: blendMode = 'multiply'; break;
                 case BlendType.Add: blendMode = 'add'; break;
                 case BlendType.Sub: blendMode = 'subtract'; break;
-                case BlendType.Mul: blendMode = 'multiply'; break;
+                case BlendType.Mulalpha: blendMode = 'multiply'; break;
                 case BlendType.Screen: blendMode = 'screen'; break;
+                case BlendType.Exclusion: blendMode = SS_EXCLUSION_BLEND; break;
+                case BlendType.Invert: blendMode = SS_INVERT_BLEND; break;
+                // SS6 "2" composite variants: not used by any bundled asset and with
+                // no exact PixiJS equivalent — best-effort to the nearest GPU-native
+                // mode (Div2/Overlay2 have none → 'normal'). Unverified.
+                case BlendType.Mul2: blendMode = 'multiply'; break;
+                case BlendType.Div2: blendMode = 'normal'; break;
+                case BlendType.Screen2: blendMode = 'screen'; break;
+                case BlendType.Overlay2: blendMode = 'normal'; break;
+                default: blendMode = 'normal'; break;
             }
             
             const invTexW = 1.0 / texture.width;
@@ -727,7 +773,7 @@ export class SSPlayer extends Container {
                     this.finishPart(mesh, 5, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
                         inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
-                        effCov, texture, blendMode, alpha * parentAlpha);
+                        effCov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Shape) {
                 const shapeVertexCounts = manager.getShapeVertexCounts();
@@ -767,7 +813,7 @@ export class SSPlayer extends Container {
                     this.finishPart(mesh, numVerts, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
                         inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
-                        effCov, texture, blendMode, alpha * parentAlpha);
+                        effCov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Mesh) {
                 const meshVOff = manager.getMeshVertexOffsets();
@@ -812,14 +858,21 @@ export class SSPlayer extends Container {
                     this.finishPart(mesh, pCount, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
                         inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
-                        effCov, texture, blendMode, alpha * parentAlpha);
+                        effCov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Effect) {
                 // Particle geometry is simulated in the WASM runtime and returned as an
                 // EffectDrawPlan per effect part: one command per (cellmap, blend) emitter
                 // group, slicing shared flat buffers. The per-vertex math lives in core's
-                // GeometryBuilder.buildEffectCommand; here we only resolve the texture,
-                // blend and shader and push the geometry to a pooled PixiJS Mesh.
+                // GeometryBuilder.buildEffectCommand.
+                //
+                // Dynamic batching (08_advanced_rendering §2): we gather every particle
+                // command in this batch in draw order — folding each effect part's own
+                // opacity into the vertex alpha — then merge consecutive commands sharing
+                // the same (cellmap, blend) into a single pooled Mesh / draw call. Only
+                // *consecutive* runs are merged, so draw order (hence blend compositing)
+                // is preserved exactly.
+                this._fxCount = 0;
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
                     const partState = frameData.parts(partIdx, this.scratchPartState);
@@ -833,38 +886,78 @@ export class SSPlayer extends Container {
                     for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
                         const cmd = plan.commands(cmdIdx);
                         if (!cmd) continue;
-
                         const quadCount = cmd.quadCount();
                         if (quadCount === 0) continue;
 
-                        const pCount = quadCount * 4;
-                        const iCount = quadCount * 6;
-
-                        const mesh = this.getMeshFromPool(this.activeMeshes, pCount, iCount);
-                        this.activeMeshes++;
-
-                        const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
-                        const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
-                        const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
-                        const indices = mesh.geometry.getIndex().data as Uint32Array;
-
-                        geometryBuilder.buildEffectCommand(
-                            partIdx, plan, cmd, positions, uvs, colors, indices
-                        );
-
-                        mesh.geometry.getBuffer('aPosition').update();
-                        mesh.geometry.getBuffer('aUV').update();
-                        mesh.geometry.getBuffer('aColor').update();
-                        mesh.geometry.getIndex().update();
-
-                        const effectTex = this.pixiResourceManager.getTexture(cmd.cellmapHash()) || Texture.WHITE;
-                        mesh.shader = this.getEffectShader(effectTex) as any;
-                        // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
-                        mesh.blendMode = cmd.blend() === 1 ? 'add' : 'normal';
-                        mesh.alpha = alpha * parentAlpha;
-                        mesh.visible = true;
-                        this.addChild(mesh);
+                        let d = this._fxDesc[this._fxCount];
+                        if (!d) {
+                            d = { partIdx: 0, plan, cellmap: 0, blend: 0, quadCount: 0, particleOffset: 0, partAlpha: 1 };
+                            this._fxDesc[this._fxCount] = d;
+                        }
+                        d.partIdx = partIdx;
+                        d.plan = plan;
+                        d.cellmap = cmd.cellmapHash();
+                        d.blend = cmd.blend();
+                        d.quadCount = quadCount;
+                        d.particleOffset = cmd.particleOffset();
+                        d.partAlpha = alpha;
+                        this._fxCount++;
                     }
+                }
+
+                // The descriptors hold zero-copy EffectDrawPlan views over WASM
+                // memory. Nothing between the gather above and the build below
+                // allocates in WASM (getEffectShader / getTexture / buffer updates
+                // are all JS/GPU side), so the views stay valid — no re-derive needed.
+                let g = 0;
+                while (g < this._fxCount) {
+                    const cellmap = this._fxDesc[g].cellmap;
+                    const blend = this._fxDesc[g].blend;
+                    let h = g;
+                    let totalQuads = 0;
+                    while (h < this._fxCount && this._fxDesc[h].cellmap === cellmap && this._fxDesc[h].blend === blend) {
+                        totalQuads += this._fxDesc[h].quadCount;
+                        h++;
+                    }
+
+                    const pCount = totalQuads * 4;
+                    const iCount = totalQuads * 6;
+                    const mesh = this.getMeshFromPool(this.activeMeshes, pCount, iCount);
+                    this.activeMeshes++;
+
+                    const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
+                    const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
+                    const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
+                    const indices = mesh.geometry.getIndex().data as Uint32Array;
+
+                    let vOff = 0;
+                    let iOff = 0;
+                    for (let k = g; k < h; k++) {
+                        const d = this._fxDesc[k];
+                        geometryBuilder.buildEffectCommand(
+                            d.partIdx, d.plan, d.particleOffset, d.quadCount,
+                            positions, uvs, colors, indices, vOff, iOff, d.partAlpha
+                        );
+                        vOff += d.quadCount * 4;
+                        iOff += d.quadCount * 6;
+                    }
+
+                    mesh.geometry.getBuffer('aPosition').update();
+                    mesh.geometry.getBuffer('aUV').update();
+                    mesh.geometry.getBuffer('aColor').update();
+                    mesh.geometry.getIndex().update();
+
+                    const effectTex = this.pixiResourceManager.getTexture(cellmap) || Texture.WHITE;
+                    mesh.shader = this.getEffectShader(effectTex) as any;
+                    // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
+                    mesh.blendMode = blend === 1 ? 'add' : 'normal';
+                    // Per-part opacity was folded into the vertex alpha above, so the mesh
+                    // alpha only carries the (uniform) parent-chain opacity.
+                    mesh.alpha = parentAlpha;
+                    mesh.visible = true;
+                    this.addChild(mesh);
+
+                    g = h;
                 }
             }
         }
@@ -875,6 +968,13 @@ export class SSPlayer extends Container {
      * list. For masked parts, binds the masked shader (with this context's
      * coverage + writer metadata) and fills the per-vertex coverage UVs; for
      * unmasked parts, the plain PartsColor shader.
+     *
+     * `alpha` here is the PARENT-CHAIN opacity only (parentAlpha). The part's own
+     * hierarchical alpha (state.alpha()) is carried per-vertex in aColor.a by the
+     * GeometryBuilder — pre-multiplied into parts_color by the runtime, or written
+     * directly for the default path — and the shader's output alpha is
+     * texColor.a * vColor.a. Folding state.alpha() into mesh.alpha here as well
+     * would double-apply it (10_parts_color §1-3).
      */
     private finishPart(
         mesh: Mesh<any>,
