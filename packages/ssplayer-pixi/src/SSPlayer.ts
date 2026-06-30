@@ -5,6 +5,7 @@ import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
 import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
+import { SS_SHADER_SOURCES } from './SSShaderLib.js';
 // SpriteStudio framebuffer blend modes (Invert / Exclusion / Sub) registered as
 // fixed-function GPU blend states — the same mechanism SpriteStudio uses — rather
 // than PixiJS "advanced" filter blends (which don't reliably engage / read the
@@ -128,6 +129,17 @@ export class SSPlayer extends Container {
     private partsColorShaders: Map<Texture, Shader> = new Map();
     private effectShaders: Map<Texture, Shader> = new Map();
 
+    // --- SpriteStudio integration shaders (ssae `SHDR` attribute) ---
+    // A part carrying a shader attribute needs its OWN per-part uniforms
+    // (param0..7, cell rect, pixel size), so the plain per-texture caching used
+    // for PartsColorShader can't be shared across parts. Instead we pool one
+    // Shader instance per (id_hash, texture) per simultaneously-drawn part: the
+    // pool is keyed `${idHash}_${texUid}` and `ssShaderActive` counts how many
+    // of each key were used this frame (reset in renderFrame), so part N of a
+    // key reuses pool[N] — each with its own UniformGroup written that frame.
+    private ssShaderPools: Map<string, Shader[]> = new Map();
+    private ssShaderActive: Map<string, number> = new Map();
+
     // --- Mask coverage state (see 09_mask.ja.md §3-2) ---
     // The renderer, captured lazily on the first render via onRender; the
     // coverage pre-pass needs it to rasterise into RenderTextures, and it runs
@@ -209,6 +221,101 @@ export class SSPlayer extends Container {
             });
             this.effectShaders.set(texture, shader);
         }
+        return shader;
+    }
+
+    /**
+     * Acquire a Shader for a part's SpriteStudio integration shader
+     * (`SHDR` attribute). Returns null when `idHash` isn't one of the built-in
+     * `ss-*` shaders (the caller then uses the plain PartsColorShader).
+     *
+     * Pooled per (idHash, texture) and handed out in draw order within a frame
+     * (see `ssShaderActive`), so each drawn shader-part gets a distinct Shader
+     * instance whose per-part uniforms (param0..7 / cellRect / pixelSize) the
+     * caller fills without clobbering another part's. Reused across frames.
+     */
+    private acquireSsShader(idHash: number, texture: Texture): Shader | null {
+        const src = SS_SHADER_SOURCES.get(idHash);
+        if (!src) return null;
+
+        const key = `${idHash}_${(texture.source as any).uid}`;
+        let pool = this.ssShaderPools.get(key);
+        if (!pool) {
+            pool = [];
+            this.ssShaderPools.set(key, pool);
+        }
+        const idx = this.ssShaderActive.get(key) ?? 0;
+        this.ssShaderActive.set(key, idx + 1);
+
+        let shader = pool[idx];
+        if (!shader) {
+            const ssUniforms = new UniformGroup({
+                uParams: { value: new Float32Array(8), type: 'vec4<f32>', size: 2 },
+                uCellRect: { value: new Float32Array([0, 0, 1, 1]), type: 'vec4<f32>' },
+                uPixelSize: { value: new Float32Array([0, 0]), type: 'vec2<f32>' },
+            });
+            shader = Shader.from({
+                gl: src.gl,
+                gpu: src.gpu,
+                resources: {
+                    uTexture: texture.source,
+                    uTextureSampler: texture.source.style,
+                    ssUniforms,
+                },
+            });
+            pool.push(shader);
+        }
+        return shader;
+    }
+
+    /**
+     * Resolve a part's `SHDR` attribute (shaders-array index) to a configured
+     * Shader: looks up the `PartAttributeShader` (id_hash + param0..7), acquires
+     * the matching `ss-*` program, and writes its per-part uniforms — param0..7,
+     * the cell's UV rect (from the quad's corner UVs, for ss-circle / ss-spot),
+     * and pixel size (1/texW, 1/texH). Returns null when the id_hash isn't a
+     * built-in shader (caller falls back to PartsColorShader).
+     *
+     * `uvs` is the part's already-built per-vertex UV buffer (5-vertex quad:
+     * corners 0..3 + centre 4); the cell rect is min/max over the four corners.
+     */
+    private resolveSsShader(
+        frameData: FrameData,
+        shaderIdx: number,
+        uvs: Float32Array,
+        texture: Texture,
+        invTexW: number,
+        invTexH: number
+    ): Shader | null {
+        const attr = frameData.shaders(shaderIdx);
+        if (!attr) return null;
+        const shader = this.acquireSsShader(attr.idHash(), texture);
+        if (!shader) return null;
+
+        const u = (shader.resources.ssUniforms as UniformGroup).uniforms;
+        const params = u.uParams as Float32Array;
+        params[0] = attr.param0(); params[1] = attr.param1();
+        params[2] = attr.param2(); params[3] = attr.param3();
+        params[4] = attr.param4(); params[5] = attr.param5();
+        params[6] = attr.param6(); params[7] = attr.param7();
+
+        // Cell UV rect = (left, top, right, bottom) over the quad's 4 corners.
+        let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+        for (let q = 0; q < 4; q++) {
+            const uu = uvs[q * 2];
+            const vv = uvs[q * 2 + 1];
+            if (uu < minU) minU = uu;
+            if (uu > maxU) maxU = uu;
+            if (vv < minV) minV = vv;
+            if (vv > maxV) maxV = vv;
+        }
+        const cr = u.uCellRect as Float32Array;
+        cr[0] = minU; cr[1] = minV; cr[2] = maxU; cr[3] = maxV;
+
+        const psz = u.uPixelSize as Float32Array;
+        psz[0] = invTexW; psz[1] = invTexH;
+
+        (shader.resources.ssUniforms as UniformGroup).update();
         return shader;
     }
 
@@ -577,6 +684,9 @@ export class SSPlayer extends Container {
         this.activeMaskedMeshes = 0;
         this.activeMaskMeshes = 0;
         this.activeRTs = 0;
+        // Per-frame reset of the integration-shader pool hand-out counters so
+        // each frame re-issues pooled Shader instances from index 0.
+        this.ssShaderActive.clear();
         this.removeChildren();
         this.addChild(this.debugText);
 
@@ -778,10 +888,20 @@ export class SSPlayer extends Container {
                     mesh.geometry.getBuffer('aColor').update();
                     mesh.geometry.getBuffer('aVarg').update();
 
+                    // SpriteStudio integration shader (`SHDR`): if this part
+                    // carries a shader attribute resolving to a built-in `ss-*`
+                    // program, draw it with that program (param0..7 + cell rect
+                    // + pixel size as per-part uniforms) instead of the plain
+                    // PartsColorShader. Not combined with masking (v1) — a
+                    // masked shader part falls back to the plain masked path.
+                    const ssShader = (!masked && partState && partState.shader() >= 0)
+                        ? this.resolveSsShader(frameData, partState.shader(), uvs, texture, invTexW, invTexH)
+                        : null;
+
                     this.finishPart(mesh, 5, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
                         inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
-                        effCov, texture, blendMode, parentAlpha);
+                        effCov, texture, blendMode, parentAlpha, ssShader);
                 }
             } else if (kind === DrawBatchKind.Shape) {
                 const shapeVertexCounts = manager.getShapeVertexCounts();
@@ -993,14 +1113,17 @@ export class SSPlayer extends Container {
         cov: MaskCoverage | null,
         texture: Texture,
         blendMode: any,
-        alpha: number
+        alpha: number,
+        ssShader: Shader | null = null
     ): void {
         if (masked && cov) {
             // maskMode = visible_inside_mask: show inside (1) vs outside (0).
             this.fillMaskUV(mesh, numVerts, maskRank, maskMode, cov);
             mesh.shader = this.getMaskedShader(texture, cov) as any;
         } else {
-            mesh.shader = this.getPartsColorShader(texture) as any;
+            // SpriteStudio integration shader if the part carries one, else the
+            // plain PartsColor shader (masked parts never take a shader — v1).
+            mesh.shader = (ssShader ?? this.getPartsColorShader(texture)) as any;
         }
         mesh.blendMode = blendMode;
         mesh.alpha = alpha;
