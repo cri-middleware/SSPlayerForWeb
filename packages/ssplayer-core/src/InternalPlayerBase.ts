@@ -282,10 +282,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // Restarting playback should also reset independent slots (effects and instances)
         this.setupInstanceChildren();
         this.setupEffectChildren();
-
-        if (this.audioManager && this.audioManager.resume) {
-            this.audioManager.resume();
-        }
     }
 
     /**
@@ -295,9 +291,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         if (!this.runtimeManager.context.is_pausing()) {
             this.runtimeManager.context.pause();
         }
-        if (this.audioManager && this.audioManager.pause) {
-            this.audioManager.pause();
-        }
     }
 
     /**
@@ -306,9 +299,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public resume() {
         if (this.runtimeManager.context.is_pausing()) {
             this.runtimeManager.context.pause(); // pause() in WASM toggles the state
-        }
-        if (this.audioManager && this.audioManager.resume) {
-            this.audioManager.resume();
         }
     }
 

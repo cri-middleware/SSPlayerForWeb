@@ -6,7 +6,6 @@ export class SSWebAudioManager implements IAudioManager {
     private buffers: Map<string, AudioBuffer> = new Map();
     private activeSources: Set<AudioBufferSourceNode> = new Set();
     private soundPaths: Map<string, string> = new Map();
-    private isPaused: boolean = false;
 
     constructor() {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -89,8 +88,8 @@ export class SSWebAudioManager implements IAudioManager {
      * Plays a preloaded sound instantly. If it's not preloaded, it will fetch and play it (with latency).
      */
     public play(soundName: string, loopNum: number = 0, partIndex: number = -1): AudioBufferSourceNode | null {
-        // If context was suspended by autoplay policy (and not explicitly paused), try to resume
-        if (this.ctx.state === 'suspended' && !this.isPaused) {
+        // If context was suspended by autoplay policy, try to resume
+        if (this.ctx.state === 'suspended') {
             this.ctx.resume().catch(console.warn);
         }
 
@@ -168,25 +167,7 @@ export class SSWebAudioManager implements IAudioManager {
         this.activeSources.clear();
     }
 
-    /**
-     * Pauses all currently playing sounds by suspending the AudioContext.
-     */
-    public pause(): void {
-        this.isPaused = true;
-        if (this.ctx.state === 'running') {
-            this.ctx.suspend().catch(console.warn);
-        }
-    }
 
-    /**
-     * Resumes all paused sounds by resuming the AudioContext.
-     */
-    public resume(): void {
-        this.isPaused = false;
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume().catch(console.warn);
-        }
-    }
 
     /**
      * Releases specific sounds from memory to free up resources.
