@@ -4,12 +4,14 @@ const os = require('os');
 const isWin = os.platform() === 'win32';
 const command = isWin ? 'powershell' : 'bash';
 
-const isRelease = process.argv.includes('--release');
-const mode = isRelease ? 'release' : 'debug';
+let mode = 'debug';
+if (process.argv.includes('--release') || process.argv.includes('build=release') || process.argv.includes('release')) {
+    mode = 'release';
+}
 
 const args = isWin 
-    ? ['-ExecutionPolicy', 'Bypass', '-File', 'scripts/build-runtime.ps1', mode] 
-    : ['scripts/build-runtime.sh', mode];
+    ? ['-ExecutionPolicy', 'Bypass', '-File', 'scripts/build-runtime.ps1', `build=${mode}`] 
+    : ['scripts/build-runtime.sh', `build=${mode}`];
 
 console.log(`[build:wasm] Running on ${os.platform()}... executing ${args[isWin ? 3 : 0]} in ${mode} mode`);
 
