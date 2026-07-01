@@ -406,9 +406,6 @@ export class SSPlayer extends Container {
     }
 
     public play(startFrame: number = -1) {
-        if (startFrame >= 0) {
-            this.syncAudioToFrame(startFrame);
-        }
         this.internalPlayer.play(startFrame);
     }
 
@@ -430,64 +427,9 @@ export class SSPlayer extends Container {
 
     public set frame(value: number) {
         this.internalPlayer.setFrame(value);
-        this.syncAudioToFrame(Math.floor(value));
     }
 
-    private syncAudioToFrame(targetFrame: number) {
-        if (!this.audioManager || !this.audioManager.playWithOffset) return;
 
-        // When seeking, stop all current audio and recalculate
-        if (this.audioManager.stopAll) {
-            this.audioManager.stopAll();
-        }
-
-        const anim = this.internalPlayer.runtimeManager.getCurrentAnimationData();
-        if (!anim) return;
-
-        const fps = this.internalPlayer.getFrameRate();
-        const startFrame = this.internalPlayer.runtimeManager.context.get_start_frame();
-        const endFrame = this.internalPlayer.runtimeManager.context.get_end_frame();
-        
-        // Track the latest audio event for each part
-        const activeAudio = new Map<number, { soundName: string, loopNum: number, startFrame: number }>();
-
-        // Scan the entire timeline from the animation start frame up to the target frame.
-        // We read the FlatBuffers event table directly because `eventsLength()` contains all events in order.
-        const eventsCount = anim.eventsLength();
-        for (let i = 0; i < eventsCount; i++) {
-            const frameEvents = anim.events(i);
-            if (!frameEvents) continue;
-
-            const f = frameEvents.frameIndex();
-            // Only care about events that happen before or exactly at the target seek frame
-            if (f > targetFrame) break; // Assuming events are sorted by frameIndex
-            if (f < startFrame) continue; // Skip events before the play range
-
-            const audioCount = frameEvents.audiosLength();
-            for (let j = 0; j < audioCount; j++) {
-                const audio = frameEvents.audios(j);
-                const val = audio?.value();
-                if (!audio || !val) continue;
-
-                const partIndex = audio.partIndex();
-                const soundName = val.soundName();
-                if (soundName) {
-                    activeAudio.set(partIndex, {
-                        soundName,
-                        loopNum: val.loopNum(),
-                        startFrame: f
-                    });
-                }
-            }
-        }
-
-        // Now trigger them with the correct offset
-        activeAudio.forEach((data, partIndex) => {
-            const elapsedFrames = targetFrame - data.startFrame;
-            const elapsedSeconds = elapsedFrames / fps;
-            this.audioManager!.playWithOffset!(data.soundName, data.loopNum, partIndex, elapsedSeconds);
-        });
-    }
 
     public get totalFrames(): number {
         return this.internalPlayer.getTotalFrames();
