@@ -516,6 +516,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     protected abstract createChildPlayer(resourceManager?: IResourceManager): T;
 
     public destroy() {
+        this.stop();
+        
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
             try { child.slot.destroy(); } catch { /* ignore */ }
