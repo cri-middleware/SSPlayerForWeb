@@ -1,0 +1,18 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    "../packages/ssplayer-core",
+    "../packages/ssplayer-pixi",
+    "../packages/ssplayer-rmmz"
+  ],
+  "packageOptions": {
+    "entryPoints": ["src/index.ts"],
+    "readme": "none"
+  },
+  "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme"],
+  "out": "api",
+  "readme": "none",
+  "githubPages": false,
+  "hideBreadcrumbs": true
+}
