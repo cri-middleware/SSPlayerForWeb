@@ -542,9 +542,6 @@ export class SSPlayer extends Container {
         // is_end_frame_reached() asserted after stopping, so notify once).
         const finished = !ctx.is_playing() && ctx.is_end_frame_reached();
         if (finished && !this._prevFinished) {
-            if (this.audioManager && this.audioManager.stopAll) {
-                this.audioManager.stopAll();
-            }
             if (this._animEndListeners.size > 0) {
                 this._animEndListeners.forEach(cb => cb());
             }

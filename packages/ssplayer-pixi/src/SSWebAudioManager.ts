@@ -77,8 +77,6 @@ export class SSWebAudioManager implements IAudioManager {
     public bindToPlayer(player: SSPlayer): () => void {
         return player.onAudio((e: SSAudioEvent) => {
             if (e.soundName) {
-                // A SpriteStudio Audio part acts like a single track.
-                // Playing a new sound on the same part interrupts the previous one.
                 this.play(e.soundName, e.loopNum, e.partIndex);
             }
         });
@@ -105,19 +103,9 @@ export class SSWebAudioManager implements IAudioManager {
             return null;
         }
 
-        // A part can only emit one sound at a time.
-        // If a sound is already playing on this part, stop it before starting the new one.
-        if (partIndex !== -1) {
-            for (const active of this.activeSources) {
-                if ((active as any)._ssPartIndex === partIndex) {
-                    try { active.stop(); } catch (e) {}
-                }
-            }
-        }
 
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
-        (source as any)._ssPartIndex = partIndex;
         source.connect(this.ctx.destination);
 
         // loopNum specifies the exact number of times to play the sound (must be >= 1).
