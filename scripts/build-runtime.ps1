@@ -1,6 +1,16 @@
 param (
-    [string]$Mode = "release"
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$ArgsList
 )
+
+$Mode = "release"
+foreach ($arg in $ArgsList) {
+    if ($arg -match "^build=(.*)") {
+        $Mode = $Matches[1]
+    } elseif ($arg -eq "release" -or $arg -eq "debug") {
+        $Mode = $arg
+    }
+}
 
 $ErrorActionPreference = "Stop"
 

@@ -6,8 +6,18 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SSRUNTIME_DIR="$ROOT_DIR/SpriteStudio-SDK/libs/ssruntime"
 OUT_DIR="$ROOT_DIR/packages/ssplayer-core/wasm"
 
-MODE=${1:-release}
+MODE="release"
 
+for arg in "$@"; do
+    case $arg in
+        build=*)
+            MODE="${arg#*=}"
+            ;;
+        release|debug)
+            MODE="$arg"
+            ;;
+    esac
+done
 echo "Building WASM runtime via release-web.sh in $MODE mode..."
 bash "$ROOT_DIR/SpriteStudio-SDK/scripts/release-web.sh" "$MODE"
 
