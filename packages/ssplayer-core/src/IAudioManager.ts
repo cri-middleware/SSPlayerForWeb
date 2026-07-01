@@ -33,10 +33,4 @@ export interface IAudioManager {
      * Resumes all paused sounds.
      */
     resume?(): void;
-
-    /**
-     * Optional method for playing a sound with a specific offset (in seconds).
-     * Useful for seeking.
-     */
-    playWithOffset?(soundName: string, loopNum: number, partIndex: number, offsetSeconds: number): void;
 }

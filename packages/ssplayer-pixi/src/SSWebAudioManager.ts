@@ -87,9 +87,8 @@ export class SSWebAudioManager implements IAudioManager {
 
     /**
      * Plays a preloaded sound instantly. If it's not preloaded, it will fetch and play it (with latency).
-     * offsetSeconds allows seeking into the audio.
      */
-    public play(soundName: string, loopNum: number = 0, partIndex: number = -1, offsetSeconds: number = 0): AudioBufferSourceNode | null {
+    public play(soundName: string, loopNum: number = 0, partIndex: number = -1): AudioBufferSourceNode | null {
         // If context was suspended by autoplay policy (and not explicitly paused), try to resume
         if (this.ctx.state === 'suspended' && !this.isPaused) {
             this.ctx.resume().catch(console.warn);
@@ -101,7 +100,7 @@ export class SSWebAudioManager implements IAudioManager {
             // Lazy load and play (will have latency)
             this.loadSound(soundName).then(() => {
                 if (this.buffers.has(soundName)) {
-                    this.play(soundName, loopNum, partIndex, offsetSeconds);
+                    this.play(soundName, loopNum, partIndex);
                 }
             });
             return null;
@@ -129,21 +128,14 @@ export class SSWebAudioManager implements IAudioManager {
             source.loop = true;
         }
 
-        let startOffset = offsetSeconds;
         let remainingPlayTime = -1;
 
         if (loopNum === 1) {
             // Play exactly once
-            if (offsetSeconds >= buffer.duration) return null; // Already finished
         } else if (loopNum > 1) {
             // Play exactly `loopNum` times
             const totalDuration = buffer.duration * loopNum;
-            if (offsetSeconds >= totalDuration) return null; // Already finished
-            startOffset = offsetSeconds % buffer.duration;
-            remainingPlayTime = totalDuration - offsetSeconds;
-        } else if (loopNum <= 0) {
-            // Infinite loop (e.g., -1)
-            startOffset = offsetSeconds % buffer.duration;
+            remainingPlayTime = totalDuration;
         }
 
         // Keep track of active sources for potential stopping
@@ -153,17 +145,13 @@ export class SSWebAudioManager implements IAudioManager {
             source.disconnect();
         };
 
-        source.start(0, startOffset);
+        source.start(0);
 
         // If loopNum > 0 and we calculated a remaining play time, schedule the exact stop.
         if (remainingPlayTime > 0) {
             source.stop(this.ctx.currentTime + remainingPlayTime);
         }
         return source;
-    }
-
-    public playWithOffset(soundName: string, loopNum: number, partIndex: number, offsetSeconds: number): void {
-        this.play(soundName, loopNum, partIndex, offsetSeconds);
     }
 
     /**
