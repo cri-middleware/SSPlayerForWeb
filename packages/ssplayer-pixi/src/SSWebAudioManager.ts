@@ -6,7 +6,6 @@ export class SSWebAudioManager implements IAudioManager {
     private buffers: Map<string, AudioBuffer> = new Map();
     private activeSources: Set<AudioBufferSourceNode> = new Set();
     private soundPaths: Map<string, string> = new Map();
-    private isPaused: boolean = false;
 
     constructor() {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -88,9 +87,9 @@ export class SSWebAudioManager implements IAudioManager {
     /**
      * Plays a preloaded sound instantly. If it's not preloaded, it will fetch and play it (with latency).
      */
-    public play(soundName: string, loopNum: number = 0, partIndex: number = -1): AudioBufferSourceNode | null {
-        // If context was suspended by autoplay policy (and not explicitly paused), try to resume
-        if (this.ctx.state === 'suspended' && !this.isPaused) {
+    public play(soundName: string, loopNum: number = 1, partIndex: number = -1): AudioBufferSourceNode | null {
+        // If context was suspended by autoplay policy, try to resume
+        if (this.ctx.state === 'suspended') {
             this.ctx.resume().catch(console.warn);
         }
 
@@ -121,21 +120,11 @@ export class SSWebAudioManager implements IAudioManager {
         (source as any)._ssPartIndex = partIndex;
         source.connect(this.ctx.destination);
 
-        // loopNum === 1 means play once.
-        // loopNum > 1 means play exactly `loopNum` times.
-        // loopNum === 0 or -1 usually means infinite loop in SS formats, we treat <= 0 as infinite.
-        if (loopNum !== 1) {
+        // loopNum specifies the exact number of times to play the sound (must be >= 1).
+        // There is no concept of an infinite loop for audio in SpriteStudio.
+        const playCount = Math.max(1, loopNum);
+        if (playCount > 1) {
             source.loop = true;
-        }
-
-        let remainingPlayTime = -1;
-
-        if (loopNum === 1) {
-            // Play exactly once
-        } else if (loopNum > 1) {
-            // Play exactly `loopNum` times
-            const totalDuration = buffer.duration * loopNum;
-            remainingPlayTime = totalDuration;
         }
 
         // Keep track of active sources for potential stopping
@@ -147,9 +136,10 @@ export class SSWebAudioManager implements IAudioManager {
 
         source.start(0);
 
-        // If loopNum > 0 and we calculated a remaining play time, schedule the exact stop.
-        if (remainingPlayTime > 0) {
-            source.stop(this.ctx.currentTime + remainingPlayTime);
+        // If playCount > 1, schedule the exact stop time.
+        if (playCount > 1) {
+            const totalDuration = buffer.duration * playCount;
+            source.stop(this.ctx.currentTime + totalDuration);
         }
         return source;
     }
@@ -168,25 +158,7 @@ export class SSWebAudioManager implements IAudioManager {
         this.activeSources.clear();
     }
 
-    /**
-     * Pauses all currently playing sounds by suspending the AudioContext.
-     */
-    public pause(): void {
-        this.isPaused = true;
-        if (this.ctx.state === 'running') {
-            this.ctx.suspend().catch(console.warn);
-        }
-    }
 
-    /**
-     * Resumes all paused sounds by resuming the AudioContext.
-     */
-    public resume(): void {
-        this.isPaused = false;
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume().catch(console.warn);
-        }
-    }
 
     /**
      * Releases specific sounds from memory to free up resources.

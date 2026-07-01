@@ -23,14 +23,4 @@ export interface IAudioManager {
      * Stops all currently playing sounds without releasing them from memory.
      */
     stopAll?(): void;
-
-    /**
-     * Pauses all currently playing sounds.
-     */
-    pause?(): void;
-
-    /**
-     * Resumes all paused sounds.
-     */
-    resume?(): void;
 }
