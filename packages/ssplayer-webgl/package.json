@@ -14,6 +14,10 @@
     "./lite": {
       "import": "./dist/lite.js",
       "types": "./dist/lite.d.ts"
+    },
+    "./element": {
+      "import": "./dist/element.js",
+      "types": "./dist/element.d.ts"
     }
   },
   "dependencies": {

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>&lt;ss-player&gt; Web Component Example</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #222; color: #eee; display: flex; height: 100vh; }
+    #stage { flex: 1; display: flex; align-items: center; justify-content: center; }
+    /* The element is sized by the host page; the canvas fills it. */
+    ss-player { width: min(80vmin, 480px); height: min(80vmin, 480px); background: #111; border: 1px solid #444; }
+    #panel { width: 280px; padding: 16px; background: #2b2b2b; box-sizing: border-box; overflow: auto; }
+    #panel h3 { margin: 0 0 12px; }
+    label { display: block; margin-top: 10px; font-size: 12px; color: #aaa; }
+    select, button, input { width: 100%; margin: 4px 0; padding: 6px; box-sizing: border-box; }
+    .row { display: flex; gap: 6px; }
+    .row button { flex: 1; }
+    #log { font-size: 11px; line-height: 1.5; white-space: pre-wrap; background: #111; padding: 8px; height: 140px; overflow: auto; border-radius: 4px; }
+    #snippet { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5; white-space: pre; overflow-x: auto; background: #111; color: #d6e9ff; padding: 8px; border-radius: 4px; margin: 4px 0; }
+    .snip-head { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    .snip-head label { margin: 0; }
+    #copy { width: auto; margin: 0; padding: 2px 10px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <!-- Declarative usage. Upgraded once defineSSPlayerElement() runs in the module below. -->
+    <ss-player id="player" src="Basic.ssab" autoplay></ss-player>
+  </div>
+  <div id="panel">
+    <h3>&lt;ss-player&gt;</h3>
+    <label for="ssab">SSAB</label>
+    <select id="ssab"></select>
+    <label for="anim">Animation</label>
+    <select id="anim"></select>
+    <div class="row">
+      <button id="play">play</button>
+      <button id="pause">pause</button>
+      <button id="stop">stop</button>
+    </div>
+    <label for="speed">Speed <span id="spd">1.0</span></label>
+    <input id="speed" type="range" min="0" max="3" step="0.1" value="1" />
+    <div class="snip-head">
+      <label>Snippet</label>
+      <button id="copy">copy</button>
+    </div>
+    <pre id="snippet"></pre>
+    <label>Events</label>
+    <div id="log"></div>
+  </div>
+  <script type="module" src="/src/element-demo.ts"></script>
+</body>
+</html>
