@@ -89,6 +89,19 @@ importers:
         specifier: ^8.0.16
         version: 8.0.16(yaml@2.9.0)
 
+  examples/webgl-example:
+    dependencies:
+      '@spritestudio/ssplayer-webgl':
+        specifier: workspace:*
+        version: link:../../packages/ssplayer-webgl
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.1.0
+        version: 8.1.0(yaml@2.9.0)
+
   packages/ssconverter-web:
     dependencies:
       fflate:
@@ -132,6 +145,16 @@ importers:
     devDependencies:
       typescript:
         specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/ssplayer-webgl:
+    dependencies:
+      '@spritestudio/ssplayer-core':
+        specifier: workspace:*
+        version: link:../ssplayer-core
+    devDependencies:
+      typescript:
+        specifier: 6.0.3
         version: 6.0.3
 
 packages:

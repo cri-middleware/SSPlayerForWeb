@@ -1,0 +1,19 @@
+{
+  "name": "webgl-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "clean": "rimraf dist"
+  },
+  "type": "module",
+  "dependencies": {
+    "@spritestudio/ssplayer-webgl": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0"
+  }
+}

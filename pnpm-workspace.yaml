@@ -4,3 +4,4 @@ packages:
   - "docs"
 allowBuilds:
   esbuild: true
+  puppeteer: set this to true or false

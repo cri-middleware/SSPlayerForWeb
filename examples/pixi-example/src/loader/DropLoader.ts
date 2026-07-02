@@ -213,7 +213,7 @@ export class DropLoader {
                     showToast(`Missing referenced pack(s) — include them in the dropped folder:<br>${[...new Set(missingPacks)].join('<br>')}`, 'warning');
                 }
 
-                this.player.internalPlayer.setInstancePackProvider((name, hash) => {
+                this.player.internalPlayer.setInstancePackProvider((name: string, hash: number) => {
                     const entry = packByHash.get(hash) ?? packByName.get(name);
                     return entry ? new Uint8Array(entry.buffer) : null;
                 });

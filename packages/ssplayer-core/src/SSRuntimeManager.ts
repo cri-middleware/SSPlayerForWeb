@@ -15,7 +15,7 @@ import { WasmViewCache } from './WasmViewCache.js';
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
 
-export async function initializeWasm(wasmUrl?: string | URL): Promise<InitOutput> {
+export async function initializeWasm(wasmUrl?: string | URL | BufferSource | WebAssembly.Module): Promise<InitOutput> {
     if (!initPromise) {
         initPromise = init({ module_or_path: wasmUrl }).then(output => {
             wasmMemory = output.memory;
@@ -495,6 +495,7 @@ export class SSRuntimeManager {
     }
 
     public getFrameData(frame: number): FrameData | null {
+        if (this.currentAnimationIndex < 0) return null;
         try {
             // Subframe playback advances the playhead continuously, so at the
             // end/loop boundary get_frame_no() briefly returns a value in

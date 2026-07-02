@@ -1,0 +1,31 @@
+{
+  "name": "@spritestudio/ssplayer-webgl",
+  "version": "1.0.0",
+  "description": "Zero-dependency, ad-grade WebGL1/2 renderer for SpriteStudio-SDK player",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./lite": {
+      "import": "./dist/lite.js",
+      "types": "./dist/lite.d.ts"
+    }
+  },
+  "dependencies": {
+    "@spritestudio/ssplayer-core": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "size": "node scripts/measure-size.mjs"
+  },
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
