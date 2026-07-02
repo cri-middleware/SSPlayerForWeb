@@ -1,10 +1,29 @@
-import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, PartState } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, PartState, FrameData, MaskPlanner, FrameDataMaskSource } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
+import { MaskProgram } from './programs/MaskProgram.js';
 import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
 export class SSWebGLRenderer {
   public gl: WebGLRenderingContext | WebGL2RenderingContext;
   private partsColorProgram: PartsColorProgram;
+  // Stencil-buffer mask program (MaskWrite pass). Lazily compiled on the first
+  // masked frame so mask-free animations never pay for it. See _writePlannedWriter.
+  private maskProgram: MaskProgram | null = null;
+  // True when the GL context was created with a stencil buffer (SSPLAYER_WEBGL_SPEC
+  // §8-5 / §5.1 `stencil`). Masking is skipped entirely when absent (masked content
+  // draws unclipped) — graceful degradation on contexts without a stencil attachment.
+  private _stencilSupported = false;
+  // Vertex count produced by the last buildOnePart() call (its index count is returned).
+  private _builtVerts = 0;
+  // Engine-agnostic mask writer planner (core) + its FrameData adapter — the same
+  // editor-verified writer selection/classification ssplayer-pixi uses. Selects pure
+  // masks (Mask batches) AND clipping writers (mask_write drawn parts in Normal/Shape/
+  // Mesh batches), with per-writer rank, OP, geometry, cutout threshold, and clip flag.
+  private maskPlanner = new MaskPlanner();
+  private maskSource = new FrameDataMaskSource();
+  // Cursor into the (rank-sorted) planner writer list: index of the next writer whose
+  // scope transition to apply as content is drawn in ascending rank order (syncMasksTo).
+  private _maskCursor = 0;
 
   private posBuffer: WebGLBuffer;
   private uvBuffer: WebGLBuffer;
@@ -55,6 +74,11 @@ export class SSWebGLRenderer {
 
   constructor(gl: WebGLRenderingContext | WebGL2RenderingContext) {
     this.gl = gl;
+
+    // Masking (stencil) needs a stencil attachment on the drawing buffer; probe the
+    // realised context attributes rather than trusting the request (a driver may deny it).
+    const ctxAttrs = gl.getContextAttributes();
+    this._stencilSupported = !!(ctxAttrs && ctxAttrs.stencil);
 
     // WebGL2 supports UNSIGNED_INT indices natively; WebGL1 needs
     // OES_element_index_uint. Promote when available so vertex counts above 65535
@@ -256,8 +280,15 @@ export class SSWebGLRenderer {
     }
   }
 
-  /** Draw one player context (also invoked recursively for instance children). */
-  private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array): void {
+  /**
+   * Draw one player context (also invoked recursively for instance children).
+   * `maskingAllowed` is false for instance children: masking is confined to the
+   * root context so children never write to the shared stencil (no cross-context
+   * contamination). Sub-animation-internal masks are therefore not applied — a
+   * documented limitation of the single-stencil path (the pixi coverage method,
+   * with a per-context coverage texture, is the general solution).
+   */
+  private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, maskingAllowed: boolean = true): void {
     if (!player.animationName) return;
 
     const gl = this.gl;
@@ -268,6 +299,11 @@ export class SSWebGLRenderer {
     const gb = player.geometryBuilder;
     gb.parentMatrix = null;
     gb.updateWorldPositions();
+
+    // Static per-part mask flags (JS-cached, stable across WASM growth): 0x01
+    // visibleInsideMask, 0x08 drawAsMask. Used to skip pure-mask colour and to
+    // resolve masked-content polarity (§2-4). Null only before an animation is set.
+    const maskFlags = player.runtimeManager.getPartMaskFlags();
 
     const pcp = this.partsColorProgram;
 
@@ -287,11 +323,30 @@ export class SSWebGLRenderer {
     let drawOrder = fd.drawOrderArray();
     if (!drawOrder) return;
 
+    // Plan this context's mask writers (pure + clipping) via the core planner, then
+    // pre-write the PURE masks into the stencil (they scope to lower/earlier ranks, so
+    // all are in scope for the first content). As content is drawn in ascending rank
+    // order, syncMasksTo() removes each pure writer at its rank and adds clipping
+    // writers at theirs (§2-1 scope). maskWriterCount == 0 → content draws unclipped.
+    let maskWriterCount = 0;
+    if (this._stencilSupported && maskingAllowed) {
+      this.maskSource.bind(fd, drawOrder, player.runtimeManager);
+      maskWriterCount = this.maskPlanner.plan(this.maskSource);
+      this._maskCursor = 0;
+      if (maskWriterCount > 0) this._prewritePureMasks(player, resourceManager, fd, gb);
+    }
+
     const batchesLen = fd.drawBatchesLength();
     for (let i = 0; i < batchesLen; i++) {
       const b = fd.drawBatches(i, this._scratchBatch);
       if (!b) continue;
       const kind = b.kind();
+
+      // Mask batch (pure-mask writers): coverage only, no colour (§8-5). Pre-written
+      // into the stencil above and removed lazily by syncMasksTo() as content passes
+      // its rank; nothing to draw here. (Clipping writers live in Normal/Shape/Mesh
+      // batches, not here — they're added by syncMasksTo at their own rank.)
+      if (kind === DrawBatchKind.Mask) continue;
 
       let texInfo = null;
       if (kind !== DrawBatchKind.Instance) {
@@ -314,11 +369,23 @@ export class SSWebGLRenderer {
       const startRank = b.startRank();
       const count = b.count();
 
+      // Masked content (FLAG_MASK_INFLUENCE, 0x01): clip each part against the
+      // current stencil coverage (§2-4 polarity per part). Handled per-part (not
+      // batched), so skip the batched build/draw. Only when the context has active
+      // mask writers — otherwise mask_count == 0 and content draws unclipped.
+      if (this._stencilSupported && maskWriterCount > 0 && (b.flags() & 0x01) !== 0 &&
+          (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape)) {
+        this.drawMaskedContent(player, resourceManager, b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts);
+        continue;
+      }
+
       let totalVerts = 0;
       let totalIndices = 0;
 
       for (let c = 0; c < count; c++) {
         const partIdx = drawOrder[startRank + c];
+        // draw_as_mask parts are pure masks — coverage only, never their colour (§3-3).
+        if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
         if (kind === DrawBatchKind.Normal) {
           totalVerts += 5;
           totalIndices += 12;
@@ -342,6 +409,9 @@ export class SSWebGLRenderer {
 
       for (let c = 0; c < count; c++) {
         const partIdx = drawOrder[startRank + c];
+        // Keep in lockstep with the pre-count skip above so vOffset/iOffset stay
+        // consistent with totalVerts/totalIndices (draw_as_mask parts draw no colour).
+        if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
 
         if (kind === DrawBatchKind.Normal) {
           const vCount = 5;
@@ -407,6 +477,20 @@ export class SSWebGLRenderer {
       }
 
       if (kind === DrawBatchKind.Effect) {
+        // Effect as a masked target (FLAG_MASK_INFLUENCE): clip the particle quads
+        // against the coverage. Effect batches are unbatchable (one effect part each),
+        // so the whole batch shares startRank's rank + polarity. Bring the coverage to
+        // that rank, then keep the stencil test on for every quad draw below.
+        const effectMasked = this._stencilSupported && maskWriterCount > 0 && (b.flags() & 0x01) !== 0;
+        if (effectMasked) {
+          this.syncMasksTo(startRank, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
+          const visInside = !!(maskFlags && (maskFlags[drawOrder[startRank]] & 0x01) !== 0);
+          gl.enable(gl.STENCIL_TEST);
+          gl.stencilMask(0x00);
+          gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+          gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
+        }
+
         this._fxCount = 0;
         for (let c = 0; c < count; c++) {
           const partIdx = drawOrder[startRank + c];
@@ -509,6 +593,10 @@ export class SSWebGLRenderer {
 
           g = h;
         }
+        if (effectMasked) {
+          gl.disable(gl.STENCIL_TEST);
+          gl.stencilMask(0xFF);
+        }
         // Effects set blend state directly (bypassing applyBlend's cache); force a
         // re-apply for the next parts batch.
         this._lastBlend = -1;
@@ -527,8 +615,32 @@ export class SSWebGLRenderer {
           player.runtimeManager.getWorldMatrix2D(partIdx, this.scratchMatrix);
           const composed = GeometryBuilder.composeAffine(transform, this.scratchMatrix, child.parentMatrix);
 
-          // Re-render child
-          this._renderContext(child.player, resourceManager, composed);
+          // §3-2-2 instance mask inheritance: when the instance part is a masked target
+          // (mask_influence, flag 0x04), the WHOLE referenced sub-animation is clipped by
+          // this context's coverage, judged once by the instance part's own rank +
+          // visible_inside polarity. The stencil is a screen-space buffer, so simply
+          // leaving the test enabled across the child recursion clips every child draw —
+          // no per-child coverage UV needed (unlike the pixi coverage method). The child
+          // renders with maskingAllowed=false (stencilMask 0 → it can't disturb coverage).
+          const instMasked = this._stencilSupported && maskWriterCount > 0 && !!(maskFlags && (maskFlags[partIdx] & 0x04) !== 0);
+          if (instMasked) {
+            this.syncMasksTo(startRank + c, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
+            const visInside = !!(maskFlags && (maskFlags[partIdx] & 0x01) !== 0);
+            gl.enable(gl.STENCIL_TEST);
+            gl.stencilMask(0x00);
+            gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+            gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
+          }
+
+          // Re-render child. maskingAllowed=false: children don't touch the shared
+          // stencil, so the parent's mask coverage and cursor survive the recursion
+          // (and any instMasked stencil test above clips the whole child sub-anime).
+          this._renderContext(child.player, resourceManager, composed, false);
+
+          if (instMasked) {
+            gl.disable(gl.STENCIL_TEST);
+            gl.stencilMask(0xFF);
+          }
 
           // Re-fetch WASM views in case the child's rendering grew WASM memory.
           fd = player.runtimeManager.getFrameData(frameNo)!;
@@ -567,6 +679,249 @@ export class SSWebGLRenderer {
     }
   }
 
+  private ensureMaskProgram(): MaskProgram {
+    if (!this.maskProgram) this.maskProgram = new MaskProgram(this.gl);
+    return this.maskProgram;
+  }
+
+  /**
+   * Build one part's geometry into the shared batch buffers at offset 0 (indices
+   * 0-based) for the per-part mask / masked-content paths. Returns the index count
+   * (0 = degenerate → skip); the vertex count lands in `_builtVerts`. The caller
+   * uploads (uploadPart) and draws. `kind` selects the geometry (Normal quad /
+   * Shape fan / Mesh); the mask-write path resolves it from the part's vertex data.
+   */
+  private buildOnePart(
+    kind: number, partIdx: number, fd: FrameData, gb: GeometryBuilder,
+    invW: number, invH: number,
+    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+  ): number {
+    let vCount = 0;
+    let iCount = 0;
+    if (kind === DrawBatchKind.Normal) {
+      vCount = 5; iCount = 12;
+    } else if (kind === DrawBatchKind.Mesh) {
+      vCount = meshVOff[partIdx + 1] - meshVOff[partIdx];
+      iCount = meshIOff[partIdx + 1] - meshIOff[partIdx];
+    } else if (kind === DrawBatchKind.Shape) {
+      vCount = shapeVertexCounts[partIdx];
+      iCount = vCount >= 3 ? (vCount - 2) * 3 : 0;
+    }
+    if (vCount <= 0 || iCount <= 0) { this._builtVerts = 0; return 0; }
+
+    this.ensureBatchCapacity(vCount, iCount);
+    const subPos = this.batchPos.subarray(0, vCount * 2);
+    const subUv = this.batchUv.subarray(0, vCount * 2);
+    const subColor = this.batchColor.subarray(0, vCount * 4);
+    const subVarg = this.batchVarg.subarray(0, vCount * 4);
+
+    if (kind === DrawBatchKind.Normal) {
+      gb.buildNormal(partIdx, fd, invW, invH, subPos, subUv, subColor, subVarg);
+      for (let j = 0; j < 12; j++) this.batchIndices[j] = this.normalIndices[j];
+    } else if (kind === DrawBatchKind.Mesh) {
+      gb.buildMesh(partIdx, fd, vCount, iCount, invW, invH, subPos, subUv, subColor, subVarg, this.batchIndices.subarray(0, iCount));
+    } else {
+      gb.buildShape(partIdx, fd, vCount, invW, invH, subPos, subUv, subColor, subVarg, this.batchIndices.subarray(0, iCount));
+    }
+    this._builtVerts = vCount;
+    return iCount;
+  }
+
+  /** Upload one part's shared-buffer geometry (all 4 attributes + indices) for a per-part draw. */
+  private uploadPart(vCount: number, iCount: number): void {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.batchPos.subarray(0, vCount * 2), gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.batchUv.subarray(0, vCount * 2), gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.batchColor.subarray(0, vCount * 4), gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vargBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.batchVarg.subarray(0, vCount * 4), gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices.subarray(0, iCount), gl.DYNAMIC_DRAW);
+  }
+
+  /**
+   * Rasterise one planned writer (maskPlanner index `w`) into the stencil with
+   * `stencilOp`. The mask program must be active (beginMaskWrite) with colour writes
+   * off. Binds the writer's cutout texture, applies its precomputed §2-5 threshold
+   * (`< 0` → whole geometry), and builds its geometry from the planner's kind
+   * (0 Normal / 1 Shape / 2 Mesh).
+   */
+  private _writePlannedWriter(
+    mp: MaskProgram, resourceManager: SSWebGLResourceManager, w: number,
+    fd: FrameData, gb: GeometryBuilder, stencilOp: number,
+    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+  ): void {
+    const gl = this.gl;
+    const p = this.maskPlanner;
+    const texInfo = this.bindMaskTexture(mp, resourceManager, p.textureHash[w] >>> 0);
+    if (mp.uThreshold) gl.uniform1f(mp.uThreshold, p.threshold[w]);
+    gl.stencilOp(gl.KEEP, gl.KEEP, stencilOp);
+
+    const invW = texInfo ? 1.0 / texInfo.width : 1.0;
+    const invH = texInfo ? 1.0 / texInfo.height : 1.0;
+    const geomKind = p.geomKind[w] === 1 ? DrawBatchKind.Shape : (p.geomKind[w] === 2 ? DrawBatchKind.Mesh : DrawBatchKind.Normal);
+
+    const iCount = this.buildOnePart(geomKind, p.partIdx[w], fd, gb, invW, invH, meshVOff, meshIOff, shapeVertexCounts);
+    if (iCount === 0) return;
+    this.uploadPart(this._builtVerts, iCount);
+    gl.drawElements(gl.TRIANGLES, iCount, this.indexType, 0);
+  }
+
+  /**
+   * Set the shared mask-write GL state (mask program, projection/transform,
+   * colour off, stencil test on, func ALWAYS). Caller draws writers, then calls
+   * endMaskWrite() to restore colour writes + the parts-color program.
+   */
+  private beginMaskWrite(mp: MaskProgram): void {
+    const gl = this.gl;
+    gl.useProgram(mp.program);
+    if (mp.uProjection) gl.uniformMatrix3fv(mp.uProjection, false, this.projMatrix);
+    if (mp.uTransform) gl.uniformMatrix3fv(mp.uTransform, false, this.transformMatrix3);
+    gl.enable(gl.STENCIL_TEST);
+    gl.colorMask(false, false, false, false);
+    gl.stencilMask(0xFF);
+    gl.stencilFunc(gl.ALWAYS, 0, 0xFF);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private endMaskWrite(): void {
+    const gl = this.gl;
+    gl.colorMask(true, true, true, true);
+    gl.disable(gl.STENCIL_TEST);
+    gl.useProgram(this.partsColorProgram.program);
+  }
+
+  /** Bind a Mask batch's cutout texture (white when it has none) for the writes below. */
+  private bindMaskTexture(mp: MaskProgram, resourceManager: SSWebGLResourceManager, texHash: number): { tex: WebGLTexture; width: number; height: number } | undefined {
+    const gl = this.gl;
+    const texInfo = texHash !== 0 ? resourceManager.getTexture(texHash) : undefined;
+    gl.bindTexture(gl.TEXTURE_2D, texInfo ? texInfo.tex : this.getWhiteTexture(gl));
+    if (mp.uTexture) gl.uniform1i(mp.uTexture, 0);
+    return texInfo;
+  }
+
+  /**
+   * Pre-write every PURE mask writer's coverage into the stencil (SSPLAYER_WEBGL_SPEC
+   * §8-5; per-rank scope matches the editor-verified coverage replay — 09_mask.ja.md
+   * §2-1/§2-4). Pure masks scope to LOWER/earlier ranks, so all are in scope for the
+   * first content; syncMasksTo() then removes each at its own rank. Clipping writers
+   * (which scope FORWARD) are NOT pre-written — syncMasksTo adds them at their rank.
+   * Writers come from maskPlanner (already planned by the caller).
+   *
+   * Limitation: overlapping writers that mix increment and invert ops can't be
+   * reproduced exactly by a single stencil value (INCR saturates at 255, and the ops
+   * don't commute), so such overlaps are approximate; the coverage-bitmap method
+   * (ssplayer-pixi) is exact there.
+   */
+  private _prewritePureMasks(
+    player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager,
+    fd: FrameData, gb: GeometryBuilder
+  ): void {
+    const gl = this.gl;
+    const p = this.maskPlanner;
+    const mp = this.ensureMaskProgram();
+    const meshVOff = player.runtimeManager.getMeshVertexOffsets();
+    const meshIOff = player.runtimeManager.getMeshIndexOffsets();
+    const shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
+
+    this.beginMaskWrite(mp);
+    for (let w = 0; w < p.count; w++) {
+      if (p.isClipping[w] !== 0) continue; // clipping added at its own rank (syncMasksTo)
+      this._writePlannedWriter(mp, resourceManager, w, fd, gb, p.opInvert[w] !== 0 ? gl.INVERT : gl.INCR, meshVOff, meshIOff, shapeVertexCounts);
+    }
+    this.endMaskWrite();
+  }
+
+  /**
+   * Advance the stencil coverage to the scope for content at `rank`: for every planned
+   * writer with `rank < rank` not yet processed (maskCursor), apply its transition —
+   * clipping writers are ADDED (forward scope begins), pure writers REMOVED (backward
+   * scope ended). Removal uses the inverse op (INVERT is self-inverse; INCR → DECR).
+   * Only switches to the mask program when there is work; restores the parts-color
+   * program (and disables the stencil test) on return, so the caller must re-establish
+   * its own draw state afterwards.
+   */
+  private syncMasksTo(
+    rank: number, player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager,
+    fd: FrameData, gb: GeometryBuilder,
+    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+  ): void {
+    const gl = this.gl;
+    const p = this.maskPlanner;
+    if (this._maskCursor >= p.count || p.rank[this._maskCursor] >= rank) return;
+
+    const mp = this.ensureMaskProgram();
+    this.beginMaskWrite(mp);
+    while (this._maskCursor < p.count && p.rank[this._maskCursor] < rank) {
+      const w = this._maskCursor;
+      const opInvert = p.opInvert[w] !== 0;
+      const op = p.isClipping[w] !== 0
+        ? (opInvert ? gl.INVERT : gl.INCR)   // clipping: forward scope begins → add
+        : (opInvert ? gl.INVERT : gl.DECR);  // pure: backward scope ended → remove
+      this._writePlannedWriter(mp, resourceManager, w, fd, gb, op, meshVOff, meshIOff, shapeVertexCounts);
+      this._maskCursor++;
+    }
+    this.endMaskWrite();
+  }
+
+  /**
+   * Draw a masked content batch (parts with FLAG_MASK_INFLUENCE). For each part, in
+   * ascending rank order, first advance the stencil coverage to its rank
+   * (syncMasksTo — adds clipping / removes pure writers), then draw it clipped by the
+   * current coverage. Polarity is per-part (§2-4): visible_inside_mask (mask flag
+   * 0x01) keeps texels where the stencil is set (NOTEQUAL 0), else where it is clear
+   * (EQUAL 0). Per-part because both the coverage AND the polarity can change within a
+   * batch (the batch key groups by texture/blend/mask-influence, not rank or polarity).
+   * draw_as_mask parts (0x08) are pure masks and never draw their colour (§3-3).
+   */
+  private drawMaskedContent(
+    player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager,
+    b: DrawBatch, kind: number, drawOrder: Uint16Array, fd: FrameData, gb: GeometryBuilder,
+    invW: number, invH: number, maskFlags: Uint8Array | null,
+    texInfo: { tex: WebGLTexture; width: number; height: number } | null | undefined,
+    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+  ): void {
+    const gl = this.gl;
+    const pcp = this.partsColorProgram;
+    const startRank = b.startRank();
+    const count = b.count();
+    const blendType = b.blendType();
+
+    for (let c = 0; c < count; c++) {
+      const partIdx = drawOrder[startRank + c];
+      if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue; // pure mask: coverage only (§3-3)
+      const ps = fd.parts(partIdx, this._scratchPart);
+      const alpha = ps ? ps.alpha() : 1.0;
+      if (alpha <= 0) continue;
+
+      // Bring the coverage up to this part's rank. This may switch to the mask
+      // program and rebind textures, so re-establish the content draw state below.
+      this.syncMasksTo(startRank + c, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
+      gl.useProgram(pcp.program);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texInfo ? texInfo.tex : this.getWhiteTexture(gl));
+      if (pcp.uTexture) gl.uniform1i(pcp.uTexture, 0);
+
+      const iCount = this.buildOnePart(kind, partIdx, fd, gb, invW, invH, meshVOff, meshIOff, shapeVertexCounts);
+      if (iCount === 0) continue;
+      this.uploadPart(this._builtVerts, iCount);
+
+      const visInside = !!(maskFlags && (maskFlags[partIdx] & 0x01) !== 0);
+      gl.enable(gl.STENCIL_TEST);
+      gl.stencilMask(0x00); // content never modifies the stencil
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+      gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
+      this.applyBlend(blendType);
+      gl.drawElements(gl.TRIANGLES, iCount, this.indexType, 0);
+    }
+
+    gl.disable(gl.STENCIL_TEST);
+    gl.stencilMask(0xFF);
+  }
+
   public destroy(): void {
     const gl = this.gl;
     if (this._vao) {
@@ -575,6 +930,10 @@ export class SSWebGLRenderer {
       this._vao = null;
     }
     this.partsColorProgram.destroy(gl);
+    if (this.maskProgram) {
+      this.maskProgram.destroy(gl);
+      this.maskProgram = null;
+    }
     gl.deleteBuffer(this.posBuffer);
     gl.deleteBuffer(this.uvBuffer);
     gl.deleteBuffer(this.colorBuffer);

@@ -55,61 +55,82 @@ void main() {
 }
 `;
 
+// Fixed attribute locations shared across every program that draws from the
+// renderer's shared VBO layout (parts-color + mask-write). Binding them
+// explicitly (below) lets a single recorded VAO / attribute-pointer setup drive
+// any of these programs interchangeably — the mask-write program reads only
+// aPosition/aUV, which stay at the same slots the VAO enabled for parts-color.
+export const ATTR_LOC = { position: 0, uv: 1, color: 2, varg: 3 } as const;
+
+/**
+ * Compile + link a program, binding the shared attribute locations (ATTR_LOC)
+ * before link so every program agrees on slot→name. `attribs` lists the
+ * (name, location) pairs this program actually declares.
+ */
+export function createGLProgram(
+  gl: WebGLRenderingContext | WebGL2RenderingContext,
+  vertSrc: string,
+  fragSrc: string,
+  attribs: { name: string; loc: number }[]
+): WebGLProgram {
+  const vert = gl.createShader(gl.VERTEX_SHADER)!;
+  gl.shaderSource(vert, vertSrc);
+  gl.compileShader(vert);
+  if (!gl.getShaderParameter(vert, gl.COMPILE_STATUS)) {
+    console.error('Vertex shader compile error:', gl.getShaderInfoLog(vert));
+  }
+
+  const frag = gl.createShader(gl.FRAGMENT_SHADER)!;
+  gl.shaderSource(frag, fragSrc);
+  gl.compileShader(frag);
+  if (!gl.getShaderParameter(frag, gl.COMPILE_STATUS)) {
+    console.error('Fragment shader compile error:', gl.getShaderInfoLog(frag));
+  }
+
+  const prog = gl.createProgram()!;
+  gl.attachShader(prog, vert);
+  gl.attachShader(prog, frag);
+  for (const a of attribs) gl.bindAttribLocation(prog, a.loc, a.name);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error('Program link error:', gl.getProgramInfoLog(prog));
+  }
+
+  gl.deleteShader(vert);
+  gl.deleteShader(frag);
+  return prog;
+}
+
 export class PartsColorProgram {
   public program: WebGLProgram;
-  
+
   public aPosition: number;
   public aUV: number;
   public aColor: number;
   public aVarg: number;
-  
+
   public uProjection: WebGLUniformLocation | null;
   public uTransform: WebGLUniformLocation | null;
   public uTexture: WebGLUniformLocation | null;
   public uColor: WebGLUniformLocation | null;
 
   constructor(gl: WebGLRenderingContext | WebGL2RenderingContext) {
-    this.program = this.createProgram(gl, PARTS_COLOR_VERT, PARTS_COLOR_FRAG);
-    
+    this.program = createGLProgram(gl, PARTS_COLOR_VERT, PARTS_COLOR_FRAG, [
+      { name: 'aPosition', loc: ATTR_LOC.position },
+      { name: 'aUV', loc: ATTR_LOC.uv },
+      { name: 'aColor', loc: ATTR_LOC.color },
+      { name: 'aVarg', loc: ATTR_LOC.varg },
+    ]);
+
     this.aPosition = gl.getAttribLocation(this.program, 'aPosition');
     this.aUV = gl.getAttribLocation(this.program, 'aUV');
     this.aColor = gl.getAttribLocation(this.program, 'aColor');
     this.aVarg = gl.getAttribLocation(this.program, 'aVarg');
-    
+
     this.uProjection = gl.getUniformLocation(this.program, 'uProjection');
     this.uTransform = gl.getUniformLocation(this.program, 'uTransform');
     this.uTexture = gl.getUniformLocation(this.program, 'uTexture');
     this.uColor = gl.getUniformLocation(this.program, 'uColor');
-  }
-
-  private createProgram(gl: WebGLRenderingContext | WebGL2RenderingContext, vertSrc: string, fragSrc: string): WebGLProgram {
-    const vert = gl.createShader(gl.VERTEX_SHADER)!;
-    gl.shaderSource(vert, vertSrc);
-    gl.compileShader(vert);
-    if (!gl.getShaderParameter(vert, gl.COMPILE_STATUS)) {
-      console.error('Vertex shader compile error:', gl.getShaderInfoLog(vert));
-    }
-
-    const frag = gl.createShader(gl.FRAGMENT_SHADER)!;
-    gl.shaderSource(frag, fragSrc);
-    gl.compileShader(frag);
-    if (!gl.getShaderParameter(frag, gl.COMPILE_STATUS)) {
-      console.error('Fragment shader compile error:', gl.getShaderInfoLog(frag));
-    }
-
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, vert);
-    gl.attachShader(prog, frag);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.error('Program link error:', gl.getProgramInfoLog(prog));
-    }
-    
-    // Shader cleanup
-    gl.deleteShader(vert);
-    gl.deleteShader(frag);
-
-    return prog;
   }
 
   public destroy(gl: WebGLRenderingContext | WebGL2RenderingContext): void {

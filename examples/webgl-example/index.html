@@ -5,25 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WebGL Example</title>
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+    body { margin: 0; padding: 0; overflow: hidden; background-color: #333; font-family: sans-serif; }
     canvas { display: block; width: 100vw; height: 100vh; }
+    #panel {
+      position: absolute; top: 10px; left: 10px; z-index: 10;
+      background: rgba(0,0,0,0.55); padding: 10px; color: #fff; border-radius: 6px;
+      display: flex; flex-direction: column; gap: 8px; max-width: 60vw;
+    }
+    #panel .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    #panel select { font-size: 15px; padding: 5px; max-width: 320px; }
+    #panel label { font-size: 12px; opacity: 0.8; }
+    #status { font-size: 12px; opacity: 0.85; word-break: break-all; }
+    #hint { font-size: 11px; opacity: 0.6; }
+    /* Full-window drop overlay */
+    #drop-overlay {
+      position: fixed; inset: 0; z-index: 100; pointer-events: none;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(30,80,160,0.35); border: 4px dashed rgba(255,255,255,0.8);
+      color: #fff; font-size: 24px; box-sizing: border-box;
+    }
+    #drop-overlay.active { display: flex; }
   </style>
 </head>
 <body>
-  <div style="position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(0,0,0,0.5); padding: 10px; color: white; border-radius: 5px;">
-    <select id="ssab-select" style="font-size: 16px; padding: 5px;">
-      <option value="/Basic.ssab">Basic.ssab</option>
-      <option value="/Shape.ssab">Shape.ssab</option>
-      <option value="/PartsColor.ssab">PartsColor.ssab</option>
-      <option value="/Mesh.ssab">Mesh.ssab</option>
-      <option value="/Ringo.ssab">Ringo.ssab</option>
-      <option value="/Effect.ssab">Effect.ssab</option>
-      <option value="/Mask.ssab">Mask.ssab</option>
-      <option value="/Instance.ssab">Instance.ssab</option>
-      <option value="/BlendMode.ssab">BlendMode.ssab</option>
-    </select>
+  <div id="panel">
+    <div class="row">
+      <label for="ssab-select">SSAB</label>
+      <select id="ssab-select">
+        <option value="/Basic.ssab">Basic.ssab</option>
+        <option value="/Shape.ssab">Shape.ssab</option>
+        <option value="/PartsColor.ssab">PartsColor.ssab</option>
+        <option value="/Mesh.ssab">Mesh.ssab</option>
+        <option value="/Ringo.ssab">Ringo.ssab</option>
+        <option value="/Effect.ssab">Effect.ssab</option>
+        <option value="/Mask.ssab">Mask.ssab</option>
+        <option value="/Instance.ssab">Instance.ssab</option>
+        <option value="/BlendMode.ssab">BlendMode.ssab</option>
+      </select>
+      <label for="animation-select">Animation</label>
+      <select id="animation-select" disabled></select>
+    </div>
+    <div id="status">Initializing…</div>
+    <div id="hint">Tip: drag &amp; drop a folder containing an .ssab and its textures to play your own asset.</div>
   </div>
   <canvas id="view"></canvas>
+  <div id="drop-overlay">Drop an ssab folder to play</div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
