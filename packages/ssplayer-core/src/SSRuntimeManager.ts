@@ -16,6 +16,17 @@ let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
 
 export async function initializeWasm(wasmUrl?: string | URL | BufferSource | WebAssembly.Module): Promise<InitOutput> {
+    // The bundled runtime is compiled with `+simd128`, so it fails to instantiate on
+    // engines without WebAssembly SIMD. Fail fast here with a clear, engine-agnostic
+    // message instead of a cryptic `WebAssembly.instantiate` error (shared by every
+    // renderer). If a non-SIMD (scalar) build is ever shipped, gate this accordingly.
+    if (!detectWasmSimd()) {
+        throw new Error(
+            '[ssplayer-core] The SpriteStudio WebAssembly runtime requires WebAssembly SIMD (simd128), ' +
+            'enabled by default in Chrome/Edge 91+, Firefox 89+, and Safari 16.4+. ' +
+            'Catch this error to fall back (e.g. show a static image).'
+        );
+    }
     if (!initPromise) {
         initPromise = init({ module_or_path: wasmUrl }).then(output => {
             wasmMemory = output.memory;
@@ -28,6 +39,34 @@ export async function initializeWasm(wasmUrl?: string | URL | BufferSource | Web
 export function getWasmMemory(): WebAssembly.Memory {
     if (!wasmMemory) throw new Error("WASM is not initialized");
     return wasmMemory;
+}
+
+let _simdSupported: boolean | undefined;
+
+/**
+ * Detect WebAssembly SIMD (simd128) support in the current engine. Zero-dependency
+ * and synchronous: `WebAssembly.validate` accepts the module below only when the
+ * engine supports the v128 opcodes it contains. The result is cached.
+ *
+ * The bundled `ssruntime` is compiled with `+simd128`, so it fails to instantiate
+ * on engines where this returns false. Callers should check this first to fail fast
+ * with a clear message instead of a cryptic `WebAssembly.instantiate` error. SIMD is
+ * enabled by default in Chrome/Edge 91+, Firefox 89+, and Safari 16.4+.
+ */
+export function detectWasmSimd(): boolean {
+    if (_simdSupported === undefined) {
+        try {
+            // Minimal module with a function returning a v128 (i8x16.splat) — the
+            // well-known wasm-feature-detect SIMD probe, inlined to stay dependency-free.
+            _simdSupported = WebAssembly.validate(new Uint8Array([
+                0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0,
+                10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11,
+            ]));
+        } catch {
+            _simdSupported = false;
+        }
+    }
+    return _simdSupported;
 }
 
 export const finalizationRegistry = new FinalizationRegistry((heldValue: { free: () => void }) => {

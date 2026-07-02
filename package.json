@@ -2,7 +2,8 @@
   "name": "ssplayer-for-web-monorepo",
   "private": true,
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "pnpm -r --filter=!docs run build",
+    "docs": "pnpm run build && pnpm --filter=docs run build",
     "build:wasm": "node scripts/build-wasm.js",
     "deploy-examples": "node scripts/deploy-examples.js",
     "test": "pnpm -r run test",

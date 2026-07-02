@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, IAudioManager, SSRuntimeManager, initializeWasm } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, IAudioManager, initializeWasm } from '@spritestudio/ssplayer-core';
 import { SSWebGLRenderer } from './SSWebGLRenderer.js';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
@@ -13,7 +13,11 @@ export interface SSCanvasPlayerOptions {
 }
 
 export class SSCanvasPlayer {
-  static async initialize(wasm: string | URL | ArrayBuffer | Uint8Array): Promise<void> {
+  static async initialize(wasm?: string | URL | ArrayBuffer | Uint8Array): Promise<void> {
+    // WASM SIMD support is validated inside initializeWasm (core), so the same clear
+    // error surfaces here on unsupported engines — callers can catch it to fall back.
+    // Omit `wasm` to use wasm-bindgen's default resolution (the bundler serves the
+    // runtime shipped with ssplayer-core); pass a URL/ArrayBuffer for inline/custom loads.
     if (wasm instanceof ArrayBuffer || wasm instanceof Uint8Array) {
       const module = await WebAssembly.compile(wasm as BufferSource);
       await initializeWasm(module);
@@ -61,11 +65,19 @@ export class SSCanvasPlayer {
     }
   }
 
+  /** Direct render mode + Y-down coordinate system, matching the WebGL projection. */
+  private configureContext(): void {
+    const ctx = this.internalPlayer.runtimeManager.context;
+    ctx.set_render_mode(0); // Direct
+    ctx.set_coordinate_system(1); // YDown
+  }
+
   public async loadBuffer(
     ssab: ArrayBuffer | Uint8Array,
     textures: Map<number, TexImageSource | ArrayBuffer | string>
   ): Promise<void> {
     this.internalPlayer.bindResource(new Uint8Array(ssab));
+    this.configureContext();
     // Load textures into resourceManager
     for (const [hash, src] of textures.entries()) {
       if (typeof src === 'string') {
@@ -82,8 +94,7 @@ export class SSCanvasPlayer {
 
   public async load(ssabUrl: string, assetBaseUrl?: string): Promise<void> {
     await this.internalPlayer.load(ssabUrl, assetBaseUrl);
-    this.internalPlayer.runtimeManager.context.set_render_mode(0); // Direct
-    this.internalPlayer.runtimeManager.context.set_coordinate_system(1); // YDown
+    this.configureContext();
   }
 
   public async setAnimation(name: string): Promise<void> {
@@ -147,24 +158,11 @@ export class SSCanvasPlayer {
 
   public draw(): void {
     const gl = this.gl;
-    const cw = this.canvas.width;
-    const ch = this.canvas.height;
-    gl.viewport(0, 0, cw, ch);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 
-    // Compute projection
-    const projection = new Float32Array([
-      2.0 / cw, 0, 0,
-      0, -2.0 / ch, 0,
-      -1, 1, 1
-    ]);
-
-    if (this.renderer['partsColorProgram'].uProjection) {
-      gl.useProgram(this.renderer['partsColorProgram'].program);
-      gl.uniformMatrix3fv(this.renderer['partsColorProgram'].uProjection, false, projection);
-    }
-
+    // Projection and all other program/blend state is set up in renderer.render().
     this.renderer.render(this.internalPlayer, this.resourceManager, this.transformMatrix);
   }
 
@@ -172,15 +170,22 @@ export class SSCanvasPlayer {
     x?: number; y?: number; scaleX?: number; scaleY?: number;
     rotation?: number; anchorX?: number; anchorY?: number;
   }): void {
-    // simplified transform update
     const x = t.x ?? 0;
     const y = t.y ?? 0;
     const sx = t.scaleX ?? 1;
     const sy = t.scaleY ?? 1;
-    this.transformMatrix[0] = sx;
-    this.transformMatrix[3] = sy;
-    this.transformMatrix[4] = x;
-    this.transformMatrix[5] = y;
+    const rot = t.rotation ?? 0;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    // Full 2D affine [m00,m01,m10,m11,tx,ty] = translate * rotate * scale, matching
+    // GeometryBuilder.composeAffine. (anchorX/anchorY are not yet applied.)
+    const m = this.transformMatrix;
+    m[0] = cos * sx;  // m00
+    m[1] = -sin * sy; // m01
+    m[2] = sin * sx;  // m10
+    m[3] = cos * sy;  // m11
+    m[4] = x;         // tx
+    m[5] = y;         // ty
   }
 
   public resize(cssW: number, cssH: number, dpr?: number): void {

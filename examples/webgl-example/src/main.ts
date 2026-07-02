@@ -7,7 +7,10 @@ async function main() {
   canvas.height = window.innerHeight;
 
   console.log("Initializing WASM...");
-  await SSCanvasPlayer.initialize('/ssruntime_bg.wasm');
+  // No argument → wasm-bindgen default resolution; the bundler serves the runtime
+  // shipped with @spritestudio/ssplayer-core (same as pixi-example). Pass a URL or
+  // ArrayBuffer here for a custom/inline wasm instead.
+  await SSCanvasPlayer.initialize();
   
   const player = new SSCanvasPlayer(canvas, { autoStart: true });
   player.setTransform({ x: canvas.width / 2, y: canvas.height / 2 });
