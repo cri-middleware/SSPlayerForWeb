@@ -117,12 +117,16 @@ async function main() {
     if (missingPacks.length > 0) setStatus(`Missing instance pack(s): ${[...new Set(missingPacks)].join(', ')} — include them in the dropped folder.`);
 
     // Resolve every involved ssab's textures to a dropped file (data URL → <img> src),
-    // each relative to ITS own ssab's directory.
+    // each relative to ITS own ssab's directory. Textures embedded in the ssab
+    // (converter `--embedded` mode) are skipped here — the player decodes them
+    // from the ssab's own bytes in loadTextures, so no sibling file is needed.
     const textures = new Map<number, string>();
     const missingTex: string[] = [];
     for (const { buf, baseDir } of involved) {
+      const embedded = new Set(SSRuntimeManager.extractEmbeddedTextures(buf).map((e) => e.hash >>> 0));
       for (const { hash, path } of SSRuntimeManager.extractTexturePaths(buf)) {
         if (textures.has(hash)) continue;
+        if (embedded.has(hash >>> 0)) continue;
         const expected = resolveRelativePath(baseDir, path);
         const texFile = droppedFiles.find((f) => f.path === expected);
         if (!texFile) { missingTex.push(expected); continue; }

@@ -114,9 +114,29 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const base = assetBaseUrl || this._assetBaseUrl;
         const prefix = base && !base.endsWith('/') ? base + '/' : base;
 
+        const rm = this._resourceManager;
+        const loadBytes = rm.loadTextureFromBytes?.bind(rm);
+
+        // Textures whose bytes are embedded in the SSAB (converter `--embedded`
+        // mode) are decoded in-place; the rest are fetched as sibling files.
+        // Only consulted when the ResourceManager can accept raw bytes — else
+        // everything falls back to URL loading (embedded won't render there).
+        let embedded: Map<number, Uint8Array> | null = null;
+        if (loadBytes) {
+            const buf = this.getSsabBuffer();
+            if (buf) {
+                const list = SSRuntimeManager.extractEmbeddedTextures(buf);
+                if (list.length > 0) embedded = new Map(list.map(e => [e.hash, e.bytes] as const));
+            }
+        }
+
         const promises = this._texturePaths.map(async (info) => {
-            const texUrl = prefix + info.path;
-            await this._resourceManager!.loadTexture(texUrl, info.hash);
+            const bytes = embedded?.get(info.hash);
+            if (bytes && loadBytes) {
+                await loadBytes(bytes, info.hash);
+            } else {
+                await rm.loadTexture(prefix + info.path, info.hash);
+            }
         });
 
         await Promise.all(promises);

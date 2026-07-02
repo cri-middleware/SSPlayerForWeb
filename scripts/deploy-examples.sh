@@ -14,6 +14,12 @@ cd "$ROOT_DIR"
 node packages/ssconverter-web/scripts/cli.js -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
 node packages/ssconverter-web/scripts/cli.js -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
+# Also emit embedded-texture variants (*_embedded.ssab) so the examples can demo
+# SSABs whose textures are inlined (no sibling image files needed).
+echo "Compiling embedded-texture variants..."
+node packages/ssconverter-web/scripts/cli.js --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
+node packages/ssconverter-web/scripts/cli.js --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
+
 # Copy compiled assets to webgl-example as well
 cp -R "$PIXI_PUBLIC/"* "$WEBGL_PUBLIC/"
 

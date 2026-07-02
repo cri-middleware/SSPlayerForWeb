@@ -20,6 +20,18 @@ export class SSWebGLResourceManager implements IResourceManager {
     });
   }
 
+  /**
+   * Decode raw (encoded) image bytes — e.g. a PNG embedded in the SSAB via the
+   * converter's `--embedded` mode — and upload them as a texture under `hash`.
+   */
+  public async loadTextureFromBytes(bytes: Uint8Array, hash: number): Promise<void> {
+    if (this.textures.has(hash)) return;
+    const blob = new Blob([bytes as BlobPart]);
+    const bitmap = await createImageBitmap(blob);
+    this.createTextureFromSource(bitmap, hash, bitmap.width, bitmap.height);
+    bitmap.close?.();
+  }
+
   public bindTextureSource(source: TexImageSource, hash: number, width: number, height: number): void {
     this.createTextureFromSource(source, hash, width, height);
   }

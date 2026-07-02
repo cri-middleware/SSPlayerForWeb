@@ -95,6 +95,10 @@ async function main() {
         'Interpolation_Easing_v1.ssab', 'Mask.ssab', 'Mesh.ssab', 'NineSlice.ssab',
         'PartsColor.ssab', 'Ringo_tyu.ssab', 'Shader.ssab', 'Shape.ssab', 'Signal.ssab',
         'Sound.ssab', 'Text.ssab', 'TextureChange.ssab', 'UserData.ssab',
+        // Embedded-texture SSABs (converter `--embedded`): the PNG is inlined in
+        // the .ssab, so these load with no sibling texture file.
+        'Basic_embedded.ssab', 'PartsColor_embedded.ssab', 'Mesh_embedded.ssab',
+        'Mask_embedded.ssab', 'Effect_embedded.ssab', 'BlendMode_embedded.ssab',
     ];
 
     // Load a bundled sample by filename (served from public/ at the site root).

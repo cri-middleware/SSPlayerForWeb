@@ -17,6 +17,12 @@ Set-Location -Path $ROOT_DIR
 node packages/ssconverter-web/scripts/cli.js -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
 node packages/ssconverter-web/scripts/cli.js -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
+# Also emit embedded-texture variants (*_embedded.ssab) so the examples can demo
+# SSABs whose textures are inlined (no sibling image files needed).
+Write-Host "Compiling embedded-texture variants..."
+node packages/ssconverter-web/scripts/cli.js --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
+node packages/ssconverter-web/scripts/cli.js --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
+
 Copy-Item -Path "$PIXI_PUBLIC\*" -Destination $WEBGL_PUBLIC -Recurse -Force
 
 Write-Host "Deploy complete! The .ssab and related asset files have been copied to $PIXI_PUBLIC and $WEBGL_PUBLIC."

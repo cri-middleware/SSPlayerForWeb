@@ -449,6 +449,45 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Parse the SSAB buffer and collect the textures whose raw image bytes are
+     * embedded directly in the file (the converter's `--embedded` mode) instead
+     * of shipping as sibling files.
+     *
+     * Embedded assets are keyed by `fnv1a(image_path)` (== `CellMap.imagePathHash()`);
+     * this joins them back to each cell-map and returns them under the render-time
+     * key (`CellMap.nameHash()`), matching {@link extractTexturePaths}. Returns an
+     * empty array for external-file (non-embedded) SSABs.
+     *
+     * The returned `bytes` are views over `ssabBuffer` — the caller must consume
+     * them (e.g. decode into a texture) before that buffer is detached/freed.
+     */
+    public static extractEmbeddedTextures(ssabBuffer: Uint8Array): { hash: number, bytes: Uint8Array }[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const embLen = ssab.embeddedAssetsLength();
+        if (embLen === 0) return [];
+
+        // fnv1a(image_path) -> raw (encoded) image bytes
+        const byPathHash = new Map<number, Uint8Array>();
+        for (let i = 0; i < embLen; i++) {
+            const asset = ssab.embeddedAssets(i);
+            if (!asset) continue;
+            const data = asset.dataArray();
+            if (data) byPathHash.set(asset.nameHash() >>> 0, data);
+        }
+
+        const results: { hash: number, bytes: Uint8Array }[] = [];
+        for (let i = 0; i < ssab.cellmapsLength(); i++) {
+            const cellmap = ssab.cellmaps(i);
+            if (!cellmap) continue;
+            const bytes = byPathHash.get(cellmap.imagePathHash() >>> 0);
+            if (bytes) results.push({ hash: cellmap.nameHash(), bytes });
+        }
+
+        return results;
+    }
+
+    /**
      * Read a pack's own name and name-hash from its SSAB buffer.
      */
     public static extractPackInfo(ssabBuffer: Uint8Array): { hash: number, name: string | null } {

@@ -8,17 +8,28 @@ import { fileURLToPath } from 'url';
 const args = process.argv.slice(2);
 let outDir = '';
 let sspjPath = '';
+let embedded = false;
+let suffix = '';
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '-o') {
         outDir = args[++i];
+    } else if (args[i] === '-e' || args[i] === '--embedded') {
+        // Inline each texture's bytes into the .ssab (no sibling image files).
+        embedded = true;
+    } else if (args[i] === '--suffix') {
+        // Append to each generated .ssab basename (e.g. "_embedded"); in this
+        // mode only .ssab files are written (renamed) and referenced external
+        // assets are NOT copied — used to emit embedded variants alongside the
+        // normal external outputs without name clashes.
+        suffix = args[++i];
     } else {
         sspjPath = args[i];
     }
 }
 
 if (!sspjPath) {
-    console.error('Usage: node cli.js [-o output_dir] <project.sspj>');
+    console.error('Usage: node cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] <project.sspj>');
     process.exit(1);
 }
 
@@ -71,20 +82,27 @@ async function main() {
     console.log(`Read ${filesMap.size} files. Converting...`);
     
     // Call wasm convert
-    const result = convert(filesMap, false, false, false, true);
-    
+    const result = convert(filesMap, embedded, false, false, true);
+
     // Save generated files
     fs.mkdirSync(outDir, { recursive: true });
-    
+
     for (const [filename, data] of result.output.entries()) {
-        const dest = path.join(outDir, filename);
+        let outName = filename;
+        if (suffix) {
+            // Suffix mode: only emit .ssab files (renamed), so embedded variants
+            // sit next to the external outputs without clobbering them.
+            if (!filename.toLowerCase().endsWith('.ssab')) continue;
+            outName = filename.slice(0, -'.ssab'.length) + suffix + '.ssab';
+        }
+        const dest = path.join(outDir, outName);
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.writeFileSync(dest, data);
         console.log(`Generated: ${dest}`);
     }
-    
-    // Copy referenced assets
-    if (result.assets) {
+
+    // Copy referenced assets (skipped in suffix mode — embedded .ssab inline them).
+    if (result.assets && !suffix) {
         for (const [destPath, srcPath] of result.assets.entries()) {
             const srcFullPath = path.join(sspjDir, srcPath);
             const destFullPath = path.join(outDir, destPath);

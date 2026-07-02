@@ -83,9 +83,7 @@ export class SSCanvasPlayer {
       if (typeof src === 'string') {
         await this.resourceManager.loadTexture(src, hash);
       } else if (src instanceof ArrayBuffer || src instanceof Uint8Array) {
-        const blob = new Blob([src as BlobPart]);
-        const bitmap = await createImageBitmap(blob);
-        this.resourceManager.bindTextureSource(bitmap, hash, bitmap.width, bitmap.height);
+        await this.resourceManager.loadTextureFromBytes(src instanceof ArrayBuffer ? new Uint8Array(src) : src, hash);
       } else {
         this.resourceManager.bindTextureSource(src as TexImageSource, hash, (src as any).width as number, (src as any).height as number);
       }

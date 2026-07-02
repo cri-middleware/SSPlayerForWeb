@@ -81,12 +81,24 @@ export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): P
             const resource = new SSABResource(subBuf);
             into.set(ref.hash, resource);
 
-            // Fetch the referenced pack's textures into the shared cache.
-            // Provider packs aren't URL-addressable, so their textures are
-            // the host's responsibility (registered before setAnimation).
-            if (!fromProvider && resourceManager) {
+            // Load the referenced pack's textures into the shared cache.
+            // Embedded textures (converter `--embedded` mode) are decoded from the
+            // pack's own bytes, so they resolve regardless of how the pack was
+            // sourced. Non-embedded textures are fetched relative to the pack URL;
+            // provider packs aren't URL-addressable, so those remain the host's
+            // responsibility (registered before setAnimation).
+            if (resourceManager) {
+                const loadBytes = resourceManager.loadTextureFromBytes?.bind(resourceManager);
+                const embedded = loadBytes
+                    ? new Map(SSRuntimeManager.extractEmbeddedTextures(subBuf).map(e => [e.hash, e.bytes] as const))
+                    : null;
                 const texPaths = SSRuntimeManager.extractTexturePaths(subBuf);
-                await Promise.all(texPaths.map(info => resourceManager.loadTexture(prefix + info.path, info.hash)));
+                await Promise.all(texPaths.map(info => {
+                    const bytes = embedded?.get(info.hash);
+                    if (bytes && loadBytes) return loadBytes(bytes, info.hash);
+                    if (!fromProvider) return resourceManager.loadTexture(prefix + info.path, info.hash);
+                    return Promise.resolve();
+                }));
             }
 
             // Enqueue packs referenced by this pack (nested instances).
