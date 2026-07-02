@@ -1,115 +1,73 @@
+[**日本語**](./README.ja.md) | [**English**](./README.md)
+
 # SSPlayerForWeb
 
-SpriteStudio-SDK Player for Web.
+A high-performance, WebAssembly-powered player for [OPTPiX SpriteStudio 7](https://www.webtech.co.jp/spritestudio/) animations on the Web.
+
+This player is designed to be highly adaptable and deployable across various Web graphics engines, ranging from modern PixiJS to legacy environments like RPG Maker MZ (PixiJS v5) and standalone WebGL.
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` folder (hosted via VitePress):
+
+- [**Documentation (Japanese)**](./docs/index.md) (English documentation is a work in progress)
+
+### Quick Links (Japanese)
+- [Installation](./docs/setup/install.md)
+- [Quick Start](./docs/setup/quickstart.md)
+- [Basic Usage](./docs/usage/basic.md)
+- [Asset Preparation](./docs/usage/assets.md)
+- [PixiJS Integration](./docs/usage/pixi.md)
+- [WebGL Standalone & Web Components](./docs/usage/webgl.md)
+
+## Quick Start
+
+### 1. Try out the Examples
+1. **Get the Repo**: Clone or download this repository.
+2. **Build WASM**: Run `pnpm run build:wasm` (required if Rust code is modified or not built yet).
+3. **Build the packages**: Run `pnpm install` and then `pnpm run build` from the project root.
+4. **Run**: Navigate to `examples/pixi-example` and run `pnpm run dev`.
+
+### 2. Import into your Project
+1. **Convert**: Use [`ssconverter-web`](./docs/usage/assets.md) or [`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases) to convert your `.sspj` to `.ssab`.
+2. **Install**: Run `npm install @spritestudio/ssplayer-pixi pixi.js`.
+3. **Play**: Load the `.ssab` and attach it to the `SSPlayer` container!
+
+For advanced setups, please refer to the [Installation Guide](./docs/setup/install.md).
 
 ## Overview
 
-SSPlayerForWeb is a high-performance, WebAssembly-powered player for SpriteStudio 7 animations. It is designed to be highly adaptable and deployable across various Web graphics engines, ranging from modern PixiJS to legacy environments like RPG Maker MZ (PixiJS v5) and Three.js.
-
-## Key Features
-
-- **Multi-Engine Support (Package Separation):** A completely independent core logic package with multiple engine-specific rendering packages.
-- **Hybrid Architecture (WASM Brain + JS Body):** WebAssembly (Rust) handles heavy interpolation and matrix calculations, while JavaScript handles the final rendering, achieving zero unnecessary object creation (GC-free updates).
-- **Optimized Rendering:** Supports both "Direct Drawing" (Batch Rendering) for high-performance modern engines and "SceneGraph Drawing" for legacy compatibility.
-
-## Monorepo Structure
+### Monorepo Structure
 
 This project uses `pnpm` workspaces for package management.
 
-### Core
+**Core**
 - **`@spritestudio/ssplayer-core`**: The engine-agnostic core logic layer. Manages WASM initialization, time updates, and zero-copy data extraction. It has zero dependencies on DOM APIs or specific rendering engines.
 
-### Renderers (Engine Bindings)
+**Renderers (Engine Bindings)**
 - **`@spritestudio/ssplayer-pixi`**: Optimized for PixiJS v8. Uses direct drawing (BatchRenderer) for maximum performance.
 - **`@spritestudio/ssplayer-webgl`**: Standalone lightweight WebGL renderer, including a `<ss-player>` Web Component.
 - **`@spritestudio/ssplayer-rmmz`**: Designed for RPG Maker MZ (PixiJS v5). Uses SceneGraph drawing for seamless integration with the engine's Sprite tree.
 
-### Tools
+**Tools**
 - **[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)**: Desktop GUI tool for converting `.sspj` to `.ssab`.
 - **`ssconverter-web`**: Web-based converter tool and Node.js CLI script that converts `.sspj` to `.ssab` using WebAssembly.
 
-## Development
+## Reader Personas
 
-### Prerequisites
-- Node.js & `pnpm`
-- Rust & `wasm-pack`
+The documentation and repository structure are designed for three levels of users. You only need to read as far as your goal requires:
 
-### Development Workflow
+| Persona | Goal | Where to Read |
+|---|---|---|
+| **General Users** | Just want to get animations running | [Quick Start](./docs/setup/quickstart.md) → [Basic Usage](./docs/usage/basic.md) |
+| **Customization Users** | Want to polish expressions and add logic | Above + [Customization](./docs/customize/events.md) |
+| **SDK / Player Developers** | Want to extend or contribute to the core | Above + [CONTRIBUTING.md](./CONTRIBUTING.md) |
 
-1. **Build WASM (if Rust code is modified)**
-   ```bash
-   pnpm run build:wasm
-   ```
+## Related Repositories
 
-2. **Build TypeScript Packages**
-   ```bash
-   pnpm run build
-   ```
+- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — The core SDK providing `libssruntime` and `libssconverter`.
+- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — Desktop GUI tool for converting `.sspj` to `.ssab`.
 
-3. **Run Examples (Dev Server)**
-   You can test your changes using the Vite dev server provided in the `examples` directory.
-   ```bash
-   cd examples/pixi-example
-   pnpm run dev
-   ```
-   *(Note: Since the examples consume the built packages via workspace references, you must re-run `pnpm run build` from the project root whenever you modify the TypeScript source code in `packages/`.)*
+## License
 
-## Architecture
-
-### 3-Layer Architecture
-
-```mermaid
-graph TD
-    classDef rust fill:#dea584,stroke:#333,stroke-width:2px,color:black;
-    classDef pixi fill:#e91e63,stroke:#333,stroke-width:2px,color:white;
-    classDef webgl fill:#009688,stroke:#333,stroke-width:2px,color:white;
-    classDef rmmz fill:#8e44ad,stroke:#333,stroke-width:2px,color:white;
-    classDef core fill:#83cc83,stroke:#333,stroke-width:2px,color:black;
-    classDef ffi fill:#e6e6e6,stroke:#333,stroke-width:2px,color:black,stroke-dasharray: 5 5;
-
-    subgraph L3 ["Layer 3: Engine Bindings"]
-        P1["ssplayer-pixi<br/>(PixiJS / BatchRenderer)"]:::pixi
-        W1["ssplayer-webgl<br/>(WebGL1/2)"]:::webgl
-        P2["ssplayer-rmmz<br/>(MZ / SceneGraph)"]:::rmmz
-    end
-
-    subgraph L2 ["Layer 2: Common Logic (@spritestudio/ssplayer-core)"]
-        D1["DirectInternalPlayer<br/>(Player Facade)"]:::core
-        S1["SceneGraphInternalPlayer<br/>(Future Facade)"]:::core
-        G1["GeometryBuilder<br/>(Vertex/Index Builder)"]:::core
-        I1["SSRuntimeManager<br/>(WASM State Wrapper)"]:::core
-        J1["Zero-copy Data<br/>(Float32Array / FlatBuffers)"]:::core
-    end
-
-    subgraph L1 ["Layer 1: WebAssembly Bindings"]
-        B1["ssruntime_bg.wasm / .js<br/>(wasm-bindgen)"]:::ffi
-    end
-
-    subgraph Native ["Rust Native Plugin"]
-        R1["libssruntime<br/>(Core Engine)"]:::rust
-    end
-
-    P1 -->|"Call Play/Update"| D1
-    W1 -->|"Call Play/Update"| D1
-    P2 -.->|"Call Play/Update"| S1
-    
-    D1 -->|"Manage"| G1
-    D1 -->|"Manage"| I1
-    S1 -.->|"Manage"| I1
-    
-    I1 -->|"Call WASM"| B1
-    B1 -->|"Return Data Pointer"| J1
-    
-    J1 -.->|"Read Reference"| G1
-    G1 -.->|"Return Geometry"| P1
-    G1 -.->|"Return Geometry"| W1
-    J1 -.->|"Read Reference"| S1
-    S1 -.->|"Return State"| P2
-    B1 <-->|"Rust C-API"| R1
-```
-
-### Robustness & Zero-Copy
-
-- **Memory Leak Prevention:** Uses `FinalizationRegistry` to automatically call WASM `free()` when JS objects are garbage-collected.
-- **Zero-Duplication:** Uses `Float32Array` mapped directly to `wasmMemory.buffer` to pass transformation matrices without copying memory.
-- **Asset Pipeline:** Caches parsed `SSRuntimeResource` instances so multiple player instances share the same WASM memory footprint for assets.
+This project is licensed under the BSD-3-Clause License. See the [LICENSE.md](./LICENSE.md) file for details.
