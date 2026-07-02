@@ -21,9 +21,11 @@ This project uses `pnpm` workspaces for package management.
 
 ### Renderers (Engine Bindings)
 - **`@spritestudio/ssplayer-pixi`**: Optimized for PixiJS v8. Uses direct drawing (BatchRenderer) for maximum performance.
+- **`@spritestudio/ssplayer-webgl`**: Standalone lightweight WebGL renderer, including a `<ss-player>` Web Component.
 - **`@spritestudio/ssplayer-rmmz`**: Designed for RPG Maker MZ (PixiJS v5). Uses SceneGraph drawing for seamless integration with the engine's Sprite tree.
 
 ### Tools
+- **[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)**: Desktop GUI tool for converting `.sspj` to `.ssab`.
 - **`ssconverter-web`**: Web-based converter tool and Node.js CLI script that converts `.sspj` to `.ssab` using WebAssembly.
 
 ## Development
@@ -60,12 +62,14 @@ This project uses `pnpm` workspaces for package management.
 graph TD
     classDef rust fill:#dea584,stroke:#333,stroke-width:2px,color:black;
     classDef pixi fill:#e91e63,stroke:#333,stroke-width:2px,color:white;
+    classDef webgl fill:#009688,stroke:#333,stroke-width:2px,color:white;
     classDef rmmz fill:#8e44ad,stroke:#333,stroke-width:2px,color:white;
     classDef core fill:#83cc83,stroke:#333,stroke-width:2px,color:black;
     classDef ffi fill:#e6e6e6,stroke:#333,stroke-width:2px,color:black,stroke-dasharray: 5 5;
 
     subgraph L3 ["Layer 3: Engine Bindings"]
         P1["ssplayer-pixi<br/>(PixiJS / BatchRenderer)"]:::pixi
+        W1["ssplayer-webgl<br/>(WebGL1/2)"]:::webgl
         P2["ssplayer-rmmz<br/>(MZ / SceneGraph)"]:::rmmz
     end
 
@@ -86,6 +90,7 @@ graph TD
     end
 
     P1 -->|"Call Play/Update"| D1
+    W1 -->|"Call Play/Update"| D1
     P2 -.->|"Call Play/Update"| S1
     
     D1 -->|"Manage"| G1
@@ -97,6 +102,7 @@ graph TD
     
     J1 -.->|"Read Reference"| G1
     G1 -.->|"Return Geometry"| P1
+    G1 -.->|"Return Geometry"| W1
     J1 -.->|"Read Reference"| S1
     S1 -.->|"Return State"| P2
     B1 <-->|"Rust C-API"| R1

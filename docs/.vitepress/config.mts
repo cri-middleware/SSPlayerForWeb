@@ -21,6 +21,10 @@ export default withMermaid({
       label: '日本語',
       lang: 'ja',
       themeConfig: {
+        outline: {
+          level: [2, 3],
+          label: '目次'
+        },
         nav: [
           { text: 'はじめに', link: '/setup/install' },
           { text: '使い方', link: '/usage/basic' },
@@ -42,6 +46,7 @@ export default withMermaid({
               { text: '基本的な再生', link: '/usage/basic' },
               { text: 'アセットの準備（.sspj → .ssab）', link: '/usage/assets' },
               { text: 'PixiJS で使う', link: '/usage/pixi' },
+              { text: 'WebGL で使う', link: '/usage/webgl' },
               { text: 'RPG Maker MZ で使う', link: '/usage/rmmz' },
             ],
           },

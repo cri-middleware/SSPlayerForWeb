@@ -5,12 +5,13 @@
 （`.ssae` / `.ssee` / `.ssqe` / `.ssce`）を解析し、`.ssab`（アニメーション）と
 必要に応じて `.ssqb`（シーケンスパック）を生成します。
 
-変換には 2 つの経路があります。用途で選んでください。
+変換には 3 つの経路があります。用途で選んでください。
 
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
 | [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | インストール不要（ブラウザ） |
-| [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | SDK Releases からバイナリ取得 |
+| [`SSConverterGUI`](#ssconvertergui-デスクトップguiツール) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
+| [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 
 全体の流れは [トップページの概要図](/#概要-sspj-描画まで) を参照してください。
 
@@ -53,6 +54,11 @@ WASM の初期化状況・変換状況はステータスバッジに、詳細は
 
 ダウンロードした ZIP を展開し、`.ssab`（と通常モードのテクスチャ）を配信場所に
 置きます（[配置とテクスチャ解決](#配置とテクスチャ解決)）。
+
+## SSConverterGUI（デスクトップGUIツール）
+
+デスクトップ上で動作する、`.sspj` を `.ssab` に変換するための GUI ツールです。
+**[SSConverterGUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** から OS 向けのバイナリをダウンロードして使用してください。
 
 ## ssconverter-cli（CLI・CI / 開発者向け）
 
@@ -113,10 +119,8 @@ ssconverter-cli ./assets/projects ./extra_assets
 
 ## 配置とテクスチャ解決
 
-- 生成した `.ssab` は Web サーバーから配信できる場所（例: `public/`）に置きます。
-- テクスチャは `player.load(ssabUrl, assetBaseUrl)` の第 2 引数を基準 URL として
-  解決されます。テクスチャが表示されない場合はここを確認してください。
-- **Embedded（埋め込み）**で変換した `.ssab` は、テクスチャを内包するため
-  `assetBaseUrl` やテクスチャの別配置は不要です。単一ファイル配布に便利です。
+- 生成した `.ssab` と一緒に出力されたテクスチャ画像は、アプリケーションの静的アセットとして Web サーバーから配信できる場所に配置します。
+- テクスチャ画像はデフォルトで `.ssab` と同じ階層にあるものとして読み込まれます。画像の配置場所が異なる場合は、各プレイヤーの読み込みメソッド（例: `player.load(ssabUrl, assetBaseUrl)`）でテクスチャの基準 URL を指定してください。
+- **Embedded（埋め込み）**で変換した `.ssab` は、ファイル内にテクスチャを内包するため画像ファイルの別配置は不要です。アセットが単一ファイルで完結するため管理に便利です。
 
-読み込み・再生の手順は [クイックスタート](/setup/quickstart) を参照。
+読み込み・再生の手順は [クイックスタート](/setup/quickstart) を参照してください。
