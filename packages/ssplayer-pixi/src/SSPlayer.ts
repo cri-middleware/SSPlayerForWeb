@@ -12,7 +12,7 @@ import { SS_SHADER_SOURCES } from './SSShaderLib.js';
 // than PixiJS "advanced" filter blends (which don't reliably engage / read the
 // live framebuffer here). Importing registers the WebGPU entries; the WebGL map is
 // patched via registerSSBlendModesGL once the renderer is known. See SSBlendModes.
-import { SS_INVERT_BLEND, SS_EXCLUSION_BLEND, registerSSBlendModesGL } from './SSBlendModes.js';
+import { SS_INVERT_BLEND, SS_EXCLUSION_BLEND, SS_MIX_BLEND, SS_ADD_BLEND, SS_MUL_BLEND, SS_SUB_BLEND, SS_SCREEN_BLEND, registerSSBlendModesGL } from './SSBlendModes.js';
 
 // MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
 
@@ -853,34 +853,26 @@ export class SSPlayer extends Container {
 
             // SpriteStudio framebuffer-composite blend (alpha_blend_type, 12 values)
             // → PixiJS blend mode. See 10_parts_color §1-0: this is the framebuffer
-            // composite, distinct from the PartColor (vertex) blend.
-            // Factors verified against SS6PlayerForUnity. GPU-native pixi modes:
-            //  Mix→normal [one,1-srcA]; Add→add; Mul→multiply [dst,1-srcA];
-            //  Screen→screen (== SS [1-dst,one] for premultiplied). Mulalpha (SS
-            //  [zero,srcColor] = dst*src) == premultiplied multiply for opaque parts.
-            // Exclusion / Invert have no GPU-native pixi mode and are registered as
-            // fixed-function GPU blends (SSBlendModes) — NOT advanced filters. Sub is
-            // intentionally left as the original 'subtract' (which is not registered,
-            // so it falls back to 'normal') per user preference — the true SS
-            // reverse-subtract looked wrong (greyed-out) for the bundled asset.
-            let blendMode: any = 'normal';
+            // composite stage (after parts_color is applied in the shader).
+            // All blend modes are mapped to custom states (SS_*_BLEND) defined in
+            // SSBlendModes.ts. This ensures 100% parity with the fixed-function
+            // GPU blend equations used in ssplayer-webgl across both WebGL and WebGPU.
+            let blendMode: any = SS_MIX_BLEND;
             switch (batch.blendType()) {
-                case BlendType.Mix: blendMode = 'normal'; break;
-                case BlendType.Mul: blendMode = 'multiply'; break;
-                case BlendType.Add: blendMode = 'add'; break;
-                case BlendType.Sub: blendMode = 'subtract'; break;
-                case BlendType.Mulalpha: blendMode = 'multiply'; break;
-                case BlendType.Screen: blendMode = 'screen'; break;
+                case BlendType.Mix: blendMode = SS_MIX_BLEND; break;
+                case BlendType.Mul: blendMode = SS_MUL_BLEND; break;
+                case BlendType.Add: blendMode = SS_ADD_BLEND; break;
+                case BlendType.Sub: blendMode = SS_SUB_BLEND; break;
+                case BlendType.Mulalpha: blendMode = SS_MUL_BLEND; break;
+                case BlendType.Screen: blendMode = SS_SCREEN_BLEND; break;
                 case BlendType.Exclusion: blendMode = SS_EXCLUSION_BLEND; break;
                 case BlendType.Invert: blendMode = SS_INVERT_BLEND; break;
-                // SS6 "2" composite variants: not used by any bundled asset and with
-                // no exact PixiJS equivalent — best-effort to the nearest GPU-native
-                // mode (Div2/Overlay2 have none → 'normal'). Unverified.
-                case BlendType.Mul2: blendMode = 'multiply'; break;
-                case BlendType.Div2: blendMode = 'normal'; break;
-                case BlendType.Screen2: blendMode = 'screen'; break;
-                case BlendType.Overlay2: blendMode = 'normal'; break;
-                default: blendMode = 'normal'; break;
+                // Emulated modes (mapping follows ssplayer-webgl)
+                case BlendType.Mul2: blendMode = SS_MUL_BLEND; break;
+                case BlendType.Div2: blendMode = SS_MIX_BLEND; break;
+                case BlendType.Screen2: blendMode = SS_SCREEN_BLEND; break;
+                case BlendType.Overlay2: blendMode = SS_MIX_BLEND; break;
+                default: blendMode = SS_MIX_BLEND; break;
             }
             
             const invTexW = 1.0 / texture.width;
@@ -1110,7 +1102,8 @@ export class SSPlayer extends Container {
                     const effectTex = this.pixiResourceManager.getTexture(cellmap) || Texture.WHITE;
                     mesh.shader = this.getEffectShader(effectTex) as any;
                     // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
-                    mesh.blendMode = blend === 1 ? 'add' : 'normal';
+                    const bMode = (blend === 1) ? SS_ADD_BLEND : SS_MIX_BLEND;
+                    mesh.blendMode = bMode;
                     // Per-part opacity was folded into the vertex alpha above, so the mesh
                     // alpha only carries the (uniform) parent-chain opacity.
                     mesh.alpha = parentAlpha;

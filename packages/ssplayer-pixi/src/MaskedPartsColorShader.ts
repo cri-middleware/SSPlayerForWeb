@@ -100,6 +100,14 @@ ${MASKED_GLSL_REPLAY}
 
         // vVarg: [rate, Mix_Flag, Mul_Flag, AddSub_Flag]
         float rate = vVarg.x;
+        
+        // Fast path for parts without parts-color (rate == 0)
+        if (rate == 0.0) {
+            float outA = texColor.a * vColor.a;
+            finalColor = vec4(texColor.rgb * vColor.a, outA) * uColor;
+            return;
+        }
+
         float isMix = vVarg.y;
         float isMul = vVarg.z;
         float isAddSub = vVarg.w;
@@ -238,6 +246,12 @@ fn mainFrag(in: VertexOutput) -> @location(0) vec4<f32> {
   }
 
   let rate = in.vVarg.x;
+  
+  if (rate == 0.0) {
+      let outA = texColor.a * in.vColor.a;
+      return vec4<f32>(texColor.rgb * in.vColor.a, outA) * localUniforms.uColor;
+  }
+
   let isMix = in.vVarg.y;
   let isMul = in.vVarg.z;
   let isAddSub = in.vVarg.w;

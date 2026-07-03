@@ -24,10 +24,13 @@ import { GpuBlendModesToPixi } from 'pixi.js';
  * parts stay visible (SS renders to an opaque target where dst alpha is moot).
  */
 
-/** SpriteStudio Invert (反転): (1 - dst) * src. */
-export const SS_INVERT_BLEND = 'ss-invert';
-/** SpriteStudio Exclusion: (1-dst)*src + (1-src)*dst. */
-export const SS_EXCLUSION_BLEND = 'ss-exclusion';
+export const SS_MIX_BLEND = 'normal';
+export const SS_ADD_BLEND = 'add';
+export const SS_MUL_BLEND = 'multiply';
+export const SS_SUB_BLEND = 'normal-npm'; // Map to unused native strings for unique WebGPU pipeline IDs
+export const SS_SCREEN_BLEND = 'screen';
+export const SS_INVERT_BLEND = 'add-npm';
+export const SS_EXCLUSION_BLEND = 'screen-npm';
 
 // Premultiplied-coverage alpha shared by every custom mode.
 const PM_ALPHA = { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' };
@@ -36,7 +39,13 @@ const PM_ALPHA = { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation
 //     can register up-front (no renderer needed). ---
 {
     const gpu = GpuBlendModesToPixi as unknown as Record<string, unknown>;
-    if (!gpu[SS_INVERT_BLEND]) {
+    if (!gpu['_ss_patched']) {
+        gpu['_ss_patched'] = true;
+        gpu[SS_MIX_BLEND] = { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { ...PM_ALPHA } };
+        gpu[SS_ADD_BLEND] = { color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' }, alpha: { ...PM_ALPHA } };
+        gpu[SS_MUL_BLEND] = { color: { srcFactor: 'dst', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { ...PM_ALPHA } };
+        gpu[SS_SUB_BLEND] = { color: { srcFactor: 'one', dstFactor: 'one', operation: 'reverse-subtract' }, alpha: { ...PM_ALPHA } };
+        gpu[SS_SCREEN_BLEND] = { color: { srcFactor: 'one-minus-dst', dstFactor: 'one', operation: 'add' }, alpha: { ...PM_ALPHA } };
         gpu[SS_INVERT_BLEND] = { color: { srcFactor: 'one-minus-dst', dstFactor: 'zero', operation: 'add' }, alpha: { ...PM_ALPHA } };
         gpu[SS_EXCLUSION_BLEND] = { color: { srcFactor: 'one-minus-dst', dstFactor: 'one-minus-src', operation: 'add' }, alpha: { ...PM_ALPHA } };
     }
@@ -53,6 +62,14 @@ export function registerSSBlendModesGL(renderer: unknown): void {
     const gl = r?.gl;
     const map = r?.state?.blendModesMap;
     if (!gl || !map || glPatched.has(map)) return;
+    map[SS_MIX_BLEND] = [gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
+    map[SS_ADD_BLEND] = [gl.ONE, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
+    map[SS_MUL_BLEND] = [gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
+    
+    // Some older WebGL1 drivers might lack reverse-subtract without extension, but we map it directly
+    map[SS_SUB_BLEND] = [gl.ONE, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.FUNC_REVERSE_SUBTRACT, gl.FUNC_ADD];
+    
+    map[SS_SCREEN_BLEND] = [gl.ONE_MINUS_DST_COLOR, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
     map[SS_INVERT_BLEND] = [gl.ONE_MINUS_DST_COLOR, gl.ZERO, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
     map[SS_EXCLUSION_BLEND] = [gl.ONE_MINUS_DST_COLOR, gl.ONE_MINUS_SRC_COLOR, gl.ONE, gl.ONE_MINUS_SRC_ALPHA];
     glPatched.add(map);
