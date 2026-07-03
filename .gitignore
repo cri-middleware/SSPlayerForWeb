@@ -822,3 +822,6 @@ examples/pixi-example/public/
 # Generated WASM files
 packages/ssplayer-core/wasm/
 packages/ssconverter-web/wasm/
+
+# Ignore test assets in public
+public/
