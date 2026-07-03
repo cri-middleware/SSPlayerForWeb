@@ -22,12 +22,12 @@ $OutDir = Join-Path $RootDir "packages\ssplayer-core\wasm"
 
 Write-Host "Building WASM runtime (Windows) in $Mode mode..."
 
-# Build using bash
+# Build using PowerShell
 Push-Location $SdkDir
 try {
-    $process = Start-Process bash -ArgumentList "scripts/release-web.sh", $Mode -Wait -NoNewWindow -PassThru
+    $process = Start-Process powershell -ArgumentList "-ExecutionPolicy", "Bypass", "-File", "scripts/release-web.ps1", $Mode -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
-        throw "release-web.sh failed."
+        throw "release-web.ps1 failed."
     }
 }
 finally {
