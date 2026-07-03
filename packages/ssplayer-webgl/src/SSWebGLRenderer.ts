@@ -355,7 +355,19 @@ export class SSWebGLRenderer {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, texInfo.tex);
           if (pcp.uTexture) gl.uniform1i(pcp.uTexture, 0);
-        } else if (kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect) {
+        } else if (kind === DrawBatchKind.Shape) {
+          // Pure-colour shapes carry textureHash 0 (no cell assigned); a textured
+          // shape whose atlas hasn't loaded yet also lands here. Bind the 1x1 white
+          // texture so the parts-colour shader samples opaque white at the fixed
+          // (0.5,0.5) UV buildShape emits, and the shape renders as its interpolated
+          // vertex colour (mirrors ssplayer-pixi's Texture.WHITE fallback). Without
+          // this bind the previous batch's atlas would bleed through the shape.
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, this.getWhiteTexture(gl));
+          if (pcp.uTexture) gl.uniform1i(pcp.uTexture, 0);
+        } else if (kind !== DrawBatchKind.Effect) {
+          // Normal/Mesh with no resolved texture: nothing sensible to draw. (Effect
+          // resolves its cellmap texture per draw command below.)
           continue;
         }
       }
@@ -394,6 +406,7 @@ export class SSWebGLRenderer {
           totalIndices += meshIOff[partIdx + 1] - meshIOff[partIdx];
         } else if (kind === DrawBatchKind.Shape) {
           const vc = shapeVertexCounts[partIdx];
+          if (vc < 3) continue;   // degenerate fan (needs >=3 verts); keep in lockstep with build
           totalVerts += vc;
           totalIndices += (vc - 2) * 3;
         }
@@ -455,8 +468,8 @@ export class SSWebGLRenderer {
 
         } else if (kind === DrawBatchKind.Shape) {
           const vCount = shapeVertexCounts[partIdx];
+          if (vCount < 3) continue;   // matches the pre-count skip above
           const iCount = (vCount - 2) * 3;
-          if (vCount === 0 || iCount === 0) continue;
 
           const subPos = this.batchPos.subarray(vOffset * 2, (vOffset + vCount) * 2);
           const subUv = this.batchUv.subarray(vOffset * 2, (vOffset + vCount) * 2);
