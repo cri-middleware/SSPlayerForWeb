@@ -20,7 +20,12 @@ async function main() {
 
   await SSCanvasPlayer.initialize();
 
-  const player = new SSCanvasPlayer(canvas, { autoStart: true });
+  // Opaque backdrop (matches the page's #333 body). Additive / backdrop-reading
+  // blend modes (Add, Screen, …) only composite correctly against a real opaque
+  // backdrop — on a transparent canvas an additive glow baked on a black
+  // background renders that black as an opaque block. Omit backgroundColor for a
+  // transparent overlay (accepting that limitation for such blends).
+  const player = new SSCanvasPlayer(canvas, { autoStart: true, backgroundColor: 0x333333 });
   player.subFrameEnabled = true;
 
   // Keep the drawing buffer matched to the window so the aspect ratio is correct

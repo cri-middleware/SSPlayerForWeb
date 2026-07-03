@@ -180,6 +180,7 @@ export class SSPlayerElement extends HTMLElement {
       powerPreference: this.powerAttr(),
       antialias: this.hasAttribute('antialias'),
       pauseWhenHidden: this.hasAttribute('pause-when-hidden'),
+      backgroundColor: this.colorAttr('background'),
     };
     this._player = new SSCanvasPlayer(this._canvas!, options);
     const speed = this.numAttr('speed');
@@ -255,6 +256,15 @@ export class SSPlayerElement extends HTMLElement {
   private powerAttr(): SSCanvasPlayerOptions['powerPreference'] {
     const v = this.getAttribute('power-preference');
     return v === 'high-performance' || v === 'low-power' || v === 'default' ? v : undefined;
+  }
+
+  /** Parse an opaque backdrop colour attribute: `#RRGGBB`, `0xRRGGBB`, or `RRGGBB`. */
+  private colorAttr(name: string): number | undefined {
+    const v = this.getAttribute(name);
+    if (v === null) return undefined;
+    const hex = v.trim().replace(/^#/, '').replace(/^0x/i, '');
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return undefined;
+    return parseInt(hex, 16);
   }
 }
 

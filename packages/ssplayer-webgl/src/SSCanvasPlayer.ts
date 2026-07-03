@@ -10,6 +10,19 @@ export interface SSCanvasPlayerOptions {
   powerPreference?: 'low-power' | 'high-performance' | 'default';
   pauseWhenHidden?: boolean;
   autoStart?: boolean;
+  /**
+   * Opaque backdrop colour (0xRRGGBB) to clear each frame to. When omitted the
+   * canvas is cleared TRANSPARENT (0,0,0,0) for overlay use.
+   *
+   * Set this when the animation uses additive / backdrop-reading blend modes
+   * (Add, Screen, Mul, …): those composite against the framebuffer, so they are
+   * only correct when a real opaque backdrop is present. On a transparent canvas
+   * an additive sprite whose texture is a glow baked on an opaque black
+   * background renders that black as an opaque block (it has nothing to add
+   * onto). This is inherent to premultiplied-alpha compositing — ssplayer-pixi
+   * avoids it the same way, by rendering on an opaque `backgroundColor`.
+   */
+  backgroundColor?: number;
 }
 
 export class SSCanvasPlayer {
@@ -36,6 +49,9 @@ export class SSCanvasPlayer {
   private lastTime: number = 0;
   private _isPlaying: boolean = false;
   private transformMatrix = new Float32Array([1, 0, 0, 1, 0, 0]); // [a, b, c, d, tx, ty]
+  // Per-frame clear colour. Transparent by default; an opaque backdrop when
+  // options.backgroundColor is set (see SSCanvasPlayerOptions.backgroundColor).
+  private _clearColor: [number, number, number, number] = [0, 0, 0, 0];
 
   constructor(
     target: HTMLCanvasElement | WebGLRenderingContext | WebGL2RenderingContext,
@@ -59,6 +75,11 @@ export class SSCanvasPlayer {
     this.renderer = new SSWebGLRenderer(this.gl);
     this.resourceManager = new SSWebGLResourceManager(this.gl);
     this.internalPlayer = new DirectInternalPlayer(this.resourceManager);
+
+    if (options.backgroundColor !== undefined) {
+      const c = options.backgroundColor;
+      this._clearColor = [((c >> 16) & 0xff) / 255, ((c >> 8) & 0xff) / 255, (c & 0xff) / 255, 1];
+    }
 
     if (options.autoStart) {
       this.startTicker();
@@ -157,7 +178,8 @@ export class SSCanvasPlayer {
   public draw(): void {
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.clearColor(0, 0, 0, 0);
+    const [r, g, b, a] = this._clearColor;
+    gl.clearColor(r, g, b, a);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 
     // Projection and all other program/blend state is set up in renderer.render().
