@@ -1,6 +1,7 @@
-import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, PartState, FrameData, MaskPlanner, FrameDataMaskSource } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, PartState, FrameData, MaskPlanner, FrameDataMaskSource, ssRuntime } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
+import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
 import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
 export class SSWebGLRenderer {
@@ -63,6 +64,19 @@ export class SSWebGLRenderer {
   private transformMatrix3 = new Float32Array(9);
   // Last GL blend state applied via applyBlend(); -1 forces a re-apply.
   private _lastBlend = -1;
+
+  // --- SpriteStudio integration shaders (ssae `SHDR` attribute; SSPLAYER_WEBGL_SPEC
+  // §6/§10) ---
+  // Compiled ss-* programs keyed by id_hash (null cached = not a built-in id → the
+  // part falls back to the plain parts-color program). Lazily compiled on the first
+  // shader part so shader-free animations never pay for them; one program per
+  // id_hash, reused across all parts/textures (the texture is bound to a unit and
+  // the ss uniforms are set per draw, so no per-texture pooling is needed — unlike
+  // ssplayer-pixi, whose Shader objects bake in their resources).
+  private ssShaderPrograms = new Map<number, SsShaderProgram | null>();
+  // Reused shader-attribute accessor + param scratch (GC-zero hot path, §6/§9).
+  private _scratchShader = new ssRuntime.PartAttributeShader();
+  private _ssParams = new Float32Array(8);
 
   // Normal has 12 indices
   private normalIndices = new Uint16Array([
@@ -300,6 +314,10 @@ export class SSWebGLRenderer {
     gb.parentMatrix = null;
     gb.updateWorldPositions();
 
+    // Whether this frame carries ANY `SHDR` (integration-shader) attributes. Frame-
+    // level gate so shader-free content skips the per-batch shader scan entirely.
+    const hasShaders = fd.shadersLength() > 0;
+
     // Static per-part mask flags (JS-cached, stable across WASM growth): 0x01
     // visibleInsideMask, 0x08 drawAsMask. Used to skip pure-mask colour and to
     // resolve masked-content polarity (§2-4). Null only before an animation is set.
@@ -388,6 +406,18 @@ export class SSWebGLRenderer {
       if (this._stencilSupported && maskWriterCount > 0 && (b.flags() & 0x01) !== 0 &&
           (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape)) {
         this.drawMaskedContent(player, resourceManager, b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts);
+        continue;
+      }
+
+      // SpriteStudio integration shader (`SHDR`): a NON-masked Normal batch that
+      // contains any shader part is drawn per-part (each with its own ss-* program +
+      // per-part uniforms, in draw order) instead of the batched path, so the shader
+      // parts composite correctly. Only reached when the frame has shaders. Not
+      // combined with masking (v1, matches ssplayer-pixi) — a masked shader part
+      // already took the drawMaskedContent path above and draws with the plain program.
+      if (hasShaders && kind === DrawBatchKind.Normal &&
+          this.normalBatchHasShader(fd, drawOrder, startRank, count, maskFlags)) {
+        this.drawShaderNormalBatch(b, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts);
         continue;
       }
 
@@ -756,6 +786,128 @@ export class SSWebGLRenderer {
   }
 
   /**
+   * Whether any drawable part in a batch carries a `SHDR` attribute. Cheap scan
+   * (reads part_state.shader()); only reached when the frame has shaders
+   * (fd.shadersLength() > 0). draw_as_mask parts are skipped — they never draw their
+   * colour, so their shader (if any) is irrelevant.
+   */
+  private normalBatchHasShader(fd: FrameData, drawOrder: Uint16Array, startRank: number, count: number, maskFlags: Uint8Array | null): boolean {
+    for (let c = 0; c < count; c++) {
+      const partIdx = drawOrder[startRank + c];
+      if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
+      const ps = fd.parts(partIdx, this._scratchPart);
+      if (ps && ps.shader() >= 0) return true;
+    }
+    return false;
+  }
+
+  /** Lazily compile (and cache) the ss-* program for `idHash`; null = not a built-in id. */
+  private acquireSsShaderProgram(idHash: number): SsShaderProgram | null {
+    let prog = this.ssShaderPrograms.get(idHash);
+    if (prog === undefined) {
+      const src = SS_SHADER_SOURCES.get(idHash);
+      prog = src ? new SsShaderProgram(this.gl, src) : null;
+      this.ssShaderPrograms.set(idHash, prog);
+    }
+    return prog;
+  }
+
+  /**
+   * Activate the ss-* program for a part's `SHDR` attribute and upload its per-part
+   * uniforms: param0..7, the cell's UV rect (min/max over the quad's 4 corner UVs, for
+   * ss-circle / ss-spot), and pixel size (1/texW, 1/texH). MUST be called AFTER the
+   * part's geometry is built (reads the corner UVs from this.batchUv). Returns the
+   * program (caller draws), or null when the id_hash isn't a built-in ss-* shader (the
+   * caller then falls back to the plain parts-color program). uProjection/uTransform/
+   * uColor mirror the context state the parts-color program uses (world tint = identity).
+   */
+  private applySsShader(fd: FrameData, shaderIdx: number, invW: number, invH: number): SsShaderProgram | null {
+    const attr = fd.shaders(shaderIdx, this._scratchShader);
+    if (!attr) return null;
+    const prog = this.acquireSsShaderProgram(attr.idHash());
+    if (!prog) return null;
+
+    const gl = this.gl;
+    gl.useProgram(prog.program);
+    if (prog.uProjection) gl.uniformMatrix3fv(prog.uProjection, false, this.projMatrix);
+    if (prog.uTransform) gl.uniformMatrix3fv(prog.uTransform, false, this.transformMatrix3);
+    if (prog.uColor) gl.uniform4f(prog.uColor, 1.0, 1.0, 1.0, 1.0);
+    if (prog.uTexture) gl.uniform1i(prog.uTexture, 0);
+
+    const p = this._ssParams;
+    p[0] = attr.param0(); p[1] = attr.param1(); p[2] = attr.param2(); p[3] = attr.param3();
+    p[4] = attr.param4(); p[5] = attr.param5(); p[6] = attr.param6(); p[7] = attr.param7();
+    if (prog.uParams) gl.uniform4fv(prog.uParams, p);
+
+    // Cell UV rect = (left, top, right, bottom) over the quad's 4 corner UVs (vertices
+    // 0..3; vertex 4 is the centre). buildOnePart wrote the normalised UVs to batchUv.
+    const uv = this.batchUv;
+    let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+    for (let q = 0; q < 4; q++) {
+      const uu = uv[q * 2];
+      const vv = uv[q * 2 + 1];
+      if (uu < minU) minU = uu;
+      if (uu > maxU) maxU = uu;
+      if (vv < minV) minV = vv;
+      if (vv > maxV) maxV = vv;
+    }
+    if (prog.uCellRect) gl.uniform4f(prog.uCellRect, minU, minV, maxU, maxV);
+    if (prog.uPixelSize) gl.uniform2f(prog.uPixelSize, invW, invH);
+    return prog;
+  }
+
+  /**
+   * Draw a NON-masked Normal batch containing ≥1 shader part, one part at a time in
+   * draw order (so overlap/compositing within the batch stays correct). Each part is
+   * built into the shared buffers, then drawn either with its ss-* program (SHDR
+   * resolves to a built-in) or the plain parts-color program (no/unknown shader). The
+   * batch shares one texture + blend, so the texture is bound once to unit 0 (both
+   * programs sample unit 0). Restores the parts-color program on return.
+   */
+  private drawShaderNormalBatch(
+    b: DrawBatch, drawOrder: Uint16Array, fd: FrameData, gb: GeometryBuilder,
+    invW: number, invH: number, maskFlags: Uint8Array | null,
+    texInfo: { tex: WebGLTexture; width: number; height: number } | null | undefined,
+    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+  ): void {
+    const gl = this.gl;
+    const pcp = this.partsColorProgram;
+    const startRank = b.startRank();
+    const count = b.count();
+
+    this.applyBlend(b.blendType());
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texInfo ? texInfo.tex : this.getWhiteTexture(gl));
+
+    for (let c = 0; c < count; c++) {
+      const partIdx = drawOrder[startRank + c];
+      if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue; // draw_as_mask: coverage only
+      const ps = fd.parts(partIdx, this._scratchPart);
+      const alpha = ps ? ps.alpha() : 1.0;
+      if (alpha <= 0) continue;
+      const shaderIdx = ps ? ps.shader() : -1;
+
+      // Build first so applySsShader can read the corner UVs for the cell rect.
+      const iCount = this.buildOnePart(DrawBatchKind.Normal, partIdx, fd, gb, invW, invH, meshVOff, meshIOff, shapeVertexCounts);
+      if (iCount === 0) continue;
+
+      const ssProg = shaderIdx >= 0 ? this.applySsShader(fd, shaderIdx, invW, invH) : null;
+      if (!ssProg) {
+        // Plain part: the parts-color program (its context-level uniforms —
+        // projection/transform/colour — persist across program switches).
+        gl.useProgram(pcp.program);
+        if (pcp.uTexture) gl.uniform1i(pcp.uTexture, 0);
+      }
+
+      this.uploadPart(this._builtVerts, iCount);
+      gl.drawElements(gl.TRIANGLES, iCount, this.indexType, 0);
+    }
+
+    // Restore the parts-color program for the following batches in this context.
+    gl.useProgram(pcp.program);
+  }
+
+  /**
    * Rasterise one planned writer (maskPlanner index `w`) into the stencil with
    * `stencilOp`. The mask program must be active (beginMaskWrite) with colour writes
    * off. Binds the writer's cutout texture, applies its precomputed §2-5 threshold
@@ -947,6 +1099,10 @@ export class SSWebGLRenderer {
       this.maskProgram.destroy(gl);
       this.maskProgram = null;
     }
+    for (const prog of this.ssShaderPrograms.values()) {
+      if (prog) prog.destroy(gl);
+    }
+    this.ssShaderPrograms.clear();
     gl.deleteBuffer(this.posBuffer);
     gl.deleteBuffer(this.uvBuffer);
     gl.deleteBuffer(this.colorBuffer);

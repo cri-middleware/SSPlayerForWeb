@@ -8,7 +8,7 @@ defineSSPlayerElement();
 // Bundled sample ssabs served from public/ (root). External textures are siblings.
 const BUNDLED_SSABS = [
   'Basic.ssab', 'Shape.ssab', 'PartsColor.ssab', 'Mesh.ssab', 'Ringo.ssab',
-  'Effect.ssab', 'Mask.ssab', 'Instance.ssab', 'BlendMode.ssab',
+  'Effect.ssab', 'Mask.ssab', 'Instance.ssab', 'BlendMode.ssab', 'Shader.ssab',
 ];
 
 const player = document.getElementById('player') as SSPlayerElement;

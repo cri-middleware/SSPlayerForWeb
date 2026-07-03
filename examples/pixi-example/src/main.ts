@@ -89,17 +89,19 @@ async function main() {
     //    (BlendMode, PartsColor, Effect, Mask, …) can be loaded straight from the
     //    UI, not only via drag & drop. Vite does not glob files under public/, so
     //    the sample list is enumerated explicitly here.
-    const SAMPLE_SSABS = [
+    const BASE_SSABS = [
         'Ringo.ssab', '01-new.ssab', 'Basic.ssab', 'BlendMode.ssab', 'Bounding.ssab',
         'Effect.ssab', 'Instance.ssab', 'Instance_SourceAnime.ssab', 'Interpolation.ssab',
         'Interpolation_Easing_v1.ssab', 'Mask.ssab', 'Mesh.ssab', 'NineSlice.ssab',
         'PartsColor.ssab', 'Ringo_tyu.ssab', 'Shader.ssab', 'Shape.ssab', 'Signal.ssab',
         'Sound.ssab', 'Text.ssab', 'TextureChange.ssab', 'UserData.ssab',
-        // Embedded-texture SSABs (converter `--embedded`): the PNG is inlined in
-        // the .ssab, so these load with no sibling texture file.
-        'Basic_embedded.ssab', 'PartsColor_embedded.ssab', 'Mesh_embedded.ssab',
-        'Mask_embedded.ssab', 'Effect_embedded.ssab', 'BlendMode_embedded.ssab',
     ];
+    // Embedded-texture SSABs (converter `--embedded`): the PNG is inlined in the
+    // .ssab, so these load with no sibling texture file. Every base sample above has
+    // a matching `<name>_embedded.ssab` under public/, so derive the list instead of
+    // maintaining it by hand.
+    const EMBEDDED_SSABS = BASE_SSABS.map((n) => n.replace(/\.ssab$/, '_embedded.ssab'));
+    const SAMPLE_SSABS = [...BASE_SSABS, ...EMBEDDED_SSABS];
 
     // Load a bundled sample by filename (served from public/ at the site root).
     // Textures and any external instance packs resolve by URL relative to root,
