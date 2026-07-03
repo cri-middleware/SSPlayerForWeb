@@ -21,7 +21,7 @@ converted `.ssab`.
 ## CLI
 
 ```bash
-# 1. Build the converter WASM first (not tracked in git):
+# 1. Build the converter WASM first (not tracked in git, requires rustup and `cargo install wasm-pack`):
 pnpm run build:wasm
 
 # 2. Convert a project. Output goes next to the .sspj unless -o is given:

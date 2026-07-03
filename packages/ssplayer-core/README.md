@@ -56,7 +56,7 @@ pnpm add @spritestudio/ssplayer-core
 WASM binaries are **not tracked in git**. From the repo root:
 
 ```bash
-pnpm run build:wasm   # build the ssruntime WASM (needs Rust)
+pnpm run build:wasm   # build the ssruntime WASM (needs rustup & cargo install wasm-pack)
 pnpm run build        # build all TS packages
 ```
 

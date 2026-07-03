@@ -24,7 +24,7 @@ Webブラウザ上で [OPTPiX SpriteStudio 7](https://www.webtech.co.jp/spritest
 
 ### 1. サンプルを動かしてみる
 1. **リポジトリの取得**: このリポジトリをクローンまたはダウンロードします。
-2. **WASM のビルド**: `pnpm run build:wasm` を実行します（Rust コードを変更した場合や、未ビルドの場合に必要です）。
+2. **WASM のビルド**: `pnpm run build:wasm` を実行します（Rust コードを変更した場合や、未ビルドの場合に必要です。事前に `rustup` 環境の構築と `cargo install wasm-pack` によるインストールが必要です）。
 3. **パッケージのビルド**: プロジェクトのルートで `pnpm install` に続いて `pnpm run build` を実行します。
 4. **実行**: `examples/pixi-example` に移動し、`pnpm run dev` を実行します。
 

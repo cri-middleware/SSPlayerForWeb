@@ -33,5 +33,5 @@ This file contains rules, context, and guidelines for AI agents working on the *
 
 - **User Global Rules**: The user has configured `rtk` (Rust Token Killer) as a CLI proxy. All command-line operations should ideally respect this hook-based usage implicitly, but keep in mind that `rtk` handles token-saving analytics.
 - **TypeScript**: Use strict typing. Avoid `any` where possible. The examples consume built packages, so ensure you run `pnpm run build` from the root whenever modifying `packages/`.
-- **Rust & WASM Builds**: Generated WASM binaries are **not tracked in git**. When checking out the project freshly or modifying Rust code, WASM must be built using `pnpm run build:wasm` (or `pnpm run build:wasm:win` on Windows).
+- **Rust & WASM Builds**: Generated WASM binaries are **not tracked in git**. When checking out the project freshly or modifying Rust code, WASM must be built using `pnpm run build:wasm` (or `pnpm run build:wasm:win` on Windows). This requires `rustup` and `cargo install wasm-pack`.
 - **Rust FFI**: Ensure any modifications to the `ssruntime` expose a C-API/FFI compatible with `wasm-bindgen`.

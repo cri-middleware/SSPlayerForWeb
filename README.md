@@ -24,7 +24,7 @@ Comprehensive documentation is available in the `docs/` folder (hosted via ViteP
 
 ### 1. Try out the Examples
 1. **Get the Repo**: Clone or download this repository.
-2. **Build WASM**: Run `pnpm run build:wasm` (required if Rust code is modified or not built yet).
+2. **Build WASM**: Run `pnpm run build:wasm` (required if Rust code is modified or not built yet. Requires `rustup` and running `cargo install wasm-pack` beforehand).
 3. **Build the packages**: Run `pnpm install` and then `pnpm run build` from the project root.
 4. **Run**: Navigate to `examples/pixi-example` and run `pnpm run dev`.
 

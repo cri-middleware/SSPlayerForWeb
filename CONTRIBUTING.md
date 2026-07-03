@@ -49,7 +49,7 @@ not attach it to a public issue — contact the maintainers privately instead.*
 
 ### Prerequisites
 - **Node.js** and **pnpm** (this repo uses pnpm workspaces).
-- **Rust** and **wasm-pack** / `wasm-bindgen` (only needed to (re)build the WASM).
+- **Rust (via rustup)** and **wasm-pack** / `wasm-bindgen` (only needed to (re)build the WASM, install via `cargo install wasm-pack`).
 
 ### Build
 Generated WASM binaries are **not tracked in git**, so a fresh checkout must
@@ -60,7 +60,7 @@ build them first.
 # 0. Install dependencies (also initializes workspaces)
 pnpm install
 
-# 1. Build the Rust runtime + converter to WASM (requires Rust)
+# 1. Build the Rust runtime + converter to WASM (requires rustup and `cargo install wasm-pack`)
 pnpm run build:wasm
 
 # 2. Build all TypeScript packages
@@ -155,7 +155,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 
 ### 前提条件
 - **Node.js** および **pnpm** (本リポジトリは pnpm workspaces を使用します)。
-- **Rust** および **wasm-pack** / `wasm-bindgen` (WASM を再ビルドする場合のみ必要)。
+- **Rust (rustup)** および **wasm-pack** / `wasm-bindgen` (WASM を再ビルドする場合のみ必要。`cargo install wasm-pack` でインストール)。
 
 ### ビルド方法
 生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時は
@@ -166,7 +166,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 # 0. 依存関係のインストール (ワークスペースの初期化も兼ねます)
 pnpm install
 
-# 1. Rust ランタイムとコンバータを WASM へビルド (Rust 環境が必要)
+# 1. Rust ランタイムとコンバータを WASM へビルド (rustup 環境および `cargo install wasm-pack` が必要)
 pnpm run build:wasm
 
 # 2. すべての TypeScript パッケージをビルド
