@@ -28,6 +28,25 @@ async function main() {
   const player = new SSCanvasPlayer(canvas, { autoStart: true, backgroundColor: 0x333333 });
   player.subFrameEnabled = true;
 
+  // --- Sound ---
+  // Nothing to wire up: when an SSAB references sounds, the player auto-creates a
+  // default Web Audio manager on setAnimation and plays them (autoAudio, on by
+  // default). Just select/drop Sound.ssab. Audio starts after a user gesture per
+  // the browser autoplay policy — clicking anywhere on the page resumes it.
+  //
+  // The onAudio listener below is OPTIONAL — only for showing which sound fired.
+  // Playback happens automatically regardless of whether you listen.
+
+  // --- Animation event listeners (06_playback_control) ---
+  player.onAnimationEnd(() => console.log('[SS][end] animation finished'));
+  player.onAnimationLoop(() => console.log('[SS][loop] animation looped'));
+  player.onUserData((e) => console.log('[SS][userData]', e));
+  player.onSignal((e) => console.log('[SS][signal]', e));
+  player.onAudio((e) => {
+    console.log('[SS][audio]', e);
+    setStatus(`♪ Audio "${e.soundName ?? e.soundNameHash}" (loop ${e.loopNum})`);
+  });
+
   // Keep the drawing buffer matched to the window so the aspect ratio is correct
   // (the projection is recomputed from canvas.width/height each frame) and re-centre
   // the animation. Runs on load and on every window resize.

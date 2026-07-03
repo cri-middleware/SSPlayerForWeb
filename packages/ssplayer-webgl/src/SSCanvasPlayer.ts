@@ -1,6 +1,60 @@
-import { DirectInternalPlayer, IAudioManager, initializeWasm } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, IAudioManager, initializeWasm, ssFormat } from '@spritestudio/ssplayer-core';
 import { SSWebGLRenderer } from './SSWebGLRenderer.js';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
+
+// --- Animation event payloads (06_playback_control.ja.md) ---
+// Event extraction lives here in the renderer package (not core): it reads the
+// SSAB events table for the current animation via the runtime manager's
+// introspection accessors, parses the FlatBuffer payloads, and dispatches typed
+// callbacks. Driven once per frame from update() (see pollEvents). Mirrors
+// ssplayer-pixi/src/SSPlayer.ts (memory: events-handled-in-pixi-not-core).
+
+/**
+ * A user-data event fired by a part on the frame it was authored. Optional
+ * fields mirror the SSAB payload: each is present only if that value type was
+ * authored (an authored integer of `0` is still present, distinct from absent).
+ */
+export interface SSUserDataEvent {
+    partIndex: number;
+    partName: string | null;
+    integer?: number;
+    str?: string;
+    /** User-data rectangle as authored (left/top/right/bottom). */
+    rect?: { x1: number; y1: number; x2: number; y2: number };
+    /** User-data point as authored. */
+    point?: { x: number; y: number };
+}
+
+/**
+ * A signal event fired by a part. `params` maps each command parameter id to
+ * its authored value (bool / int / float / string). Only **active** signals are
+ * dispatched (mirroring the Godot / Unity players and the porting guide).
+ */
+export interface SSSignalEvent {
+    partIndex: number;
+    partName: string | null;
+    active: boolean;
+    commandId: string | null;
+    params: Record<string, boolean | number | string>;
+}
+
+/**
+ * An audio event fired by a part: the SSAB sound reference (hashes + alias
+ * name) plus loop count. The runtime plays no audio — the host resolves the
+ * sound and plays it on its own audio engine (11_optional_features.ja.md).
+ * Attach an {@link IAudioManager} (e.g. `SSWebAudioManager`) to actually play it.
+ */
+export interface SSAudioEvent {
+    partIndex: number;
+    partName: string | null;
+    soundListNameHash: number;
+    soundNameHash: number;
+    soundName: string | null;
+    loopNum: number;
+}
+
+/** Unsubscribe handle returned by the `onX` event-registration methods. */
+export type Unsubscribe = () => void;
 
 export interface SSCanvasPlayerOptions {
   premultipliedAlpha?: boolean;
@@ -10,6 +64,21 @@ export interface SSCanvasPlayerOptions {
   powerPreference?: 'low-power' | 'high-performance' | 'default';
   pauseWhenHidden?: boolean;
   autoStart?: boolean;
+  /**
+   * Automatically play the animation's sounds (default `true`).
+   *
+   * When the loaded SSAB references sounds and no `audioManager` has been set, the
+   * player lazily creates a default {@link SSWebAudioManager} on `setAnimation`
+   * and wires it up — so sound "just works" with zero consumer code, like
+   * ssplayer-pixi. The audio adapter is loaded via a **dynamic import**, so it is
+   * a separate chunk that is fetched only when a sound-bearing animation is set:
+   * animations without sound (and the `./lite` build) never pull in any audio
+   * code, keeping the default bundle within the size budget (spec §11.1).
+   *
+   * Set to `false` for full manual control (attach your own `IAudioManager`, or
+   * none) — nothing audio-related is then loaded automatically.
+   */
+  autoAudio?: boolean;
   /**
    * Opaque backdrop colour (0xRRGGBB) to clear each frame to. When omitted the
    * canvas is cleared TRANSPARENT (0,0,0,0) for overlay use.
@@ -52,6 +121,19 @@ export class SSCanvasPlayer {
   // Per-frame clear colour. Transparent by default; an opaque backdrop when
   // options.backgroundColor is set (see SSCanvasPlayerOptions.backgroundColor).
   private _clearColor: [number, number, number, number] = [0, 0, 0, 0];
+
+  // --- Animation event listeners (06_playback_control.ja.md) ---
+  private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
+  private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
+  private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
+  private readonly _animEndListeners = new Set<() => void>();
+  private readonly _animLoopListeners = new Set<() => void>();
+  // Rising-edge memory for onAnimationEnd (!playing && end-reached): the runtime
+  // leaves is_end_frame_reached() asserted after stopping, so we notify once on
+  // the false→true transition.
+  private _prevFinished = false;
+  // Guards the one-time default-audio auto-wire (see ensureAutoAudio).
+  private _audioAutoWired = false;
 
   constructor(
     target: HTMLCanvasElement | WebGLRenderingContext | WebGL2RenderingContext,
@@ -117,7 +199,36 @@ export class SSCanvasPlayer {
   }
 
   public async setAnimation(name: string): Promise<void> {
+    // Auto-wire a default audio manager BEFORE setAnimation, since the core
+    // preloads the animation's sounds there (only when an audioManager is set).
+    await this.ensureAutoAudio();
     await this.internalPlayer.setAnimation(name);
+  }
+
+  /**
+   * Lazily create + wire a default {@link SSWebAudioManager} so sound plays with
+   * zero consumer code (mirrors ssplayer-pixi's auto-behaviour). No-op when:
+   * `options.autoAudio === false`, an `audioManager` is already set (consumer
+   * supplied one), already attempted, or the current SSAB has no sounds.
+   *
+   * The adapter is pulled in via a **dynamic import**, so it lands in a separate
+   * chunk fetched only here, only when sounds exist — the base player and the
+   * `./lite` build stay audio-free (spec §11.1 size budget). Failures (e.g. an
+   * environment without dynamic import) are swallowed so the animation still
+   * plays silently; opt out with `autoAudio: false` + your own `IAudioManager`.
+   */
+  private async ensureAutoAudio(): Promise<void> {
+    if (this.options.autoAudio === false) return;
+    if (this._audioAutoWired || this.internalPlayer.audioManager) return;
+    if (this.internalPlayer.runtimeManager.getSounds().length === 0) return;
+    this._audioAutoWired = true;
+    try {
+      const { SSWebAudioManager } = await import('./SSWebAudioManager.js');
+      // bindToPlayer sets `this.audioManager` and subscribes onAudio → play.
+      new SSWebAudioManager().bindToPlayer(this);
+    } catch (e) {
+      console.warn('[SSCanvasPlayer] Failed to auto-load the audio adapter; sound disabled. Attach an IAudioManager manually if needed.', e);
+    }
   }
 
   public play(startFrame?: number): void {
@@ -170,8 +281,17 @@ export class SSCanvasPlayer {
   }
 
   public update(deltaMs: number): void {
-    if (this._isPlaying) {
-      this.internalPlayer.update(deltaMs);
+    if (!this._isPlaying) return;
+    // While paused, internalPlayer.update() still advances `independent` slots but
+    // does NOT move the timeline, so no events are passed — skip polling then.
+    const pausing = this.internalPlayer.isPausing;
+    this.internalPlayer.update(deltaMs);
+    if (!pausing) {
+      // Drain the events accumulated by this update (user-data / signal / audio +
+      // animation end/loop) right away, while the runtime's passed-event buffer is
+      // still valid. Must run on the same tick that advanced — including the tick a
+      // non-looping animation finishes on.
+      this.pollEvents();
     }
   }
 
@@ -216,12 +336,186 @@ export class SSCanvasPlayer {
     this.canvas.style.height = cssH + 'px';
   }
 
-  public onUserData(cb: any): () => void { return () => {}; }
-  public onSignal(cb: any): () => void { return () => {}; }
-  public onAudio(cb: any): () => void { return () => {}; }
-  public onAnimationEnd(cb: any): () => void { return () => {}; }
-  public onAnimationLoop(cb: any): () => void { return () => {}; }
+  // --- Animation events (06_playback_control.ja.md) ---
+  //
+  // Listeners are drained each frame by update() via pollEvents(). Each
+  // registration returns an unsubscribe function. The runtime plays no audio —
+  // onAudio hands the sound reference to the host (attach an IAudioManager such
+  // as SSWebAudioManager to actually play it).
 
+  /** Registers a user-data event listener. Returns an unsubscribe function. */
+  public onUserData(listener: (e: SSUserDataEvent) => void): Unsubscribe {
+    this._userDataListeners.add(listener);
+    return () => { this._userDataListeners.delete(listener); };
+  }
+
+  /** Registers a signal event listener (active signals only). Returns an unsubscribe function. */
+  public onSignal(listener: (e: SSSignalEvent) => void): Unsubscribe {
+    this._signalListeners.add(listener);
+    return () => { this._signalListeners.delete(listener); };
+  }
+
+  /** Registers an audio event listener. Returns an unsubscribe function. */
+  public onAudio(listener: (e: SSAudioEvent) => void): Unsubscribe {
+    this._audioListeners.add(listener);
+    return () => { this._audioListeners.delete(listener); };
+  }
+
+  /** Fires once when a non-looping animation reaches its end and stops. */
+  public onAnimationEnd(listener: () => void): Unsubscribe {
+    this._animEndListeners.add(listener);
+    return () => { this._animEndListeners.delete(listener); };
+  }
+
+  /** Fires on each loop boundary crossing. */
+  public onAnimationLoop(listener: () => void): Unsubscribe {
+    this._animLoopListeners.add(listener);
+    return () => { this._animLoopListeners.delete(listener); };
+  }
+
+  /**
+   * Drain and dispatch the events accumulated by the last runtime update:
+   * user-data / signal / audio, plus animation end (edge) and loop (pulse).
+   * Called from update() right after `internalPlayer.update()`, while the
+   * runtime's passed-event buffer is still valid. Reads event payloads from the
+   * current animation's SSAB events table via the runtime manager's
+   * introspection accessors. Safe with no listeners / no animation.
+   */
+  private pollEvents(): void {
+    const ctx = this.internalPlayer.runtimeManager.context;
+
+    // onAnimationEnd: rising edge of "stopped at end" (the runtime leaves
+    // is_end_frame_reached() asserted after stopping, so notify once).
+    const finished = !ctx.is_playing() && ctx.is_end_frame_reached();
+    if (finished && !this._prevFinished) {
+      if (this._animEndListeners.size > 0) {
+        this._animEndListeners.forEach(cb => cb());
+      }
+    }
+    this._prevFinished = finished;
+
+    // onAnimationLoop: is_looped() pulses true for the single update that crossed
+    // a loop boundary, so dispatch it verbatim.
+    if (this._animLoopListeners.size > 0 && ctx.is_looped()) {
+      this._animLoopListeners.forEach(cb => cb());
+    }
+
+    const count = ctx.get_passed_event_count();
+    if (count <= 0) return;
+    if (this._userDataListeners.size === 0 && this._signalListeners.size === 0 && this._audioListeners.size === 0) return;
+
+    const anim = this.internalPlayer.runtimeManager.getCurrentAnimationData();
+    if (!anim) return;
+
+    // is_playing_forward() handles the Forward/Backward/PingPong direction state;
+    // getSpeed() handles user-level time reversal. Audio only plays going forward.
+    const isPlayingForward = (ctx.is_playing_forward() === (this.internalPlayer.getSpeed() >= 0));
+
+    for (let i = 0; i < count; i++) {
+      // get_passed_event_index returns the index into this animation's per-frame
+      // events table (single-source playback: always primary).
+      const eventIdx = ctx.get_passed_event_index(i);
+      const events = anim.events(eventIdx);
+      if (!events) continue;
+      if (this._userDataListeners.size > 0) this.dispatchUserData(events);
+      if (this._signalListeners.size > 0) this.dispatchSignals(events);
+      if (this._audioListeners.size > 0 && isPlayingForward) this.dispatchAudios(events);
+    }
+  }
+
+  private dispatchUserData(events: ssFormat.EventsPerFrame): void {
+    const mgr = this.internalPlayer.runtimeManager;
+    const n = events.usersLength();
+    for (let j = 0; j < n; j++) {
+      const user = events.users(j);
+      const val = user?.value();
+      if (!user || !val) continue;
+      const partIndex = user.partIndex();
+      const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex) };
+      const intEntry = val.integer();
+      if (intEntry) ev.integer = intEntry.value();
+      const str = val.str();
+      if (str !== null) ev.str = str;
+      const rect = val.rect();
+      if (rect) ev.rect = { x1: rect.x1(), y1: rect.y1(), x2: rect.x2(), y2: rect.y2() };
+      const point = val.point();
+      if (point) ev.point = { x: point.v1(), y: point.v2() };
+      this._userDataListeners.forEach(cb => cb(ev));
+    }
+  }
+
+  private dispatchSignals(events: ssFormat.EventsPerFrame): void {
+    const mgr = this.internalPlayer.runtimeManager;
+    const n = events.signalsLength();
+    for (let j = 0; j < n; j++) {
+      const sig = events.signals(j);
+      const val = sig?.value();
+      if (!sig || !val) continue;
+      // Skip inactive signals (Godot / Unity / porting-guide behaviour).
+      if (!val.active()) continue;
+
+      const params: Record<string, boolean | number | string> = {};
+      const pn = val.paramsLength();
+      for (let k = 0; k < pn; k++) {
+        const param = val.params(k);
+        if (!param) continue;
+        const paramId = param.paramId();
+        if (paramId === null) continue;
+
+        // Resolve the param's union value (Bool/Index/Integer/Floating/Text).
+        let boxed: boolean | number | string | undefined;
+        switch (param.valueType()) {
+          case ssFormat.SignalCommandParamValue.Bool:
+            boxed = (param.value(new ssFormat.BoolValueEntry()) as ssFormat.BoolValueEntry | null)?.value(); break;
+          case ssFormat.SignalCommandParamValue.Index:
+          case ssFormat.SignalCommandParamValue.Integer:
+            boxed = (param.value(new ssFormat.IntValueEntry()) as ssFormat.IntValueEntry | null)?.value(); break;
+          case ssFormat.SignalCommandParamValue.Floating:
+            boxed = (param.value(new ssFormat.FloatValueEntry()) as ssFormat.FloatValueEntry | null)?.value(); break;
+          case ssFormat.SignalCommandParamValue.Text: {
+            const s = (param.value(new ssFormat.StringValueEntry()) as ssFormat.StringValueEntry | null)?.value();
+            boxed = s ?? undefined; break;
+          }
+          default: continue;
+        }
+        if (boxed !== undefined) params[paramId] = boxed;
+      }
+
+      const partIndex = sig.partIndex();
+      const ev: SSSignalEvent = {
+        partIndex,
+        partName: mgr.getPartName(partIndex),
+        active: true,
+        commandId: val.commandId(),
+        params,
+      };
+      this._signalListeners.forEach(cb => cb(ev));
+    }
+  }
+
+  private dispatchAudios(events: ssFormat.EventsPerFrame): void {
+    const mgr = this.internalPlayer.runtimeManager;
+    const n = events.audiosLength();
+    for (let j = 0; j < n; j++) {
+      const audio = events.audios(j);
+      const val = audio?.value();
+      if (!audio || !val) continue;
+      const partIndex = audio.partIndex();
+      const ev: SSAudioEvent = {
+        partIndex,
+        partName: mgr.getPartName(partIndex),
+        soundListNameHash: val.soundListNameHash(),
+        soundNameHash: val.soundNameHash(),
+        soundName: val.soundName(),
+        loopNum: val.loopNum(),
+      };
+      this._audioListeners.forEach(cb => cb(ev));
+    }
+  }
+
+  public get audioManager(): IAudioManager | null {
+    return this.internalPlayer.audioManager;
+  }
   public set audioManager(v: IAudioManager | null) {
     this.internalPlayer.audioManager = v;
   }

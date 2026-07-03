@@ -53,9 +53,10 @@ export class SSPlayerElement extends HTMLElement {
   private _readyPromise: Promise<void> = Promise.resolve();
   private _readyResolve: (() => void) | null = null;
 
-  // Player-event unsubscribers, torn down on disconnect. Wired now even though the
-  // WebGL player's on* hooks are currently no-ops (P0 event work pending): once they
-  // fire, the element re-dispatches them as CustomEvents with no further change here.
+  // Player-event unsubscribers, torn down on disconnect. The player's on* hooks
+  // are re-dispatched as DOM CustomEvents (see wireEvents). Audio playback itself
+  // is opt-in: attach an SSWebAudioManager to `el.player` to hear `onAudio` sounds
+  // (the 'audio' CustomEvent is still emitted regardless, for host wiring).
   private _unsubscribe: Array<() => void> = [];
 
   /** Resolves when the player exists and wasm is initialised (safe to load/play). */
@@ -190,13 +191,15 @@ export class SSPlayerElement extends HTMLElement {
 
   private wireEvents(): void {
     const player = this._player!;
-    // These re-dispatch player events as DOM CustomEvents. The WebGL player's on*
-    // hooks are no-ops today (P0 pending); this wiring is inert until they fire.
+    // Re-dispatch player events as DOM CustomEvents so declarative hosts can
+    // listen on the element. 'audio' carries the sound reference only — actual
+    // playback requires an SSWebAudioManager attached to `el.player`.
     this._unsubscribe.push(
       player.onAnimationEnd(() => this.emit('ended')),
       player.onAnimationLoop(() => this.emit('loop')),
       player.onUserData((e: unknown) => this.emit('userdata', e)),
       player.onSignal((e: unknown) => this.emit('signal', e)),
+      player.onAudio((e: unknown) => this.emit('audio', e)),
     );
   }
 
