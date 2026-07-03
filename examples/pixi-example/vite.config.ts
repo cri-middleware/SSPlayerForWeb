@@ -3,9 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import viteCompression from 'vite-plugin-compression';
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
   // package.json から pixi.js のバージョンを動的に取得する
-  const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf-8'));
   const rawVersion = (pkg.dependencies && pkg.dependencies['pixi.js']) || 
                      (pkg.devDependencies && pkg.devDependencies['pixi.js']) || 
                      '^8.0.0';
@@ -21,6 +21,9 @@ export default defineConfig(() => {
           drop_debugger: true,
         },
       },
+      rollupOptions: {
+        external: ['pixi.js'],
+      }
     },
     plugins: [
       viteCompression({ algorithm: 'gzip', filter: /\.(js|mjs|json|css|html|wasm)$/i }),
@@ -28,23 +31,14 @@ export default defineConfig(() => {
       {
         name: 'externalize-pixi',
         enforce: 'pre',
-        resolveId(source) {
-          if (source === 'pixi.js') {
-            return { id: 'pixi.js', external: true };
-          }
-        },
         transformIndexHtml(html) {
-          return html.replace(
-            '<!-- PIXI_IMPORT_MAP -->',
-            `<script type="importmap">
-  {
-    "imports": {
-      "pixi.js": "${pixiUrl}"
-    }
-  }
-</script>
-    <link rel="modulepreload" href="${pixiUrl}">`
-          );
+          if (command === 'build') {
+            return html.replace(
+              '<!-- PIXI_IMPORT_MAP -->',
+              `<script type="importmap">\n  {\n    "imports": {\n      "pixi.js": "${pixiUrl}"\n    }\n  }\n</script>\n    <link rel="modulepreload" href="${pixiUrl}">`
+            );
+          }
+          return html;
         }
       }
     ]
