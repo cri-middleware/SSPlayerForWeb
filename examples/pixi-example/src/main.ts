@@ -13,7 +13,7 @@ async function main() {
     // Exclusion / Invert) are now real fixed-function GPU blends that read the live
     // framebuffer, so this background IS the backdrop they composite against — e.g.
     // Invert/Exclusion over this blue invert it toward yellow, matching the editor.
-    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgl' });
+    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgpu' });
     
     const container = document.getElementById('canvas-container');
     if (container) {
