@@ -3,5 +3,7 @@ packages:
   - "examples/*"
   - "docs"
 allowBuilds:
+  core-js: set this to true or false
   esbuild: true
+  fsevents: set this to true or false
   puppeteer: set this to true or false
