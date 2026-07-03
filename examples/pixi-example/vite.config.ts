@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import fs from 'fs';
 import path from 'path';
+import viteCompression from 'vite-plugin-compression';
 
 export default defineConfig(() => {
   // package.json から pixi.js のバージョンを動的に取得する
@@ -9,6 +10,7 @@ export default defineConfig(() => {
                      (pkg.devDependencies && pkg.devDependencies['pixi.js']) || 
                      '^8.0.0';
   const pixiVersion = rawVersion.replace(/[\^~]/g, '');
+  const pixiUrl = `https://cdn.jsdelivr.net/npm/pixi.js@${pixiVersion}/+esm`;
 
   return {
     build: {
@@ -21,6 +23,8 @@ export default defineConfig(() => {
       },
     },
     plugins: [
+      viteCompression({ algorithm: 'gzip', filter: /\.(js|mjs|json|css|html|wasm)$/i }),
+      viteCompression({ algorithm: 'brotliCompress', ext: '.br', filter: /\.(js|mjs|json|css|html|wasm)$/i }),
       {
         name: 'externalize-pixi',
         enforce: 'pre',
@@ -35,10 +39,11 @@ export default defineConfig(() => {
             `<script type="importmap">
   {
     "imports": {
-      "pixi.js": "https://cdn.jsdelivr.net/npm/pixi.js@${pixiVersion}/+esm"
+      "pixi.js": "${pixiUrl}"
     }
   }
-</script>`
+</script>
+    <link rel="modulepreload" href="${pixiUrl}">`
           );
         }
       }
