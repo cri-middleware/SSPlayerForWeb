@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, PartState, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -102,9 +102,12 @@ export class SSPlayer extends Container {
     private activeMeshes: number = 0;
 
     // Reused per-frame scratch so the render hot path allocates nothing: a
-    // shared PartState wrapper (re-positioned per part) and a transient 2D
-    // affine for an instance part's own world matrix before composition.
-    private readonly scratchPartState = new PartState();
+    // zero-copy raw reader for the FlatBuffers struct vectors (bypasses the
+    // per-element accessors — 07_render_loop.ja.md §2) and a transient 2D affine
+    // for an instance part's own world matrix before composition. The raw reader
+    // is bound via its `*Of(frameData, …)` helpers at each read so it stays
+    // correct across instance-child recursion (which rebinds it) and re-fetches.
+    private readonly _raw = new FrameDataRaw();
     private readonly scratchInstMat = new Float32Array(6);
 
     // Reused per-frame scratch for effect draw-call batching: a pooled list of the
@@ -802,8 +805,7 @@ export class SSPlayer extends Container {
             if (kind === DrawBatchKind.Instance) {
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    const partState = frameData.parts(partIdx, this.scratchPartState);
-                    const alpha = partState ? partState.alpha() : 1.0;
+                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
 
                     const child = player.getInstanceChild(partIdx);
@@ -890,8 +892,7 @@ export class SSPlayer extends Container {
                     const partIdx = drawOrder[startRank + c];
                     // draw_as_mask parts are pure masks: coverage only, no colour.
                     if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
-                    const partState = frameData.parts(partIdx, this.scratchPartState);
-                    const alpha = partState ? partState.alpha() : 1.0;
+                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
 
                     const mesh = masked
@@ -918,8 +919,9 @@ export class SSPlayer extends Container {
                     // + pixel size as per-part uniforms) instead of the plain
                     // PartsColorShader. Not combined with masking (v1) — a
                     // masked shader part falls back to the plain masked path.
-                    const ssShader = (!masked && partState && partState.shader() >= 0)
-                        ? this.resolveSsShader(frameData, partState.shader(), uvs, texture, invTexW, invTexH)
+                    const shaderIdx = masked ? -1 : this._raw.partShaderOf(frameData, partIdx);
+                    const ssShader = shaderIdx >= 0
+                        ? this.resolveSsShader(frameData, shaderIdx, uvs, texture, invTexW, invTexH)
                         : null;
 
                     this.finishPart(mesh, 5, masked,
@@ -936,8 +938,7 @@ export class SSPlayer extends Container {
                     const numVerts = shapeVertexCounts[partIdx];
                     if (numVerts < 3) continue;
 
-                    const partState = frameData.parts(partIdx, this.scratchPartState);
-                    const alpha = partState ? partState.alpha() : 1.0;
+                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
 
                     const numIndices = (numVerts - 2) * 3;
@@ -974,8 +975,7 @@ export class SSPlayer extends Container {
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
                     if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
-                    const partState = frameData.parts(partIdx, this.scratchPartState);
-                    const alpha = partState ? partState.alpha() : 1.0;
+                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
 
                     const v0 = meshVOff[partIdx];
@@ -1027,8 +1027,7 @@ export class SSPlayer extends Container {
                 this._fxCount = 0;
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    const partState = frameData.parts(partIdx, this.scratchPartState);
-                    const alpha = partState ? partState.alpha() : 1.0;
+                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
 
                     const plan = player.getEffectDrawPlan(partIdx);

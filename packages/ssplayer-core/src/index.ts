@@ -2,6 +2,7 @@ export * from './SSRuntimeManager.js';
 export * from './IResourceManager.js';
 export * from './DirectInternalPlayer.js';
 export * from './GeometryBuilder.js';
+export * from './FrameDataRaw.js';
 export * as ssFormat from './ss/format.js';
 export * as ssRuntime from './ss/runtime.js';
 export * from './ss/runtime/frame-data.js';

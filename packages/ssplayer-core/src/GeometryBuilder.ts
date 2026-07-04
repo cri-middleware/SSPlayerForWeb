@@ -2,10 +2,7 @@ import type { SSRuntimeManager } from './SSRuntimeManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { BlendType } from './ss/format/blend-type.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
-import { PartState } from './ss/runtime/part-state.js';
-import { PartAttributePartColor } from './ss/runtime/part-attribute-part-color.js';
-import { SsAttributePartColorKeyValueColor } from './ss/runtime/ss-attribute-part-color-key-value-color.js';
-import { U8Rect } from './ss/runtime/u8-rect.js';
+import { FrameDataRaw } from './FrameDataRaw.js';
 
 /**
  * Encapsulates purely mathematical geometry operations:
@@ -28,40 +25,19 @@ export class GeometryBuilder {
      */
     public parentMatrix: Float32Array | null = null;
 
-    // Reused per-build scratch so the render hot path allocates nothing. The
-    // FlatBuffers wrappers are re-positioned in place via their `obj` param;
-    // the typed arrays hold the resolved 4 corner colors + center (×rgba) and
-    // their rates. A single part is built at a time, so sharing is safe.
-    private readonly _ps = new PartState();
-    private readonly _pc = new PartAttributePartColor();
-    private readonly _corner = new SsAttributePartColorKeyValueColor();
-    private readonly _rgba = new U8Rect();
+    // Zero-copy raw reader for the FlatBuffers struct vectors (parts /
+    // parts_color) — bypasses the per-element accessors that dominate frame-data
+    // cost in JS hosts (07_render_loop.ja.md §2). Bound per build call; the bind
+    // is cached by FlatBuffer identity so per-part rebinds are ~free.
+    private readonly _raw = new FrameDataRaw();
+    // Reused per-build scratch so the render hot path allocates nothing: the
+    // typed arrays hold the resolved 4 corner colors + center (×rgba) and their
+    // rates. A single part is built at a time, so sharing is safe.
     private readonly _cornerColors = new Float32Array(20); // [LT,RT,LB,RB,center] × [r,g,b,a]
     private readonly _cornerRates = new Float32Array(5);
 
     constructor(runtimeManager: SSRuntimeManager) {
         this.runtimeManager = runtimeManager;
-    }
-
-    /**
-     * Read one PartsColor corner into `_cornerColors`/`_cornerRates` at the
-     * given corner index (0=LT,1=RT,2=LB,3=RB). Uses the shared scratch
-     * wrappers, so the caller must consume the values before reading the next
-     * corner. Mirrors the SS6 default of opaque white / rate 0 when absent.
-     */
-    private readCorner(cornerIdx: number, corner: SsAttributePartColorKeyValueColor | null): void {
-        const base = cornerIdx * 4;
-        const c = this._cornerColors;
-        const rgba = corner ? corner.rgba(this._rgba) : null;
-        if (rgba) {
-            c[base + 0] = rgba.r() / 255.0;
-            c[base + 1] = rgba.g() / 255.0;
-            c[base + 2] = rgba.b() / 255.0;
-            c[base + 3] = rgba.a() / 255.0;
-        } else {
-            c[base + 0] = 1; c[base + 1] = 1; c[base + 2] = 1; c[base + 3] = 1;
-        }
-        this._cornerRates[cornerIdx] = corner ? corner.rate() : 0;
     }
 
     /**
@@ -134,31 +110,30 @@ export class GeometryBuilder {
         outCustom0: Float32Array
     ): void {
         const srcBase = partIdx * 10;
-        const partState = frameData.parts(partIdx, this._ps);
-        if (!partState) return;
+        const raw = this._raw.bind(frameData);
+        if (raw.partsLen === 0) return;
 
         const uvData = this.runtimeManager.getLocalUVs();
         if (uvData.length === 0) return;
 
-        const pcIdx = partState.partColor();
-        const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+        const pcIdx = raw.partColorIdx(partIdx);
 
         const colors = this._cornerColors;
         const rates = this._cornerRates;
         let pc_blendType = BlendType.Mix;
-        const hasPc = !!pc;
+        const hasPc = pcIdx >= 0;
 
-        if (pc) {
-            pc_blendType = pc.blendType();
+        if (hasPc) {
+            pc_blendType = raw.pcBlendType(pcIdx);
             // PartColor blend is only valid for Mix/Mul/Add/Sub (0..3). Any other
             // BlendType value (Mulalpha, Screen, …) must clamp to Mix, else no
             // flag below matches and the shader outputs black (10_parts_color §1-1).
             if (pc_blendType > BlendType.Sub) pc_blendType = BlendType.Mix;
             // Resolve each corner in place, then derive the center as the average.
-            this.readCorner(0, pc.lt(this._corner));
-            this.readCorner(1, pc.rt(this._corner));
-            this.readCorner(2, pc.lb(this._corner));
-            this.readCorner(3, pc.rb(this._corner));
+            raw.readCornerInto(pcIdx, 0, colors, rates);
+            raw.readCornerInto(pcIdx, 1, colors, rates);
+            raw.readCornerInto(pcIdx, 2, colors, rates);
+            raw.readCornerInto(pcIdx, 3, colors, rates);
             colors[16] = (colors[0] + colors[4] + colors[8]  + colors[12]) * 0.25;
             colors[17] = (colors[1] + colors[5] + colors[9]  + colors[13]) * 0.25;
             colors[18] = (colors[2] + colors[6] + colors[10] + colors[14]) * 0.25;
@@ -177,7 +152,7 @@ export class GeometryBuilder {
         // source and the renderer's mesh.alpha need only carry the parent chain
         // (avoids double-applying state.alpha(); 10_parts_color §1-3 "do not
         // re-multiply state->alpha()").
-        const stateAlpha = partState.alpha();
+        const stateAlpha = raw.partAlpha(partIdx);
 
         const pm = this.parentMatrix;
         for (let j = 0; j < 5; j++) {
@@ -234,28 +209,29 @@ export class GeometryBuilder {
 
         const SHAPE_VERTICES_STRIDE = 24;
         const srcBase = partIdx * SHAPE_VERTICES_STRIDE;
-        const partState = frameData.parts(partIdx, this._ps);
+        const raw = this._raw.bind(frameData);
+        const hasParts = raw.partsLen > 0;
 
-        const pcIdx = partState ? partState.partColor() : -1;
-        const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+        const pcIdx = hasParts ? raw.partColorIdx(partIdx) : -1;
+        const hasPc = pcIdx >= 0;
         // This part's own (hierarchical) opacity — see buildNormal. For the
         // no-PartColor path it becomes the corner alpha so output alpha is
         // texColor.a * vColor.a with the parent chain applied once via mesh.alpha.
-        const stateAlpha = partState ? partState.alpha() : 1;
+        const stateAlpha = hasParts ? raw.partAlpha(partIdx) : 1;
 
         // Corner colors/rates live in shared scratch ([LT,RT,LB,RB] × rgba);
         // the per-vertex loop below interpolates them as scalars.
         const cc = this._cornerColors;
         const cr = this._cornerRates;
-        if (pc) {
+        if (hasPc) {
             // Shape bypasses the PartColor blend formula: blend is forced to Mix
             // and rate to 1.0, so the shape renders as the (bilinearly
             // interpolated) parts colour itself, ignoring parts_color.blend_type
             // (10_parts_color.ja.md §1-2 table / §1-2-3).
-            this.readCorner(0, pc.lt(this._corner));
-            this.readCorner(1, pc.rt(this._corner));
-            this.readCorner(2, pc.lb(this._corner));
-            this.readCorner(3, pc.rb(this._corner));
+            raw.readCornerInto(pcIdx, 0, cc, cr);
+            raw.readCornerInto(pcIdx, 1, cc, cr);
+            raw.readCornerInto(pcIdx, 2, cc, cr);
+            raw.readCornerInto(pcIdx, 3, cc, cr);
             // Override the per-corner rates so the bilinear interpolation below
             // yields 1.0 at every vertex (rate is forced to 1.0 for shapes).
             cr[0] = 1; cr[1] = 1; cr[2] = 1; cr[3] = 1;
@@ -313,7 +289,7 @@ export class GeometryBuilder {
                 outPositions[v * 2 + 1] = wy;
             }
 
-            if (partState && partState.cell() >= 0) {
+            if (hasParts && raw.partCell(partIdx) >= 0) {
                 const uvBase = partIdx * 10;
                 const tlU = uvData[uvBase + 2]; const tlV = uvData[uvBase + 3];
                 const trU = uvData[uvBase + 4]; const trV = uvData[uvBase + 5];
@@ -378,27 +354,27 @@ export class GeometryBuilder {
         const v0 = meshVOff[partIdx];
         const i0 = meshIOff[partIdx];
 
-        const partState = frameData.parts(partIdx, this._ps);
-        const pcIdx = partState ? partState.partColor() : -1;
-        const pc = (pcIdx >= 0) ? frameData.partsColor(pcIdx, this._pc) : null;
+        const raw = this._raw.bind(frameData);
+        const hasParts = raw.partsLen > 0;
+        const pcIdx = hasParts ? raw.partColorIdx(partIdx) : -1;
 
         let pc_rate = 1;
         let pcR = 1, pcG = 1, pcB = 1, pcA = 1;
         let pc_blendType = BlendType.Mix;
-        const hasPc = !!pc;
+        const hasPc = pcIdx >= 0;
         // This part's own (hierarchical) opacity — see buildNormal.
-        const stateAlpha = partState ? partState.alpha() : 1;
+        const stateAlpha = hasParts ? raw.partAlpha(partIdx) : 1;
 
-        if (pc) {
-            pc_blendType = pc.blendType();
+        if (hasPc) {
+            pc_blendType = raw.pcBlendType(pcIdx);
             // Clamp invalid PartColor blend modes (>=4) to Mix (10_parts_color §1-1).
             if (pc_blendType > BlendType.Sub) pc_blendType = BlendType.Mix;
-            const lt = pc.lt(this._corner);
-            pc_rate = lt ? lt.rate() : 0;
-            const rgba = lt ? lt.rgba(this._rgba) : null;
-            if (rgba) {
-                pcR = rgba.r() / 255.0; pcG = rgba.g() / 255.0; pcB = rgba.b() / 255.0; pcA = rgba.a() / 255.0;
-            }
+            // Mesh uses only the LT corner (index 0) as a flat tint.
+            pc_rate = raw.pcCornerRate(pcIdx, 0);
+            pcR = raw.pcCornerR(pcIdx, 0) / 255.0;
+            pcG = raw.pcCornerG(pcIdx, 0) / 255.0;
+            pcB = raw.pcCornerB(pcIdx, 0) / 255.0;
+            pcA = raw.pcCornerA(pcIdx, 0) / 255.0;
         }
         const meshMixF = pc_blendType === BlendType.Mix ? 1 : 0;
         const meshMulF = pc_blendType === BlendType.Mul ? 1 : 0;

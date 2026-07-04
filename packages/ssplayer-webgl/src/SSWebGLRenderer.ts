@@ -1,4 +1,4 @@
-import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, PartState, FrameData, MaskPlanner, FrameDataMaskSource, ssRuntime } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, ssRuntime } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
@@ -55,10 +55,14 @@ export class SSWebGLRenderer {
   private _whiteTex: WebGLTexture | null = null;
 
   private scratchMatrix = new Float32Array(6);
-  // Reused FlatBuffer accessors so the batch/part loops allocate nothing in steady
-  // state (the accessors re-`__init` into these instead of `new`-ing per call).
+  // Reused FlatBuffer accessor so the batch loop allocates nothing in steady state
+  // (re-`__init`s into this instead of `new`-ing per call).
   private _scratchBatch = new DrawBatch();
-  private _scratchPart = new PartState();
+  // Zero-copy raw reader for the per-part struct-vector fields (part_state /
+  // parts_color) — bypasses the per-element accessors (07_render_loop.ja.md §2).
+  // Read via its `*Of(fd, …)` helpers so it stays correct across instance-child
+  // recursion (shared `this`, rebinds it) and post-recursion re-fetches.
+  private _raw = new FrameDataRaw();
   // Reused per-frame uniforms (avoid per-frame allocation / GC — spec §6, §9).
   private projMatrix = new Float32Array(9);
   private transformMatrix3 = new Float32Array(9);
@@ -537,8 +541,7 @@ export class SSWebGLRenderer {
         this._fxCount = 0;
         for (let c = 0; c < count; c++) {
           const partIdx = drawOrder[startRank + c];
-          const partState = fd.parts(partIdx, this._scratchPart);
-          const alpha = partState ? partState.alpha() : 1.0;
+          const alpha = this._raw.partAlphaOf(fd, partIdx);
           if (alpha <= 0) continue;
 
           const plan = player.getEffectDrawPlan(partIdx);
@@ -648,8 +651,7 @@ export class SSWebGLRenderer {
       if (kind === DrawBatchKind.Instance) {
         for (let c = 0; c < count; c++) {
           const partIdx = drawOrder[startRank + c];
-          const partState = fd.parts(partIdx, this._scratchPart);
-          const alpha = partState ? partState.alpha() : 1.0;
+          const alpha = this._raw.partAlphaOf(fd, partIdx);
           if (alpha <= 0) continue;
 
           const child = player.getInstanceChild(partIdx);
@@ -795,8 +797,7 @@ export class SSWebGLRenderer {
     for (let c = 0; c < count; c++) {
       const partIdx = drawOrder[startRank + c];
       if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
-      const ps = fd.parts(partIdx, this._scratchPart);
-      if (ps && ps.shader() >= 0) return true;
+      if (this._raw.partShaderOf(fd, partIdx) >= 0) return true;
     }
     return false;
   }
@@ -882,10 +883,9 @@ export class SSWebGLRenderer {
     for (let c = 0; c < count; c++) {
       const partIdx = drawOrder[startRank + c];
       if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue; // draw_as_mask: coverage only
-      const ps = fd.parts(partIdx, this._scratchPart);
-      const alpha = ps ? ps.alpha() : 1.0;
+      const alpha = this._raw.partAlphaOf(fd, partIdx);
       if (alpha <= 0) continue;
-      const shaderIdx = ps ? ps.shader() : -1;
+      const shaderIdx = this._raw.partShaderOf(fd, partIdx);
 
       // Build first so applySsShader can read the corner UVs for the cell rect.
       const iCount = this.buildOnePart(DrawBatchKind.Normal, partIdx, fd, gb, invW, invH, meshVOff, meshIOff, shapeVertexCounts);
@@ -1058,8 +1058,7 @@ export class SSWebGLRenderer {
     for (let c = 0; c < count; c++) {
       const partIdx = drawOrder[startRank + c];
       if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue; // pure mask: coverage only (§3-3)
-      const ps = fd.parts(partIdx, this._scratchPart);
-      const alpha = ps ? ps.alpha() : 1.0;
+      const alpha = this._raw.partAlphaOf(fd, partIdx);
       if (alpha <= 0) continue;
 
       // Bring the coverage up to this part's rank. This may switch to the mask
