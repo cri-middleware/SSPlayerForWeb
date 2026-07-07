@@ -23,19 +23,14 @@
   そのまま再生します。
 - **MZ ネイティブな手段 — そして唯一適合する手段。** MZ は **PixiJS v5** に
   固定されているため、モダンな [`ssplayer-pixi`](../ssplayer-pixi) (v8) レンダラーは
-  そこでは動作しません。このパッケージはその PixiJS v5 固定環境を専用に対象とし、
-  SceneGraph 描画を用いることで、SpriteStudio のパーツを MZ の既存の `Sprite`
-  ツリーを回避するのではなく、その中に組み込みます。
+  そこでは動作しません。このパッケージはその PixiJS v5 固定環境を専用に対象とします。
 
 ## 計画中のアプローチ
 
-`ssplayer-pixi`（直接描画 / バッチ描画）とは異なり、このパッケージは
-**SceneGraph 描画** を使用します。SpriteStudio のパーツを PixiJS v5 の `Sprite`
-ツリーにマッピングすることで、RPG Maker MZ の既存のレンダリング階層に統合します。
-これは [`@spritestudio/ssplayer-core`](../ssplayer-core) の
-`SceneGraphInternalPlayer` ファサードの上に構築されます。
-
-ステータスについてはリポジトリの [ROADMAP.md](../../ROADMAP.md) を参照してください。
+[`@spritestudio/ssplayer-pixi`](../ssplayer-pixi) と同様に、このパッケージも
+**ダイレクト描画** で描画する見込みです。コアのドローバッチを PixiJS へ直接渡し、
+RPG Maker MZ が同梱する固定バージョン (v5) に合わせます。ステータスについては
+リポジトリの [ROADMAP.md](../../ROADMAP.md) を参照してください。
 
 ## ライセンス
 

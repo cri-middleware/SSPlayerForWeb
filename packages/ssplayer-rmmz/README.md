@@ -22,19 +22,14 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo.
   your existing PNG art.
 - **The MZ-native path — and the only one that fits.** MZ is locked to
   **PixiJS v5**, so the modern [`ssplayer-pixi`](../ssplayer-pixi) (v8) renderer
-  cannot run there. This package targets that fixed v5 environment specifically,
-  using SceneGraph drawing so SpriteStudio parts slot into MZ's existing `Sprite`
-  tree instead of bypassing it.
+  cannot run there. This package targets that fixed v5 environment specifically.
 
 ## Planned approach
 
-Unlike `ssplayer-pixi` (direct / batched drawing), this package will use
-**SceneGraph drawing** — mapping SpriteStudio parts onto PixiJS v5 `Sprite`
-trees so it integrates with RPG Maker MZ's existing rendering hierarchy. This
-builds on the `SceneGraphInternalPlayer` facade in
-[`@spritestudio/ssplayer-core`](../ssplayer-core).
-
-See the repo [ROADMAP.md](../../ROADMAP.md) for status.
+Like [`@spritestudio/ssplayer-pixi`](../ssplayer-pixi), this package is expected to
+render with **direct drawing** — feeding the core's draw batches straight to
+PixiJS — adapted to the fixed version (v5) that RPG Maker MZ ships. See the repo
+[ROADMAP.md](../../ROADMAP.md) for status.
 
 ## License
 

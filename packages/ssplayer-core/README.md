@@ -73,6 +73,10 @@ the layer a renderer package sits on top of.
 
 [`@spritestudio/ssplayer-pixi`](../ssplayer-pixi) is the reference implementation.
 
+> A `SceneGraphInternalPlayer` facade — for engines that prefer to render into an
+> existing scene-graph / `Sprite` tree instead of issuing draw batches directly —
+> is planned. For now, build on `DirectInternalPlayer`.
+
 ## Memory model
 
 - **Zero-copy:** transform matrices and geometry are read through `Float32Array`
