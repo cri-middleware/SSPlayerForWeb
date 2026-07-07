@@ -47,41 +47,20 @@ not attach it to a public issue — contact the maintainers privately instead.*
 
 ## Development Environment
 
-### Prerequisites
-- **Node.js** and **pnpm** (this repo uses pnpm workspaces).
-- **Rust (via rustup)** and **wasm-pack** / `wasm-bindgen` (only needed to (re)build the WASM, install via `cargo install wasm-pack`).
+Prerequisites (Node.js, pnpm, and — only for building the WASM — Rust / wasm-pack)
+and the full build steps live in the **[Quick Start](./README.md#-quick-start)**
+section of the README. In short, from the repo root:
 
-### Build
-Generated WASM binaries are **not tracked in git**, so a fresh checkout must
-build them first.
-
-**macOS / Linux:**
 ```bash
-# 0. Install dependencies (also initializes workspaces)
 pnpm install
-
-# 1. Build the Rust runtime + converter to WASM (requires rustup and `cargo install wasm-pack`)
-pnpm run build:wasm
-
-# 2. Build all TypeScript packages
+pnpm run build:wasm   # Windows: pnpm run build:wasm:win
 pnpm run build
 ```
 
-**Windows:**
-```powershell
-pnpm install
-pnpm run build:wasm:win
-pnpm run build
-```
-
-### Run the example
-The examples consume the **built** packages via workspace references, so re-run
-`pnpm run build` from the root whenever you change TypeScript under `packages/`.
-
-```bash
-cd examples/pixi-example
-pnpm run dev
-```
+The generated WASM binaries are **not tracked in git**, so a fresh checkout must
+build them first. The examples consume the **built** packages via workspace
+references, so re-run `pnpm run build` after changing any TypeScript under
+`packages/`. Verify your changes against `examples/pixi-example` (`pnpm run dev`).
 
 ## Coding Standards
 

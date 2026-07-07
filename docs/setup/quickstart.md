@@ -22,7 +22,6 @@ async function main() {
   await player.setAnimation('run');    // loop 既定値は -1（無限ループ）
 
   player.position.set(640, 480);
-  player.subframe = true;              // サブフレーム補間で滑らかに
   app.stage.addChild(player);
 
   // 3. 再生開始

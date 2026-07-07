@@ -29,7 +29,6 @@ async function main() {
     await player.load('/Ringo.ssab');
     await player.setAnimation("run");
 
-    player.subframe = true;
     player.position.set(640, 480);
     app.stage.addChild(player);
     

@@ -1,16 +1,16 @@
-[**日本語**](./README.ja.md) | [**English**](./README.md)
+[**English**](./README.md) | [**日本語**](./README.ja.md)
 
 # SSPlayerForWeb
 
-A high-performance, WebAssembly-powered player for [OPTPiX SpriteStudio 7](https://www.webtech.co.jp/spritestudio/) animations on the Web.
+**Professional 2D animation for the Web — one WebAssembly-powered core, from modern PixiJS to legacy RPG Maker MZ and standalone WebGL.**
 
-This player is designed to be highly adaptable and deployable across various Web graphics engines, ranging from modern PixiJS to legacy environments like RPG Maker MZ (PixiJS v5) and standalone WebGL.
+A high-performance player for **[OPTPiX SpriteStudio 7](https://www.webtech.co.jp/spritestudio/)** animations (`.ssab`) on the Web. Animate the sprite art you already have (PNG / WebP) in a dedicated editor, then play it back in the browser through the rendering engine of your choice — no video files, no re-authoring.
 
-## Documentation
+## 📚 Documentation
 
-Comprehensive documentation is available in the `docs/` folder (hosted via VitePress):
+Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) and is structured step-by-step according to what you want to do:
 
-- [**Documentation (Japanese)**](./docs/index.md) (English documentation is a work in progress)
+- [**ドキュメント (日本語)**](./docs/index.md) — full documentation (English documentation is a work in progress).
 
 ### Quick Links (Japanese)
 - [Installation](./docs/setup/install.md)
@@ -20,54 +20,89 @@ Comprehensive documentation is available in the `docs/` folder (hosted via ViteP
 - [PixiJS Integration](./docs/usage/pixi.md)
 - [WebGL Standalone & Web Components](./docs/usage/webgl.md)
 
-## Quick Start
+### Where to read, by goal
+You only need to read as far as your goal requires:
 
-### 1. Try out the Examples
-1. **Get the Repo**: Clone or download this repository.
-2. **Build WASM**: Run `pnpm run build:wasm` (required if Rust code is modified or not built yet. Requires `rustup` and running `cargo install wasm-pack` beforehand).
-3. **Build the packages**: Run `pnpm install` and then `pnpm run build` from the project root.
-4. **Run**: Navigate to `examples/pixi-example` and run `pnpm run dev`.
+| You are… | Your goal | Where to read |
+|---|---|---|
+| **A general user** | Just get animations running | [Quick Start](./docs/setup/quickstart.md) → [Basic Usage](./docs/usage/basic.md) |
+| **A customization user** | Polish expressions and add logic | Above + [Customization](./docs/customize/events.md) |
+| **An SDK / player developer** | Extend or contribute to the core | Above + [CONTRIBUTING.md](./CONTRIBUTING.md) |
 
-### 2. Import into your Project
-1. **Convert**: Use [`ssconverter-web`](./docs/usage/assets.md) or [`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases) to convert your `.sspj` to `.ssab`.
-2. **Install**: Run `npm install @spritestudio/ssplayer-pixi pixi.js`.
-3. **Play**: Load the `.ssab` and attach it to the `SSPlayer` container!
+## 🎯 Which Package Should I Use?
 
-For advanced setups, please refer to the [Installation Guide](./docs/setup/install.md).
+This is a `pnpm` monorepo of focused packages. Install the renderer that matches your environment — each one bundles the WASM core, so you don't pull it in separately. Each package's README explains **why you'd choose SpriteStudio for that specific stack** (PixiJS, plain WebGL, RPG Maker MZ, …).
 
-## Overview
+| Your environment | Package | Runnable example |
+|---|---|---|
+| **PixiJS v8** (recommended, fastest) | [`@spritestudio/ssplayer-pixi`](./packages/ssplayer-pixi) | [examples/pixi-example](./examples/pixi-example) |
+| **Standalone WebGL / `<ss-player>` Web Component** | [`@spritestudio/ssplayer-webgl`](./packages/ssplayer-webgl) | [examples/webgl-example](./examples/webgl-example) |
+| **RPG Maker MZ** (PixiJS v5) | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
+| **Building your own renderer** | [`@spritestudio/ssplayer-core`](./packages/ssplayer-core) | — |
+| **Converting `.sspj` → `.ssab`** | [`ssconverter-web`](./packages/ssconverter-web) (Web tool + Node CLI) | — |
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Node.js** and **pnpm** (this repo uses pnpm workspaces).
+- The WASM core is **not tracked in git**, so a fresh clone must obtain it once. How depends on what you're doing:
+  - **General & customization users** — **download** the pre-built binaries. No extra toolchain.
+  - **SDK / player developers** who change the Rust core — **build from source**, which additionally needs **Rust (via [rustup](https://rustup.rs/))** and **wasm-pack** (`cargo install wasm-pack`).
+
+> Consuming the published npm packages does **not** require any of this — the WASM ships inside each renderer package.
+
+### 1. Try the Examples
+```bash
+# From the repo root
+pnpm install               # install deps & initialize the workspace
+./scripts/download-sdk.sh  # fetch the pre-built WASM (Windows: scripts\download-sdk.ps1)
+pnpm run build             # build all TypeScript packages
+
+cd examples/pixi-example
+pnpm run dev               # open the dev server and see the animation
+```
+`pnpm run download:wasm` runs the same download cross-platform. The examples consume the **built** packages via workspace references, so re-run `pnpm run build` from the root whenever you change TypeScript under `packages/`.
+
+> **SDK / player developers** modifying the Rust core build the WASM from source instead: run `pnpm run build:wasm` (Windows: `build:wasm:win`) in place of `download-sdk`. This needs the Rust / wasm-pack toolchain — see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+### 2. Import into Your Project
+1. **Convert**: Turn your `.sspj` into `.ssab` with [`ssconverter-web`](./docs/usage/assets.md) or the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases).
+2. **Install**: `npm install @spritestudio/ssplayer-pixi pixi.js` (or the renderer for your environment — see the table above).
+3. **Play**: Load the `.ssab` and attach it to the `SSPlayer` container.
+
+For advanced setups, see the [Installation Guide](./docs/setup/install.md).
+
+## 💡 Overview
 
 ### Monorepo Structure
 
-This project uses `pnpm` workspaces for package management.
+This project uses `pnpm` workspaces. The core is deliberately decoupled from any rendering engine, so each renderer is a thin binding on top of the same WASM logic.
 
 **Core**
-- **`@spritestudio/ssplayer-core`**: The engine-agnostic core logic layer. Manages WASM initialization, time updates, and zero-copy data extraction. It has zero dependencies on DOM APIs or specific rendering engines.
+- **[`@spritestudio/ssplayer-core`](./packages/ssplayer-core)** — the engine-agnostic core. Manages WASM initialization, time updates, and zero-copy data extraction, with zero dependencies on the DOM or any rendering engine.
 
-**Renderers (Engine Bindings)**
-- **`@spritestudio/ssplayer-pixi`**: Optimized for PixiJS v8. Uses direct drawing (BatchRenderer) for maximum performance.
-- **`@spritestudio/ssplayer-webgl`**: Standalone lightweight WebGL renderer, including a `<ss-player>` Web Component.
-- **`@spritestudio/ssplayer-rmmz`**: Designed for RPG Maker MZ (PixiJS v5). Uses SceneGraph drawing for seamless integration with the engine's Sprite tree.
+**Renderers (engine bindings)**
+- **[`@spritestudio/ssplayer-pixi`](./packages/ssplayer-pixi)** — optimized for PixiJS v8. Uses direct drawing (BatchRenderer) for maximum performance.
+- **[`@spritestudio/ssplayer-webgl`](./packages/ssplayer-webgl)** — standalone, dependency-free WebGL1/2 renderer, including a `<ss-player>` Web Component.
+- **[`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz)** — for RPG Maker MZ (PixiJS v5). Uses SceneGraph drawing for seamless integration with the engine's Sprite tree.
 
 **Tools**
-- **[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)**: Desktop GUI tool for converting `.sspj` to `.ssab`.
-- **`ssconverter-web`**: Web-based converter tool and Node.js CLI script that converts `.sspj` to `.ssab` using WebAssembly.
+- **[`ssconverter-web`](./packages/ssconverter-web)** — Web-based converter and Node.js CLI that turns `.sspj` into `.ssab` using WebAssembly.
+- **[SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases)** — desktop GUI tool for the same `.sspj` → `.ssab` conversion.
 
-## Reader Personas
+## 🎬 Samples
 
-The documentation and repository structure are designed for three levels of users. You only need to read as far as your goal requires:
+Ready-to-run example apps live under the [examples folder](./examples/). Build the packages first (see [Quick Start](#1-try-the-examples)), then start any example's dev server.
 
-| Persona | Goal | Where to Read |
-|---|---|---|
-| **General Users** | Just want to get animations running | [Quick Start](./docs/setup/quickstart.md) → [Basic Usage](./docs/usage/basic.md) |
-| **Customization Users** | Want to polish expressions and add logic | Above + [Customization](./docs/customize/events.md) |
-| **SDK / Player Developers** | Want to extend or contribute to the core | Above + [CONTRIBUTING.md](./CONTRIBUTING.md) |
+- [pixi-example](./examples/pixi-example) — PixiJS v8 renderer (`@spritestudio/ssplayer-pixi`).
+- [webgl-example](./examples/webgl-example) — standalone WebGL renderer and `<ss-player>` Web Component (`@spritestudio/ssplayer-webgl`).
+- [rmmz-example](./examples/rmmz-example) — RPG Maker MZ / PixiJS v5 integration (`@spritestudio/ssplayer-rmmz`).
 
-## Related Repositories
+## 🔗 Related Repositories
 
-- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — The core SDK providing `libssruntime` and `libssconverter`.
-- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — Desktop GUI tool for converting `.sspj` to `.ssab`.
+- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — the core SDK providing `libssruntime` and `libssconverter`.
+- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — desktop GUI tool for converting `.sspj` to `.ssab`.
 
-## License
+## 📄 License
 
-This project is licensed under the BSD-3-Clause License. See the [LICENSE.md](./LICENSE.md) file for details.
+This project is licensed under the BSD-3-Clause License. See [LICENSE.md](./LICENSE.md) for details.

@@ -38,7 +38,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public _instancePackResources: Map<number, SSABResource> = new Map();
     public _instancePackProvider: InstancePackProvider | null = null;
     private _animationName: string = '';
-    private _subFrameEnabled: boolean = false;
+    private _subFrameEnabled: boolean = true;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
 

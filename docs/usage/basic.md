@@ -34,7 +34,7 @@ player.stop();              // 停止
 ```ts
 player.frame;               // 現在フレーム（get / set）
 player.speedScale = 1.5;    // 再生速度倍率
-player.subFrameEnabled;     // サブフレーム補間（スロー再生や高リフレッシュで滑らか）
+player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー再生や高リフレッシュで滑らか）
 player.isPlaying;           // 再生中か
 ```
 
