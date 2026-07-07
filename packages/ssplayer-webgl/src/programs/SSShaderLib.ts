@@ -9,14 +9,14 @@
 //
 // The 13 shader bodies are the GLSL ES 1.00 ports of the authoritative SS6-SDK
 // GLSL already migrated for the sibling ssplayer-pixi renderer (its
-// `SSShaderLib.ts`, GLSL ES 3.00 version — the source of truth per
-// SSPLAYER_WEBGL_SPEC §6/§16). Each computes a `Pixel` (vec4) then reuses this
+// `SSShaderLib.ts`, GLSL ES 3.00 version — the source of truth). Each computes
+// a `Pixel` (vec4) then reuses this
 // renderer's PartColor tail (`ssFinish`, identical math to PartsColorProgram),
 // because our per-vertex `aVarg` encodes the blend as `[rate, isMix, isMul,
 // isAddSub]`. ss-blur is the lone exception: it skips the PartColor composite and
 // just multiplies by the part colour (mirrors the SS6 reference).
 //
-// GLSL ES 3.00 → 1.00 conversion applied (SSPLAYER_WEBGL_SPEC §6 table):
+// GLSL ES 3.00 → 1.00 conversion applied:
 //   `in`/`out` varyings   → `varying` (shared vertex stage = PARTS_COLOR_VERT)
 //   `out vec4 finalColor` → `gl_FragColor`
 //   `texture(t,uv)`       → `texture2D(t,uv)` (only in ssTex)

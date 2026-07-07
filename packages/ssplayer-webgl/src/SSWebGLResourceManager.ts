@@ -1,7 +1,7 @@
 import type { IResourceManager } from '@spritestudio/ssplayer-core';
 
 // Retained creation info for a texture, kept so every texture can be rebuilt
-// after a GL context loss (SPEC §8-9 / §9). We keep the *smallest recoverable*
+// after a GL context loss. We keep the *smallest recoverable*
 // form: a URL (re-fetched), the encoded bytes (re-decoded — far smaller than the
 // decoded RGBA), or a caller-owned TexImageSource (re-uploaded as-is; the caller
 // must keep it alive if it wants restore to work for that entry).
@@ -84,7 +84,7 @@ export class SSWebGLResourceManager implements IResourceManager {
   }
 
   /**
-   * Rebuild every texture after a GL context loss (SPEC §8-9 / §9). The old
+   * Rebuild every texture after a GL context loss. The old
    * WebGLTexture handles died with the context, so drop them and re-upload from
    * the retained creation info. URL / bytes sources re-decode asynchronously;
    * caller-owned TexImageSources re-upload synchronously (skipped if the caller

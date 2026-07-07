@@ -4,7 +4,7 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 /**
  * Optional `<ss-player>` Custom Element wrapper around {@link SSCanvasPlayer}.
  *
- * Native Custom Elements only — no framework dependency (spec §1-1 "依存ゼロ").
+ * Native Custom Elements only — no framework dependency (依存ゼロ).
  * Lives behind the `@spritestudio/ssplayer-webgl/element` subpath and is NOT
  * auto-registered (`sideEffects: false` is preserved): call
  * {@link defineSSPlayerElement} to register the tag, so ads that don't use the
@@ -83,7 +83,7 @@ export class SSPlayerElement extends HTMLElement {
       this.createPlayer();
       this.applyResize();
 
-      // Keep the drawing buffer matched to the element's box (spec §11.5 DPR clamp
+      // Keep the drawing buffer matched to the element's box (DPR clamp
       // lives in SSCanvasPlayer.resize) and re-centre on every size change.
       this._resizeObserver = new ResizeObserver(() => this.applyResize());
       this._resizeObserver.observe(this);

@@ -69,7 +69,7 @@ export const ATTR_LOC = { position: 0, uv: 1, color: 2, varg: 3 } as const;
 const _fragPrecisionCache = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, 'highp' | 'mediump'>();
 
 /**
- * Highest fragment float precision the context actually supports (SPEC §8-8):
+ * Highest fragment float precision the context actually supports:
  * `highp` when `getShaderPrecisionFormat(FRAGMENT_SHADER, HIGH_FLOAT)` reports a
  * usable range, else `mediump` (guaranteed on WebGL1). Mobile GPUs are not
  * required to offer fragment highp, so we probe rather than assume — highp keeps
@@ -92,7 +92,7 @@ export function getFragmentPrecision(gl: WebGLRenderingContext | WebGL2Rendering
  * (name, location) pairs this program actually declares.
  *
  * The fragment source's `precision mediump float;` declaration is promoted to
- * `highp` when the context supports it (SPEC §8-8, via getFragmentPrecision) —
+ * `highp` when the context supports it (via getFragmentPrecision) —
  * every SS fragment shader declares mediump as its baseline, so this single
  * replacement upgrades them all uniformly.
  */

@@ -73,7 +73,7 @@ export interface SSCanvasPlayerOptions {
    * ssplayer-pixi. The audio adapter is loaded via a **dynamic import**, so it is
    * a separate chunk that is fetched only when a sound-bearing animation is set:
    * animations without sound (and the `./lite` build) never pull in any audio
-   * code, keeping the default bundle within the size budget (spec §11.1).
+   * code, keeping the default bundle within the size budget.
    *
    * Set to `false` for full manual control (attach your own `IAudioManager`, or
    * none) — nothing audio-related is then loaded automatically.
@@ -122,14 +122,14 @@ export class SSCanvasPlayer {
   private _wantTicker: boolean = false;
   private _isPlaying: boolean = false;
 
-  // --- Visibility gating (pauseWhenHidden, SPEC §11.5 / design pillar 7) ---
+  // --- Visibility gating (pauseWhenHidden) ---
   // Whether the canvas currently intersects the viewport. Starts true so hosts
   // without IntersectionObserver (or with pauseWhenHidden:false) always run.
   private _intersecting: boolean = true;
   private _io: IntersectionObserver | null = null;
   private _onVisibilityChange: (() => void) | null = null;
 
-  // --- Context loss recovery (SPEC §8-9 / §9 / design pillar 8) ---
+  // --- Context loss recovery ---
   private _contextLost: boolean = false;
   private _onContextLost: ((e: Event) => void) | null = null;
   private _onContextRestored: (() => void) | null = null;
@@ -163,7 +163,7 @@ export class SSCanvasPlayer {
         stencil: options.stencil ?? true,
         antialias: options.antialias ?? false,
         powerPreference: options.powerPreference ?? 'low-power',
-        // SPEC §4 attrs: keep the drawing buffer disposable (we clear + redraw
+        // Ad-friendly context attrs: keep the drawing buffer disposable (we clear + redraw
         // every frame), never fail on a "slow GPU" caveat (widen device reach),
         // and hint desynchronized presentation for lower-latency low-power draw.
         preserveDrawingBuffer: false,
@@ -193,7 +193,7 @@ export class SSCanvasPlayer {
   }
 
   /**
-   * Subscribe to `webglcontextlost` / `webglcontextrestored` (SPEC §8-9 / §9).
+   * Subscribe to `webglcontextlost` / `webglcontextrestored`.
    * Mobile webviews drop the GL context aggressively; without this the canvas
    * goes blank permanently. On loss we must `preventDefault()` (otherwise the
    * browser never fires a restore) and stop drawing; on restore we rebuild every
@@ -276,7 +276,7 @@ export class SSCanvasPlayer {
    *
    * The adapter is pulled in via a **dynamic import**, so it lands in a separate
    * chunk fetched only here, only when sounds exist — the base player and the
-   * `./lite` build stay audio-free (spec §11.1 size budget). Failures (e.g. an
+   * `./lite` build stay audio-free (size budget). Failures (e.g. an
    * environment without dynamic import) are swallowed so the animation still
    * plays silently; opt out with `autoAudio: false` + your own `IAudioManager`.
    */
@@ -367,8 +367,8 @@ export class SSCanvasPlayer {
   /**
    * Lazily wire the visibility gating used by `pauseWhenHidden` (default on):
    * an IntersectionObserver pauses the ticker when the canvas scrolls off-screen
-   * and `visibilitychange` pauses it when the tab is backgrounded (SPEC §11.5 —
-   * saves battery and satisfies ad viewability). No-op when pauseWhenHidden is
+   * and `visibilitychange` pauses it when the tab is backgrounded (saves
+   * battery and satisfies ad viewability). No-op when pauseWhenHidden is
    * false or the APIs are unavailable (then the ticker simply always runs).
    */
   private ensureVisibilityWatch(): void {

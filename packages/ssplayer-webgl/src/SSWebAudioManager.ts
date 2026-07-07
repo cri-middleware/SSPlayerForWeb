@@ -8,7 +8,7 @@ import type { SSCanvasPlayer, SSAudioEvent } from './SSCanvasPlayer.js';
  * (via `onAudio`) and preloads them when an audio manager is attached. This
  * adapter is a **separate, tree-shakeable module**: it is NOT imported by
  * `SSCanvasPlayer`, so playable-ad builds that don't use sound pay nothing for
- * it (spec §10/§15 — audio is injection-only, not in the default bundle).
+ * it (audio is injection-only, not in the default bundle).
  *
  * Usage:
  * ```ts

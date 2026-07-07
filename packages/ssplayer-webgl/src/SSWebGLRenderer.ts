@@ -11,8 +11,8 @@ export class SSWebGLRenderer {
   // Stencil-buffer mask program (MaskWrite pass). Lazily compiled on the first
   // masked frame so mask-free animations never pay for it. See _writePlannedWriter.
   private maskProgram: MaskProgram | null = null;
-  // True when the GL context was created with a stencil buffer (SSPLAYER_WEBGL_SPEC
-  // §8-5 / §5.1 `stencil`). Masking is skipped entirely when absent (masked content
+  // True when the GL context was created with a stencil buffer (the `stencil`
+  // context attribute). Masking is skipped entirely when absent (masked content
   // draws unclipped) — graceful degradation on contexts without a stencil attachment.
   private _stencilSupported = false;
   // Vertex count produced by the last buildOnePart() call (its index count is returned).
@@ -66,14 +66,13 @@ export class SSWebGLRenderer {
   // Read via its `*Of(fd, …)` helpers so it stays correct across instance-child
   // recursion (shared `this`, rebinds it) and post-recursion re-fetches.
   private _raw = new FrameDataRaw();
-  // Reused per-frame uniforms (avoid per-frame allocation / GC — spec §6, §9).
+  // Reused per-frame uniforms (avoid per-frame allocation / GC).
   private projMatrix = new Float32Array(9);
   private transformMatrix3 = new Float32Array(9);
   // Last GL blend state applied via applyBlend(); -1 forces a re-apply.
   private _lastBlend = -1;
 
-  // --- SpriteStudio integration shaders (ssae `SHDR` attribute; SSPLAYER_WEBGL_SPEC
-  // §6/§10) ---
+  // --- SpriteStudio integration shaders (ssae `SHDR` attribute) ---
   // Compiled ss-* programs keyed by id_hash (null cached = not a built-in id → the
   // part falls back to the plain parts-color program). Lazily compiled on the first
   // shader part so shader-free animations never pay for them; one program per
@@ -112,7 +111,7 @@ export class SSWebGLRenderer {
 
     // Record the (fixed) attribute layout into a VAO so each frame restores it with
     // one bindVertexArray instead of re-issuing enable/vertexAttribPointer per context
-    // (spec §8-10 / P4). WebGL2 has VAOs natively; WebGL1 needs the extension; without
+    // WebGL2 has VAOs natively; WebGL1 needs the extension; without
     // either we fall back to rebinding attributes per context in _renderContext.
     if (isWebGL2) {
       this._vaoSupported = true;
@@ -160,7 +159,7 @@ export class SSWebGLRenderer {
   }
 
   /**
-   * Rebuild all GL objects after a `webglcontextrestored` event (SPEC §8-9 / §9).
+   * Rebuild all GL objects after a `webglcontextrestored` event.
    * The old programs / buffers / VAO handles died with the context; recreate them
    * from the retained capability flags. Textures are the resource manager's job
    * (SSWebGLResourceManager.restoreContext), orchestrated by SSCanvasPlayer.
@@ -226,7 +225,7 @@ export class SSWebGLRenderer {
   }
 
   /**
-   * Apply the fixed-function GPU blend state for an SS BlendType (spec §7, matching
+   * Apply the fixed-function GPU blend state for an SS BlendType (matching
    * ssplayer-pixi/SSBlendModes). Shader output is premultiplied; alpha is
    * premultiplied-coverage (ONE, ONE_MINUS_SRC_ALPHA) for every mode. De-duplicated
    * against the last applied state so consecutive same-blend batches don't re-issue.
@@ -1005,8 +1004,8 @@ export class SSWebGLRenderer {
   }
 
   /**
-   * Pre-write every PURE mask writer's coverage into the stencil (SSPLAYER_WEBGL_SPEC
-   * §8-5; per-rank scope matches the editor-verified coverage replay — 09_mask.ja.md
+   * Pre-write every PURE mask writer's coverage into the stencil (per-rank scope
+   * matches the editor-verified coverage replay — 09_mask.ja.md
    * §2-1/§2-4). Pure masks scope to LOWER/earlier ranks, so all are in scope for the
    * first content; syncMasksTo() then removes each at its own rank. Clipping writers
    * (which scope FORWARD) are NOT pre-written — syncMasksTo adds them at their rank.

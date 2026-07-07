@@ -1,6 +1,6 @@
 import { ATTR_LOC, createGLProgram } from './PartsColorProgram.js';
 
-// Mask *coverage write* program (SSPLAYER_WEBGL_SPEC §8-5, 09_mask.ja.md §3-1).
+// Mask *coverage write* program (09_mask.ja.md §3-1).
 // Rasterises a mask writer's geometry into the hardware stencil buffer. Colour
 // output is irrelevant — the renderer disables colour writes and only the
 // stencil op (increment / invert) takes effect — so the fragment just performs
