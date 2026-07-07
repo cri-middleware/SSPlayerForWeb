@@ -6,7 +6,8 @@ import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
 export class SSWebGLRenderer {
   public gl: WebGLRenderingContext | WebGL2RenderingContext;
-  private partsColorProgram: PartsColorProgram;
+  // Assigned in _createGLResources() (constructor + context restore).
+  private partsColorProgram!: PartsColorProgram;
   // Stencil-buffer mask program (MaskWrite pass). Lazily compiled on the first
   // masked frame so mask-free animations never pay for it. See _writePlannedWriter.
   private maskProgram: MaskProgram | null = null;
@@ -26,11 +27,13 @@ export class SSWebGLRenderer {
   // scope transition to apply as content is drawn in ascending rank order (syncMasksTo).
   private _maskCursor = 0;
 
-  private posBuffer: WebGLBuffer;
-  private uvBuffer: WebGLBuffer;
-  private colorBuffer: WebGLBuffer;
-  private vargBuffer: WebGLBuffer;
-  private indexBuffer: WebGLBuffer;
+  // Shared attribute / index VBOs. Assigned in _createGLResources() (from the
+  // constructor and again on context restore), hence definite-assignment.
+  private posBuffer!: WebGLBuffer;
+  private uvBuffer!: WebGLBuffer;
+  private colorBuffer!: WebGLBuffer;
+  private vargBuffer!: WebGLBuffer;
+  private indexBuffer!: WebGLBuffer;
 
   // Batch arrays for GeometryBuilder
   private batchPos = new Float32Array(512 * 2);
@@ -107,14 +110,6 @@ export class SSWebGLRenderer {
     this.indexType = this._uint32Index ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
     if (this._uint32Index) this.batchIndices = new Uint32Array(512 * 3);
 
-    this.partsColorProgram = new PartsColorProgram(gl);
-
-    this.posBuffer = gl.createBuffer()!;
-    this.uvBuffer = gl.createBuffer()!;
-    this.colorBuffer = gl.createBuffer()!;
-    this.vargBuffer = gl.createBuffer()!;
-    this.indexBuffer = gl.createBuffer()!;
-
     // Record the (fixed) attribute layout into a VAO so each frame restores it with
     // one bindVertexArray instead of re-issuing enable/vertexAttribPointer per context
     // (spec §8-10 / P4). WebGL2 has VAOs natively; WebGL1 needs the extension; without
@@ -125,12 +120,53 @@ export class SSWebGLRenderer {
       this._vaoExt = gl.getExtension('OES_vertex_array_object');
       this._vaoSupported = !!this._vaoExt;
     }
+
+    // Program / buffers / VAO objects. Split out so context-loss restore rebuilds
+    // exactly these (the capability probes above are stable across a restore — the
+    // same context is reused — so they stay in the constructor). See restoreContext.
+    this._createGLResources();
+  }
+
+  /**
+   * Create (or re-create) all GL objects this renderer owns: the parts-color
+   * program, the shared attribute/index buffers, and the recorded VAO. Lazily
+   * compiled resources (mask program, ss-* shader programs, 1×1 white texture)
+   * are reset to their uncompiled state so the next frame recompiles them on
+   * demand. Called once from the constructor and again from restoreContext()
+   * after a `webglcontextrestored` event.
+   */
+  private _createGLResources(): void {
+    const gl = this.gl;
+
+    this.partsColorProgram = new PartsColorProgram(gl);
+    // Drop lazy resources so they recompile against the (new) context on next use.
+    this.maskProgram = null;
+    this.ssShaderPrograms.clear();
+    this._whiteTex = null;
+    this._lastBlend = -1;
+
+    this.posBuffer = gl.createBuffer()!;
+    this.uvBuffer = gl.createBuffer()!;
+    this.colorBuffer = gl.createBuffer()!;
+    this.vargBuffer = gl.createBuffer()!;
+    this.indexBuffer = gl.createBuffer()!;
+
     if (this._vaoSupported) {
       this._vao = this.createVAO();
       this.bindVAO(this._vao);
       this.bindPartsAttribs();
       this.bindVAO(null);
     }
+  }
+
+  /**
+   * Rebuild all GL objects after a `webglcontextrestored` event (SPEC §8-9 / §9).
+   * The old programs / buffers / VAO handles died with the context; recreate them
+   * from the retained capability flags. Textures are the resource manager's job
+   * (SSWebGLResourceManager.restoreContext), orchestrated by SSCanvasPlayer.
+   */
+  public restoreContext(): void {
+    this._createGLResources();
   }
 
   private createVAO(): WebGLVertexArrayObject | null {

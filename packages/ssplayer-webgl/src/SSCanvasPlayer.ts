@@ -114,9 +114,25 @@ export class SSCanvasPlayer {
 
   private canvas: HTMLCanvasElement;
   private gl: WebGLRenderingContext | WebGL2RenderingContext;
-  private tickerId: number = 0;
+  // Active requestAnimationFrame handle (0 = not scheduled). The internal ticker
+  // runs only while `_wantTicker` (user intent) AND the canvas is visible AND the
+  // context is not lost — see _syncTicker / _shouldRun.
+  private _rafId: number = 0;
   private lastTime: number = 0;
+  private _wantTicker: boolean = false;
   private _isPlaying: boolean = false;
+
+  // --- Visibility gating (pauseWhenHidden, SPEC §11.5 / design pillar 7) ---
+  // Whether the canvas currently intersects the viewport. Starts true so hosts
+  // without IntersectionObserver (or with pauseWhenHidden:false) always run.
+  private _intersecting: boolean = true;
+  private _io: IntersectionObserver | null = null;
+  private _onVisibilityChange: (() => void) | null = null;
+
+  // --- Context loss recovery (SPEC §8-9 / §9 / design pillar 8) ---
+  private _contextLost: boolean = false;
+  private _onContextLost: ((e: Event) => void) | null = null;
+  private _onContextRestored: (() => void) | null = null;
   private transformMatrix = new Float32Array([1, 0, 0, 1, 0, 0]); // [a, b, c, d, tx, ty]
   // Per-frame clear colour. Transparent by default; an opaque backdrop when
   // options.backgroundColor is set (see SSCanvasPlayerOptions.backgroundColor).
@@ -146,7 +162,13 @@ export class SSCanvasPlayer {
         premultipliedAlpha: options.premultipliedAlpha ?? true,
         stencil: options.stencil ?? true,
         antialias: options.antialias ?? false,
-        powerPreference: options.powerPreference ?? 'low-power'
+        powerPreference: options.powerPreference ?? 'low-power',
+        // SPEC §4 attrs: keep the drawing buffer disposable (we clear + redraw
+        // every frame), never fail on a "slow GPU" caveat (widen device reach),
+        // and hint desynchronized presentation for lower-latency low-power draw.
+        preserveDrawingBuffer: false,
+        failIfMajorPerformanceCaveat: false,
+        desynchronized: true,
       };
       this.gl = (this.canvas.getContext('webgl2', glAttrs) || this.canvas.getContext('webgl', glAttrs)) as any;
     } else {
@@ -163,9 +185,50 @@ export class SSCanvasPlayer {
       this._clearColor = [((c >> 16) & 0xff) / 255, ((c >> 8) & 0xff) / 255, (c & 0xff) / 255, 1];
     }
 
+    this.registerContextLossHandlers();
+
     if (options.autoStart) {
       this.startTicker();
     }
+  }
+
+  /**
+   * Subscribe to `webglcontextlost` / `webglcontextrestored` (SPEC §8-9 / §9).
+   * Mobile webviews drop the GL context aggressively; without this the canvas
+   * goes blank permanently. On loss we must `preventDefault()` (otherwise the
+   * browser never fires a restore) and stop drawing; on restore we rebuild every
+   * GL object and re-upload textures, then resume.
+   */
+  private registerContextLossHandlers(): void {
+    this._onContextLost = (e: Event) => {
+      e.preventDefault();
+      this._contextLost = true;
+      this._syncTicker(); // halt the RAF while the context is gone
+    };
+    this._onContextRestored = () => { void this.restoreContext(); };
+    this.canvas.addEventListener('webglcontextlost', this._onContextLost as EventListener, false);
+    this.canvas.addEventListener('webglcontextrestored', this._onContextRestored, false);
+  }
+
+  /**
+   * Rebuild GPU state after the context is restored: renderer GL objects
+   * (programs / buffers / VAO) synchronously, then textures asynchronously from
+   * their retained sources. Only after textures are back do we clear the lost
+   * flag and resume — so we never draw a frame with missing textures.
+   */
+  private async restoreContext(): Promise<void> {
+    this.renderer.restoreContext();
+    try {
+      await this.resourceManager.restoreContext();
+    } catch (e) {
+      console.warn('[SSCanvasPlayer] Texture restore after context loss failed; some parts may render blank.', e);
+    }
+    this._contextLost = false;
+    this._syncTicker();
+    // For manually-driven hosts (no ticker frame coming) repaint the current
+    // frame now — but not while gated off-screen (an on-screen manual host keeps
+    // _intersecting true because it never wired the observer).
+    if (!this._rafId && this._intersecting) this.draw();
   }
 
   /** Direct render mode + Y-down coordinate system, matching the WebGL projection. */
@@ -261,22 +324,70 @@ export class SSCanvasPlayer {
   public set subFrameEnabled(v: boolean) { this.internalPlayer.subFrameEnabled = v; }
 
   public startTicker(): void {
-    if (this.tickerId) return;
-    this.lastTime = performance.now();
-    const tick = (now: number) => {
-      const deltaMs = now - this.lastTime;
-      this.lastTime = now;
-      this.update(deltaMs);
-      this.draw();
-      this.tickerId = requestAnimationFrame(tick);
-    };
-    this.tickerId = requestAnimationFrame(tick);
+    this._wantTicker = true;
+    this.ensureVisibilityWatch();
+    this._syncTicker();
   }
 
   public stopTicker(): void {
-    if (this.tickerId) {
-      cancelAnimationFrame(this.tickerId);
-      this.tickerId = 0;
+    this._wantTicker = false;
+    this._syncTicker();
+  }
+
+  /**
+   * Whether the internal RAF loop should currently run: the user asked for it
+   * (`startTicker`), the context is alive, and — when `pauseWhenHidden` is on —
+   * the canvas is on-screen and the tab is foregrounded.
+   */
+  private get _shouldRun(): boolean {
+    const docHidden = typeof document !== 'undefined' && document.hidden;
+    return this._wantTicker && !this._contextLost && this._intersecting && !docHidden;
+  }
+
+  /** Start or stop the RAF loop to match `_shouldRun` (idempotent). */
+  private _syncTicker(): void {
+    if (this._shouldRun && !this._rafId) {
+      // Reset the clock so the first frame after a pause/restore uses a normal
+      // delta instead of the whole idle gap.
+      this.lastTime = performance.now();
+      const tick = (now: number) => {
+        const deltaMs = now - this.lastTime;
+        this.lastTime = now;
+        this.update(deltaMs);
+        this.draw();
+        this._rafId = this._shouldRun ? requestAnimationFrame(tick) : 0;
+      };
+      this._rafId = requestAnimationFrame(tick);
+    } else if (!this._shouldRun && this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = 0;
+    }
+  }
+
+  /**
+   * Lazily wire the visibility gating used by `pauseWhenHidden` (default on):
+   * an IntersectionObserver pauses the ticker when the canvas scrolls off-screen
+   * and `visibilitychange` pauses it when the tab is backgrounded (SPEC §11.5 —
+   * saves battery and satisfies ad viewability). No-op when pauseWhenHidden is
+   * false or the APIs are unavailable (then the ticker simply always runs).
+   */
+  private ensureVisibilityWatch(): void {
+    if (this.options.pauseWhenHidden === false) return;
+    if (this._io || this._onVisibilityChange) return; // already set up
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      // Until the observer's first callback we don't know if we're on-screen;
+      // assume hidden so an off-screen canvas never paints an initial frame.
+      this._intersecting = false;
+      this._io = new IntersectionObserver((entries) => {
+        this._intersecting = entries[entries.length - 1].isIntersecting;
+        this._syncTicker();
+      });
+      this._io.observe(this.canvas);
+    }
+    if (typeof document !== 'undefined') {
+      this._onVisibilityChange = () => this._syncTicker();
+      document.addEventListener('visibilitychange', this._onVisibilityChange);
     }
   }
 
@@ -296,6 +407,9 @@ export class SSCanvasPlayer {
   }
 
   public draw(): void {
+    // Drawing on a lost context is a no-op at best; skip until it is restored
+    // (isContextLost() also catches a loss that fired before our handler ran).
+    if (this._contextLost || this.gl.isContextLost()) return;
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     const [r, g, b, a] = this._clearColor;
@@ -522,6 +636,24 @@ export class SSCanvasPlayer {
 
   public destroy(): void {
     this.stopTicker();
+
+    // Tear down visibility gating (pauseWhenHidden).
+    if (this._io) { this._io.disconnect(); this._io = null; }
+    if (this._onVisibilityChange && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    }
+    this._onVisibilityChange = null;
+
+    // Tear down context-loss handlers.
+    if (this._onContextLost) {
+      this.canvas.removeEventListener('webglcontextlost', this._onContextLost as EventListener);
+      this._onContextLost = null;
+    }
+    if (this._onContextRestored) {
+      this.canvas.removeEventListener('webglcontextrestored', this._onContextRestored);
+      this._onContextRestored = null;
+    }
+
     this.renderer.destroy();
     this.resourceManager.destroy();
   }

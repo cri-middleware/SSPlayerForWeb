@@ -62,10 +62,39 @@ void main() {
 // aPosition/aUV, which stay at the same slots the VAO enabled for parts-color.
 export const ATTR_LOC = { position: 0, uv: 1, color: 2, varg: 3 } as const;
 
+// Detected fragment float precision per context, cached so the (cheap but
+// non-free) getShaderPrecisionFormat probe runs once per GL context rather than
+// per program compile. Keyed by the context object; survives a context-loss
+// restore (the same context is reused and its precision capability is stable).
+const _fragPrecisionCache = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, 'highp' | 'mediump'>();
+
+/**
+ * Highest fragment float precision the context actually supports (SPEC §8-8):
+ * `highp` when `getShaderPrecisionFormat(FRAGMENT_SHADER, HIGH_FLOAT)` reports a
+ * usable range, else `mediump` (guaranteed on WebGL1). Mobile GPUs are not
+ * required to offer fragment highp, so we probe rather than assume — highp keeps
+ * the parts-color straight-alpha divide (`rgb / max(a, ε)`) accurate where it is
+ * available, and falls back cleanly where it is not.
+ */
+export function getFragmentPrecision(gl: WebGLRenderingContext | WebGL2RenderingContext): 'highp' | 'mediump' {
+  let p = _fragPrecisionCache.get(gl);
+  if (p) return p;
+  p = 'mediump';
+  const hp = gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+  if (hp && hp.precision > 0) p = 'highp';
+  _fragPrecisionCache.set(gl, p);
+  return p;
+}
+
 /**
  * Compile + link a program, binding the shared attribute locations (ATTR_LOC)
  * before link so every program agrees on slot→name. `attribs` lists the
  * (name, location) pairs this program actually declares.
+ *
+ * The fragment source's `precision mediump float;` declaration is promoted to
+ * `highp` when the context supports it (SPEC §8-8, via getFragmentPrecision) —
+ * every SS fragment shader declares mediump as its baseline, so this single
+ * replacement upgrades them all uniformly.
  */
 export function createGLProgram(
   gl: WebGLRenderingContext | WebGL2RenderingContext,
@@ -73,6 +102,10 @@ export function createGLProgram(
   fragSrc: string,
   attribs: { name: string; loc: number }[]
 ): WebGLProgram {
+  if (getFragmentPrecision(gl) === 'highp') {
+    fragSrc = fragSrc.replace('precision mediump float;', 'precision highp float;');
+  }
+
   const vert = gl.createShader(gl.VERTEX_SHADER)!;
   gl.shaderSource(vert, vertSrc);
   gl.compileShader(vert);

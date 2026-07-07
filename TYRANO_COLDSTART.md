@@ -2,7 +2,7 @@
 
 > **前提**: レンダラは **`@spritestudio/ssplayer-webgl`（`SSCanvasPlayer`）を使う**。
 > WebGL1/2・シェーダ移植・ブレンド・`ssplayer-core` API などの描画側の一切は
-> **[SSPLAYER_WEBGL_SPEC.md](./SSPLAYER_WEBGL_SPEC.md) が正典**。本書はそれを重複させず、
+> **描画側は [`ssplayer-webgl`](./packages/ssplayer-webgl/README.md)（残タスクは [ROADMAP.md](./packages/ssplayer-webgl/ROADMAP.md)）が正典**。本書はそれを重複させず、
 > **TyranoScript / ティラノビルダー固有のグルー層だけ**を扱う。
 > まず SPEC を読み、次に本書を読めば `ssplayer-tyrano` に着手できる。
 
@@ -328,7 +328,7 @@ cmp["ss_new"] = {
 
 ## 5. 実装フェーズ（コールドスタート手順）
 
-> **描画（webgl）側のフェーズは [SSPLAYER_WEBGL_SPEC.md §13] に委譲**。以下は tyrano 固有。
+> **描画（webgl）側のフェーズは [ssplayer-webgl の ROADMAP.md](./packages/ssplayer-webgl/ROADMAP.md) に委譲**。以下は tyrano 固有。
 > webgl の P1（静止 1 枚）が出た時点で PT0 に着手できる。
 
 - [ ] **PT0 scaffold**: `packages/ssplayer-tyrano` 作成（package.json / tsdown / `index.ts`）。
@@ -394,9 +394,9 @@ cmp["ss_new"] = {
 
 | 目的 | パス / URL |
 | --- | --- |
-| **描画側の一切（正典）** | [SSPLAYER_WEBGL_SPEC.md](./SSPLAYER_WEBGL_SPEC.md) |
+| **描画側の一切（正典）** | [`packages/ssplayer-webgl/`](./packages/ssplayer-webgl/README.md)（残タスク: [ROADMAP.md](./packages/ssplayer-webgl/ROADMAP.md)） |
 | 全体アーキ図 / ロードマップ | `README.md` / `ROADMAP.md` |
-| 使う面（SSCanvasPlayer） | SPEC §5.1、`packages/ssplayer-webgl/src/SSCanvasPlayer.ts`（実装後） |
+| 使う面（SSCanvasPlayer） | `packages/ssplayer-webgl/src/SSCanvasPlayer.ts` |
 | リソース/音声 IF | `packages/ssplayer-core/src/IResourceManager.ts`, `IAudioManager.ts` |
 | 音声マネージャの手本 | `packages/ssplayer-pixi/src/SSWebAudioManager.ts` |
 | **`.sspj → .ssab` 変換器（§4.3）** | `packages/ssconverter-web/`（`src/main.ts` ブラウザ / `scripts/cli.js` Node / `wasm/ssconverter.js`） |
