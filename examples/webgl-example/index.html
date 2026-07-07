@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WebGL Example</title>
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; background-color: #333; font-family: sans-serif; }
-    canvas { display: block; width: 100vw; height: 100vh; }
+    body { margin: 0; padding: 0; overflow: hidden; background-color: #333; font-family: sans-serif;
+           display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    /* The drawing buffer is a fixed 1280x960; show it at its native pixel size
+       (no CSS scaling) so it renders pixel-by-pixel (crisp), centered in the
+       window. Drawing cost stays fixed at 1280x960 regardless of window size. */
+    canvas { display: block; }
     #panel {
       position: absolute; top: 10px; left: 10px; z-index: 10;
       background: rgba(0,0,0,0.55); padding: 10px; color: #fff; border-radius: 6px;

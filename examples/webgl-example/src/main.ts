@@ -9,8 +9,13 @@ const BUNDLED_SSABS = [
 
 async function main() {
   const canvas = document.getElementById('view') as HTMLCanvasElement;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  // Fixed drawing-buffer size (matches pixi-example's 1280x960). Effect-heavy
+  // animations are fill-rate bound (additive overdraw), so capping the pixel
+  // count here — rather than tracking the full window — keeps them smooth.
+  const CANVAS_W = 1280;
+  const CANVAS_H = 960;
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
 
   const ssabSelect = document.getElementById('ssab-select') as HTMLSelectElement;
   const animSelect = document.getElementById('animation-select') as HTMLSelectElement;
@@ -47,16 +52,10 @@ async function main() {
     setStatus(`♪ Audio "${e.soundName ?? e.soundNameHash}" (loop ${e.loopNum})`);
   });
 
-  // Keep the drawing buffer matched to the window so the aspect ratio is correct
-  // (the projection is recomputed from canvas.width/height each frame) and re-centre
-  // the animation. Runs on load and on every window resize.
-  const fitCanvas = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    player.setTransform({ x: canvas.width / 2, y: canvas.height / 2 });
-  };
-  fitCanvas();
-  window.addEventListener('resize', fitCanvas);
+  // Fixed drawing buffer (1280x960): re-centre the animation. The projection is
+  // recomputed from canvas.width/height each frame, so no per-resize work is
+  // needed — the CSS layout scales the fixed buffer to fit the window.
+  player.setTransform({ x: canvas.width / 2, y: canvas.height / 2 });
 
   // Dropped ssab files by their dropdown value (path); empty until a folder is dropped.
   let droppedSsabs = new Map<string, DroppedFile>();
