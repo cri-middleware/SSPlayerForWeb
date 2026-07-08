@@ -1,6 +1,6 @@
 {
   "name": "@spritestudio/ssplayer-core",
-  "version": "1.0.0",
+  "version": "7.0.0-beta.1",
   "description": "Engine-agnostic WebAssembly core for SpriteStudio-SDK player",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -10,6 +10,15 @@
       "types": "./dist/index.d.ts"
     },
     "./wasm/*": "./wasm/*"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown && copyfiles -u 1 \"wasm/*.wasm\" dist/",

@@ -1,6 +1,6 @@
 {
   "name": "@spritestudio/ssplayer-pixi",
-  "version": "1.0.0",
+  "version": "7.0.0-beta.1",
   "description": "PixiJS renderer for SpriteStudio-SDK player",
   "main": "index.js",
   "types": "dist/index.d.ts",
@@ -10,6 +10,14 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "pixi.js": "^8.19.0"

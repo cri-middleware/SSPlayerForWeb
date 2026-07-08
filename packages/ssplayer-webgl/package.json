@@ -1,6 +1,6 @@
 {
   "name": "@spritestudio/ssplayer-webgl",
-  "version": "1.0.0",
+  "version": "7.0.0-beta.1",
   "description": "Zero-dependency, ad-grade WebGL1/2 renderer for SpriteStudio-SDK player",
   "type": "module",
   "main": "dist/index.js",
@@ -19,6 +19,14 @@
       "import": "./dist/element.js",
       "types": "./dist/element.d.ts"
     }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@spritestudio/ssplayer-core": "workspace:*"
