@@ -6,10 +6,19 @@
 
 **[OPTPiX SpriteStudio 7](https://www.webtech.co.jp/spritestudio/)** で制作したアニメーション (`.ssab`) を Web ブラウザ上で再生する高性能プレイヤーです。すでにお持ちのスプライト素材 (PNG / WebP) を専用エディタでアニメーションさせ、動画ファイルも作り直しも不要で、お好みのレンダリングエンジンからブラウザで再生できます。
 
+## 🌐 ブラウザで試す
+
+インストール不要、すべてブラウザ上で動作します（🚧 初回リリースの公開後に有効になります）:
+
+- ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — 推奨レンダラー
+- ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — `<ss-player>` Web コンポーネント
+- 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換
+
 ## 📚 ドキュメント
 
 詳細なドキュメントは `docs/` フォルダ内で提供しています（VitePress にてホスティング）。読者の目的に応じて段階的に読み進められる構成です。
 
+- [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 初回リリース後に公開
 - [**ドキュメント (日本語)**](./docs/index.md) — 全ドキュメント（英語ドキュメントは現在準備中です）。
 
 ### クイックリンク (日本語)
