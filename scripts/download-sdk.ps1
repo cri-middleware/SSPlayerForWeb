@@ -8,7 +8,7 @@
 #
 # Asset names and layout follow SpriteStudio-SDK/.github/workflows/release.yml:
 #   - spritestudio7-sdk-runtime-web.zip    -> packages/ssplayer-core/wasm/
-#   - spritestudio7-sdk-converter-web.zip  -> packages/ssconverter-web/wasm/
+#   - spritestudio7-sdk-converter-web.zip  -> packages/ssconverter-core/wasm/
 # Both zips are flattened (`zip -rj`), so their files extract directly into the
 # target directory.
 
@@ -20,7 +20,7 @@ $versionFile = "$rootDirectory/SDK_VERSION.txt"
 
 $repo = "cri-middleware/SpriteStudio-SDK"
 $runtimeDir = "$rootDirectory/packages/ssplayer-core/wasm"
-$converterDir = "$rootDirectory/packages/ssconverter-web/wasm"
+$converterDir = "$rootDirectory/packages/ssconverter-core/wasm"
 $versionMarker = "$runtimeDir/VERSION"
 
 $targetVersion = (Get-Content $versionFile).Trim()

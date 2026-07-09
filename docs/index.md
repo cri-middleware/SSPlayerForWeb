@@ -100,3 +100,4 @@ graph LR
 | [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | RPG Maker MZ（PixiJS v5, WIP） |
 | `@spritestudio/ssplayer-core` | エンジン非依存の WASM コア（レンダラーを自作する場合） |
 | [`ssconverter-web`](/usage/assets#ssconverter-web-ブラウザツール) | `.sspj` → `.ssab` 変換ツール（ブラウザ版） |
+| [`@spritestudio/ssconverter-core`](/usage/assets#ssconverter-core-ライブラリ-自作アプリへの組み込み) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合） |

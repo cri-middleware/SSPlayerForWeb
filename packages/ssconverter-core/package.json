@@ -1,0 +1,36 @@
+{
+  "name": "@spritestudio/ssconverter-core",
+  "version": "7.0.0-beta.1",
+  "description": "Environment-agnostic WebAssembly core (wasm build of the Rust libssconverter crate) that converts SpriteStudio projects (.sspj) to binaries (.ssab/.ssqb)",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./wasm/*": "./wasm/*"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cri-middleware/SpriteStudio-SDK"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.9"
+  },
+  "license": "BSD-3-Clause"
+}

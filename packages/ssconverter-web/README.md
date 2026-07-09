@@ -6,6 +6,13 @@ WebAssembly-powered converter that turns SpriteStudio project files (`.sspj`)
 into the runtime binary format (`.ssab`) consumed by the players. Ships as both
 a **browser tool** (Vite app) and a **Node.js CLI**.
 
+Both interfaces are thin **hosts** on top of
+[`@spritestudio/ssconverter-core`](../ssconverter-core) — the environment-agnostic
+converter engine. This package supplies the I/O (browser: File System Access API +
+ZIP download; CLI: filesystem), while the core does the `.sspj → .ssab` conversion.
+To embed conversion in your own app, depend on `@spritestudio/ssconverter-core`
+directly rather than this package.
+
 Part of the [SSPlayerForWeb](../../README.md) monorepo.
 
 > This package is `private` — it is a tool within the monorepo and is **not
@@ -33,8 +40,9 @@ when you want a native app.
 
 ## Setup
 
-The converter WASM (`wasm/ssconverter_bg.wasm`) is **not tracked in git**, so
-obtain it once from the repo root before using either interface below:
+The converter WASM (`@spritestudio/ssconverter-core`'s
+`wasm/ssconverter_bg.wasm`) is **not tracked in git**, so obtain it once from the
+repo root before using either interface below:
 
 ```bash
 pnpm run download:wasm   # fetch the pre-built WASM (no toolchain needed)

@@ -12,6 +12,7 @@
 | [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | インストール不要（ブラウザ） |
 | [`SSConverterGUI`](#ssconvertergui-デスクトップguiツール) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
+| [`@spritestudio/ssconverter-core`](#ssconverter-core-ライブラリ-自作アプリへの組み込み) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core` |
 
 全体の流れは [トップページの概要図](/#概要-sspj-描画まで) を参照してください。
 
@@ -115,6 +116,61 @@ ssconverter-cli ./assets/projects ./extra_assets
 
 詳細は SDK の
 [ssconverter-cli README](https://github.com/cri-middleware/SpriteStudio-SDK/blob/main/cli/README.md)
+を参照してください。
+
+## ssconverter-core（ライブラリ / 自作アプリへの組み込み）
+
+上記のツール類ではなく、**変換そのものを自分の JavaScript/TypeScript アプリや
+サービスに組み込みたい**場合は、変換エンジンを npm ライブラリとして提供する
+**[`@spritestudio/ssconverter-core`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core)**
+を使います。Rust `libssconverter` の WebAssembly ビルドに、エルゴノミックな
+TypeScript API を被せたものです。
+
+**バイト入力・バイト出力**で、ファイルシステムにも DOM にも依存しません。その
+ため同じコアがブラウザ・Node・Web Worker・エッジランタイムのいずれでも動作します
+（`ssconverter-web` のブラウザ UI と Node CLI もこのコアの上に載っています）。
+
+```bash
+npm i @spritestudio/ssconverter-core
+```
+
+```ts
+import {
+  init,
+  convertProject,
+  locateProject,
+  version,
+  ssabSchemaVersion,
+} from '@spritestudio/ssconverter-core';
+
+// ブラウザ: 同梱 wasm を URL で読み込む
+import wasmUrl from '@spritestudio/ssconverter-core/wasm/ssconverter_bg.wasm?url';
+await init(wasmUrl);
+
+// Node: wasm のバイト列を自分で読んで渡す
+// import { readFile } from 'node:fs/promises';
+// const wasmPath = new URL(
+//   import.meta.resolve('@spritestudio/ssconverter-core/wasm/ssconverter_bg.wasm'),
+// );
+// await init(await readFile(wasmPath));
+
+console.log(`converter ${version()} (ssab v${ssabSchemaVersion()})`);
+
+// files: プロジェクトディレクトリ内の全パス（.sspj を含む）→ バイト列
+const { stem } = locateProject(files.keys());
+const result = convertProject(files, { embedded: false });
+
+for (const [name, bytes] of result.output) {
+  /* `${stem}/${name}` として書き出す */
+}
+for (const [dest, src] of result.assets) {
+  /* 参照テクスチャ src を dest にコピー（非 embedded 時のみ） */
+}
+```
+
+I/O（ファイル読み書き・ZIP 化・ダウンロード）は呼び出し側（ホスト）の担当です。
+API の一覧は
+[`ssconverter-core` の README](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core#api)
 を参照してください。
 
 ## 配置とテクスチャ解決
