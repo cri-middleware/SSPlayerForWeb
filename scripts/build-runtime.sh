@@ -25,7 +25,7 @@ echo "Copying generated WASM files..."
 mkdir -p "$OUT_DIR"
 cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/runtime-web/$MODE/"* "$OUT_DIR/"
 
-CONVERTER_OUT_DIR="$ROOT_DIR/packages/ssconverter-web/wasm"
+CONVERTER_OUT_DIR="$ROOT_DIR/packages/ssconverter-core/wasm"
 echo "Copying generated converter WASM files..."
 mkdir -p "$CONVERTER_OUT_DIR"
 cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/converter-web/$MODE/"* "$CONVERTER_OUT_DIR/"

@@ -3,6 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { init, convertProject, applySuffix } from '@spritestudio/ssconverter-core';
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -43,27 +44,25 @@ if (!fs.existsSync(sspjPath)) {
     process.exit(1);
 }
 
-// Load WASM
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const wasmPath = path.resolve(__dirname, '../wasm/ssconverter_bg.wasm');
+// Load the WASM shipped inside @spritestudio/ssconverter-core. The core is
+// fs-agnostic, so the host reads the bytes and hands them to init().
+const wasmPath = fileURLToPath(
+    import.meta.resolve('@spritestudio/ssconverter-core/wasm/ssconverter_bg.wasm'),
+);
 
 if (!fs.existsSync(wasmPath)) {
-    console.error(`Error: WASM not found at ${wasmPath}. Please build WASM first.`);
+    console.error(`Error: WASM not found at ${wasmPath}. Run \`pnpm download:wasm\` (or \`pnpm build:wasm\`) first.`);
     process.exit(1);
 }
 
-const wasmBuffer = fs.readFileSync(wasmPath);
-
-import init, { convert } from '../wasm/ssconverter.js';
-
 async function main() {
-    await init({ module_or_path: wasmBuffer });
-    
+    await init(fs.readFileSync(wasmPath));
+
     const sspjDir = path.dirname(sspjPath);
-    
+
     // Read all files in the directory recursively
     const filesMap = new Map();
-    
+
     function readDirRecursive(dir) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {
@@ -76,26 +75,22 @@ async function main() {
             }
         }
     }
-    
+
     console.log(`Reading project directory: ${sspjDir}...`);
     readDirRecursive(sspjDir);
     console.log(`Read ${filesMap.size} files. Converting...`);
-    
-    // Call wasm convert
-    const result = convert(filesMap, embedded, false, false, true);
+
+    const result = convertProject(filesMap, { embedded });
+
+    // Suffix mode renames .ssab outputs and drops everything else, so embedded
+    // variants sit next to the external outputs without clobbering them.
+    const outputs = suffix ? applySuffix(result.output, suffix) : result.output;
 
     // Save generated files
     fs.mkdirSync(outDir, { recursive: true });
 
-    for (const [filename, data] of result.output.entries()) {
-        let outName = filename;
-        if (suffix) {
-            // Suffix mode: only emit .ssab files (renamed), so embedded variants
-            // sit next to the external outputs without clobbering them.
-            if (!filename.toLowerCase().endsWith('.ssab')) continue;
-            outName = filename.slice(0, -'.ssab'.length) + suffix + '.ssab';
-        }
-        const dest = path.join(outDir, outName);
+    for (const [filename, data] of outputs.entries()) {
+        const dest = path.join(outDir, filename);
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.writeFileSync(dest, data);
         console.log(`Generated: ${dest}`);
@@ -106,7 +101,7 @@ async function main() {
         for (const [destPath, srcPath] of result.assets.entries()) {
             const srcFullPath = path.join(sspjDir, srcPath);
             const destFullPath = path.join(outDir, destPath);
-            
+
             if (fs.existsSync(srcFullPath)) {
                 fs.mkdirSync(path.dirname(destFullPath), { recursive: true });
                 fs.copyFileSync(srcFullPath, destFullPath);
@@ -116,7 +111,7 @@ async function main() {
             }
         }
     }
-    
+
     console.log('Conversion successful!');
 }
 

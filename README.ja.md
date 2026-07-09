@@ -49,6 +49,7 @@
 | **RPG Maker MZ**（PixiJS v5） | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
 | **自作レンダラーを実装する** | [`@spritestudio/ssplayer-core`](./packages/ssplayer-core) | — |
 | **`.sspj` → `.ssab` を変換する** | [`ssconverter-web`](./packages/ssconverter-web)（Web ツール + Node CLI） | — |
+| **変換機能を自作アプリ/サービスに組み込む** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
 ## 🚀 クイックスタート
 
@@ -95,8 +96,9 @@ pnpm run dev               # 開発サーバを起動してアニメーション
 - **[`@spritestudio/ssplayer-webgl`](./packages/ssplayer-webgl)**: 依存ゼロの単体 WebGL1/2 レンダラー。`<ss-player>` Web Component を含みます。
 - **[`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz)**: RPG Maker MZ (PixiJS v5) 向け。エンジンの Sprite ツリーとシームレスに統合するため SceneGraph 描画を使用します。
 
-**ツール (Tools)**
-- **[`ssconverter-web`](./packages/ssconverter-web)**: WebAssembly を使って `.sspj` を `.ssab` に変換する Web 版ツールおよび Node.js CLI。
+**変換 (Conversion: `.sspj` → `.ssab`)**
+- **[`@spritestudio/ssconverter-core`](./packages/ssconverter-core)**: エンジン非依存の変換コア（Rust `libssconverter` の WebAssembly ビルド）とエルゴノミックな TypeScript API。バイト入力・バイト出力で fs / DOM に依存しないため、ブラウザ・Node・Worker・エッジランタイムのいずれでも同じコアが動きます。
+- **[`ssconverter-web`](./packages/ssconverter-web)**: `ssconverter-core` の上に載るホスト。ブラウザ変換 UI と Node.js CLI（`ssconverter-web-cli`）を提供します。`download:wasm` を実行すれば、ランタイムの `.ssab` スキーマに整合した変換環境が Rust ツールチェーン無しで手に入ります。
 - **[SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases)**: 同じ `.sspj` → `.ssab` 変換を行うデスクトップ GUI ツール。
 
 ## 🎬 サンプル

@@ -16,6 +16,7 @@
     "vite": "^8.1.0"
   },
   "dependencies": {
+    "@spritestudio/ssconverter-core": "workspace:*",
     "fflate": "^0.8.3"
   }
 }

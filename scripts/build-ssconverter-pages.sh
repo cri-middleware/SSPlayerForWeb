@@ -31,11 +31,11 @@ CONVERTER_ASSET="spritestudio7-sdk-converter-web.zip"
 
 command -v jq >/dev/null || { echo "jq is required"; exit 1; }
 
-# Fetch a version's converter wasm into <src>/packages/ssconverter-web/wasm,
+# Fetch a version's converter wasm into <src>/packages/ssconverter-core/wasm,
 # replacing whatever was there (a previous iteration or `download:wasm`).
 fetch_wasm() {
   local src="$1" sdk="$2"
-  local wasm_dir="$src/packages/ssconverter-web/wasm"
+  local wasm_dir="$src/packages/ssconverter-core/wasm"
   local tmp url
   tmp="$(mktemp -d)"
   url="https://github.com/$REPO/releases/download/$sdk/$CONVERTER_ASSET"
@@ -52,6 +52,9 @@ fetch_wasm() {
 build_from() {
   local src="$1" schema="$2" sdk="$3"
   fetch_wasm "$src" "$sdk"
+  # ssconverter-web imports the engine from @spritestudio/ssconverter-core (its
+  # dist + bundled wasm), so build the core against this version's wasm first.
+  pnpm -C "$src" --filter=@spritestudio/ssconverter-core build
   # Build with a per-version base so assets resolve under /<repo>/ssconverter/<schema>/.
   pnpm -C "$src" --filter=ssconverter-web exec tsc
   pnpm -C "$src" --filter=ssconverter-web exec vite build --base="${SITE_BASE}ssconverter/${schema}/"

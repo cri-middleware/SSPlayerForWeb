@@ -21,9 +21,12 @@ This file contains rules, context, and guidelines for AI agents working on the *
 
 - The project uses `pnpm` workspaces. Ensure any dependency modifications are made correctly within the context of a monorepo (e.g., `pnpm add <pkg> --filter <workspace>`).
 - **Packages (`packages/`)**:
-  - `ssplayer-core`: Engine-agnostic WebAssembly wrapper.
+  - `ssplayer-core`: Engine-agnostic WebAssembly wrapper (runtime).
   - `ssplayer-pixi`: PixiJS v8 renderer bindings.
+  - `ssplayer-webgl`: Standalone WebGL1/2 renderer + `<ss-player>` Web Component.
   - `ssplayer-rmmz`: RPG Maker MZ renderer bindings.
+  - `ssconverter-core`: Engine-agnostic WebAssembly converter core (`.sspj` → `.ssab`/`.ssqb`; wasm build of Rust `libssconverter`). No fs/DOM. The wasm glue is kept **external** (`deps.neverBundle`) so it never desyncs from the wasm binary in `wasm/`.
+  - `ssconverter-web`: Host built on `ssconverter-core` — browser converter UI + Node CLI (`ssconverter-web-cli`).
 - **Examples (`examples/`)**:
   - `pixi-example`: Vite-based test server for PixiJS.
   - `rmmz-example`: Test environment for RPG Maker MZ.

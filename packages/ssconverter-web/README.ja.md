@@ -6,6 +6,13 @@ SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤー
 バイナリ形式（`.ssab`）へ変換する、WebAssembly ベースのコンバータです。
 **ブラウザツール**（Vite アプリ）と **Node.js CLI** の両方として提供されます。
 
+どちらのインターフェースも、環境非依存の変換エンジン
+[`@spritestudio/ssconverter-core`](../ssconverter-core) の上に載る薄い**ホスト**です。
+本パッケージは I/O（ブラウザ: File System Access API + ZIP ダウンロード、CLI:
+ファイルシステム）を担い、`.sspj → .ssab` の変換そのものはコアが行います。
+変換機能を自作アプリに組み込みたい場合は、本パッケージではなく
+`@spritestudio/ssconverter-core` を直接依存に加えてください。
+
 [SSPlayerForWeb](../../README.ja.md) モノレポの一部です。
 
 > このパッケージは `private` です。モノレポ内のツールであり、**npm には公開されません**。
@@ -32,8 +39,9 @@ SDK のネイティブ版 `ssconverter-cli` と同じ `.sspj → .ssab` 変換�
 
 ## セットアップ
 
-コンバータの WASM（`wasm/ssconverter_bg.wasm`）は **git で管理されていない** ため、
-以下のいずれかのインターフェースを使う前に、リポジトリルートから一度取得してください。
+コンバータの WASM（`@spritestudio/ssconverter-core` の
+`wasm/ssconverter_bg.wasm`）は **git で管理されていない** ため、以下のいずれかの
+インターフェースを使う前に、リポジトリルートから一度取得してください。
 
 ```bash
 pnpm run download:wasm   # fetch the pre-built WASM (no toolchain needed)

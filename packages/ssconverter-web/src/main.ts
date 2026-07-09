@@ -1,5 +1,11 @@
-import wasmUrl from '../wasm/ssconverter_bg.wasm?url';
-import init, { convert, version, ssab_schema_version } from '../wasm/ssconverter.js';
+import wasmUrl from '@spritestudio/ssconverter-core/wasm/ssconverter_bg.wasm?url';
+import {
+  init,
+  convertProject,
+  locateProject,
+  version,
+  ssabSchemaVersion,
+} from '@spritestudio/ssconverter-core';
 import * as fflate from 'fflate';
 import pkg from '../package.json';
 import './style.css';
@@ -146,7 +152,7 @@ async function initWasm() {
         log('Initializing WebAssembly runtime...');
         await init(wasmUrl);
         const ver = version();
-        const ssabSchemaVer = ssab_schema_version();
+        const ssabSchemaVer = ssabSchemaVersion();
         versionDisplay.textContent = `Converter Version: ${ver} (ssab v${ssabSchemaVer})`;
         btnCopyVersion.style.display = 'inline-flex';
         btnCopyVersion.onclick = async () => {
@@ -195,24 +201,11 @@ async function handleInputDirectory(handle: FileSystemDirectoryHandle) {
     log(`Scanning folder: ${handle.name}...`);
     try {
         await readDirectoryRecursive(handle);
-        let sspjCount = 0;
-        
-        for (const p of sourceFiles.keys()) {
-            if (p.endsWith('.sspj')) {
-                sspjCount++;
-                const parts = p.split('/');
-                const filename = parts[parts.length - 1];
-                currentSspjStem = filename.substring(0, filename.length - 5);
-                currentSspjDir = parts.slice(0, -1);
-            }
-        }
-        
-        if (sspjCount === 0) {
-            throw new Error('No .sspj file found in the selected folder.');
-        } else if (sspjCount > 1) {
-            throw new Error(`Validation Error: Found ${sspjCount} .sspj files. Only 1 .sspj file is allowed per conversion to prevent ambiguity.`);
-        }
-        
+
+        const { stem, dir } = locateProject(sourceFiles.keys());
+        currentSspjStem = stem;
+        currentSspjDir = dir;
+
         log(`Found project: ${currentSspjStem}`);
         const timestamp = getTimestamp();
         if (chkEmbedded.checked) {
@@ -269,7 +262,7 @@ btnConvert.addEventListener('click', async () => {
         }
         
         const startTime = performance.now();
-        const result = convert(filesMap, chkEmbedded.checked, false, false, true);
+        const result = convertProject(filesMap, { embedded: chkEmbedded.checked });
         const endTime = performance.now();
         log(`Conversion completed in ${(endTime - startTime).toFixed(2)} ms.`);
         

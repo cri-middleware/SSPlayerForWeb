@@ -40,7 +40,7 @@ if (-not (Test-Path $OutDir)) {
 }
 Copy-Item -Path (Join-Path $SdkReleaseDir "*") -Destination $OutDir -Recurse -Force
 
-$ConverterOutDir = Join-Path $RootDir "packages\ssconverter-web\wasm"
+$ConverterOutDir = Join-Path $RootDir "packages\ssconverter-core\wasm"
 $ConverterSdkReleaseDir = Join-Path $SdkDir "pkg\converter-web\$Mode"
 Write-Host "Copying generated converter WASM files..."
 if (-not (Test-Path $ConverterOutDir)) {
