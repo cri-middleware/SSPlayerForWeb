@@ -6,10 +6,19 @@
 
 A high-performance player for **[OPTPiX SpriteStudio 7](https://www.webtech.co.jp/spritestudio/)** animations (`.ssab`) on the Web. Animate the sprite art you already have (PNG / WebP) in a dedicated editor, then play it back in the browser through the rendering engine of your choice — no video files, no re-authoring.
 
+## 🌐 Try it live
+
+No install — these run entirely in your browser (🚧 live once the first release is published):
+
+- ▶️ **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — the recommended renderer
+- ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — the `<ss-player>` Web Component
+- 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — convert `.sspj` → `.ssab` entirely client-side
+
 ## 📚 Documentation
 
 Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) and is structured step-by-step according to what you want to do:
 
+- [**Documentation site (hosted)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 live after the first release
 - [**ドキュメント (日本語)**](./docs/index.md) — full documentation (English documentation is a work in progress).
 
 ### Quick Links (Japanese)

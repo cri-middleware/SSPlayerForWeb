@@ -14,6 +14,11 @@ export default withMermaid({
   lastUpdated: true,
   cleanUrls: true,
 
+  // A GitHub Pages project site is served under a subpath (e.g. /SSPlayerForWeb/).
+  // CI passes DOCS_BASE to match; local dev/build stays at '/'. Env-driven because
+  // VitePress build has no --base CLI flag.
+  base: process.env.DOCS_BASE || '/',
+
   // ja-first. English lives under docs/en/ and can be enabled later by adding
   // an `en` locale here that mirrors the sidebar below.
   locales: {

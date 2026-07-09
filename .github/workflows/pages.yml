@@ -1,0 +1,109 @@
+name: Deploy Pages
+
+# Serve docs (VitePress), ssconverter-web (every schema version) and examples
+# from GitHub Pages as a single site. Deployed via the artifact method — no
+# gh-pages branch.
+#
+# Triggers on release publish and manual dispatch only (never on push).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Permissions required by the artifact-based Pages deploy.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once; let an in-progress deploy finish rather than
+# cancelling it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with SpriteStudio-SDK submodule)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          # Full history + tags so build-ssconverter-pages.sh can build a version
+          # from a pinned git ref (versions.json "ref") in a worktree.
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # wasm is not tracked in git. Fetch the runtime/converter wasm for the
+      # version in SDK_VERSION.txt — needed to build the packages and examples.
+      # (Each ssconverter schema version's wasm is re-fetched per-version later
+      # by build-ssconverter-pages.sh based on versions.json.)
+      - name: Download SDK WASM (runtime + converter)
+        run: pnpm run download:wasm
+
+      - name: Build packages
+        run: pnpm run build
+
+      # Generate the .ssab assets the examples load, from the SpriteStudio-SDK
+      # test projects.
+      - name: Generate example assets
+        run: pnpm run deploy-examples
+
+      # Pages base path (a project site is served under /<repo>/).
+      - name: Compute site base path
+        run: echo "SITE_BASE=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
+
+      # docs (VitePress): base is env-driven (config.mts reads DOCS_BASE).
+      - name: Build docs
+        env:
+          DOCS_BASE: ${{ env.SITE_BASE }}
+        run: pnpm --filter=docs run build
+
+      # examples: base is injected via vite's --base CLI (configs left untouched).
+      - name: Build examples
+        run: |
+          pnpm --filter=pixi-example exec vite build --base="${SITE_BASE}examples/pixi/"
+          pnpm --filter=webgl-example exec vite build --base="${SITE_BASE}examples/webgl/"
+
+      # ssconverter-web: build every schema version from versions.json into
+      # _site/ssconverter/<schema>/.
+      - name: Build ssconverter-web (all schema versions)
+        run: bash scripts/build-ssconverter-pages.sh _site
+
+      # Collect the outputs into _site (docs at the root, the rest under subpaths).
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -R docs/.vitepress/dist/. _site/
+          mkdir -p _site/examples/pixi  && cp -R examples/pixi-example/dist/.  _site/examples/pixi/
+          mkdir -p _site/examples/webgl && cp -R examples/webgl-example/dist/. _site/examples/webgl/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
