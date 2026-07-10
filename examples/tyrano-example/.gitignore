@@ -1,0 +1,33 @@
+# --- TyranoScript engine (fetched at dev-time; NOT redistributed — see README) ---
+# The engine ships its own index.html + tyrano/ + a starter data/ tree. We keep
+# only the files this example authors (scenario/first.ks, the ssplayer plugin,
+# and the sample ssdata) and ignore everything the engine provides.
+/index.html
+/tyrano/
+/package_electron/
+/*.exe
+/*.app
+
+# Engine-provided data subfolders (overlaid at dev-time, not ours to commit).
+/data/system/
+/data/fgimage/
+/data/bgimage/
+/data/image/
+/data/bgm/
+/data/sound/
+/data/video/
+/data/font/
+
+# Only these scenario files are authored here (the rest ship with the engine).
+/data/scenario/*
+!/data/scenario/first.ks
+!/data/scenario/make.ks
+
+# --- Generated plugin artefacts (produced by `pnpm run sync:plugin`) ---
+/data/others/plugin/ssplayer/main.js
+/data/others/plugin/ssplayer/ssruntime_bg.wasm
+
+# --- SS assets (reference .ssab + textures; generated, not committed) ---
+# Populated by `pnpm run sync:assets` (copy from webgl-example/public) or the
+# repo-wide `pnpm deploy-examples` (compiles the SDK test projects).
+/data/others/ssdata/
