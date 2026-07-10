@@ -5,6 +5,9 @@
 **SpriteStudio 7**（`.ssab`）アニメーションを **RPG Maker MZ** で再生するプラグインです。
 キャラやピクチャと正しい前後関係（Zオーダー）で表示されます。
 
+▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
+同梱のサンプル MZ プロジェクトをブラウザで動かせます（🚧 初回リリース後に公開）。
+
 [SSPlayerForWeb](../../README.ja.md) モノレポの一部です。この README は2部構成になっています。
 **[プラグインの使い方](#プラグインの使い方)**（RPG Maker MZ でゲームを作る方向け）と、
 **[開発・コントリビュート](#開発コントリビュート)**（プラグインや SDK に手を入れる方向け）です。

@@ -5,6 +5,10 @@
 Play **SpriteStudio 7** (`.ssab`) animations in **RPG Maker MZ** — shown in correct
 Z-order with your characters and pictures.
 
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
+run the bundled sample MZ project in your browser (🚧 live once the first release is
+published).
+
 Part of the [SSPlayerForWeb](../../README.md) monorepo. This page has two parts:
 **[Using the plugin](#using-the-plugin)** (for RPG Maker MZ game creators) and
 **[Contributing](#contributing)** (for people hacking on the plugin or the SDK).
