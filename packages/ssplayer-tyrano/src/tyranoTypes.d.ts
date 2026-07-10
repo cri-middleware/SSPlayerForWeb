@@ -1,7 +1,7 @@
 // Minimal ambient types for the TyranoScript runtime surface this adapter
-// touches. TyranoScript ships no types; we model only what `[ss_*]` needs
-// (§2 of TYRANO_COLDSTART.md). Kept intentionally loose — the real object has
-// far more, and we must not over-constrain a foreign runtime.
+// touches. TyranoScript ships no types; we model only what `[ss_*]` needs.
+// Kept intentionally loose — the real object has far more, and we must not
+// over-constrain a foreign runtime.
 
 /** A KAG custom tag registered on `TYRANO.kag.ftag.master_tag`. */
 export interface TyranoMasterTag {

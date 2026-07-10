@@ -1,16 +1,15 @@
 import type { PlayerRegistry } from './PlayerRegistry.js';
 import type { TyranoKag } from './tyranoTypes.js';
 
-// Save/load bridge (§3.3). SS players live in the DOM + WASM, neither of which
+// Save/load bridge. SS players live in the DOM + WASM, neither of which
 // TyranoScript's save system captures — so on save we must mirror each player's
 // reconstruction data into the SAVE TARGET (`stat`), and on load rebuild the
 // live players from it (see the `[ss_restore]` tag, which the author places in
 // `make.ks` — the special .ks TyranoScript `call`s on load). This mirrors the
 // official Spine plugin's `stat.spine_models` + `[spine_restore]` pattern.
 //
-// We namespace under `stat.f` (the documented game-variable save target,
-// TYRANO_COLDSTART.md §2/§3.3) with a `__`-prefixed key so it never collides
-// with an author's own `f` variables.
+// We namespace under `stat.f` (the game-variable save target) with a
+// `__`-prefixed key so it never collides with an author's own `f` variables.
 
 /** Key under `TYRANO.kag.stat.f` holding the serialized player map. */
 export const SAVE_KEY = '__ssplayers';

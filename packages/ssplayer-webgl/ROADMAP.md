@@ -58,4 +58,5 @@ renderer can wire them up.
 *   **DOM / scene-graph integration and UI** — a host responsibility; this package
     renders to a single canvas only.
 *   **Tyrano integration** — a thin adapter kept in a separate `ssplayer-tyrano`
-    package (see [`../../TYRANO_COLDSTART.md`](../../TYRANO_COLDSTART.md)).
+    package (see [`../ssplayer-tyrano/README.md`](../ssplayer-tyrano/README.md) and
+    its [`ROADMAP.md`](../ssplayer-tyrano/ROADMAP.md)).

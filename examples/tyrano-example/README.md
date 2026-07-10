@@ -186,4 +186,4 @@ SS の音声イベントは TyranoScript 同梱の howler で再生されます�
 （`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
 本サンプルの Ringo には音声が無いため鳴りません。
 
-ティラノビルダー `.tbp` 対応は PT4（TYRANO_COLDSTART.md §5）。
+ティラノビルダー `.tbp` 対応は PT4（[ssplayer-tyrano ROADMAP](../../packages/ssplayer-tyrano/ROADMAP.md)）。
