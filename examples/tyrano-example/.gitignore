@@ -28,6 +28,6 @@
 /data/others/plugin/ssplayer/ssruntime_bg.wasm
 
 # --- SS assets (reference .ssab + textures; generated, not committed) ---
-# Populated by `pnpm run sync:assets` (copy from webgl-example/public) or the
-# repo-wide `pnpm deploy-examples` (compiles the SDK test projects).
+# Populated by the repo-wide `pnpm deploy-examples` (compiles the SDK test
+# projects and copies each into its example, including this one's ssdata/).
 /data/others/ssdata/

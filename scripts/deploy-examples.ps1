@@ -19,19 +19,32 @@ if (!(Test-Path -Path $TYRANO_SSDATA)) {
 Write-Host "Compiling SpriteStudio test assets..."
 Set-Location -Path $ROOT_DIR
 
-node packages/ssconverter-web/scripts/cli.js -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
-node packages/ssconverter-web/scripts/cli.js -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
+# --stem-dir nests each project's output under <out>/<sspj-stem>/, so overall's
+# many ssab land in <out>/overall/ and Ringo's in <out>/Ringo/.
+node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
+node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
 # Also emit embedded-texture variants (*_embedded.ssab) so the examples can demo
 # SSABs whose textures are inlined (no sibling image files needed).
 Write-Host "Compiling embedded-texture variants..."
-node packages/ssconverter-web/scripts/cli.js --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
-node packages/ssconverter-web/scripts/cli.js --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
+node packages/ssconverter-web/scripts/cli.js --stem-dir --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/overall/overall.sspj
+node packages/ssconverter-web/scripts/cli.js --stem-dir --embedded --suffix _embedded -o "$PIXI_PUBLIC" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
 Copy-Item -Path "$PIXI_PUBLIC\*" -Destination $WEBGL_PUBLIC -Recurse -Force
 
 # tyrano-example uses the REFERENCE Ringo (ssab + sibling PNG), not the embedded
 # variant, to exercise real texture-path resolution.
-Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo.png") -Destination $TYRANO_SSDATA -Force
+$TYRANO_RINGO = Join-Path $TYRANO_SSDATA "Ringo"
+New-Item -ItemType Directory -Force -Path $TYRANO_RINGO | Out-Null
+Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo\Ringo.png") -Destination $TYRANO_RINGO -Force
 
-Write-Host "Deploy complete! The .ssab and related asset files have been copied to $PIXI_PUBLIC, $WEBGL_PUBLIC and $TYRANO_SSDATA."
+# rmmz-example (RPG Maker MZ): convert the test .sspj into the game's asset
+# folder (nested under img/spritestudio/<project>/). The MZ plugin build
+# artefacts are synced separately by the example itself (examples/rmmz-example:
+# pnpm run sync:plugin), mirroring tyrano-example — deploy-examples only
+# publishes converted test assets.
+$RMMZ_SS = Join-Path $ROOT_DIR "examples\rmmz-example\SampleProject\img\spritestudio"
+New-Item -ItemType Directory -Force -Path $RMMZ_SS | Out-Null
+node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$RMMZ_SS" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
+
+Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $TYRANO_SSDATA and $RMMZ_SS."

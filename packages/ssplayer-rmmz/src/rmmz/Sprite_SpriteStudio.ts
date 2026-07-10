@@ -27,6 +27,7 @@ export interface SSViewSpec {
 export interface ISpriteSpriteStudio {
   readonly player: SSPlayer;
   loadAnimation(spec: SSViewSpec): Promise<void>;
+  switchAnimation(animation: string, loop?: number): Promise<void>;
   update(): void;
   destroy(options?: unknown): void;
 }
@@ -55,6 +56,19 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
       if (token !== this._loadToken) return; // superseded by a newer load
       await this.player.setAnimation(spec.animation, spec.loop ?? -1);
       if (token !== this._loadToken) return;
+      this.player.play();
+    }
+
+    /**
+     * Switch to another animation WITHOUT reloading the .ssab (the project is
+     * already loaded). Much lighter than loadAnimation and keeps playback
+     * subframe-smooth. Use loadAnimation when the .ssab itself changes.
+     */
+    public async switchAnimation(animation: string, loop = -1): Promise<void> {
+      if (this._spec) this._spec = { ...this._spec, animation, loop };
+      const token = ++this._loadToken;
+      await this.player.setAnimation(animation, loop);
+      if (token !== this._loadToken) return; // superseded by a newer load/switch
       this.player.play();
     }
 

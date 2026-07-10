@@ -1,10 +1,13 @@
 import { SSCanvasPlayer, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 import { collectDroppedFiles, fileToDataUrl, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
 
-// Bundled sample ssabs served from public/ (root). Their <option> value is the URL.
+// Bundled sample ssabs served from public/. The deploy nests each project under
+// public/<project>/ (ssconverter --stem-dir): the `overall` test project in
+// /overall/, Ringo in /Ringo/. Their <option> value is the URL. (The live
+// dropdown is defined in index.html; this list documents the bundled set.)
 const BUNDLED_SSABS = [
-  'Basic.ssab', 'Shape.ssab', 'PartsColor.ssab', 'Mesh.ssab', 'Ringo.ssab',
-  'Effect.ssab', 'Mask.ssab', 'Instance.ssab', 'BlendMode.ssab',
+  '/overall/Basic.ssab', '/overall/Shape.ssab', '/overall/PartsColor.ssab', '/overall/Mesh.ssab', '/Ringo/Ringo.ssab',
+  '/overall/Effect.ssab', '/overall/Mask.ssab', '/overall/Instance.ssab', '/overall/BlendMode.ssab',
 ];
 
 async function main() {

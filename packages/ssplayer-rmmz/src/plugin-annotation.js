@@ -11,8 +11,8 @@
  * SETUP
  *   1. Put this file and "ssruntime_bg.wasm" in js/plugins/ssplayer/ and enable
  *      the plugin. Point the "WASM Path" parameter at the .wasm.
- *   2. Convert your .sspj to .ssab (see the developer converter plugin) and place
- *      the output under img/spritestudio/<project>/.
+ *   2. Convert your .sspj to .ssab with the SpriteStudio converter tooling
+ *      (ssconverter-web) and place the output under img/spritestudio/<project>/.
  *   3. Use the "Show SS" plugin command to attach an animation to a picture id.
  *
  * The animation is attached as a CHILD of the picture, so Move Picture / scale
@@ -32,9 +32,6 @@
  *   MZ's "Exclude unused files" deployment option WILL DELETE them. Either turn
  *   that option OFF, or copy your img/spritestudio/ folder into the deployed
  *   output afterward.
- *   Also, do NOT deploy the developer converter: remove
- *   ssplayer-rpgmakermz-devconvert.js and ssconverter_bg.wasm from js/plugins/
- *   before release (they are only needed during NW.js test-play).
  *
  * @command showSS
  * @text Show SS
@@ -98,9 +95,163 @@
  * @type boolean
  * @default false
  *
+ * @command setSSAsPicture
+ * @text Set SS As Picture
+ * @desc Attach an SS animation to a picture ALREADY shown by "Show Picture". Control position/erase with the standard Move/Erase Picture commands.
+ *
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ *
+ * @arg ssab
+ * @text SSAB File
+ * @desc Path to the .ssab (relative to the game root), e.g. img/spritestudio/Ringo/Ringo.ssab
+ * @type string
+ * @default
+ *
+ * @arg animation
+ * @text Animation Name
+ * @type string
+ * @default
+ *
+ * @arg loop
+ * @text Loop Count
+ * @desc -1 = infinite, 0/1 = play once.
+ * @type number
+ * @min -1
+ * @default -1
+ *
+ * @arg signalSwitch
+ * @text Signal -> Switch
+ * @desc Game switch turned ON when the animation fires a SpriteStudio signal (0 = none).
+ * @type switch
+ * @default 0
+ *
+ * @arg wait
+ * @text Wait for Completion
+ * @desc Hold the event until the animation finishes. Use with a finite loop count (0/1), not an infinite loop.
+ * @type boolean
+ * @default false
+ *
  * @command waitForSS
  * @text Wait for SS
  * @desc Hold the event until the picture's SS animation finishes (non-looping playback).
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ *
+ * @command changeSSAnimation
+ * @text Change SS Animation
+ * @desc Switch the animation on an existing SS picture without reloading the .ssab.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg animation
+ * @text Animation Name
+ * @type string
+ * @default
+ * @arg loop
+ * @text Loop Count
+ * @desc -1 = infinite, 0/1 = play once. Leave blank to keep the current value.
+ * @type number
+ * @min -1
+ * @default -1
+ *
+ * @command setSSSpeed
+ * @text Set SS Speed
+ * @desc Playback speed multiplier (1 = normal, 0.5 = half, 2 = double). Subframe interpolation keeps slow speeds smooth.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg speed
+ * @text Speed
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @default 1
+ *
+ * @command playSSOnce
+ * @text Play SS Once (return to loop)
+ * @desc Play an animation, then automatically return to the base loop. Ideal for portrait expressions/emotes over an idle loop.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg animation
+ * @text Animation Name
+ * @desc The one-shot animation to play before returning to the current loop.
+ * @type string
+ * @default
+ * @arg loop
+ * @text Play Count
+ * @desc How many times to play the one-shot before returning to the loop (>=1).
+ * @type number
+ * @min 1
+ * @default 1
+ *
+ * @command playSSSequence
+ * @text Play SS Sequence
+ * @desc Play a comma-separated list of animations: each plays once except the LAST, which loops. e.g. "attack1,attack2,wait1".
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg animations
+ * @text Animations (comma-separated)
+ * @desc e.g. "attack1,attack2,wait1". All but the last play once; make the last your idle/base loop.
+ * @type string
+ * @default
+ * @arg loop
+ * @text Final Loop Count
+ * @desc Loop count for the LAST animation. -1 = loop forever.
+ * @type number
+ * @min -1
+ * @default -1
+ *
+ * @command setSSTalk
+ * @text Set SS Talk (lip-sync)
+ * @desc Bind a picture to a SPEAKER NAME: plays "talk" while THAT speaker's message prints, "idle" otherwise. Only the current speaker lip-syncs.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg name
+ * @text Speaker Name
+ * @desc The message name-box name this picture speaks for. Empty = unnamed messages.
+ * @type string
+ * @default
+ * @arg talk
+ * @text Talk Animation
+ * @desc Animation to loop while this speaker's text is being printed.
+ * @type string
+ * @default
+ * @arg idle
+ * @text Idle Animation
+ * @desc Animation to loop when the message finishes.
+ * @type string
+ * @default
+ *
+ * @command clearSSTalk
+ * @text Clear SS Talk
+ * @desc Remove a picture's talk binding (stops lip-sync for it).
  * @arg pictureId
  * @text Picture Id
  * @type number
@@ -155,7 +306,7 @@
  * 導入手順
  *   1. 本ファイルと "ssruntime_bg.wasm" を js/plugins/ssplayer/ に置き、プラグイン
  *      を有効化。パラメータ「WASMパス」を .wasm に合わせてください。
- *   2. .sspj を .ssab に変換し（開発用コンバータプラグイン参照）、出力を
+ *   2. .sspj を SpriteStudio コンバータ（ssconverter-web）で .ssab に変換し、出力を
  *      img/spritestudio/<プロジェクト名>/ に配置します。
  *   3. プラグインコマンド「SS表示」でピクチャ番号にアニメを割り当てます。
  *
@@ -176,9 +327,6 @@
  *   「未使用ファイルを削除」オプションで【削除されてしまいます】。同オプションを
  *   OFF にするか、デプロイメント後に img/spritestudio/ フォルダを出力先へコピー
  *   してください。
- *   また、開発用コンバータはデプロイに含めないでください。リリース前に
- *   ssplayer-rpgmakermz-devconvert.js と ssconverter_bg.wasm を js/plugins/ から
- *   削除してください（NW.js テストプレイ時のみ必要です）。
  *
  * @command showSS
  * @text SS表示
@@ -242,9 +390,163 @@
  * @type boolean
  * @default false
  *
+ * @command setSSAsPicture
+ * @text SSをピクチャに割当
+ * @desc 「ピクチャの表示」で既に表示済みのピクチャに SS アニメを割り当てます。位置移動・消去は標準の「ピクチャの移動/消去」で操作します。
+ *
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ *
+ * @arg ssab
+ * @text SSABファイル
+ * @desc .ssab のパス（ゲームルートからの相対）。例: img/spritestudio/Ringo/Ringo.ssab
+ * @type string
+ * @default
+ *
+ * @arg animation
+ * @text アニメーション名
+ * @type string
+ * @default
+ *
+ * @arg loop
+ * @text ループ回数
+ * @desc -1 = 無限、0/1 = 1回再生。
+ * @type number
+ * @min -1
+ * @default -1
+ *
+ * @arg signalSwitch
+ * @text シグナル→スイッチ
+ * @desc アニメがSpriteStudioシグナルを発火したときONにするスイッチ（0=なし）。
+ * @type switch
+ * @default 0
+ *
+ * @arg wait
+ * @text 完了までウェイト
+ * @desc アニメ終了までイベントを待機します。無限ループではなく有限ループ(0/1)で使用してください。
+ * @type boolean
+ * @default false
+ *
  * @command waitForSS
  * @text SS完了待ち
  * @desc 指定ピクチャの SS アニメが終わるまでイベントを待機します（非ループ再生向け）。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ *
+ * @command changeSSAnimation
+ * @text SSアニメ切替
+ * @desc 表示中の SS ピクチャのアニメを、.ssab を再ロードせずに切り替えます。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg animation
+ * @text アニメーション名
+ * @type string
+ * @default
+ * @arg loop
+ * @text ループ回数
+ * @desc -1 = 無限、0/1 = 1回再生。空欄なら現在値を維持。
+ * @type number
+ * @min -1
+ * @default -1
+ *
+ * @command setSSSpeed
+ * @text SS再生速度
+ * @desc 再生速度の倍率（1=標準, 0.5=半分, 2=倍速）。サブフレーム補間により低速でも滑らかです。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg speed
+ * @text 速度
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @default 1
+ *
+ * @command playSSOnce
+ * @text SSワンショット再生
+ * @desc アニメを再生し、自動で元の base ループへ戻します。立ち絵の表情/エモート向け。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg animation
+ * @text アニメーション名
+ * @desc ループへ戻す前に再生するアニメ名。
+ * @type string
+ * @default
+ * @arg loop
+ * @text 再生回数
+ * @desc ループへ戻る前に何回再生するか（1以上）。
+ * @type number
+ * @min 1
+ * @default 1
+ *
+ * @command playSSSequence
+ * @text SS連続再生
+ * @desc カンマ区切りのアニメ列を再生：末尾以外は各1回、末尾はループ。例「attack1,attack2,wait1」。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg animations
+ * @text アニメ列（カンマ区切り）
+ * @desc 例「attack1,attack2,wait1」。末尾以外は各1回。末尾は idle/base ループにするのが基本。
+ * @type string
+ * @default
+ * @arg loop
+ * @text 末尾のループ回数
+ * @desc 末尾アニメのループ回数。-1 = 無限ループ。
+ * @type number
+ * @min -1
+ * @default -1
+ *
+ * @command setSSTalk
+ * @text SSリップシンク設定
+ * @desc ピクチャを「話者名」に紐づけ：その話者の文章表示中のみ talk、それ以外は idle。喋っているキャラだけ口パクします。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg name
+ * @text 話者名
+ * @desc このピクチャが担当する「名前欄」の名前。空欄＝名前なしの文章に対応。
+ * @type string
+ * @default
+ * @arg talk
+ * @text 発話アニメ
+ * @desc この話者の文章表示中にループ再生するアニメ。
+ * @type string
+ * @default
+ * @arg idle
+ * @text 待機アニメ
+ * @desc 文章が終わったらループ再生するアニメ。
+ * @type string
+ * @default
+ *
+ * @command clearSSTalk
+ * @text SSリップシンク解除
+ * @desc ピクチャのリップシンク登録を解除します。
  * @arg pictureId
  * @text ピクチャ番号
  * @type number

@@ -198,9 +198,6 @@ importers:
         specifier: workspace:*
         version: link:../ssplayer-webgl
     devDependencies:
-      '@spritestudio/ssconverter-core':
-        specifier: workspace:*
-        version: link:../ssconverter-core
       jsdom:
         specifier: ^26.0.0
         version: 26.1.0

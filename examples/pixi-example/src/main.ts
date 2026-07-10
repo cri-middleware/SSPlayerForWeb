@@ -4,6 +4,11 @@ import { UIManager, showToast } from './ui/UIManager.js';
 import { DropLoader } from './loader/DropLoader.js';
 import { extractAnimationNames } from './utils/ssabExtractor.js';
 
+// The deploy nests each SS project's output under public/<project>/ (ssconverter
+// `--stem-dir`): Ringo's assets live in /Ringo/, everything else comes from the
+// `overall` test project in /overall/. Map a bare sample filename to its URL.
+const ssabUrl = (name: string) => '/' + (name.startsWith('Ringo') ? 'Ringo/' : 'overall/') + name;
+
 async function main() {
     await SSPlayer.initialize();
 
@@ -26,7 +31,7 @@ async function main() {
     const player = new SSPlayer();
     
     console.log("Loading default animation...");
-    await player.load('/Ringo.ssab');
+    await player.load(ssabUrl('Ringo.ssab'));
     await player.setAnimation("run");
 
     player.position.set(640, 480);
@@ -107,8 +112,8 @@ async function main() {
     // matching how the bundled assets are laid out.
     const loadSample = async (name: string) => {
         try {
-            await player.load('/' + name);
-            const buffer = await (await fetch('/' + name)).arrayBuffer();
+            await player.load(ssabUrl(name));
+            const buffer = await (await fetch(ssabUrl(name))).arrayBuffer();
             const anims = extractAnimationNames(buffer);
             uiManager.updateAnimationSelect(anims, anims[0]);
             if (anims.length > 0) await player.setAnimation(anims[0]);
@@ -133,7 +138,7 @@ async function main() {
 
     // Default animation list for the initially-loaded Ringo.
     try {
-        const response = await fetch('/Ringo.ssab');
+        const response = await fetch(ssabUrl('Ringo.ssab'));
         const buffer = await response.arrayBuffer();
         const anims = extractAnimationNames(buffer);
         uiManager.updateAnimationSelect(anims, "run");

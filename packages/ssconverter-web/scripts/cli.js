@@ -11,6 +11,7 @@ let outDir = '';
 let sspjPath = '';
 let embedded = false;
 let suffix = '';
+let stemDir = false;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '-o') {
@@ -24,18 +25,28 @@ for (let i = 0; i < args.length; i++) {
         // assets are NOT copied — used to emit embedded variants alongside the
         // normal external outputs without name clashes.
         suffix = args[++i];
+    } else if (args[i] === '--stem-dir') {
+        // Nest the output under <out_dir>/<sspj-stem>/ instead of writing flat
+        // into <out_dir>. Useful for hosts that expect one folder per project
+        // (e.g. RPG Maker MZ: img/spritestudio/<project>/<project>.ssab).
+        stemDir = true;
     } else {
         sspjPath = args[i];
     }
 }
 
 if (!sspjPath) {
-    console.error('Usage: node cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] <project.sspj>');
+    console.error('Usage: node cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>');
     process.exit(1);
 }
 
 if (!outDir) {
     outDir = path.dirname(sspjPath);
+}
+
+// Opt-in: write into a per-project subfolder named after the .sspj stem.
+if (stemDir) {
+    outDir = path.join(outDir, path.basename(sspjPath, '.sspj'));
 }
 
 // Ensure the SSPJ exists
