@@ -40,6 +40,17 @@ if (-not (Test-Path $OutDir)) {
 }
 Copy-Item -Path (Join-Path $SdkReleaseDir "*") -Destination $OutDir -Recurse -Force
 
+# No-SIMD runtime variant for RPG Maker MZ / NW.js (bundled Chromium lacks WASM
+# simd128). Same wasm-bindgen interface as the SIMD build, so ssplayer-rmmz
+# swaps only ssruntime_bg.wasm for this one (see its pack-plugin.mjs).
+$NosimdOutDir = Join-Path $RootDir "packages\ssplayer-core\wasm-nosimd"
+$NosimdSdkReleaseDir = Join-Path $SdkDir "pkg\runtime-web-nosimd\$Mode"
+Write-Host "Copying no-SIMD runtime WASM (RPG Maker MZ / NW.js)..."
+if (-not (Test-Path $NosimdOutDir)) {
+    New-Item -ItemType Directory -Path $NosimdOutDir | Out-Null
+}
+Copy-Item -Path (Join-Path $NosimdSdkReleaseDir "*") -Destination $NosimdOutDir -Recurse -Force
+
 $ConverterOutDir = Join-Path $RootDir "packages\ssconverter-core\wasm"
 $ConverterSdkReleaseDir = Join-Path $SdkDir "pkg\converter-web\$Mode"
 Write-Host "Copying generated converter WASM files..."

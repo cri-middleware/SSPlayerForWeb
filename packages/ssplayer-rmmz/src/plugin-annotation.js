@@ -21,12 +21,11 @@
  * The WASM runtime (ssruntime_bg.wasm) is loaded automatically from the same
  * folder as this plugin .js — no path configuration needed.
  *
- * ■ REQUIREMENT — WebAssembly SIMD
- *   The SpriteStudio runtime needs WebAssembly SIMD. Recent RPG Maker MZ builds
- *   (bundled Chromium 91+) enable it by default. On an older MZ / NW.js, add
- *   this to your game's package.json "chromium-args" and restart the play-test:
- *     --enable-features=WebAssemblySimd --js-flags=--experimental-wasm-simd
- *   Without SIMD, SS animations are disabled (the game still runs).
+ * ■ COMPATIBILITY — no special setup
+ *   This plugin bundles the no-SIMD (scalar) SpriteStudio runtime, so it runs on
+ *   RPG Maker MZ's bundled NW.js as-is — no "chromium-args" or WebAssembly SIMD
+ *   flags are required. If the runtime fails to load for any other reason, SS
+ *   animations are disabled but the game still runs.
  *
  * ■ DEPLOYMENT — IMPORTANT
  *   SS animations under img/spritestudio/ are loaded dynamically, so RPG Maker
@@ -166,12 +165,11 @@
  * WASM ランタイム（ssruntime_bg.wasm）はこのプラグイン .js と同じフォルダから
  * 自動で読み込まれます。パス設定は不要です。
  *
- * ■ 動作要件 — WebAssembly SIMD
- *   SpriteStudio ランタイムは WebAssembly SIMD を必要とします。近年の RPG Maker
- *   MZ（同梱 Chromium 91+）は既定で有効です。古い MZ / NW.js の場合は、ゲームの
- *   package.json の "chromium-args" に以下を追加してテストプレイを再起動してください：
- *     --enable-features=WebAssemblySimd --js-flags=--experimental-wasm-simd
- *   SIMD が無い環境では SS アニメは無効化されます（ゲーム自体は動作します）。
+ * ■ 動作環境 — 追加設定は不要
+ *   本プラグインは no-SIMD（スカラー）版 SpriteStudio ランタイムを同梱しているため、
+ *   RPG Maker MZ 同梱の NW.js でそのまま動作します。"chromium-args" や WebAssembly
+ *   SIMD フラグの追加は不要です。何らかの理由でランタイムの読み込みに失敗した場合は、
+ *   SS アニメは無効化されますが、ゲーム自体は動作します。
  *
  * ■ デプロイメント時の重要な注意
  *   img/spritestudio/ の SS アニメは動的にロードされるため、RPG Maker MZ の

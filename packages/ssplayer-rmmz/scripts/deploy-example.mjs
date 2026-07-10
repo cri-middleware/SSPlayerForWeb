@@ -53,7 +53,9 @@ if (!existsSync(example)) {
 // --- 1. Plugin deploy ---------------------------------------------------------
 
 const runtimeJs = join(pkgRoot, 'dist/browser/ssplayer-rpgmakermz.js');
-const runtimeWasm = join(repoRoot, 'packages/ssplayer-core/wasm/ssruntime_bg.wasm');
+// No-SIMD runtime variant: RPG Maker MZ's bundled NW.js lacks WASM simd128.
+// Same wasm-bindgen interface as the SIMD build (glue loads it unchanged).
+const runtimeWasm = join(repoRoot, 'packages/ssplayer-core/wasm-nosimd/ssruntime_bg.wasm');
 const devJs = join(pkgRoot, 'dist/browser/ssplayer-rpgmakermz-devconvert.js');
 const devWasm = join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');
 

@@ -26,7 +26,10 @@ const version = require(join(pkgRoot, 'package.json')).version;
 
 // Required (runtime) inputs.
 const runtimeJs = join(pkgRoot, 'dist/browser/ssplayer-rpgmakermz.js');
-const runtimeWasm = join(repoRoot, 'packages/ssplayer-core/wasm/ssruntime_bg.wasm');
+// RPG Maker MZ runs on NW.js, whose bundled Chromium predates stable WASM
+// simd128 and cannot load the SIMD runtime build. Ship the no-SIMD variant
+// (same wasm-bindgen interface, so the bundled glue loads it unchanged).
+const runtimeWasm = join(repoRoot, 'packages/ssplayer-core/wasm-nosimd/ssruntime_bg.wasm');
 // Optional (developer converter) inputs.
 const devJs = join(pkgRoot, 'dist/browser/ssplayer-rpgmakermz-devconvert.js');
 const devWasm = join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');

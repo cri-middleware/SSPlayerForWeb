@@ -79,7 +79,9 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
     t[4] = wt.tx * r;
     t[5] = wt.ty * r;
 
-    this.ssRenderer.render(ip, player.resourceManager, t);
+    // flipY: MZ's shared framebuffer has the opposite Y convention to a standalone
+    // canvas's default framebuffer, so SS otherwise renders upside-down here.
+    this.ssRenderer.render(ip, player.resourceManager, t, true);
 
     // --- MZ Effekseer-style: restore Pixi's cached GL state ---
     renderer.texture.reset();

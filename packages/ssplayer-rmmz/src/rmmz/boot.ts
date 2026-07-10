@@ -26,16 +26,15 @@ export function installWasmBootGate(wasmPath?: string): Promise<void> {
       _wasmReady = true;
     })
     .catch((err) => {
-      // Never hang boot: if WASM fails (e.g. the NW.js/Chromium build has no
-      // WebAssembly SIMD), log a clear message and let the game start — SS
-      // animations are disabled but the game runs normally (players are not
-      // constructed while !isWasmOk(), so no secondary error is thrown).
+      // Never hang boot: if WASM fails to initialize, log a clear message and let
+      // the game start — SS animations are disabled but the game runs normally
+      // (players are not constructed while !isWasmOk(), so no secondary error is
+      // thrown). The bundled runtime is the no-SIMD (scalar) build, so a missing
+      // WebAssembly SIMD feature is NOT the cause — see the error for the reason.
       console.error(
         '[ssplayer-rmmz] WASM initialization failed — SS animations are DISABLED.\n' +
-          '  The SpriteStudio runtime needs WebAssembly SIMD. If you are on RPG Maker MZ /\n' +
-          '  NW.js, add this to your game\'s package.json "chromium-args":\n' +
-          '    --enable-features=WebAssemblySimd --js-flags=--experimental-wasm-simd\n' +
-          '  and use a reasonably recent MZ (bundled Chromium 91+ enables SIMD by default).',
+          '  The game still runs. This plugin bundles the no-SIMD (scalar) SpriteStudio\n' +
+          '  runtime, so this is not a WebAssembly SIMD issue — see the error below.',
         err,
       );
       _wasmReady = true;

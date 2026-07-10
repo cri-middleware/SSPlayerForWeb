@@ -7,10 +7,12 @@
 # — build from source with `pnpm run build:wasm:win` in the meantime.
 #
 # Asset names and layout follow SpriteStudio-SDK/.github/workflows/release.yml:
-#   - spritestudio7-sdk-runtime-web.zip    -> packages/ssplayer-core/wasm/
-#   - spritestudio7-sdk-converter-web.zip  -> packages/ssconverter-core/wasm/
+#   - spritestudio7-sdk-runtime-web.zip         -> packages/ssplayer-core/wasm/
+#   - spritestudio7-sdk-runtime-web-nosimd.zip  -> packages/ssplayer-core/wasm-nosimd/
+#   - spritestudio7-sdk-converter-web.zip       -> packages/ssconverter-core/wasm/
 # Both zips are flattened (`zip -rj`), so their files extract directly into the
-# target directory.
+# target directory. The no-SIMD runtime variant is consumed by ssplayer-rmmz
+# (RPG Maker MZ / NW.js lacks WASM simd128).
 
 $ErrorActionPreference = "Stop"
 
@@ -20,6 +22,7 @@ $versionFile = "$rootDirectory/SDK_VERSION.txt"
 
 $repo = "cri-middleware/SpriteStudio-SDK"
 $runtimeDir = "$rootDirectory/packages/ssplayer-core/wasm"
+$runtimeNosimdDir = "$rootDirectory/packages/ssplayer-core/wasm-nosimd"
 $converterDir = "$rootDirectory/packages/ssconverter-core/wasm"
 $versionMarker = "$runtimeDir/VERSION"
 
@@ -35,6 +38,7 @@ if (Test-Path $versionMarker) {
 
 $baseUrl = "https://github.com/$repo/releases/download/$targetVersion"
 $runtimeZipUrl = "$baseUrl/spritestudio7-sdk-runtime-web.zip"
+$runtimeNosimdZipUrl = "$baseUrl/spritestudio7-sdk-runtime-web-nosimd.zip"
 $converterZipUrl = "$baseUrl/spritestudio7-sdk-converter-web.zip"
 
 $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
@@ -44,19 +48,27 @@ try {
     Write-Host "Target SDK Version: $targetVersion"
 
     $runtimeZip = "$tmpDir/runtime-web.zip"
+    $runtimeNosimdZip = "$tmpDir/runtime-web-nosimd.zip"
     $converterZip = "$tmpDir/converter-web.zip"
 
-    Write-Host "Downloading runtime WASM:   $runtimeZipUrl"
+    Write-Host "Downloading runtime WASM:        $runtimeZipUrl"
     Invoke-WebRequest -Uri $runtimeZipUrl -OutFile $runtimeZip
 
-    Write-Host "Downloading converter WASM: $converterZipUrl"
+    Write-Host "Downloading runtime WASM (nosimd): $runtimeNosimdZipUrl"
+    Invoke-WebRequest -Uri $runtimeNosimdZipUrl -OutFile $runtimeNosimdZip
+
+    Write-Host "Downloading converter WASM:      $converterZipUrl"
     Invoke-WebRequest -Uri $converterZipUrl -OutFile $converterZip
 
-    Write-Host "Extracting runtime WASM   -> $runtimeDir"
+    Write-Host "Extracting runtime WASM          -> $runtimeDir"
     New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
     Expand-Archive -Path $runtimeZip -DestinationPath $runtimeDir -Force
 
-    Write-Host "Extracting converter WASM -> $converterDir"
+    Write-Host "Extracting runtime WASM (nosimd) -> $runtimeNosimdDir"
+    New-Item -ItemType Directory -Force -Path $runtimeNosimdDir | Out-Null
+    Expand-Archive -Path $runtimeNosimdZip -DestinationPath $runtimeNosimdDir -Force
+
+    Write-Host "Extracting converter WASM        -> $converterDir"
     New-Item -ItemType Directory -Force -Path $converterDir | Out-Null
     Expand-Archive -Path $converterZip -DestinationPath $converterDir -Force
 
