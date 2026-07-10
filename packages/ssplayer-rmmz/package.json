@@ -1,10 +1,12 @@
 {
   "name": "@spritestudio/ssplayer-rmmz",
-  "version": "7.0.0-beta.1",
-  "description": "RPG Maker MZ renderer for SpriteStudio-SDK player",
-  "main": "index.js",
-  "types": "dist/index.d.ts",
+  "version": "7.0.0-alpha.1",
+  "description": "RPG Maker MZ (PixiJS v5) renderer + plugin for the SpriteStudio-SDK player",
   "type": "module",
+  "private": true,
+  "//private": "Not published to npm. RPG Maker MZ authors consume the built IIFE plugin (dist/browser/ssplayer-rpgmakermz.js + ssruntime_bg.wasm), not an npm install. Distribution is via GitHub Releases assets (see scripts/pack-plugin.mjs). The ESM dist/index.js exists for bundler consumers / tests.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -13,21 +15,30 @@
   },
   "files": [
     "dist",
+    "plugin",
     "README.md",
+    "README.ja.md",
     "LICENSE.md"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "dependencies": {
-    "@spritestudio/ssplayer-core": "workspace:*"
+    "@spritestudio/ssplayer-webgl": "workspace:*"
+  },
+  "peerDependencies": {
+    "pixi.js": "^5.3.12"
   },
   "scripts": {
-    "build": "tsdown",
-    "clean": "rimraf dist"
+    "build": "tsdown && node scripts/prepend-annotation.mjs",
+    "pack": "node scripts/pack-plugin.mjs",
+    "deploy:example": "node scripts/deploy-example.mjs",
+    "clean": "rimraf dist",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "@spritestudio/ssconverter-core": "workspace:*",
+    "jsdom": "^26.0.0",
+    "pixi.js": "^5.3.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.9"
   },
   "license": "BSD-3-Clause"
 }
