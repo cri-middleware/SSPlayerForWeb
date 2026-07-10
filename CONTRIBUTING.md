@@ -53,14 +53,14 @@ section of the README. In short, from the repo root:
 
 ```bash
 pnpm install
-pnpm run build:wasm   # Windows: pnpm run build:wasm:win
+pnpm run build:wasm   # builds the Rust core to WASM (needs Rust + wasm-pack)
 pnpm run build
 ```
 
 The generated WASM binaries are **not tracked in git**, so a fresh checkout must
 build them first. The examples consume the **built** packages via workspace
 references, so re-run `pnpm run build` after changing any TypeScript under
-`packages/`. Verify your changes against `examples/pixi-example` (`pnpm run dev`).
+`packages/`. Verify your changes against `examples/webgl-example` (`pnpm run dev`).
 
 ## Coding Standards
 
@@ -132,42 +132,20 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 
 ## 開発環境のセットアップ
 
-### 前提条件
-- **Node.js** および **pnpm** (本リポジトリは pnpm workspaces を使用します)。
-- **Rust (rustup)** および **wasm-pack** / `wasm-bindgen` (WASM を再ビルドする場合のみ必要。`cargo install wasm-pack` でインストール)。
+前提条件（Node.js・pnpm、および WASM を再ビルドする場合のみ Rust / wasm-pack）と
+完全なビルド手順は、README の **[クイックスタート](./README.ja.md#-クイックスタート)**
+に記載しています。リポジトリのルートで手短には:
 
-### ビルド方法
-生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時は
-まず WASM をビルドしてください。
-
-**macOS / Linux:**
 ```bash
-# 0. 依存関係のインストール (ワークスペースの初期化も兼ねます)
 pnpm install
-
-# 1. Rust ランタイムとコンバータを WASM へビルド (rustup 環境および `cargo install wasm-pack` が必要)
-pnpm run build:wasm
-
-# 2. すべての TypeScript パッケージをビルド
+pnpm run build:wasm   # Rust コアを WASM へビルド（Rust / wasm-pack が必要）
 pnpm run build
 ```
 
-**Windows:**
-```powershell
-pnpm install
-pnpm run build:wasm:win
-pnpm run build
-```
-
-### サンプルの実行
-examples は **ビルド済み** のパッケージをワークスペース参照で利用します。そのため
-`packages/` 配下の TypeScript を変更したら、都度ルートで `pnpm run build` を
-再実行してください。
-
-```bash
-cd examples/pixi-example
-pnpm run dev
-```
+生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまず
+ビルドが必要です。examples は **ビルド済み** のパッケージをワークスペース参照で利用
+するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行して
+ください。変更は `examples/webgl-example`（`pnpm run dev`）で確認してください。
 
 ## コーディング規約
 
