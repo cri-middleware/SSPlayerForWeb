@@ -1,0 +1,22 @@
+{
+  "name": "rmmz-harness",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Browser harness to test ssplayer-rmmz Layer 3 (SSPlayer + SSPlayerRenderer) against real PixiJS v5, stubbing only the MZ ImageManager/Bitmap.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@spritestudio/ssplayer-core": "workspace:*",
+    "@spritestudio/ssplayer-rmmz": "workspace:*",
+    "pixi.js": "^5.3.12"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.1.0"
+  },
+  "license": "BSD-3-Clause"
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ssplayer-rmmz harness</title>
+    <style>
+      body { margin: 0; background: #12121c; color: #ddd; font-family: system-ui, sans-serif; }
+      #bar { padding: 8px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      select, button { font-size: 14px; padding: 4px 8px; }
+      #status { margin-left: auto; color: #8 af; font-variant-numeric: tabular-nums; }
+      #stage { display: block; margin: 0 auto; }
+      .note { color: #888; font-size: 12px; padding: 0 12px 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <strong>ssplayer-rmmz</strong>
+      <label>animation <select id="anim"></select></label>
+      <button id="play">play</button>
+      <button id="pause">pause</button>
+      <span id="status">booting…</span>
+    </div>
+    <div class="note">
+      Real PixiJS v5 + real SSPlayer/SSPlayerRenderer. MZ's ImageManager/Bitmap are stubbed to load PNGs from
+      <code>public/</code>. This exercises the actual Layer&nbsp;3 render path (masks/effects/shaders included).
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
