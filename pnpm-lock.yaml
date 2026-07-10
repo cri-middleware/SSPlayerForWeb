@@ -116,6 +116,9 @@ importers:
       vite-plugin-compression:
         specifier: ^0.5.1
         version: 0.5.1(vite@8.1.0(@types/node@26.1.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.9(@types/node@26.1.0)(vite@8.1.0(@types/node@26.1.0)(terser@5.48.0)(yaml@2.9.0))
 
   packages/ssconverter-core:
     devDependencies:
@@ -5122,7 +5125,7 @@ snapshots:
       magic-string: 0.30.21
       obug: 2.1.3
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.5
       std-env: 4.1.0
       tinybench: 2.9.0
       tinyexec: 1.2.4
