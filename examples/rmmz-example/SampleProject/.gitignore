@@ -1,0 +1,9 @@
+# --- Generated SS assets (produced by `pnpm deploy-examples`) ---
+/img/spritestudio/
+
+# --- Plugin build artefacts (synced by `pnpm --filter rmmz-example run sync:plugin`) ---
+/js/plugins/ssplayer-rpgmakermz.js
+/js/plugins/ssruntime_bg.wasm
+
+# --- Playtest saves ---
+/save/

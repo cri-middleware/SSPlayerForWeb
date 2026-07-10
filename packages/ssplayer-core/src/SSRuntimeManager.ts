@@ -15,12 +15,16 @@ import { WasmViewCache } from './WasmViewCache.js';
 let wasmMemory: WebAssembly.Memory | null = null;
 let initPromise: Promise<InitOutput> | null = null;
 
-export async function initializeWasm(wasmUrl?: string | URL | BufferSource | WebAssembly.Module): Promise<InitOutput> {
-    // The bundled runtime is compiled with `+simd128`, so it fails to instantiate on
-    // engines without WebAssembly SIMD. Fail fast here with a clear, engine-agnostic
-    // message instead of a cryptic `WebAssembly.instantiate` error (shared by every
-    // renderer). If a non-SIMD (scalar) build is ever shipped, gate this accordingly.
-    if (!detectWasmSimd()) {
+export async function initializeWasm(
+    wasmUrl?: string | URL | BufferSource | WebAssembly.Module,
+    opts?: { requireSimd?: boolean },
+): Promise<InitOutput> {
+    // The default runtime build is compiled with `+simd128`, so it fails to
+    // instantiate on engines without WebAssembly SIMD. Fail fast here with a clear,
+    // engine-agnostic message instead of a cryptic `WebAssembly.instantiate` error.
+    // Consumers that bundle the scalar (no-SIMD) build — e.g. ssplayer-rmmz for
+    // RPG Maker MZ / NW.js — pass `requireSimd: false` to skip this precondition.
+    if ((opts?.requireSimd ?? true) && !detectWasmSimd()) {
         throw new Error(
             '[ssplayer-core] The SpriteStudio WebAssembly runtime requires WebAssembly SIMD (simd128), ' +
             'enabled by default in Chrome/Edge 91+, Firefox 89+, and Safari 16.4+. ' +

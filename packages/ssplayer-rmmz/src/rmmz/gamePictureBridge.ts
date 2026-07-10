@@ -22,6 +22,8 @@ export interface SSPictureData {
   loop: number;
   /** Optional: turn this game switch ON whenever the animation fires a signal. */
   signalSwitch?: number;
+  /** Optional playback speed multiplier (1 = normal). Persisted for save/load. */
+  speed?: number;
 }
 
 interface GamePictureLike {
@@ -80,11 +82,27 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     }
     const key = `${ss.ssabUrl}|${ss.animation}`;
     if (this._ssChild && this._ssKey === key) return;
+
+    // Same .ssab, only the animation changed → switch in place (no reload). This
+    // keeps playback subframe-smooth and avoids re-parsing the project. A full
+    // rebuild happens only when the .ssab itself changes.
+    if (this._ssChild && this._ssAsset === ss.ssabUrl) {
+      this._ssKey = key;
+      // Reset the "ended" flag so waitForSS tracks the new animation.
+      if (typeof this._pictureId === 'number') setLivePlayer(this._pictureId, this._ssChild.player);
+      this._ssChild.switchAnimation(ss.animation, ss.loop).catch((e: unknown) => {
+        console.error('[ssplayer-rmmz] failed to switch SS animation:', e);
+      });
+      if (typeof ss.speed === 'number') this._ssChild.player.speedScale = ss.speed;
+      return;
+    }
+
     if (this._ssChild) this._ssRemove();
 
     const child = new SpriteSpriteStudio();
     this._ssChild = child;
     this._ssKey = key;
+    this._ssAsset = ss.ssabUrl;
     this.addChild(child as unknown as any);
     if (typeof this._pictureId === 'number') {
       const pid = this._pictureId;
@@ -102,6 +120,7 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     child.loadAnimation({ ssabUrl: ss.ssabUrl, animation: ss.animation, loop: ss.loop }).catch((e: unknown) => {
       console.error('[ssplayer-rmmz] failed to load SS animation:', e);
     });
+    if (typeof ss.speed === 'number') child.player.speedScale = ss.speed;
   };
 
   Sprite_Picture.prototype._ssRemove = function (this: any): void {
@@ -111,5 +130,6 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     this._ssChild.destroy();
     this._ssChild = null;
     this._ssKey = null;
+    this._ssAsset = null;
   };
 }

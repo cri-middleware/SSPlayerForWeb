@@ -3,8 +3,8 @@
 // RPG Maker MZ (PixiJS v5) renderer + plugin glue for the SpriteStudio-SDK
 // player. This ESM entry is side-effect-free: importing it does NOT register any
 // plugin or touch MZ globals, so it's safe in bundlers / tests. The drop-in
-// runtime plugin (src/plugin.ts) and the dev converter (src/devconvert.ts)
-// self-register on load and are built as separate IIFE bundles.
+// runtime plugin (src/plugin.ts) self-registers on load and is built as a
+// separate IIFE bundle.
 
 // Convenience facade: re-export the engine-agnostic core + webgl surface so
 // consumers get a single entry point (initializeWasm, DirectInternalPlayer,

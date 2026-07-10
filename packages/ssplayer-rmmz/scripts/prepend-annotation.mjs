@@ -11,7 +11,6 @@ const pkgRoot = join(here, '..');
 
 const pairs = [
   ['src/plugin-annotation.js', 'dist/browser/ssplayer-rpgmakermz.js'],
-  ['src/devconvert-annotation.js', 'dist/browser/ssplayer-rpgmakermz-devconvert.js'],
 ];
 
 for (const [annPath, outPath] of pairs) {

@@ -25,6 +25,14 @@ echo "Copying generated WASM files..."
 mkdir -p "$OUT_DIR"
 cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/runtime-web/$MODE/"* "$OUT_DIR/"
 
+# No-SIMD runtime variant for RPG Maker MZ / NW.js (bundled Chromium lacks WASM
+# simd128). Same wasm-bindgen interface as the SIMD build, so ssplayer-rmmz
+# swaps only ssruntime_bg.wasm for this one (see its pack-plugin.mjs).
+NOSIMD_OUT_DIR="$ROOT_DIR/packages/ssplayer-core/wasm-nosimd"
+echo "Copying no-SIMD runtime WASM (RPG Maker MZ / NW.js)..."
+mkdir -p "$NOSIMD_OUT_DIR"
+cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/runtime-web-nosimd/$MODE/"* "$NOSIMD_OUT_DIR/"
+
 CONVERTER_OUT_DIR="$ROOT_DIR/packages/ssconverter-core/wasm"
 echo "Copying generated converter WASM files..."
 mkdir -p "$CONVERTER_OUT_DIR"

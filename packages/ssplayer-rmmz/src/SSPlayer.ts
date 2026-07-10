@@ -62,7 +62,9 @@ const ContainerBase: typeof PixiContainer = PIXI ? PIXI.Container : (class {} as
 export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   /** Loads the WASM runtime once. Call before constructing any SSPlayer. */
   public static async initialize(wasmUrl?: string | URL | BufferSource | WebAssembly.Module): Promise<void> {
-    await initializeWasm(wasmUrl as any);
+    // rmmz bundles the no-SIMD (scalar) runtime build — RPG Maker MZ's bundled
+    // NW.js lacks WebAssembly SIMD — so skip ssplayer-core's SIMD precondition.
+    await initializeWasm(wasmUrl as any, { requireSimd: false });
   }
 
   public readonly internalPlayer: DirectInternalPlayer;

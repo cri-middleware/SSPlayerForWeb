@@ -295,18 +295,21 @@ export class SSWebGLRenderer {
    * (program, projection, blend enable); the per-context drawing (and recursive
    * instance children) lives in `_renderContext`.
    */
-  public render(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array): void {
+  public render(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, flipY = false): void {
     if (!player.animationName) return;
 
     const gl = this.gl;
     gl.useProgram(this.partsColorProgram.program);
 
-    // Orthographic projection: canvas pixel space (origin at center, Y-down) ->
+    // Orthographic projection: canvas pixel space (origin top-left, Y-down) ->
     // clip space. Written into a reused scratch to avoid per-frame allocation (§6/§9).
+    // `flipY` inverts the vertical axis for render targets whose framebuffer Y is
+    // opposite the default framebuffer — e.g. RPG Maker MZ's shared context, where
+    // SS otherwise draws upside-down. Standalone canvases pass flipY = false.
     const proj = this.projMatrix;
     proj[0] = 2 / gl.canvas.width; proj[1] = 0; proj[2] = 0;
-    proj[3] = 0; proj[4] = -2 / gl.canvas.height; proj[5] = 0;
-    proj[6] = -1; proj[7] = 1; proj[8] = 1;
+    proj[3] = 0; proj[4] = (flipY ? 2 : -2) / gl.canvas.height; proj[5] = 0;
+    proj[6] = -1; proj[7] = flipY ? -1 : 1; proj[8] = 1;
     if (this.partsColorProgram.uProjection) {
       gl.uniformMatrix3fv(this.partsColorProgram.uProjection, false, proj);
     }

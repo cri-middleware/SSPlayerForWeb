@@ -5,11 +5,14 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 // connectedCallback then loads its `src`/`autoplay` attributes.
 defineSSPlayerElement();
 
-// Bundled sample ssabs served from public/ (root). External textures are siblings.
+// Bundled sample ssabs served from public/. The deploy nests each project under
+// public/<project>/ (ssconverter --stem-dir); map a bare name to its URL
+// (relative, so the <ss-player src> resolves siblings from the same folder).
 const BUNDLED_SSABS = [
   'Basic.ssab', 'Shape.ssab', 'PartsColor.ssab', 'Mesh.ssab', 'Ringo.ssab',
   'Effect.ssab', 'Mask.ssab', 'Instance.ssab', 'BlendMode.ssab', 'Shader.ssab',
 ];
+const ssabUrl = (name: string) => (name.startsWith('Ringo') ? 'Ringo/' : 'overall/') + name;
 
 const player = document.getElementById('player') as SSPlayerElement;
 const ssabSel = document.getElementById('ssab') as HTMLSelectElement;
@@ -54,11 +57,11 @@ copyBtn.addEventListener('click', async () => {
 
 for (const name of BUNDLED_SSABS) {
   const opt = document.createElement('option');
-  opt.value = name;
+  opt.value = ssabUrl(name);
   opt.textContent = name;
   ssabSel.appendChild(opt);
 }
-ssabSel.value = 'Basic.ssab';
+ssabSel.value = ssabUrl('Basic.ssab');
 
 // The element auto-selects the first animation; we still fetch the ssab once to
 // populate the dropdown (mirrors main.ts — no instance-level name accessor).
@@ -108,4 +111,4 @@ speed.addEventListener('input', () => {
   renderSnippet();
 });
 
-populateAnimations('Basic.ssab').catch((e) => write(`Error: ${e?.message ?? e}`));
+populateAnimations(ssabUrl('Basic.ssab')).catch((e) => write(`Error: ${e?.message ?? e}`));

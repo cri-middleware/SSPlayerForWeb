@@ -23,7 +23,7 @@
 
 ; プレイヤーを生成 → ssab ロード → レイヤー0 に canvas を挿入 → 再生。
 ; anime を省略すると ssab の先頭アニメを自動選択する。
-[ss_new name="ringo" storage="others/ssdata/Ringo.ssab" layer="0" x="640" y="480" scale="1" loop="true"]
+[ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480" scale="1" loop="true"]
 
 「レイヤー0に Ringo が表示され、ループ再生されています。」[l][r]
 

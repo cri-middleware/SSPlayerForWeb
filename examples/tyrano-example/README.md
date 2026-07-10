@@ -64,7 +64,7 @@ examples/tyrano-example/
     system/ …       ← 取得＋自動パッチ（コミットしない）
     scenario/first.ks, make.ks  ← 本サンプル
     others/plugin/ssplayer/…    ← init.ks は本サンプル / main.js・wasm は生成物
-    others/ssdata/…             ← 生成アセット（sync:assets、コミットしない）
+    others/ssdata/Ringo/…       ← 生成アセット（deploy-examples、コミットしない）
 ```
 
 > 画面解像度は TyranoScript 既定の **1280×720** を想定しています
@@ -81,9 +81,10 @@ pnpm --filter @spritestudio/ssplayer-tyrano run build
 #    ★ パッケージを編集したら毎回これを回すのが基本ループ
 pnpm --filter tyrano-example run sync:plugin
 
-# 3) SS アセット（reference Ringo.ssab + Ringo.png）を data/others/ssdata/ へ
-#    ※ 事前に `pnpm deploy-examples` で webgl-example/public に生成されている前提
-pnpm --filter tyrano-example run sync:assets
+# 3) SS アセット（reference Ringo.ssab + Ringo.png）を data/others/ssdata/Ringo/ へ
+#    ※ リポジトリ直下の deploy-examples が SS-SDK/tests を変換し、各 example へ配布する
+#      （tyrano の ssdata へのコピーも含む。アセット配布は deploy-examples に一本化）
+pnpm deploy-examples
 ```
 
 ### 3. 起動して確認する

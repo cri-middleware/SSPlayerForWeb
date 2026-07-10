@@ -1,8 +1,8 @@
 name: Deploy Pages
 
-# Serve docs (VitePress), ssconverter-web (every schema version) and examples
-# from GitHub Pages as a single site. Deployed via the artifact method — no
-# gh-pages branch.
+# Serve docs (VitePress), ssconverter-web (every schema version) and the examples
+# — pixi, webgl, and the static RPG Maker MZ SampleProject (rmmz) — from GitHub
+# Pages as a single site. Deployed via the artifact method — no gh-pages branch.
 #
 # Triggers on release publish and manual dispatch only (never on push).
 on:
@@ -63,6 +63,12 @@ jobs:
       - name: Generate example assets
         run: pnpm run deploy-examples
 
+      # rmmz-example is a static RPG Maker MZ project (no bundler). Sync the built
+      # plugin + no-SIMD runtime wasm into its js/plugins/ (deploy-examples already
+      # produced the .ssab under SampleProject/img/spritestudio/).
+      - name: Sync rmmz-example plugin
+        run: pnpm --filter rmmz-example run sync:plugin
+
       # Pages base path (a project site is served under /<repo>/).
       - name: Compute site base path
         run: echo "SITE_BASE=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
@@ -91,6 +97,9 @@ jobs:
           cp -R docs/.vitepress/dist/. _site/
           mkdir -p _site/examples/pixi  && cp -R examples/pixi-example/dist/.  _site/examples/pixi/
           mkdir -p _site/examples/webgl && cp -R examples/webgl-example/dist/. _site/examples/webgl/
+          # rmmz-example: copy the static MZ project as-is (relative paths, so it
+          # runs fine under the /examples/rmmz/ subpath — no base rewrite needed).
+          mkdir -p _site/examples/rmmz  && cp -R examples/rmmz-example/SampleProject/. _site/examples/rmmz/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

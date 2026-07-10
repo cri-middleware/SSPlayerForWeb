@@ -5,7 +5,7 @@ import { defineConfig } from 'tsdown';
 // `build` npm script). tsdown/rolldown's `banner` option does not survive here,
 // so the post-build prepend is the reliable path. See spec §9.
 //
-// ssplayer-rmmz ships three artefacts:
+// ssplayer-rmmz ships two artefacts:
 //
 //  1. ESM `dist/index.js` — for bundler consumers / vitest. Exposes SSPlayer,
 //     SSPlayerRenderer, the RMMZ managers and types; does NOT self-register (safe
@@ -16,18 +16,15 @@ import { defineConfig } from 'tsdown';
 //     EXTERNAL (RMMZ provides `window.PIXI` v5). The WASM binary is EXTERNAL —
 //     ship `ssruntime_bg.wasm` alongside and point the `wasmPath` param at it.
 //
-//  3. IIFE `dist/browser/ssplayer-rpgmakermz-devconvert.js` — an OPTIONAL,
-//     developer-only plugin that (under NW.js test-play) converts `.sspj`
-//     projects dropped in `ss_source/` to `.ssab` via ssconverter-core. Never
-//     add it to a deployed game. Bundles ssconverter-core glue; its wasm and
-//     pixi stay external.
+// SpriteStudio project conversion (.sspj -> .ssab) is NOT part of this package;
+// use the ssconverter-web / ssconverter-core tooling to pre-build .ssab assets.
 export default defineConfig([
-  // 1. Bundler / test entry (ESM, no minify). pixi.js + converter external.
+  // 1. Bundler / test entry (ESM, no minify). pixi.js external.
   {
     entry: ['src/index.ts'],
     format: 'esm',
     dts: true,
-    external: ['pixi.js', '@spritestudio/ssconverter-core'],
+    external: ['pixi.js'],
     outputOptions: {
       entryFileNames: '[name].js',
       chunkFileNames: '[name].js',
@@ -53,26 +50,6 @@ export default defineConfig([
         '@spritestudio/ssplayer-rmmz',
         '@spritestudio/ssplayer-webgl',
         '@spritestudio/ssplayer-core',
-        'flatbuffers',
-      ],
-    },
-  },
-  // 3. Developer-only converter plugin (IIFE, NW.js test-play only).
-  {
-    entry: ['src/devconvert.ts'],
-    format: 'iife',
-    globalName: 'SSPlayerRmmzDevConvert',
-    minify: true,
-    outDir: 'dist/browser',
-    external: ['pixi.js'],
-    outputOptions: {
-      entryFileNames: 'ssplayer-rpgmakermz-devconvert.js',
-      globals: { 'pixi.js': 'PIXI' },
-    },
-    deps: {
-      alwaysBundle: [
-        '@spritestudio/ssplayer-rmmz',
-        '@spritestudio/ssconverter-core',
         'flatbuffers',
       ],
     },
