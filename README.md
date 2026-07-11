@@ -132,3 +132,5 @@ Ready-to-run example apps live under [`examples/`](./examples/) — one per rend
 ## 📄 License
 
 This project is licensed under the BSD-3-Clause License. See [LICENSE.md](./LICENSE.md) for details.
+
+For the licenses of the bundled `SpriteStudio-SDK` and other third-party libraries, see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). Need help? See [SUPPORT.md](./SUPPORT.md); participation is governed by our [Code of Conduct](./CODE_OF_CONDUCT.md).
