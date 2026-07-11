@@ -3,8 +3,9 @@
   "entryPointStrategy": "packages",
   "entryPoints": [
     "../packages/ssplayer-core",
+    "../packages/ssplayer-webgl",
     "../packages/ssplayer-pixi",
-    "../packages/ssplayer-rmmz"
+    "../packages/ssconverter-core"
   ],
   "packageOptions": {
     "entryPoints": ["src/index.ts"],

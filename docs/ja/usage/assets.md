@@ -5,21 +5,30 @@
 （`.ssae` / `.ssee` / `.ssqe` / `.ssce`）を解析し、`.ssab`（アニメーション）と
 必要に応じて `.ssqb`（シーケンスパック）を生成します。
 
-変換には 3 つの経路があります。用途で選んでください。
+変換には 3 つのツール経路があります。用途で選んでください。加えて、変換そのものを
+自作アプリに組み込みたい場合は、ライブラリ **`@spritestudio/ssconverter-core`** を
+使います。
 
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | インストール不要（ブラウザ） |
+| [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | 未公開（現状はソースからビルドしてローカル起動。公開後は GitHub Pages でホスト 🚧） |
 | [`SSConverterGUI`](#ssconvertergui-デスクトップguiツール) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 | [`@spritestudio/ssconverter-core`](#ssconverter-core-ライブラリ-自作アプリへの組み込み) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core` |
 
-全体の流れは [トップページの概要図](/#概要-sspj-描画まで) を参照してください。
+全体の流れは [トップページの概要図](/ja/#概要-sspj-描画まで) を参照してください。
 
 ## ssconverter-web（ブラウザツール）
 
 ブラウザ上で `.sspj` プロジェクトを変換し、結果を **ZIP** でダウンロードする
-ツールです。インストール不要で、WASM 版コンバータをそのままブラウザで実行します。
+ツールです。WASM 版コンバータをそのままブラウザで実行します。
+
+::: warning このパッケージは未公開です
+`ssconverter-web` はまだ公開しておらず、npm には配布していません。現状は
+リポジトリを取得してローカルのビルドから起動する必要があります。公開後は
+ブラウザツールを GitHub Pages（<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/> 🚧）
+でホストする予定です。同梱の Node CLI は開発者向けのツールです。
+:::
 
 ::: warning 対応ブラウザ
 フォルダ選択に **File System Access API**（`showDirectoryPicker` / ディレクトリの
@@ -63,17 +72,17 @@ WASM の初期化状況・変換状況はステータスバッジに、詳細は
 
 ## ssconverter-cli（CLI・CI / 開発者向け）
 
-SpriteStudio-SDK が配布する**ビルド時 CLI**です（`libssconverter` のラッパーで、
-SDK のリリース成果物と同じ変換パイプライン）。CI やバッチ変換、再現性が必要な
-場面に向きます。
+SpriteStudio-SDK が配布する**ネイティブのビルド時 CLI**です（`libssconverter` の
+ラッパーで、SDK のリリース成果物と同じ変換パイプライン）。CI やバッチ変換、
+再現性が必要な場面に向きます。
 
 ### 入手
 
-- **プリビルドバイナリ（推奨）**: Windows / macOS / Linux 版を
+- **プリビルドバイナリ**: Windows / macOS / Linux 版を
   **[SpriteStudio-SDK の Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases)**
-  からダウンロード。ビルド環境は不要です。
+  からダウンロードします。ビルド環境は不要です。
 - **ソースからビルド**: Rust ツールチェーンがあれば SDK リポジトリのルートで
-  `cargo install --path cli`。
+  `cargo install --path cli` を実行します。
 
 ### Single モード（単一プロジェクト）
 
@@ -124,7 +133,7 @@ ssconverter-cli ./assets/projects ./extra_assets
 サービスに組み込みたい**場合は、変換エンジンを npm ライブラリとして提供する
 **[`@spritestudio/ssconverter-core`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core)**
 を使います。Rust `libssconverter` の WebAssembly ビルドに、エルゴノミックな
-TypeScript API を被せたものです。
+TypeScript API を被せたもので、これ単体は npm で公開しています。
 
 **バイト入力・バイト出力**で、ファイルシステムにも DOM にも依存しません。その
 ため同じコアがブラウザ・Node・Web Worker・エッジランタイムのいずれでも動作します
@@ -179,4 +188,4 @@ API の一覧は
 - テクスチャ画像はデフォルトで `.ssab` と同じ階層にあるものとして読み込まれます。画像の配置場所が異なる場合は、各プレイヤーの読み込みメソッド（例: `player.load(ssabUrl, assetBaseUrl)`）でテクスチャの基準 URL を指定してください。
 - **Embedded（埋め込み）**で変換した `.ssab` は、ファイル内にテクスチャを内包するため画像ファイルの別配置は不要です。アセットが単一ファイルで完結するため管理に便利です。
 
-読み込み・再生の手順は [クイックスタート](/setup/quickstart) を参照してください。
+読み込み・再生の手順は [クイックスタート](/ja/setup/quickstart) を参照してください。

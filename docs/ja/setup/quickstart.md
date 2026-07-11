@@ -1,8 +1,56 @@
 # クイックスタート
 
-PixiJS v8 で `.ssab` を再生する最小コードです。`SSPlayer` は PixiJS の
-`Container` を継承し、`Ticker.shared` から**自動更新**されます。ステージに
-追加して `play()` を呼ぶだけで、毎フレームの `update()` は不要です。
+`.ssab` を再生する最小コードです。依存の要らない `ssplayer-webgl` と、
+PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う環境に合う方を選んでください。
+
+## ssplayer-webgl（依存なし）
+
+もっとも手軽な方法は Web Component の `<ss-player>` です。JavaScript をほとんど
+書かずに再生できます。
+
+```html
+<script type="module">
+  import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
+  // <ss-player> タグをブラウザに登録します
+  defineSSPlayerElement();
+</script>
+
+<!-- src に ssab ファイル、animation に再生するアニメーション名を指定 -->
+<ss-player
+  src="/Ringo.ssab"
+  animation="run"
+  autoplay
+  style="width: 640px; height: 480px;">
+</ss-player>
+```
+
+Canvas を自分で用意して制御したい場合は `SSCanvasPlayer` を使います。
+
+```ts
+import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+
+async function main() {
+  // WASM ランタイムをアプリ全体で一度だけ初期化
+  await SSCanvasPlayer.initialize();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 480;
+  document.body.appendChild(canvas);
+
+  const player = new SSCanvasPlayer(canvas, { autoStart: true });
+  await player.load('/Ringo.ssab');   // 第 2 引数でテクスチャの assetBaseUrl を指定可
+  await player.setAnimation('run');    // loop 既定値は -1（無限ループ）
+  player.play();
+}
+
+main().catch(console.error);
+```
+
+## ssplayer-pixi（PixiJS v8）
+
+`SSPlayer` は PixiJS の `Container` を継承し、`Ticker.shared` から**自動更新**されます。
+ステージに追加して `play()` を呼ぶだけで、毎フレームの `update()` は不要です。
 
 ```ts
 import { Application } from 'pixi.js';
@@ -33,10 +81,11 @@ main().catch(console.error);
 
 ## つまずきやすい点
 
-- **`initialize()` は一度だけ**：アプリ起動時に 1 回呼べば十分です。
-- **`update()` は呼ばない**：`Ticker.shared` に自動登録されます。
-- **`.ssab` が無い**：`.sspj` からの変換は [アセットの準備](/usage/assets) を参照。
-- **テクスチャが表示されない**：`load(url, assetBaseUrl)` の第 2 引数でテクスチャ
+- **`initialize()` は一度だけ**：WASM ランタイムはアプリ起動時に 1 回初期化すれば
+  十分です（`SSCanvasPlayer.initialize()` / `SSPlayer.initialize()`）。
+- **Pixi では `update()` を呼ばない**：`SSPlayer` は `Ticker.shared` に自動登録されます。
+- **`.ssab` が無い**：`.sspj` からの変換は [アセットの準備](/ja/usage/assets) を参照してください。
+- **テクスチャが表示されない**：`load(url, assetBaseUrl)` の第 2 引数で、テクスチャ
   の基準 URL を確認してください。
 
-次は [基本的な再生](/usage/basic) で再生制御 API を見ていきます。
+次は [基本的な再生](/ja/usage/basic) で再生制御 API を見ていきます。

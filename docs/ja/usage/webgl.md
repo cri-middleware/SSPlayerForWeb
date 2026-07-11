@@ -1,8 +1,10 @@
-# WebGL で使う
+# WebGL・Web Components で使う
 
-`@spritestudio/ssplayer-webgl` は、外部のレンダリングエンジン（PixiJSなど）に依存しない軽量な単体 WebGL 1/2 レンダラーです。広告用バナーやシンプルなWebページなど、ファイルサイズや依存関係を極力抑えたい用途に向いています。
+`@spritestudio/ssplayer-webgl` は、外部のレンダリングエンジン（PixiJS など）に依存しない単体の WebGL 1/2 レンダラーです。依存関係やファイルサイズを抑えたい構成に向いており、広告バナーやシンプルな Web ページにそのまま組み込めます。フレームワークを使わないドロップイン用途を想定しています。
 
 ## インストール
+
+npm で公開されています。
 
 ```bash
 pnpm add @spritestudio/ssplayer-webgl
@@ -11,8 +13,8 @@ pnpm add @spritestudio/ssplayer-webgl
 ## ポイント
 
 - **依存なし**: PixiJS や Three.js などの外部ライブラリを必要とせず、単体で動作します。
-- **Web Components 対応**: JavaScript を書かずに、HTML に `<ss-player>` を記述するだけで利用できる Custom Element を内包しています。
-- 描画や更新を自動で行う `SSCanvasPlayer` と、独自のレンダリングループに組み込める `SSWebGLRenderer` を提供します。
+- **Web Components 対応**: JavaScript を書かずに、HTML へ `<ss-player>` を記述するだけで利用できる Custom Element を内包しています。
+- 描画と更新を自動で行う `SSCanvasPlayer` と、独自のレンダリングループへ組み込める `SSWebGLRenderer` を提供します。
 
 ## Web Components (`<ss-player>`) の使い方
 
@@ -35,7 +37,7 @@ pnpm add @spritestudio/ssplayer-webgl
 </ss-player>
 ```
 
-JavaScript から制御する場合は、対象の DOM 要素を取得して `play()` や `stop()` を呼び出します。詳細な API は [基本的な再生](/usage/basic) を参照してください。
+JavaScript から制御する場合は、対象の DOM 要素を取得して `play()` や `stop()` を呼び出します。詳細な API は [基本的な再生](/ja/usage/basic) を参照してください。
 
 ## SSCanvasPlayer を直接使う場合
 

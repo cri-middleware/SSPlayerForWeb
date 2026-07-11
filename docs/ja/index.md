@@ -4,14 +4,14 @@ layout: home
 hero:
   name: SSPlayerForWeb
   text: SpriteStudio 7 player for the Web
-  tagline: WebAssembly（Rust）× JavaScript のハイブリッド。PixiJS などの Web グラフィックスエンジンで SpriteStudio 7 アニメーションを高速再生します。
+  tagline: WebAssembly（Rust）× JavaScript のハイブリッド。WebGL や PixiJS などの Web グラフィックスで SpriteStudio 7 アニメーションを高速に再生します。
   actions:
     - theme: brand
       text: クイックスタート
-      link: /setup/quickstart
+      link: /ja/setup/quickstart
     - theme: alt
       text: インストール
-      link: /setup/install
+      link: /ja/setup/install
     - theme: alt
       text: GitHub
       link: https://github.com/cri-middleware/SSPlayerForWeb
@@ -19,17 +19,26 @@ hero:
 features:
   - title: まず動かす
     details: パッケージを入れて .ssab を読み込み、数行で再生。「はじめに」→「使い方」→「API リファレンス」は写経すればそのまま動きます。
-    link: /setup/install
+    link: /ja/setup/install
     linkText: はじめに
   - title: 作り込む
     details: イベント処理、パーツ制御、シェーダー、パフォーマンス調整。少し工夫して表現を作り込みます。
-    link: /customize/events
+    link: /ja/customize/events
     linkText: カスタマイズ
   - title: 拡張・貢献する
     details: 全体構成を理解した上で core や WASM / FFI を拡張・貢献します。設計原則とビルド手順は CONTRIBUTING を参照。
     link: https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md
     linkText: コントリビューション
 ---
+
+## ブラウザで試す
+
+インストール不要、すべてブラウザ上で動作します（🚧 初回リリースの公開後に有効になります）:
+
+- 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
+- ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — `<ss-player>` Web コンポーネント
+- ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け
+- ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（実験的）
 
 ## このドキュメントの読み方
 
@@ -89,15 +98,21 @@ graph LR
 ```
 
 図の 3 経路（`SSConverterGUI` / `ssconverter-web` / `ssconverter-cli`）の詳しい使い方は
-[アセットの準備](/usage/assets) を参照してください。
+[アセットの準備](/ja/usage/assets) を参照してください。
 
 ## パッケージ
 
 | パッケージ | 用途 |
 |---|---|
-| [`@spritestudio/ssplayer-pixi`](/usage/pixi) | PixiJS v8 レンダラー（推奨・まずはこれ） |
-| [`@spritestudio/ssplayer-webgl`](/usage/webgl) | 軽量な単体 WebGL レンダラー（Web Components `<ss-player>` 含む） |
-| [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | RPG Maker MZ（PixiJS v5, WIP） |
-| `@spritestudio/ssplayer-core` | エンジン非依存の WASM コア（レンダラーを自作する場合） |
-| [`ssconverter-web`](/usage/assets#ssconverter-web-ブラウザツール) | `.sspj` → `.ssab` 変換ツール（ブラウザ版） |
-| [`@spritestudio/ssconverter-core`](/usage/assets#ssconverter-core-ライブラリ-自作アプリへの組み込み) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合） |
+| [`@spritestudio/ssplayer-webgl`](/ja/usage/webgl) | 依存ゼロの単体 WebGL レンダラー（Web Component `<ss-player>` を含む）。フレームワークを使わない構成やドロップイン利用に向いています。 |
+| [`@spritestudio/ssplayer-pixi`](/ja/usage/pixi) | すでに **PixiJS v8** で構築したアプリ向けのレンダラーです。 |
+| `@spritestudio/ssplayer-core` | エンジン非依存の WASM コア（レンダラーを自作する場合）です。 |
+| [`ssconverter-web`](/ja/usage/assets) | `.sspj` → `.ssab` 変換ツール（ブラウザツール + Node CLI）です。 |
+| [`@spritestudio/ssconverter-core`](/ja/usage/assets) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合）です。 |
+
+**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（**実験的・alpha**、非公開、npm 未公開）:
+
+| パッケージ | 用途 |
+|---|---|
+| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 |
+| `@spritestudio/ssplayer-tyrano` | **TyranoScript / TyranoBuilder**（ノベルエンジン）向けプラグインです。 |

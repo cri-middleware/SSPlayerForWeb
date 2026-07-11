@@ -20,23 +20,23 @@
 詳細なドキュメントは `docs/` フォルダ内で提供しています（VitePress にてホスティング）。読者の目的に応じて段階的に読み進められる構成です。
 
 - [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 初回リリース後に公開
-- [**ドキュメント (日本語)**](./docs/index.md) — 全ドキュメント（英語ドキュメントは現在準備中です）。
+- [**日本語ドキュメント**](./docs/ja/index.md) · [**English docs**](./docs/index.md)
 
 ### クイックリンク (日本語)
-- [インストール](./docs/setup/install.md)
-- [クイックスタート](./docs/setup/quickstart.md)
-- [基本的な使い方](./docs/usage/basic.md)
-- [アセットの準備](./docs/usage/assets.md)
-- [WebGL・Web Components で使う](./docs/usage/webgl.md)
-- [PixiJS で使う](./docs/usage/pixi.md)
+- [インストール](./docs/ja/setup/install.md)
+- [クイックスタート](./docs/ja/setup/quickstart.md)
+- [基本的な使い方](./docs/ja/usage/basic.md)
+- [アセットの準備](./docs/ja/usage/assets.md)
+- [WebGL・Web Components で使う](./docs/ja/usage/webgl.md)
+- [PixiJS で使う](./docs/ja/usage/pixi.md)
 
 ### 目的別・どこから読むか
 目的の達成に必要な範囲だけを読んで利用できます。
 
 | あなたは… | ゴール | 読むところ |
 |---|---|---|
-| **利用ユーザー** | とにかくアニメーションを動かしたい | [クイックスタート](./docs/setup/quickstart.md) → [基本的な再生](./docs/usage/basic.md) |
-| **カスタマイズユーザー** | 表現を作り込み、ロジックを追加したい | 上記 + [カスタマイズ](./docs/customize/events.md) |
+| **利用ユーザー** | とにかくアニメーションを動かしたい | [クイックスタート](./docs/ja/setup/quickstart.md) → [基本的な再生](./docs/ja/usage/basic.md) |
+| **カスタマイズユーザー** | 表現を作り込み、ロジックを追加したい | 上記 + [カスタマイズ](./docs/ja/customize/events.md) |
 | **SDK / Player 開発者** | 内部の拡張やコアに貢献したい | 上記 + [CONTRIBUTING.md](./CONTRIBUTING.md) |
 
 ## 🎯 どのパッケージを使うか
@@ -88,13 +88,9 @@ examples は **ビルド済み** のパッケージをワークスペース参�
 
 > 🚧 パッケージは **まだ npm に公開されていません**。この導線は初回リリース後に利用できます。それまでは **トラック A** でローカルにお試しください。
 
-こちらでは Rust / WASM ツールチェーンは不要です。WASM は各レンダラーパッケージに同梱されています。
+Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj` を `.ssab` に変換し、数行で再生できます。詳しい手順はドキュメントにあります:
 
-1. **変換**: [`ssconverter-web`](./docs/usage/assets.md) またはデスクトップの [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) で `.sspj` を `.ssab` に変換します。
-2. **インストール**: `npm install @spritestudio/ssplayer-pixi pixi.js`（または環境に合ったレンダラー。上の表を参照）。
-3. **再生**: `.ssab` を読み込み、`SSPlayer` コンテナにアタッチして再生します。
-
-より高度なセットアップについては、[インストールガイド](./docs/setup/install.md) を参照してください。
+**[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
 
 ## 💡 概要
 

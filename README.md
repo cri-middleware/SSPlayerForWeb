@@ -20,9 +20,9 @@ No install — these run entirely in your browser (🚧 live once the first rele
 Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) and is structured step-by-step according to what you want to do:
 
 - [**Documentation site (hosted)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 live after the first release
-- [**ドキュメント (日本語)**](./docs/index.md) — full documentation (English documentation is a work in progress).
+- [**Documentation (English)**](./docs/index.md) · [**日本語ドキュメント**](./docs/ja/index.md)
 
-### Quick Links (Japanese)
+### Quick Links
 - [Installation](./docs/setup/install.md)
 - [Quick Start](./docs/setup/quickstart.md)
 - [Basic Usage](./docs/usage/basic.md)
@@ -88,13 +88,9 @@ The examples consume the **built** packages via workspace references — re-run 
 
 > 🚧 The packages are **not published to npm yet** — this path opens up after the first release. Until then, use **Track A** to try things locally.
 
-No Rust or WASM toolchain is needed here — the WASM ships inside each renderer package.
+No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab`, and play it in a few lines. The full walkthrough lives in the docs:
 
-1. **Convert**: Turn your `.sspj` into `.ssab` with [`ssconverter-web`](./docs/usage/assets.md) or the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases).
-2. **Install**: `npm install @spritestudio/ssplayer-pixi pixi.js` (or the renderer for your environment — see the table above).
-3. **Play**: Load the `.ssab` and attach it to the `SSPlayer` container.
-
-For advanced setups, see the [Installation Guide](./docs/setup/install.md).
+**[Installation](./docs/setup/install.md)** · **[Quick Start](./docs/setup/quickstart.md)** · **[Preparing assets (.sspj → .ssab)](./docs/usage/assets.md)**
 
 ## 💡 Overview
 

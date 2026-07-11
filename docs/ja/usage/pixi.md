@@ -1,7 +1,6 @@
 # PixiJS で使う
 
-`@spritestudio/ssplayer-pixi` は PixiJS v8 向けのレンダラーです。**Direct Drawing
-（バッチ描画）** により多数のキャラクターを高速に描画します。
+`@spritestudio/ssplayer-pixi` は、すでに **PixiJS v8** を採用しているアプリ向けのレンダラーです。**Direct Drawing（バッチ描画）** を使い、多数のキャラクターをまとめて描画します。
 
 ## インストール
 
@@ -15,15 +14,15 @@ pnpm add @spritestudio/ssplayer-pixi pixi.js
 
 - `SSPlayer` は PixiJS の `Container` を継承します。`position` / `scale` /
   `eventMode` など通常の Pixi の API がそのまま使えます。
-- `Ticker.shared` に自動登録されるため、**毎フレームの `update()` は不要**です。
-- 破棄は `player.destroy()`。WASM 側リソースも解放されます。
+- `Ticker.shared` へ自動登録されるため、**毎フレームの `update()` は不要**です。
+- 破棄は `player.destroy()` で行い、WASM 側リソースも解放されます。
 
-最小コードは [クイックスタート](/setup/quickstart)、再生制御は
-[基本的な再生](/usage/basic) を参照してください。
+最小コードは [クイックスタート](/ja/setup/quickstart)、再生制御は
+[基本的な再生](/ja/usage/basic) を参照してください。
 
 ## ブレンドモードと背景
 
-SpriteStudio の「背景を読み取る」ブレンドモード（Screen / Exclusion / Invert）は
+SpriteStudio の「背景を読み取る」ブレンドモード（Screen / Exclusion / Invert）は、
 実際のフレームバッファを読む固定機能 GPU ブレンドとして実装されています。つまり
 `Application` の `backgroundColor` が合成対象の背景になります。詳細は
-[シェーダーとブレンドモード](/customize/shaders) を参照。
+[シェーダーとブレンドモード](/ja/customize/shaders) を参照してください。

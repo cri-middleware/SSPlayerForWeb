@@ -1,6 +1,6 @@
 # 基本的な再生
 
-`SSPlayer`（PixiJS v8）および `SSCanvasPlayer`（WebGL）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/setup/quickstart) を参照してください。
+`SSCanvasPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/ja/setup/quickstart) を参照してください。
 
 ## 読み込みとアニメーション選択
 
@@ -8,15 +8,15 @@
 await player.load(ssabUrl); // 第2引数でテクスチャの基準URL(assetBaseUrl)を指定可
 ```
 
+WebGL (`SSCanvasPlayer`):
+```ts
+await player.setAnimation(name);                       // アニメーションを選択
+```
+
 PixiJS (`SSPlayer`):
 ```ts
 await player.setAnimation(name); // 第2引数: loop回数(既定-1), 第3引数: assetBaseUrl
 player.animationName;            // 現在のアニメーション名
-```
-
-WebGL (`SSCanvasPlayer`):
-```ts
-await player.setAnimation(name);                       // アニメーションを選択
 ```
 
 ## 再生制御
@@ -82,4 +82,4 @@ WebGL 版パッケージでは、HTML に記述するだけで簡単に利用で
 JavaScript から DOM 要素を取得して、`play()` / `pause()` などのメソッドを呼ぶことも可能です。
 
 ---
-タイムラインイベント（ユーザーデータ / シグナル / サウンド）や着せ替えなどの作り込みは [カスタマイズ](/customize/events) を参照してください。
+タイムラインイベント（ユーザーデータ / シグナル / サウンド）や着せ替えなどの作り込みは [カスタマイズ](/ja/customize/events) を参照してください。

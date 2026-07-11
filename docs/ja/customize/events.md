@@ -33,5 +33,5 @@ player.audioManager = myAudioManager; // IAudioManager 実装
 ## シーク時の扱い
 
 シークすると、開始フレームから対象フレームまでのイベントが走査されます。想定外の
-発火があるときは、区間指定（[基本的な再生](/usage/basic) の `setAnimationSection`）
+発火があるときは、区間指定（[基本的な再生](/ja/usage/basic) の `setAnimationSection`）
 と合わせて確認してください。
