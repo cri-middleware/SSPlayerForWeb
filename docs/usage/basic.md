@@ -53,7 +53,8 @@ player.isPausing;           // whether playback is paused
 ```ts
 player.setAnimationSection(startFrame, endFrame);      // limit the playback range
 player.setPlaybackDirection(direction, style);         // direction / style
-player.frameSkipEnabled = true;                        // skip heavy frames
+player.subframe = false;                               // turn off together with frameSkip
+player.frameSkipEnabled = false;                       // stop skipping frames; also needs subframe off, or timing drifts
 ```
 
 ## Part lookup (PixiJS `SSPlayer` only)

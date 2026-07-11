@@ -13,10 +13,13 @@
 レンダラーパッケージは `@spritestudio/ssplayer-core` を再エクスポートしているため、
 コアを個別に入れる必要はありません。
 
-::: tip RPG ツクール MZ 向け
-RPG ツクール MZ 向けレンダラー（`@spritestudio/ssplayer-rmmz`）は**実験的（alpha）かつ非公開**で、
-npm では配布していません。`ssplayer-webgl` を土台にしています。詳細は
-[RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
+::: tip フレームワーク連携
+ゲーム/ノベルフレームワーク向けの連携は `ssplayer-webgl` を土台とし、各フレームワークの
+プラグイン機構で読み込む **IIFE バンドル**として提供されます（npm からインストールするのではなく
+プラグインとして利用）。いずれも現状は**実験的（alpha）**です:
+
+- **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
+- **TyranoScript / TyranoBuilder**（`@spritestudio/ssplayer-tyrano`）— [TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照。
 :::
 
 ## インストール
@@ -46,8 +49,10 @@ npm install @spritestudio/ssplayer-pixi pixi.js
 
 ## 前提
 
-- ブラウザが **WebGL 1 / 2** に対応していること。`ssplayer-pixi` は PixiJS v8 が
-  必要とする **WebGL2 / WebGPU** に依存します。
+- ブラウザが **WebGL** に対応していること（`ssplayer-webgl` は WebGL 1 / 2、
+  `ssplayer-pixi` は WebGL 2 が必要）。加えて `ssplayer-pixi` は、PixiJS v8 の
+  バックエンド優先順位に従い、WebGPU が利用可能ならそれを使い、なければ WebGL2 に
+  フォールバックします。
 - 再生には **`.ssab`（ランタイムバイナリ）** が必要です。SpriteStudio の `.sspj`
   からの変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
 

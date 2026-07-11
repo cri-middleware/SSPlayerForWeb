@@ -13,10 +13,13 @@ Pick a single renderer package that matches your environment.
 Each renderer package re-exports `@spritestudio/ssplayer-core`, so you don't need to
 install the core separately.
 
-::: tip RPG Maker MZ
-The RPG Maker MZ renderer (`@spritestudio/ssplayer-rmmz`) is **experimental (alpha) and
-private** — it is not published to npm. It is built on `ssplayer-webgl`. See
-[Using RPG Maker MZ](/usage/rmmz) for details.
+::: tip Framework integrations
+Integrations for game/VN frameworks are built on `ssplayer-webgl` and ship as **IIFE
+plugin bundles** loaded by the host framework's plugin system — so they are consumed as
+plugins, not installed from npm. Both are currently **experimental (alpha)**:
+
+- **RPG Maker MZ** (`@spritestudio/ssplayer-rmmz`) — see [Using RPG Maker MZ](/usage/rmmz).
+- **TyranoScript / TyranoBuilder** (`@spritestudio/ssplayer-tyrano`) — see [Using TyranoScript / TyranoBuilder](/usage/tyrano).
 :::
 
 ## Install
@@ -46,8 +49,10 @@ npm install @spritestudio/ssplayer-pixi pixi.js
 
 ## Prerequisites
 
-- The browser must support **WebGL 1 / 2**. `ssplayer-pixi` relies on the
-  **WebGL2 / WebGPU** support that PixiJS v8 requires.
+- The browser must support **WebGL** (version 1 or 2 for `ssplayer-webgl`,
+  version 2 for `ssplayer-pixi`). On top of that, `ssplayer-pixi` uses **WebGPU**
+  when the browser provides it and falls back to WebGL2 otherwise, matching the
+  backend preference of PixiJS v8.
 - Playback needs a **`.ssab` (runtime binary)**. See [Preparing assets](/usage/assets)
   for how to convert a SpriteStudio `.sspj`.
 

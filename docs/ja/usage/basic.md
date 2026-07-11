@@ -53,7 +53,8 @@ player.isPausing;           // 一時停止中か
 ```ts
 player.setAnimationSection(startFrame, endFrame);      // 再生区間を限定
 player.setPlaybackDirection(direction, style);         // 方向 / スタイル
-player.frameSkipEnabled = true;                        // 重いフレームのスキップ
+player.subframe = false;                               // frameSkip と一緒に off にする
+player.frameSkipEnabled = false;                       // フレームスキップを止める（subframe も off にしないとタイミングが崩れる）
 ```
 
 ## パーツ照会 (PixiJS `SSPlayer` 固有)

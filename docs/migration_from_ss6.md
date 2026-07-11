@@ -4,7 +4,7 @@
 
 This guide covers moving from the legacy **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`) to this player (`@spritestudio/ssplayer-pixi`). Timeline evaluation has moved from **JavaScript to a Rust/WebAssembly core**, and the asset pipeline and API have been redesigned. This is not a drop-in swap — you will need to **re-convert your assets and rewrite your scripts**.
 
-Note that **both players target PixiJS v8** (legacy `^8.17` / this player `^8.19`), so your Pixi-side rendering and scene-graph code stays largely the same.
+Note that **both players target PixiJS v8**, so your Pixi-side rendering and scene-graph code stays largely the same.
 
 ## 1. Asset format & pipeline
 

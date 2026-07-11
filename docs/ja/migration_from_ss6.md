@@ -4,7 +4,7 @@
 
 旧プレイヤー **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から本プレイヤー（`@spritestudio/ssplayer-pixi`）へ移行する場合の要点をまとめます。タイムライン評価が **JavaScript から Rust/WebAssembly コア**に置き換わり、アセットパイプラインと API も一新されています。単純な差し替えではなく、**アセットの再変換とスクリプトの書き換え**が必要です。
 
-なお **PixiJS は双方とも v8 系**（旧 `^8.17` / 本 `^8.19`）なので、Pixi 本体まわりの描画コードやシーングラフの扱いは大きく変わりません。
+なお **PixiJS は双方とも v8 系**なので、Pixi 本体まわりの描画コードやシーングラフの扱いは大きく変わりません。
 
 ## 1. アセットフォーマットとパイプラインの変更
 
