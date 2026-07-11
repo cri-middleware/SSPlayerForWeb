@@ -98,17 +98,27 @@ Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパ
 
 `pnpm` ワークスペースで構成し、描画をアニメーションロジックから完全に分離しています:
 
-```
-変換（オーサリング時）
-  .sspj  ──▶  ssconverter-core (WASM)  ──▶  .ssab
-                └─ ssconverter-web — ブラウザ UI + Node CLI
+```mermaid
+flowchart TD
+    subgraph conv ["変換（オーサリング時）"]
+        direction LR
+        sspj[".sspj"] --> convcore["ssconverter-core<br/>WASM"] --> ssab[".ssab"]
+        convweb["ssconverter-web<br/>ブラウザ UI + Node CLI"] -. 内包 .-> convcore
+    end
 
-再生（ランタイム）
-  .ssab  ──▶  ssplayer-core (WASM・エンジン非依存)
-                ├─ ssplayer-webgl   → 単体 WebGL + <ss-player>
-                │    ├─ ssplayer-rmmz     → RPG ツクール MZ   （実験的）
-                │    └─ ssplayer-tyrano   → TyranoScript      （実験的）
-                └─ ssplayer-pixi    → PixiJS v8
+    subgraph play ["再生（ランタイム）"]
+        core["ssplayer-core<br/>WASM・エンジン非依存"]
+        webgl["ssplayer-webgl<br/>単体 WebGL + &lt;ss-player&gt;"]
+        pixi["ssplayer-pixi<br/>PixiJS v8"]
+        rmmz["ssplayer-rmmz<br/>RPG ツクール MZ（実験的）"]
+        tyrano["ssplayer-tyrano<br/>TyranoScript（実験的）"]
+        core --> webgl
+        core --> pixi
+        webgl --> rmmz
+        webgl --> tyrano
+    end
+
+    ssab ==>|入力| core
 ```
 
 - **[`ssplayer-core`](./packages/ssplayer-core)** がタイムラインと WASM 処理をすべて担い、各フレームを素の描画データとしてレンダラーへ渡します（DOM・エンジンに非依存）。各レンダラーはその上に載る薄いバインディングなので、新規レンダラーの追加（[ROADMAP](./ROADMAP.md) 参照）はそのパッケージだけで完結します。`ssplayer-rmmz` / `ssplayer-tyrano` はさらに `ssplayer-webgl` を再利用します。

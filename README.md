@@ -98,17 +98,27 @@ No Rust or WASM toolchain needed — the WASM ships inside each renderer package
 
 This project uses `pnpm` workspaces, layered so that rendering stays fully decoupled from the animation logic:
 
-```
-Conversion (author-time)
-  .sspj  ──▶  ssconverter-core (WASM)  ──▶  .ssab
-                └─ ssconverter-web — browser UI + Node CLI
+```mermaid
+flowchart TD
+    subgraph conv ["Conversion (author-time)"]
+        direction LR
+        sspj[".sspj"] --> convcore["ssconverter-core<br/>(WASM)"] --> ssab[".ssab"]
+        convweb["ssconverter-web<br/>browser UI + Node CLI"] -. wraps .-> convcore
+    end
 
-Playback (run-time)
-  .ssab  ──▶  ssplayer-core (WASM, engine-agnostic)
-                ├─ ssplayer-webgl   → standalone WebGL + <ss-player>
-                │    ├─ ssplayer-rmmz     → RPG Maker MZ   (experimental)
-                │    └─ ssplayer-tyrano   → TyranoScript   (experimental)
-                └─ ssplayer-pixi    → PixiJS v8
+    subgraph play ["Playback (run-time)"]
+        core["ssplayer-core<br/>(WASM, engine-agnostic)"]
+        webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
+        pixi["ssplayer-pixi<br/>PixiJS v8"]
+        rmmz["ssplayer-rmmz<br/>RPG Maker MZ (experimental)"]
+        tyrano["ssplayer-tyrano<br/>TyranoScript (experimental)"]
+        core --> webgl
+        core --> pixi
+        webgl --> rmmz
+        webgl --> tyrano
+    end
+
+    ssab ==>|feeds| core
 ```
 
 - **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyrano` further build on `ssplayer-webgl`.

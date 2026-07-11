@@ -64,6 +64,7 @@ export default withMermaid({
               { text: 'WebGL & Web Components', link: '/usage/webgl' },
               { text: 'PixiJS', link: '/usage/pixi' },
               { text: 'RPG Maker MZ (experimental)', link: '/usage/rmmz' },
+              { text: 'TyranoScript / TyranoBuilder (experimental)', link: '/usage/tyrano' },
             ],
           },
           {
@@ -123,6 +124,7 @@ export default withMermaid({
               { text: 'WebGL・Web Components で使う', link: '/ja/usage/webgl' },
               { text: 'PixiJS で使う', link: '/ja/usage/pixi' },
               { text: 'RPG ツクール MZ で使う（実験的）', link: '/ja/usage/rmmz' },
+              { text: 'TyranoScript / TyranoBuilder で使う（実験的）', link: '/ja/usage/tyrano' },
             ],
           },
           {

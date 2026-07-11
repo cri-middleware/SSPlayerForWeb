@@ -15,5 +15,13 @@
   "out": "api",
   "readme": "none",
   "githubPages": false,
-  "hideBreadcrumbs": true
+  "hideBreadcrumbs": true,
+  "externalSymbolLinkMappings": {
+    "pixi.js": {
+      "*": "https://pixijs.download/release/docs/index.html"
+    }
+  },
+  "validation": {
+    "invalidLink": false
+  }
 }
