@@ -65,6 +65,7 @@ export default withMermaid({
               { text: 'PixiJS', link: '/usage/pixi' },
               { text: 'RPG Maker MZ (experimental)', link: '/usage/rmmz' },
               { text: 'TyranoScript / TyranoBuilder (experimental)', link: '/usage/tyrano' },
+              { text: 'Migrating from SS6Player', link: '/migration_from_ss6' },
             ],
           },
           {
@@ -125,6 +126,7 @@ export default withMermaid({
               { text: 'PixiJS で使う', link: '/ja/usage/pixi' },
               { text: 'RPG ツクール MZ で使う（実験的）', link: '/ja/usage/rmmz' },
               { text: 'TyranoScript / TyranoBuilder で使う（実験的）', link: '/ja/usage/tyrano' },
+              { text: 'SS6Player からの移行', link: '/ja/migration_from_ss6' },
             ],
           },
           {
