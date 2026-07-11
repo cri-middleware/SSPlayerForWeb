@@ -9,8 +9,9 @@
  * MZ's PixiJS v5 renderer so they respect Z-order with characters and pictures.
  *
  * SETUP
- *   1. Put this file and "ssruntime_bg.wasm" in js/plugins/ssplayer/ and enable
- *      the plugin. Point the "WASM Path" parameter at the .wasm.
+ *   1. Put this file and "ssruntime_bg.wasm" together in js/plugins/ (same
+ *      folder) and enable the plugin. The WASM loads automatically from beside
+ *      this .js — no path parameter to set.
  *   2. Convert your .sspj to .ssab with the SpriteStudio converter tooling
  *      (ssconverter-web) and place the output under img/spritestudio/<project>/.
  *   3. Use the "Show SS" plugin command to attach an animation to a picture id.
@@ -304,8 +305,8 @@
  * ピクチャと正しい前後関係（Zオーダー）で表示します。
  *
  * 導入手順
- *   1. 本ファイルと "ssruntime_bg.wasm" を js/plugins/ssplayer/ に置き、プラグイン
- *      を有効化。パラメータ「WASMパス」を .wasm に合わせてください。
+ *   1. 本ファイルと "ssruntime_bg.wasm" を js/plugins/ に一緒に（同じフォルダに）置き、
+ *      プラグインを有効化。WASM はこの .js と同じ場所から自動で読み込まれます（パス設定不要）。
  *   2. .sspj を SpriteStudio コンバータ（ssconverter-web）で .ssab に変換し、出力を
  *      img/spritestudio/<プロジェクト名>/ に配置します。
  *   3. プラグインコマンド「SS表示」でピクチャ番号にアニメを割り当てます。

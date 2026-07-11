@@ -10,7 +10,8 @@
 // exists inside the running game; the ESM barrel must stay import-safe outside
 // MZ, so plugin.ts calls this with the real `Sprite` at load time.
 
-import { SSPlayer } from '../SSPlayer.js';
+import { SSPlayer, type Unsubscribe } from '../SSPlayer.js';
+import { RMMZAudioManager } from './RMMZAudioManager.js';
 import type { GL } from '../rmmzGlobals.js';
 
 // One logical MZ frame ≈ 1/60 s. SSPlayer.update converts ms → SS frames via the
@@ -41,11 +42,15 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
     public readonly player: SSPlayer;
     private _spec: SSViewSpec | null = null;
     private _loadToken = 0;
+    private _audioUnsub: Unsubscribe;
 
     constructor(gl?: GL) {
       super();
       this.player = new SSPlayer(gl);
       this.addChild(this.player as unknown as any);
+      // Route SS sound parts through MZ's AudioManager (spec §7.4). Bound here —
+      // BEFORE any loadAnimation/setAnimation — so preload runs through us too.
+      this._audioUnsub = new RMMZAudioManager().bindToPlayer(this.player);
     }
 
     /** (Re)load and start an animation. Safe to call again to switch anims. */
@@ -85,6 +90,7 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
 
     // Explicitly free WASM memory now (spec §10.1) rather than waiting for GC.
     public destroy(options?: unknown): void {
+      this._audioUnsub();
       this.player.destroy();
       super.destroy(options as any);
     }
