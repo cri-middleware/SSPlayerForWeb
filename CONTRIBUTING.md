@@ -45,6 +45,21 @@ not attach it to a public issue — contact the maintainers privately instead.*
 3. Verify your changes against the sample app in `examples/pixi-example`.
 4. Submit a Pull Request targeting `main` with a clear description of the change.
 
+### Branching & releases
+This repo is **trunk-based**: `main` is the single long-lived branch and is always
+releasable. Use short-lived feature branches off `main`; for large, long-running
+work (e.g. an `.ssab` schema change), use a longer-lived `epic/*` branch and merge
+it back when it's coherent, so `main` stays deployable.
+
+There is **no `develop` branch here** — and that's intentional. Packages are
+versioned **independently** (via [Changesets](https://github.com/changesets/changesets)),
+so there is no single "promote develop → main = the release" moment that a
+Git-Flow `develop` branch would model; a release is simply merging the accumulated
+**Version Packages** PR. Add a changeset to any PR that should trigger a version
+bump. Note this differs from other SpriteStudio repositories (e.g. the
+lockstep-versioned SDK, which uses a `develop` branch): the branch model follows
+the versioning model, not the other way around.
+
 ## Development Environment
 
 Prerequisites (Node.js, pnpm, and — only for building the WASM — Rust / wasm-pack)
@@ -129,6 +144,20 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 2. 既存のコードスタイルと上記の制約に従ってください。
 3. `examples/pixi-example` のサンプルアプリで変更内容を確認してください。
 4. `main` ブランチに向けて、変更内容を明確に記載したプルリクエストを送信してください。
+
+### ブランチとリリース
+本リポジトリは **トランクベース** です。`main` が唯一の長寿命ブランチで、常にリリース可能な
+状態を保ちます。通常は `main` から短命の作業ブランチを切ってください。`.ssab` スキーマ改修
+のような大規模・長期の作業は、`main` を汚さないよう長寿命の `epic/*` ブランチで進め、まとまった
+段階で `main` へマージします。
+
+**`develop` ブランチは設けていません**（意図的です）。パッケージは
+[Changesets](https://github.com/changesets/changesets) で**独立にバージョニング**しており、
+Git-Flow の `develop` が表す「develop→main 昇格＝リリース」という単一の瞬間が存在しません。
+リリースは、蓄積された **Version Packages PR をマージすること**そのものです。バージョンを
+上げたい PR には changeset を1枚添えてください。この点は他の SpriteStudio リポジトリ
+（例: lockstep でバージョンを統一し `develop` 運用の SDK）とは異なります — **ブランチモデルは
+バージョニングモデルに従う**、という方針です。
 
 ## 開発環境のセットアップ
 
