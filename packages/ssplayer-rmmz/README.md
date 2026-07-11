@@ -47,51 +47,49 @@ drive it from event commands.*
 runtime file the plugin actually plays. Convert your `.sspj` with either:
 
 - **Web — no install:** the hosted converter at
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop your
-  `.sspj` project in and download the `.ssab` (+ its texture).
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop the
+  **folder** containing your `.sspj` project in and download the `.ssab` (+ its texture) as a zip file.
 - **Desktop:** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases).
 
-Then put the output under `img/spritestudio/<project>/`, so it matches the `Show SS`
-path `img/spritestudio/<project>/<project>.ssab`.
+Put the resulting `.ssab` under `img/spritestudio/<project>/` in your game project.
+Its path is then the predictable `img/spritestudio/<project>/<project>.ssab`
+(e.g. `img/spritestudio/Ringo/Ringo.ssab`), which you can paste straight into the
+`ssab` field of the `Show SS` command.
 
 ## 3. Plugin commands
 
 Use event → **Plugin Command** → `ssplayer-rpgmakermz`. An SS animation rides on an MZ
 **picture**, so *Move Picture* / scale / Z-order / save-load all apply for free.
 
-**Show / attach**
+### Show / attach
 
-- **Show SS** (`showSS`) — create a picture **and** attach an animation in one step:
-  `pictureId`, `ssab` (e.g. `img/spritestudio/Ringo/Ringo.ssab`), `animation`
-  (empty = first), `x`, `y`, `scale`, `loop`, `signalSwitch`, `wait`.
-- **Set SS As Picture** (`setSSAsPicture`) — attach SS to a picture you have
-  **already** shown with the native *Show Picture* command. Then position/erase it
-  with the standard *Move / Erase Picture* commands. (Don't drive one picture id with
-  both a raw *Show Picture* and SS.)
+| Command | Internal name | Description |
+|---|---|---|
+| Show SS | `showSS` | Create a picture **and** attach an animation in one step. Args: `pictureId`, `ssab` (e.g. `img/spritestudio/Ringo/Ringo.ssab`), `animation` (empty = first), `x`, `y`, `scale`, `loop`, `signalSwitch`, `wait`. |
+| Set SS As Picture | `setSSAsPicture` | Attach SS to a picture you have **already** shown with the native *Show Picture* command. Then position/erase it with the standard *Move / Erase Picture* commands. (Don't drive one picture id with both a raw *Show Picture* and SS.) |
 
-**Animation control**
+### Animation control
 
-- **Change SS Animation** (`changeSSAnimation`) — switch to another animation
-  **within the same `.ssab`** (no reload).
-- **Play SS Once** (`playSSOnce`) — play an animation, then **auto-return to the
-  current loop** (idle → expression → idle). `loop` = play count.
-- **Play SS Sequence** (`playSSSequence`) — a comma-separated list where each entry
-  plays once except the **last, which loops** (e.g. `attack1,attack2,wait1`).
-- **Set SS Speed** (`setSSSpeed`) — playback-speed multiplier (subframe-interpolated,
-  smooth even when slow).
+| Command | Internal name | Description |
+|---|---|---|
+| Change SS Animation | `changeSSAnimation` | Switch to another animation **within the same `.ssab`** (no reload). |
+| Play SS Once | `playSSOnce` | Play an animation, then **auto-return to the current loop** (idle → expression → idle). `loop` = play count. |
+| Play SS Sequence | `playSSSequence` | A comma-separated list where each entry plays once except the **last, which loops** (e.g. `attack1,attack2,wait1`). |
+| Set SS Speed | `setSSSpeed` | Playback-speed multiplier (subframe-interpolated, smooth even when slow). |
 
-**Playback / lifecycle**
+### Playback / lifecycle
 
-- **Play / Pause / Stop / Remove SS**, and **Wait for SS** — by `pictureId`.
-  *Wait for SS* holds the event until a **non-looping** animation finishes (use a
-  finite `loop`, or it waits forever).
+| Command | Internal name | Description |
+|---|---|---|
+| Play / Pause / Stop / Remove SS | — | By `pictureId`. |
+| Wait for SS | — | Holds the event until a **non-looping** animation finishes (use a finite `loop`, or it waits forever). |
 
-**Lip-sync (talking portrait — advanced)**
+### Lip-sync (talking portrait — advanced)
 
-- **Set SS Talk** (`setSSTalk`) — bind a picture to a **speaker name** (the message
-  name box): plays `talk` while that speaker's message is on screen, `idle`
-  otherwise — so only the character currently speaking lip-syncs.
-- **Clear SS Talk** (`clearSSTalk`) — unbind it (do this when the conversation ends).
+| Command | Internal name | Description |
+|---|---|---|
+| Set SS Talk | `setSSTalk` | Bind a picture to a **speaker name** (the message name box): plays `talk` while that speaker's message is on screen, `idle` otherwise — so only the character currently speaking lip-syncs. |
+| Clear SS Talk | `clearSSTalk` | Unbind it (do this when the conversation ends). |
 
 > Leaving `animation` empty auto-picks the first; a wrong name warns in the console
 > and lists the real names (the MZ editor can't read a `.ssab` to build a dropdown).

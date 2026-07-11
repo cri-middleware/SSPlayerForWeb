@@ -22,7 +22,7 @@ Both modes run the **same** `.sspj → .ssab` conversion — pick by workflow:
 | | **Browser tool** | **CLI** |
 |---|---|---|
 | Best for | one-off conversions, non-technical users | **developers**: scripting, CI, batch jobs |
-| How | start a local dev server, drag/drop a `.sspj`, download the `.ssab` | `node scripts/cli.js -o ./out project.sspj` |
+| How | start a local dev server, drag/drop the `.sspj` project **folder**, download the `.ssab` | `node scripts/cli.js -o ./out project.sspj` |
 | Output | ZIP download from the browser | files written to an output directory |
 | Jump to | [Browser tool](#browser-tool-dev-server) | [CLI](#cli) |
 
@@ -54,7 +54,7 @@ first release). Until then there is no hosted page, so run it locally with a Vit
 pnpm --filter ssconverter-web dev
 ```
 
-Open the printed URL, drop a `.sspj` project into the page, and download the
+Open the printed URL, drop the **folder** containing your `.sspj` project into the page, and download the
 converted `.ssab`. Best for a quick one-off or a non-technical user — no command
 line beyond starting the server.
 
