@@ -13,7 +13,7 @@
 - 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
 - ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — 依存ゼロの単体レンダラー（`<ss-player>` Web コンポーネント）
 - ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け
-- ▶️ **[RPG Maker MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（SpriteStudio ピクチャ）
+- ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（SpriteStudio ピクチャ）
 
 ## 📚 ドキュメント
 
@@ -55,7 +55,7 @@
 
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
-| **RPG Maker MZ**（PixiJS v5） | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
+| **RPG ツクール MZ**（PixiJS v5） | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
 | **TyranoScript / TyranoBuilder**（ノベル） | [`@spritestudio/ssplayer-tyrano`](./packages/ssplayer-tyrano) | [examples/tyrano-example](./examples/tyrano-example) |
 
 ## 🚀 クイックスタート
@@ -98,7 +98,7 @@ examples は **ビルド済み** のパッケージをワークスペース参�
 
 ## 💡 概要
 
-### モノレポ構成
+### monorepo 構成
 
 `pnpm` ワークスペースで構成し、描画をアニメーションロジックから完全に分離しています:
 
@@ -110,8 +110,8 @@ examples は **ビルド済み** のパッケージをワークスペース参�
 再生（ランタイム）
   .ssab  ──▶  ssplayer-core (WASM・エンジン非依存)
                 ├─ ssplayer-webgl   → 単体 WebGL + <ss-player>
-                │    ├─ ssplayer-rmmz     → RPG Maker MZ   （実験的）
-                │    └─ ssplayer-tyrano   → TyranoScript   （実験的）
+                │    ├─ ssplayer-rmmz     → RPG ツクール MZ   （実験的）
+                │    └─ ssplayer-tyrano   → TyranoScript      （実験的）
                 └─ ssplayer-pixi    → PixiJS v8
 ```
 

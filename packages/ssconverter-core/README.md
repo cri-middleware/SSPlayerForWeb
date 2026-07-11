@@ -1,7 +1,12 @@
+[**English**](./README.md) | [**日本語**](./README.ja.md)
+
 # @spritestudio/ssconverter-core
 
-Environment-agnostic WebAssembly core that converts OPTPiX SpriteStudio 7
-projects (`.sspj`) to runtime binaries (`.ssab` / `.ssqb`).
+Engine-agnostic WebAssembly core that converts OPTPiX SpriteStudio 7 projects (`.sspj`) to runtime binaries (`.ssab` / `.ssqb`).
+
+> **Who this is for:** developers embedding `.sspj → .ssab` conversion into their own app, service, worker, or build pipeline — a bytes-in/bytes-out engine, no filesystem or DOM required.
+> **Install:** `npm install @spritestudio/ssconverter-core`
+> **Not what you need?** → [ssconverter-web](../ssconverter-web) — just want to convert a file? Use the browser tool + CLI instead.
 
 This package is the wasm build of the Rust [`libssconverter`] crate plus a small
 ergonomic TypeScript layer. It has **no filesystem or DOM dependencies** — bytes
@@ -12,10 +17,19 @@ I/O around it.
 [`libssconverter`]: https://github.com/cri-middleware/SpriteStudio-SDK
 [`ssconverter-web`]: ../ssconverter-web
 
+## When to use this vs ssconverter-web
+
+- **You just want to convert a file** — you have a `.sspj` and want a `.ssab` out.
+  Use [`ssconverter-web`](../ssconverter-web): a ready-made **browser tool** and
+  **Node CLI**. You do not write any code.
+- **You want conversion inside your own code** — an app, backend service, Worker,
+  or build step that turns project bytes into runtime bytes. Use **this package**:
+  you supply the I/O, the core does the `.sspj → .ssab` conversion.
+
 ## Install
 
 ```sh
-npm i @spritestudio/ssconverter-core
+npm install @spritestudio/ssconverter-core
 ```
 
 ## Usage
@@ -66,10 +80,14 @@ for (const [dest, src] of result.assets) {
 | `version()` | Converter build version string. |
 | `ssabSchemaVersion()` / `ssqbSchemaVersion()` | Emitted schema versions. |
 
-The wasm is **not** tracked in git. It is fetched from the SpriteStudio-SDK
-Releases via `pnpm download:wasm`, or built from source with `pnpm build:wasm`,
-at the repo root.
-
 ## License
 
 BSD-3-Clause. See [LICENSE.md](./LICENSE.md).
+
+---
+
+## For contributors — building from source
+
+*Consumers can stop here — everything below is for hacking on this package. The published npm package already bundles the wasm.*
+
+Working in the monorepo, the wasm is **not** tracked in git. From the repo root, fetch it from the SpriteStudio-SDK Releases via `pnpm download:wasm`, or build it from source with `pnpm build:wasm`.

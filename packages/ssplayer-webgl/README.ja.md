@@ -4,7 +4,11 @@
 
 **SpriteStudio 7** プレイヤー向けの、軽量で依存ゼロの **WebGL1/2** レンダラー。Rust/WebAssembly コアで駆動し、宣言的で JavaScript 不要な利用を可能にするドロップインの **`<ss-player>` カスタム要素** を備えています。
 
-[SSPlayerForWeb](../../README.ja.md) モノレポの一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
+[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
+
+> **対象読者:** フレームワークを使わない Web 開発者 — SpriteStudio プレイヤーを任意のページに、`<ss-player>` という HTML タグ 1 つ、または `SSCanvasPlayer` の JS API で、ランタイム依存ゼロで組み込めます。
+> **インストール:** `npm install @spritestudio/ssplayer-webgl`
+> **目的が違う場合:** → [パッケージ表](../../README.ja.md#-どのパッケージを使うか) — すでに PixiJS や RPG ツクール MZ を使っていますか? それ専用のレンダラーがあります。
 
 ## ✨ なぜ素の WebGL で SpriteStudio なのか?
 
@@ -37,7 +41,47 @@
 HTML タグ、そしてバイト予算に収まる `./lite` ビルド — これによって、より重い
 プレイヤーでは収まらない、サイズやサンドボックスの制約がある配置にもフィットします。
 
-## クイックスタート
+## 使い方
+
+使い方は 2 通り — どちらかを選んでください。いずれの場合も、同じ[タイムラインイベント](#再生とイベント)
+が利用できます。JS API では直接購読し、`<ss-player>` 要素はそれらを DOM の
+`CustomEvent` として再ディスパッチします。
+
+### ドロップイン — `<ss-player>` Web Component(JS ほぼ不要)
+
+ページに載せる最速の方法: `SSCanvasPlayer` をラップした宣言的なカスタム要素です。
+タグを一度登録すれば、あとは HTML のどこでも使えます。
+
+```ts
+import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
+defineSSPlayerElement();   // <ss-player> タグを登録(アプリごとに一度)
+```
+
+```html
+<ss-player src="chara.ssab" animation="idle" autoplay
+           max-dpr="2" power-preference="low-power"
+           style="width:320px;height:480px"></ss-player>
+```
+
+インライン / `ArrayBuffer` アセットの場合(属性はバッファを運べません)、命令的に駆動してください:
+
+```ts
+const el = document.querySelector('ss-player')!;
+await el.ready;
+await el.loadBuffer(ssabArrayBuffer, new Map([[0x1234abcd, imageBitmap]]));
+el.play();
+```
+
+監視される属性(`src`、`animation`、`speed`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`stencil`、`pause-when-hidden`)は接続時に一度だけ読み取られます。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。
+
+> **なぜ `defineSSPlayerElement()` を自分で呼ぶのか?** この要素はインポート時に
+> 意図的に **自動登録されません**。これにより、パッケージの `sideEffects: false`
+> というツリーシェイク契約が保たれます([エントリーポイント](#エントリーポイント)参照)。
+> 一度呼べばタグが登録され、インポートしなければバンドルから取り除かれます。
+
+### コード駆動 — `SSCanvasPlayer`(JS API)
+
+完全な命令的コントロールが必要ですか? `SSCanvasPlayer` クラスを `<canvas>` に対して直接使用してください。
 
 ```ts
 import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
@@ -76,37 +120,11 @@ player.play();                       // drives itself via requestAnimationFrame
 |---|---|
 | `@spritestudio/ssplayer-webgl` | フルレンダラー: すべてのブレンドモード + 遅延ロードされる Web Audio アダプター。 |
 | `@spritestudio/ssplayer-webgl/lite` | 最小構成のビルド — **Normal + blend のみ**、特殊なブレンドモードなし、最小のバンドル。 |
-| `@spritestudio/ssplayer-webgl/element` | `<ss-player>` カスタム要素(下記参照)。 |
-
-## `<ss-player>` Web Component
-
-`SSCanvasPlayer` の薄い宣言的なラッパーです。自動登録は **されません**(`sideEffects: false` を保つため)ので、`defineSSPlayerElement()` を一度呼び出してタグを登録してください。
-
-```ts
-import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
-defineSSPlayerElement();
-```
-
-```html
-<ss-player src="chara.ssab" animation="idle" autoplay
-           max-dpr="2" power-preference="low-power"
-           style="width:320px;height:480px"></ss-player>
-```
-
-インライン / `ArrayBuffer` アセットの場合(属性はバッファを運べません)、命令的に駆動してください:
-
-```ts
-const el = document.querySelector('ss-player')!;
-await el.ready;
-await el.loadBuffer(ssabArrayBuffer, new Map([[0x1234abcd, imageBitmap]]));
-el.play();
-```
-
-監視される属性(`src`、`animation`、`speed`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`stencil`、`pause-when-hidden`)は接続時に一度だけ読み取られます。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。
+| `@spritestudio/ssplayer-webgl/element` | `<ss-player>` カスタム要素([ドロップイン](#ドロップイン--ss-player-web-componentjs-ほぼ不要)参照)。 |
 
 ## 再生とイベント
 
-`SSCanvasPlayer` は他のレンダラーと同じファサードを公開します:
+タイムラインイベントは上記の **両方** の使い方に適用されます。`SSCanvasPlayer` は他のレンダラーと同じファサードを公開します:
 
 ```ts
 player.play(startFrame?);  player.pause();  player.resume();  player.stop();
@@ -120,11 +138,23 @@ player.onAnimationLoop(() => {});
 off();
 ```
 
+`<ss-player>` 要素では、これらと同じイベントが DOM の `CustomEvent` として再ディスパッチされるため、`addEventListener` で受け取ることもできます。
+
 サウンドは「そのまま動きます」: 読み込んだ `.ssab` がオーディオを参照しており、`audioManager` が設定されていない場合、デフォルトの `SSWebAudioManager` が遅延インポートされて接続されます(必要なときにのみフェッチされる別チャンク)。完全に手動でコントロールするには `autoAudio: false` を設定してください。
 
 > **加算系ブレンドモードに関する注意:** 加算 / バックドロップ参照モード(Add、Screen、Mul、…)はフレームバッファに対して合成されるため、アニメーションがそれらを使用する場合は不透明な `backgroundColor` を設定してください。透明なキャンバス上では、黒地に焼き込まれたグローが不透明なブロックとして描画されることがあります — これは乗算済みアルファ合成に固有の挙動です。
 
-## ソースからのビルド
+## ライセンス
+
+BSD-3-Clause — [LICENSE.md](../../LICENSE.md) を参照してください。
+
+---
+
+## コントリビューター向け — ソースからビルド
+
+*利用者はここまで。以下はこのパッケージを開発する人向けです。*
+
+### ソースからのビルド
 
 WASM バイナリは **git で管理されていません**。リポジトリのルートから WASM を取得し、
 その後にパッケージをビルドしてください:
@@ -134,7 +164,7 @@ pnpm run download:wasm   # fetch pre-built WASM (or build from source: pnpm run 
 pnpm run build           # build all TS packages
 ```
 
-## 変更を試す
+### 変更を試す
 
 同梱の WebGL サンプルを実行して、レンダラー(および `<ss-player>` 要素)の動作を
 確認してください — ソースをカスタマイズしたり、修正を検証したりする際に便利です:
@@ -146,7 +176,3 @@ pnpm run dev             # start the dev server
 
 サンプルはワークスペース参照を通じて **ビルド済み** のパッケージを利用するため、
 ここで `src/` を編集した後はリポジトリのルートから `pnpm run build` を再実行してください。
-
-## ライセンス
-
-BSD-3-Clause — [LICENSE.md](../../LICENSE.md) を参照してください。

@@ -5,13 +5,23 @@
 Play **SpriteStudio 7** (`.ssab`) animations in **RPG Maker MZ** — shown in correct
 Z-order with your characters and pictures.
 
+> **Who this is for:** RPG Maker MZ game creators adding SpriteStudio animations via plugin commands — no coding required. Building the plugin itself? → [For contributors](#for-contributors--building-from-source).
+> **Status:** experimental / alpha (`7.0.0-alpha.1`), private — **not on npm**.
+> Distributed as a plugin ZIP attached to **GitHub Releases** once the first release
+> ships. No release exists yet, so today you build it from source (see
+> [For contributors](#for-contributors--building-from-source)).
+
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
 run the bundled sample MZ project in your browser (🚧 live once the first release is
 published).
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo. This page has two parts:
 **[Using the plugin](#using-the-plugin)** (for RPG Maker MZ game creators) and
-**[Contributing](#contributing)** (for people hacking on the plugin or the SDK).
+**[For contributors](#for-contributors--building-from-source)** (for people hacking on
+the plugin or the SDK).
+
+**Which one is for me?** Making a game → read **Using the plugin**. Changing the
+plugin's own code → read **For contributors**.
 
 ---
 
@@ -22,8 +32,10 @@ drive it from event commands.*
 
 ## 1. Install
 
-1. Get `ssplayer-rpgmakermz.js` **and** `ssruntime_bg.wasm` — from a release zip, or
-   build them yourself (see [Contributing](#contributing)).
+1. Get `ssplayer-rpgmakermz.js` **and** `ssruntime_bg.wasm`. **No release is published
+   yet** — for now you must build them yourself (see
+   [For contributors](#for-contributors--building-from-source)). Once the first release
+   ships, you'll download the plugin ZIP from **GitHub Releases** instead.
 2. Copy **both** into your project's `js/plugins/` (flat — the WASM must sit next to
    the `.js`).
 3. Enable **ssplayer-rpgmakermz** in the Plugin Manager. No parameters — the WASM is
@@ -31,7 +43,8 @@ drive it from event commands.*
 
 ## 2. Convert your animation (.sspj → .ssab)
 
-The plugin plays **pre-built** `.ssab`. Convert your SpriteStudio project with either:
+`.sspj` is your editable SpriteStudio project; `.ssab` is the compact, pre-built
+runtime file the plugin actually plays. Convert your `.sspj` with either:
 
 - **Web — no install:** the hosted converter at
   **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop your
@@ -91,19 +104,22 @@ unused and removes them. Either **turn that option off**, or **copy
 `img/spritestudio/` into the deployed output** afterward. (Same caveat the old
 SS6Player plugin had.)
 
-## Current limitations
+## Known limitations
 
-- **MZ opacity / tint on the picture are not applied** to the SS animation (it draws
-  at full opacity). *Move* and *scale* **do** apply.
-- Putting a **PIXI filter directly on the SS sprite** can misplace it (fixed
-  full-screen projection). MZ screen effects (flash, tint) are separate overlays and
-  are unaffected.
-- Looped SE (`loopNum`) play once; stencil masks need a stencil buffer on MZ's canvas
-  (present by default).
+- The picture's **opacity / tint don't affect** the SS animation — it always draws
+  fully opaque. *Move* and *scale* **do** apply.
+- **Some screen effects behave differently** from a normal picture (a few PIXI filters
+  can shift the animation out of place; looped sound effects play only once). MZ's own
+  flash/tint overlays are unaffected.
+
+The technical reasons and planned fixes are in
+[For contributors → How it works](#how-it-works).
 
 ---
 
-# Contributing
+# For contributors — building from source
+
+*Consumers can stop here — everything below is for hacking on this package.*
 
 *For people hacking on the plugin or the SDK — architecture, building from source,
 and the bundled test harnesses.*
@@ -131,9 +147,20 @@ sit in correct Z-order with characters and pictures.
 - **No private timer.** Playback advances only from the host sprite's `update()`, so
   SS animations pause exactly with the game (menus, message waits).
 
-The opacity/tint and projection limitations above would both be fixed by a small
-enhancement to `SSWebGLRenderer` (accept an injected projection matrix + alpha/tint
-uniform) — a planned follow-up.
+**Known limitations (technical).** The plain-language summary is in
+[Known limitations](#known-limitations) above; the internals:
+
+- MZ **opacity / tint** are not forwarded to the SS draw (it renders at full opacity);
+  *Move* and *scale* are.
+- A **PIXI filter placed directly on the SS sprite** can misplace it — the projection
+  is **fixed full-screen**. MZ screen effects (flash, tint) are separate overlays and
+  are unaffected.
+- Looped SE (`loopNum`) play once; **stencil masks** need a stencil buffer on MZ's
+  canvas (present by default).
+
+The opacity/tint and projection limitations would both be fixed by a small enhancement
+to `SSWebGLRenderer` (accept an injected projection matrix + alpha/tint uniform) — a
+planned follow-up.
 
 ## Build & try it
 

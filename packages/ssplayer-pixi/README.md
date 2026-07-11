@@ -4,6 +4,10 @@
 
 PixiJS v8 renderer for the **SpriteStudio 7** player. High-performance **direct drawing** (batched meshes) driven by a Rust/WebAssembly core.
 
+> **Who this is for:** app developers already building on PixiJS v8 who want to play SpriteStudio `.ssab` animations in their app.
+> **Install:** `npm install @spritestudio/ssplayer-pixi pixi.js` (needs `pixi.js@^8` as a peer dependency)
+> **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) if you're not on Pixi, or [ssplayer-core](../ssplayer-core/README.md) to build your own renderer.
+
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
 
 ## ✨ Why SpriteStudio with PixiJS?
@@ -27,6 +31,15 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 - **Smooth at any refresh rate.** Playback is **sub-frame interpolated** (on by
   default), rendering each frame at its exact display time — so motion stays fluid
   on 120Hz+ displays and in slow motion, instead of snapping to integer frames.
+
+## Install
+
+```bash
+npm install @spritestudio/ssplayer-pixi pixi.js
+```
+
+`pixi.js` (v8) is a **peer dependency** — install it alongside the player if your app
+doesn't already depend on it.
 
 ## Quick start
 
@@ -99,7 +112,17 @@ assign your own `IAudioManager` to `player.audioManager` **before** `load()` (th
 default is only attached when none is set). `onAudio` fires either way, so you can
 also drive sound entirely yourself.
 
-## Working from source
+## License
+
+BSD-3-Clause — see [LICENSE.md](../../LICENSE.md).
+
+---
+
+## For contributors — building from source
+
+*Consumers can stop here — everything below is for hacking on this package.*
+
+### Working from source
 
 WASM binaries are **not tracked in git**. From the repo root, obtain the WASM,
 then build the packages:
@@ -109,7 +132,7 @@ pnpm run download:wasm   # fetch pre-built WASM (or build from source: pnpm run 
 pnpm run build           # build all TS packages
 ```
 
-## Try your changes
+### Try your changes
 
 Run the bundled PixiJS example to see the renderer in action — handy when
 customising the source or verifying a fix:
@@ -121,7 +144,3 @@ pnpm run dev             # start the dev server
 
 The example consumes the **built** package via a workspace reference, so re-run
 `pnpm run build` from the repo root after editing `src/` here.
-
-## License
-
-BSD-3-Clause — see [LICENSE.md](../../LICENSE.md).

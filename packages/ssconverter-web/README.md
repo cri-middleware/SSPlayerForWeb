@@ -2,66 +2,66 @@
 
 # ssconverter-web
 
-WebAssembly-powered converter that turns SpriteStudio project files (`.sspj`)
-into the runtime binary format (`.ssab`) consumed by the players. Ships as both
-a **browser tool** (Vite app) and a **Node.js CLI**.
+Convert SpriteStudio project files (`.sspj`) into the runtime binary format
+(`.ssab`) the players load — in your browser or from the command line.
 
-Both interfaces are thin **hosts** on top of
-[`@spritestudio/ssconverter-core`](../ssconverter-core) — the environment-agnostic
-converter engine. This package supplies the I/O (browser: File System Access API +
-ZIP download; CLI: filesystem), while the core does the `.sspj → .ssab` conversion.
-To embed conversion in your own app, depend on `@spritestudio/ssconverter-core`
-directly rather than this package.
+> **Who this is for:** you have a SpriteStudio project (`.sspj`) and need the
+> runtime `.ssab` — convert it via a drag-and-drop browser tool or a scriptable CLI.
+> **Status:** experimental / alpha, private — **not on npm**. The only way to get
+> it today is to build from source (clone the monorepo — see
+> [Get the tool](#get-the-tool) below).
+> **Not what you need?** → [ssconverter-core](../ssconverter-core) — the
+> environment-agnostic converter engine to embed in your own app.
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo.
 
-> This package is `private` — it is a tool within the monorepo and is **not
-> published to npm**.
+## Choose how to run it
 
-## ✨ Why ssconverter-web?
+Both modes run the **same** `.sspj → .ssab` conversion — pick by workflow:
 
-Same `.sspj → .ssab` conversion as the SDK's native `ssconverter-cli` — the
-identical `libssconverter` engine — but compiled to **WebAssembly**, which
-changes how you run it:
+| | **Browser tool** | **CLI** |
+|---|---|---|
+| Best for | one-off conversions, non-technical users | **developers**: scripting, CI, batch jobs |
+| How | start a local dev server, drag/drop a `.sspj`, download the `.ssab` | `node scripts/cli.js -o ./out project.sspj` |
+| Output | ZIP download from the browser | files written to an output directory |
+| Jump to | [Browser tool](#browser-tool-dev-server) | [CLI](#cli) |
 
-- **No per-platform binary — deployable as a no-install web page.**
-  `ssconverter-cli` is a native binary you fetch from the [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK)
-  releases for your specific OS. This converter is WASM, so the browser tool runs
-  entirely client-side and can be served as a plain web page — end users just
-  open it, drop a `.sspj`, and download the `.ssab`. Cross-platform by
-  construction, with no matching-binary hunt.
-- **Native to JS / TS pipelines.** The Node CLI is plain JavaScript over the same
-  WASM, so it slots into your existing pnpm / CI scripts without shipping a
-  separate native executable alongside them.
+## Get the tool
 
-Reach for `ssconverter-cli` when you specifically want a standalone native
-binary, or the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases)
-when you want a native app.
-
-## Setup
-
-The converter WASM (`@spritestudio/ssconverter-core`'s
-`wasm/ssconverter_bg.wasm`) is **not tracked in git**, so obtain it once from the
-repo root before using either interface below:
+This package is unpublished (private, not on npm), so there is no installer and no
+release ZIP yet — a ZIP will be attached to GitHub Releases once the first release
+ships. Until then, obtain it by cloning the monorepo and installing once:
 
 ```bash
-pnpm run download:wasm   # fetch the pre-built WASM (no toolchain needed)
+git clone https://github.com/cri-middleware/SSPlayerForWeb.git
+cd SSPlayerForWeb
+pnpm install
+pnpm run download:wasm   # fetch the pre-built converter WASM (no toolchain needed)
 ```
 
-> Building from source instead (SDK / player developers)? Run `pnpm run build:wasm`
-> — this needs the Rust / wasm-pack toolchain. See the
-> [repo README](../../README.md#-quick-start).
+`download:wasm` fetches `@spritestudio/ssconverter-core`'s
+`wasm/ssconverter_bg.wasm`, which is **not tracked in git**. Run it once; then use
+either mode below (all commands are run from the repo root).
 
 ## Browser tool (dev server)
+
+Once the first release ships, the browser tool is hosted on GitHub Pages at
+**<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** (🚧 live after the
+first release). Until then there is no hosted page, so run it locally with a Vite
+**dev server**:
 
 ```bash
 pnpm --filter ssconverter-web dev
 ```
 
-Opens a Vite dev server where you can drop a `.sspj` project and download the
-converted `.ssab`.
+Open the printed URL, drop a `.sspj` project into the page, and download the
+converted `.ssab`. Best for a quick one-off or a non-technical user — no command
+line beyond starting the server.
 
 ## CLI
+
+**A developer tool** — scriptable conversion for CI / batch jobs with a chosen
+output directory. Needs Node and the cloned repo (commands run from the repo root):
 
 ```bash
 # Output goes next to the .sspj unless -o is given:
@@ -72,9 +72,58 @@ The CLI reads the `.sspj` directory recursively, converts it, and writes the
 generated `.ssab` (plus any referenced textures) into the output directory.
 
 ```
-Usage: node scripts/cli.js [-o output_dir] <project.sspj>
+Usage: node scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>
 ```
+
+> The package declares a bin, `ssconverter-web-cli` (→ `scripts/cli.js`). It is
+> **not** linked onto your `PATH` because the package is private / unpublished
+> (nothing runs `npm install -g`), so invoke the script by path as shown above.
+
+## How this compares to the native SDK tools
+
+*Decision help if you're choosing across SpriteStudio's converter tools — skip if
+you're just here to convert.*
+
+This is the same `.sspj → .ssab` conversion as the SDK's native `ssconverter-cli`
+— the identical `libssconverter` engine — but compiled to **WebAssembly**, which
+changes how you run it:
+
+- **No per-platform binary — deployable as a no-install web page.**
+  `ssconverter-cli` is a native binary you fetch from the [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK)
+  releases for your specific OS. This converter is WASM, so the browser tool runs
+  entirely client-side and can be served as a plain web page — cross-platform by
+  construction, with no matching-binary hunt.
+- **Native to JS / TS pipelines.** The Node CLI is plain JavaScript over the same
+  WASM, so it slots into your existing pnpm / CI scripts without shipping a
+  separate native executable alongside them.
+
+Reach for `ssconverter-cli` when you specifically want a standalone native
+binary, or the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases)
+when you want a native app.
+
+## For library integrators
+
+Want to embed `.sspj → .ssab` conversion in your own app rather than run a tool?
+Depend on [`@spritestudio/ssconverter-core`](../ssconverter-core) directly — the
+environment-agnostic engine. Both interfaces here are thin **hosts** on top of it:
+this package supplies the I/O (browser: File System Access API + ZIP download; CLI:
+filesystem), while the core does the conversion.
 
 ## License
 
 BSD-3-Clause — see [LICENSE.md](../../LICENSE.md).
+
+---
+
+## For contributors — building from source
+
+*Consumers can stop here — everything below is for hacking on this package.*
+
+Building the converter WASM from source instead of downloading it (SDK / player
+developers) needs the Rust / wasm-pack toolchain:
+
+```bash
+pnpm run build:wasm   # build the WASM from source (requires Rust / wasm-pack)
+```
+
+See the [repo README](../../README.md#-quick-start) for the full toolchain setup.

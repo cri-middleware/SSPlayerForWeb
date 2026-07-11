@@ -4,14 +4,18 @@
 
 Engine-agnostic WebAssembly core for the **SpriteStudio 7** player.
 
+> **Who this is for:** developers building their own renderer / advanced integrators — the engine-agnostic WASM playback core to bind a new engine onto.
+> **Install:** `npm install @spritestudio/ssplayer-core`
+> **Not what you need?** → [ssplayer-pixi](../ssplayer-pixi) / [ssplayer-webgl](../ssplayer-webgl) — drop-in renderers if you just want to render animations.
+
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
 
 > **Just want to render animations?** Pick a renderer from the [package table](../../README.md#-which-package-should-i-use) — you don't use `core` directly.
 
 This package is for the two audiences who do:
 
-- **Renderer authors** — porting the Player to a new engine by building a renderer binding on top of `core`. The guide below is written for you.
-- **`core` maintainers** — see [Working from source](#working-from-source) and [CONTRIBUTING.md](../../CONTRIBUTING.md).
+- **Renderer authors** — porting the Player to a new engine by building a renderer binding on top of `core`. Jump straight to [Building a renderer on top](#building-a-renderer-on-top).
+- **`core` maintainers** — see [For contributors — building from source](#for-contributors--building-from-source) and [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## ✨ Why build your renderer on this core?
 
@@ -84,7 +88,17 @@ the layer a renderer package sits on top of.
 - **Memory safety:** WASM memory is not GC'd by JS; the wrappers use
   `FinalizationRegistry` to call the WASM `free()` when the JS object is collected.
 
-## Working from source
+## License
+
+BSD-3-Clause — see [LICENSE.md](../../LICENSE.md).
+
+---
+
+## For contributors — building from source
+
+*Consumers can stop here — everything below is for hacking on this package.*
+
+Who this is for: `core` maintainers; renderer authors using the npm package can skip this.
 
 WASM binaries are **not tracked in git**. From the repo root, obtain the WASM,
 then build the packages:
@@ -93,7 +107,3 @@ then build the packages:
 pnpm run download:wasm   # fetch pre-built WASM (or build from source: pnpm run build:wasm — needs rustup + wasm-pack)
 pnpm run build           # build all TS packages
 ```
-
-## License
-
-BSD-3-Clause — see [LICENSE.md](../../LICENSE.md).

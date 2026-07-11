@@ -4,7 +4,11 @@
 
 **SpriteStudio 7** プレイヤー向けの PixiJS v8 レンダラー。Rust/WebAssembly コアが駆動する高性能な**ダイレクト描画**（バッチ化メッシュ）を提供します。
 
-[SSPlayerForWeb](../../README.ja.md) モノレポの一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
+> **対象読者:** すでに PixiJS v8 でアプリを構築していて、SpriteStudio の `.ssab` アニメーションを組み込みたい開発者です。
+> **インストール:** `npm install @spritestudio/ssplayer-pixi pixi.js`（`pixi.js@^8` を peer 依存として必要とします）
+> **目的が違う場合:** → Pixi を使っていないなら [ssplayer-webgl](../ssplayer-webgl/README.ja.md)、自作レンダラーを組むなら [ssplayer-core](../ssplayer-core/README.ja.md) をどうぞ。
+
+[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
 
 ## ✨ なぜ PixiJS で SpriteStudio を使うのか？
 
@@ -28,6 +32,15 @@
   されており、各フレームを正確な表示時刻でレンダリングします。そのため、整数フレームへ
   スナップすることなく、120Hz 以上のディスプレイやスローモーションでも動きが滑らかに
   保たれます。
+
+## インストール
+
+```bash
+npm install @spritestudio/ssplayer-pixi pixi.js
+```
+
+`pixi.js`（v8）は **peer 依存**です。アプリがまだ依存していない場合は、プレイヤーと
+一緒にインストールしてください。
 
 ## クイックスタート
 
@@ -101,7 +114,17 @@ off(); // stop listening
 `player.audioManager` へ割り当ててください（既定のものは未設定のときにのみアタッチされます）。
 `onAudio` はいずれの場合でも発火するため、サウンドを完全に自分で駆動することもできます。
 
-## ソースからのビルド
+## ライセンス
+
+BSD-3-Clause — [LICENSE.md](../../LICENSE.md) を参照してください。
+
+---
+
+## コントリビューター向け — ソースからビルド
+
+*利用者はここまで。以下はこのパッケージを開発する人向けです。*
+
+### ソースからのビルド
 
 WASM バイナリは **git で管理されていません**。リポジトリのルートから、まず WASM を取得し、
 続いてパッケージをビルドします。
@@ -111,7 +134,7 @@ pnpm run download:wasm   # fetch pre-built WASM (or build from source: pnpm run 
 pnpm run build           # build all TS packages
 ```
 
-## 変更を試す
+### 変更を試す
 
 バンドルされた PixiJS のサンプルを実行して、レンダラーの動作を確認できます。ソースを
 カスタマイズしたり修正を検証したりする際に便利です。
@@ -123,7 +146,3 @@ pnpm run dev             # start the dev server
 
 このサンプルは、ワークスペース参照を通じて**ビルド済み**パッケージを利用します。そのため、
 ここで `src/` を編集した後は、リポジトリのルートから `pnpm run build` を再実行してください。
-
-## ライセンス
-
-BSD-3-Clause — [LICENSE.md](../../LICENSE.md) を参照してください。
