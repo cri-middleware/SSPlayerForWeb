@@ -5,13 +5,16 @@
 **TyranoScript / TyranoBuilder** のシナリオに `[ss_*]` タグを書くだけで、
 **SpriteStudio 7** のアニメを表示・再生できます。プログラミングは不要です。
 
-> **対象読者:** TyranoScript / TyranoBuilder を使う VN シナリオ作者 — SpriteStudio アニメ用の `[ss_*]` シナリオタグを追加するドロップイン・プラグインです。
+> **対象読者:** TyranoScript / TyranoBuilder を使うヴィジュアルノベルのシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` シナリオタグを追加するドロップイン・プラグインです。
 > **ステータス:** 実験的 / alpha・private（npm 未公開）。
 > **目的が違う場合:** → [ssplayer-webgl](../ssplayer-webgl/README.ja.md) — このプラグインの土台になっている単体レンダラです。
 
 > ⚠️ **alpha / 実験的 / private。** 本プラグインは初期段階で npm には公開していません。
 > タグ名や挙動はバージョン間で変わる可能性があります。設計ロードマップはリポジトリの
 > [`ROADMAP.md`](./ROADMAP.md) にあります。
+
+▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** —
+同梱の TyranoScript サンプルをブラウザで動かせます（🚧 初回リリース後に公開）。
 
 ## インストール
 
@@ -28,6 +31,23 @@
 フォルダには 3 ファイルが入ります: `init.ks`（ローダ）、`main.js`（プラグイン本体）、
 `ssruntime_bg.wasm`（アニメーションランタイム）。`.ssab` アニメファイルは
 `data/others/ssdata/` に置きます。
+
+## アニメを変換する（.sspj → .ssab）
+
+`.sspj` は SpriteStudio で編集するプロジェクトファイル、`.ssab` はプラグインが実際に再生する
+変換済み（プリビルド）のランタイムファイルです。`[ss_new storage="..."]` で読み込むのはこの
+`.ssab` です。`.sspj` を次のいずれかで変換してください。
+
+- **Web（インストール不要）：** ホスト版コンバータ
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** を開き、`.sspj`
+  プロジェクトが入ったフォルダ（ディレクトリ）をドロップすると `.ssab`（＋テクスチャ）が
+  zip ファイルでダウンロードできます。
+- **デスクトップ：** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases) を使います。
+
+変換して出てきた `.ssab`（＋テクスチャ）は、Tyrano プロジェクトの `data/others/ssdata/` に
+置きます。プロジェクトごとにサブフォルダ（例: `data/others/ssdata/Ringo/`）へまとめておくと
+テクスチャが混ざらず、`[ss_new]` からは `storage="others/ssdata/Ringo/Ringo.ssab"` のように
+参照できます。
 
 ## クイックスタート
 
@@ -46,6 +66,27 @@
 - `[ss_play]` は既存プレイヤーで再生／アニメ切替を行います。
 
 動く最小プロジェクトは [`examples/tyrano-example`](../../examples/tyrano-example/README.md) を参照してください。
+
+## レシピ（よくある操作）
+
+1 つの `.ssab` に複数アニメ（待機／笑顔／ジャンプ…）を含められます。`anime=` で切り替えます（空欄なら先頭）。
+
+**表情・アニメを切り替える**（同じ `.ssab`・再ロードなし）
+
+```
+[ss_play name="akane" anime="smile"]
+```
+
+**一度だけ再生して、終わってから次へ進む**
+
+```
+[ss_play name="akane" anime="jump" loop="false"]   ; 1 回だけ再生
+[ss_wait name="akane"]                              ; 再生完了まで待つ
+[ss_play name="akane" anime="wait" loop="true"]     ; 待機ループへ戻す
+```
+
+> 登場・移動（`[ss_move]` / `[ss_pos]`）、`[anim]` フェード、複数レイヤー、セーブ/ロード復元などの
+> 実例は、コメント付きの同梱サンプル [`first.ks`](../../examples/tyrano-example/data/scenario/first.ks) を参照してください。
 
 ## 提供タグ
 
@@ -68,6 +109,16 @@
 
 [^coords]: 内部的には canvas は HiDPI 対応です。ピクセル倍率の詳細はコントリビューター
 向けセクションを参照してください。
+
+**属性の補足:**
+
+- `loop`: `true`＝無限ループ（既定）／`false`＝1 回／数値＝回数。
+- `layer`: Tyrano のレイヤー番号（**大きいほど手前**。既定 `0`）。`page` は `fore`（前景・既定）/`back`（背景）。
+- `x` / `y`: Tyrano と同じ左上原点ピクセル（既定 `0,0`）。指定した位置にアニメの**アンカー**が合います。
+- `scale`: 拡大率（既定 `1`）。
+- `anime`: `.ssab` 内のアニメ名。空欄なら**先頭アニメ**を自動採用します。
+- `[ss_play]` の `start`: 再生開始フレーム（既定 `-1`＝現在フレームから）。
+- `[ss_init]` の `base`: テクスチャ探索の基準フォルダ。省略時は `.ssab` と同じフォルダから読み込みます（→ プロジェクト毎サブフォルダ推奨）。
 
 ## 移動・エフェクトは `[anim]` / `[kanim]` で
 
@@ -111,6 +162,21 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 ティラノビルダー `.tbp` 対応・`[cm]` / `[clearfix]` 自動フック・frame 精密復元・Tyrano 音量
 スライダー連動は [`ROADMAP.md`](./ROADMAP.md) の残課題です。
+
+## うまく表示されないとき
+
+タグは失敗してもシナリオを止めず、**原因をブラウザのコンソール（開発者ツール）に出力**します。
+まずはコンソールを確認してください。
+
+- **何も出ない / エラーになる**: `[ss_init]` を `[ss_new]` より前に置いているか確認してください
+  （`call [ss_init] before creating players` などのメッセージが出ます）。
+- **`.ssab` が読み込めない**: `storage=` は `data/` 基準の相対パスです
+  （例: `others/ssdata/Ringo/Ringo.ssab`）。テクスチャ PNG は `.ssab` と同じフォルダに置いてください。
+- **WASM が初期化されない**: `[ss_init wasm="..."]` のパスを確認してください（プラグイン同梱なら
+  `others/plugin/ssplayer/ssruntime_bg.wasm`）。TyranoScript が動く WebGL 対応ブラウザが前提です。
+- **`[anim]` で薄くしか表示されない**: `opacity` は **0〜255**（0〜1 ではありません）。完全表示は `255`。
+- **アニメが切り替わらない**: `anime=` の名前が `.ssab` 内に存在するか確認してください（空欄なら先頭アニメ）。
+- **ロード後にキャラが消える**: `make.ks` に `[ss_init]` → `[ss_restore]` を置いているか確認してください。
 
 ---
 
@@ -196,5 +262,5 @@ pnpm --filter @spritestudio/ssplayer-tyrano run test    # vitest (モック TYRA
 
 ## ライセンス
 
-BSD-3-Clause © CRI Middleware Co., Ltd.
+BSD-3-Clause © CRI Middleware Co., Ltd. — [LICENSE.md](./LICENSE.md) を参照してください。
 </content>

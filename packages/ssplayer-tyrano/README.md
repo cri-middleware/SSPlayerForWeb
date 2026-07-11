@@ -13,6 +13,9 @@ visual novel by writing `[ss_*]` tags in your scenario — no coding required.
 > npm. Tag names and behavior may still change between versions. The design roadmap
 > lives in the repo ([`ROADMAP.md`](./ROADMAP.md)).
 
+▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** —
+the bundled TyranoScript sample, running in your browser (🚧 live after the first release).
+
 ## Install
 
 There is **no released build yet.** For now the only way to get the plugin is to
@@ -28,6 +31,23 @@ Releases. To install it you will:
 The folder holds three files: `init.ks` (the loader), `main.js` (the plugin
 itself), and `ssruntime_bg.wasm` (the animation runtime). Your `.ssab` animation
 files go under `data/others/ssdata/`.
+
+## Convert your animation (.sspj → .ssab)
+
+`.sspj` is your editable SpriteStudio project; `.ssab` is the compact, pre-built
+runtime file the plugin actually plays — it's what `[ss_new storage="..."]` loads.
+Convert your `.sspj` with either:
+
+- **Web — no install:** the hosted converter at
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop the
+  **folder** containing your `.sspj` project in and download the `.ssab` (+ its
+  texture) as a zip file.
+- **Desktop:** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases).
+
+Put the resulting `.ssab` (+ texture) under `data/others/ssdata/` in your Tyrano
+project. Grouping each project in its own subfolder (e.g. `data/others/ssdata/Ringo/`)
+keeps textures from colliding, so you reference it from `[ss_new]` as
+`storage="others/ssdata/Ringo/Ringo.ssab"`.
 
 ## Quick start
 
@@ -46,6 +66,28 @@ A minimal scenario that shows one looping character:
 - `[ss_play]` plays or switches an animation on an existing player.
 
 A runnable minimal project is [`examples/tyrano-example`](../../examples/tyrano-example/README.md).
+
+## Recipes (common patterns)
+
+A single `.ssab` can hold several animations (idle / smile / jump …); switch between them by name with `anime=` (empty picks the first).
+
+**Switch expression / animation** (same `.ssab`, no reload)
+
+```
+[ss_play name="akane" anime="smile"]
+```
+
+**Play once, then continue after it finishes**
+
+```
+[ss_play name="akane" anime="jump" loop="false"]   ; play once
+[ss_wait name="akane"]                              ; hold until it ends
+[ss_play name="akane" anime="wait" loop="true"]     ; back to the idle loop
+```
+
+> For worked examples of entrances/movement (`[ss_move]` / `[ss_pos]`), `[anim]` fades,
+> multiple layers, and save/load restore, see the commented sample scenario
+> [`first.ks`](../../examples/tyrano-example/data/scenario/first.ks).
 
 ## Tags
 
@@ -69,6 +111,16 @@ once / a number → that many loops.
 
 [^coords]: Under the hood the canvas is HiDPI-aware; the pixel-scale details live in
 the contributor section.
+
+**Attribute notes:**
+
+- `loop`: `true` = infinite (default) / `false` = once / a number = that many loops.
+- `layer`: the Tyrano layer number (**higher = in front**; default `0`). `page` is `fore` (foreground, default) / `back`.
+- `x` / `y`: Tyrano's top-left pixels (default `0,0`); the animation's **anchor** lands at that point.
+- `scale`: scale factor (default `1`).
+- `anime`: an animation name inside the `.ssab`; empty auto-picks the **first** animation.
+- `[ss_play]`'s `start`: start frame (default `-1` = from the current frame).
+- `[ss_init]`'s `base`: base folder for texture lookup; when omitted, textures load from the same folder as the `.ssab` (→ the per-project subfolder layout above).
 
 ## Movement & effects with `[anim]` / `[kanim]`
 
@@ -112,6 +164,21 @@ SpriteStudio sound events play through TyranoScript's bundled audio (howler). So
 files are expected under `data/sound/`; an SS sound name resolves to
 `data/<dir>/<name>.<ext>` (tune with `[ss_init sounddir= soundext= sevolume=]`,
 disable with `audio="false"`).
+
+## Troubleshooting
+
+Tags never stall the scenario on failure — they **log the reason to the browser
+console (dev tools)**, so check the console first.
+
+- **Nothing shows / an error appears**: make sure `[ss_init]` runs before `[ss_new]`
+  (you'll see messages like `call [ss_init] before creating players`).
+- **The `.ssab` won't load**: `storage=` is relative to `data/`
+  (e.g. `others/ssdata/Ringo/Ringo.ssab`); keep the texture PNGs in the same folder as the `.ssab`.
+- **WASM won't initialize**: check the `[ss_init wasm="..."]` path (for the bundled
+  plugin it's `others/plugin/ssplayer/ssruntime_bg.wasm`). A WebGL-capable browser (whatever runs TyranoScript) is assumed.
+- **`[anim]` shows it barely visible**: `opacity` is **0–255** (not 0–1); full opacity is `255`.
+- **The animation won't switch**: check that the `anime=` name exists inside the `.ssab` (empty = first animation).
+- **Characters vanish after loading a save**: make sure `make.ks` has `[ss_init]` → `[ss_restore]`.
 
 TyranoBuilder `.tbp` support, `[cm]` / `[clearfix]` auto-hooks, frame-precise
 restore, and Tyrano volume-slider integration are tracked in [`ROADMAP.md`](./ROADMAP.md).
@@ -206,6 +273,6 @@ pnpm --filter @spritestudio/ssplayer-tyrano run test    # vitest (mock TYRANO ha
 
 ## License
 
-BSD-3-Clause © CRI Middleware Co., Ltd.
+BSD-3-Clause © CRI Middleware Co., Ltd. — see [LICENSE.md](./LICENSE.md).
 </content>
 </invoke>
