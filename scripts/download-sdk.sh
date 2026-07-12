@@ -10,9 +10,9 @@ set -e
 # — build from source with `pnpm run build:wasm` in the meantime.
 #
 # Asset names and layout follow SpriteStudio-SDK/.github/workflows/release.yml:
-#   - spritestudio7-sdk-runtime-web.zip         -> packages/ssplayer-core/wasm/
-#   - spritestudio7-sdk-runtime-web-nosimd.zip  -> packages/ssplayer-core/wasm-nosimd/
-#   - spritestudio7-sdk-converter-web.zip       -> packages/ssconverter-core/wasm/
+#   - spritestudio-sdk-runtime-web.zip         -> packages/ssplayer-core/wasm/
+#   - spritestudio-sdk-runtime-web-nosimd.zip  -> packages/ssplayer-core/wasm-nosimd/
+#   - spritestudio-sdk-converter-web.zip       -> packages/ssconverter-core/wasm/
 # Both zips are flattened (`zip -rj`), so their files extract directly into the
 # target directory. The no-SIMD runtime variant is consumed by ssplayer-rmmz
 # (RPG Maker MZ / NW.js lacks WASM simd128).
@@ -38,9 +38,9 @@ if [ -f "$VERSION_MARKER" ]; then
 fi
 
 BASE_URL="https://github.com/${REPO}/releases/download/${TARGET_VERSION}"
-RUNTIME_ZIP_URL="${BASE_URL}/spritestudio7-sdk-runtime-web.zip"
-RUNTIME_NOSIMD_ZIP_URL="${BASE_URL}/spritestudio7-sdk-runtime-web-nosimd.zip"
-CONVERTER_ZIP_URL="${BASE_URL}/spritestudio7-sdk-converter-web.zip"
+RUNTIME_ZIP_URL="${BASE_URL}/spritestudio-sdk-runtime-web.zip"
+RUNTIME_NOSIMD_ZIP_URL="${BASE_URL}/spritestudio-sdk-runtime-web-nosimd.zip"
+CONVERTER_ZIP_URL="${BASE_URL}/spritestudio-sdk-converter-web.zip"
 
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT

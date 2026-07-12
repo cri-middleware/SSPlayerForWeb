@@ -27,7 +27,7 @@ OUT="${1:?usage: build-ssconverter-pages.sh <out-dir>}"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd -P)"
 MANIFEST="$ROOT_DIR/packages/ssconverter-web/versions.json"
 REPO="cri-middleware/SpriteStudio-SDK"
-CONVERTER_ASSET="spritestudio7-sdk-converter-web.zip"
+CONVERTER_ASSET="spritestudio-sdk-converter-web.zip"
 
 command -v jq >/dev/null || { echo "jq is required"; exit 1; }
 

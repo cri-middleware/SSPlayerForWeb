@@ -7,9 +7,9 @@
 # — build from source with `pnpm run build:wasm:win` in the meantime.
 #
 # Asset names and layout follow SpriteStudio-SDK/.github/workflows/release.yml:
-#   - spritestudio7-sdk-runtime-web.zip         -> packages/ssplayer-core/wasm/
-#   - spritestudio7-sdk-runtime-web-nosimd.zip  -> packages/ssplayer-core/wasm-nosimd/
-#   - spritestudio7-sdk-converter-web.zip       -> packages/ssconverter-core/wasm/
+#   - spritestudio-sdk-runtime-web.zip         -> packages/ssplayer-core/wasm/
+#   - spritestudio-sdk-runtime-web-nosimd.zip  -> packages/ssplayer-core/wasm-nosimd/
+#   - spritestudio-sdk-converter-web.zip       -> packages/ssconverter-core/wasm/
 # Both zips are flattened (`zip -rj`), so their files extract directly into the
 # target directory. The no-SIMD runtime variant is consumed by ssplayer-rmmz
 # (RPG Maker MZ / NW.js lacks WASM simd128).
@@ -37,9 +37,9 @@ if (Test-Path $versionMarker) {
 }
 
 $baseUrl = "https://github.com/$repo/releases/download/$targetVersion"
-$runtimeZipUrl = "$baseUrl/spritestudio7-sdk-runtime-web.zip"
-$runtimeNosimdZipUrl = "$baseUrl/spritestudio7-sdk-runtime-web-nosimd.zip"
-$converterZipUrl = "$baseUrl/spritestudio7-sdk-converter-web.zip"
+$runtimeZipUrl = "$baseUrl/spritestudio-sdk-runtime-web.zip"
+$runtimeNosimdZipUrl = "$baseUrl/spritestudio-sdk-runtime-web-nosimd.zip"
+$converterZipUrl = "$baseUrl/spritestudio-sdk-converter-web.zip"
 
 $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 New-Item -ItemType Directory -Path $tmpDir | Out-Null
