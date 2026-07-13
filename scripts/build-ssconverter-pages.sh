@@ -32,15 +32,34 @@ CONVERTER_ASSET="spritestudio-sdk-converter-web.zip"
 command -v jq >/dev/null || { echo "jq is required"; exit 1; }
 
 # Fetch a version's converter wasm into <src>/packages/ssconverter-core/wasm,
-# replacing whatever was there (a previous iteration or `download:wasm`).
+# replacing whatever was there (a previous iteration or `download:wasm`). The
+# zip is verified against the release's SHA256SUMS manifest before extracting,
+# so a corrupted or tampered download fails loudly (sha256sum on Linux/CI, or
+# shasum -a 256 as a fallback).
 fetch_wasm() {
   local src="$1" sdk="$2"
   local wasm_dir="$src/packages/ssconverter-core/wasm"
-  local tmp url
+  local tmp base expected actual
   tmp="$(mktemp -d)"
-  url="https://github.com/$REPO/releases/download/$sdk/$CONVERTER_ASSET"
-  echo "   downloading $url"
-  curl -fL -o "$tmp/converter.zip" "$url"
+  base="https://github.com/$REPO/releases/download/$sdk"
+  echo "   downloading $base/$CONVERTER_ASSET"
+  curl -fL -o "$tmp/converter.zip" "$base/$CONVERTER_ASSET"
+  curl -fL -o "$tmp/SHA256SUMS" "$base/SHA256SUMS"
+  expected="$(awk -v n="$CONVERTER_ASSET" '$2 == n {print $1}' "$tmp/SHA256SUMS")"
+  if [ -z "$expected" ]; then
+    echo "ERROR: no checksum entry for $CONVERTER_ASSET in SHA256SUMS" >&2
+    rm -rf "$tmp"; exit 1
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$tmp/converter.zip" | awk '{print $1}')"
+  else
+    actual="$(shasum -a 256 "$tmp/converter.zip" | awk '{print $1}')"
+  fi
+  if [ "$expected" != "$actual" ]; then
+    echo "ERROR: checksum mismatch for $CONVERTER_ASSET (expected $expected, got $actual)" >&2
+    rm -rf "$tmp"; exit 1
+  fi
+  echo "   checksum OK: $CONVERTER_ASSET"
   rm -rf "$wasm_dir"
   mkdir -p "$wasm_dir"
   unzip -q -o "$tmp/converter.zip" -d "$wasm_dir"
