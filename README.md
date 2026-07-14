@@ -30,6 +30,7 @@ Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) a
 - [Asset Preparation](./docs/usage/assets.md)
 - [WebGL Standalone & Web Components](./docs/usage/webgl.md)
 - [PixiJS Integration](./docs/usage/pixi.md)
+- [Migrating from SS6Player for Web](./docs/migration_from_ss6.md)
 
 ### Where to read, by goal
 You only need to read as far as your goal requires:

@@ -117,3 +117,7 @@ graph LR
 |---|---|
 | [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 |
 | `@spritestudio/ssplayer-tyrano` | **TyranoScript / TyranoBuilder**（ノベルエンジン）向けプラグインです。 |
+
+::: tip 旧プレイヤーからの移行をお探しの方へ
+旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
+:::

@@ -30,6 +30,7 @@
 - [アセットの準備](./docs/ja/usage/assets.md)
 - [WebGL・Web Components で使う](./docs/ja/usage/webgl.md)
 - [PixiJS で使う](./docs/ja/usage/pixi.md)
+- [SS6Player for Web からの移行](./docs/ja/migration_from_ss6.md)
 
 ### 目的別・どこから読むか
 目的の達成に必要な範囲だけを読んで利用できます。
