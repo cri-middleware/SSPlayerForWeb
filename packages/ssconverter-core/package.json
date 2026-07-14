@@ -2,6 +2,21 @@
   "name": "@spritestudio/ssconverter-core",
   "version": "7.0.0-beta.1",
   "description": "Environment-agnostic WebAssembly core (wasm build of the Rust libssconverter crate) that converts SpriteStudio projects (.sspj) to binaries (.ssab/.ssqb)",
+  "keywords": [
+    "spritestudio",
+    "spritestudio7",
+    "converter",
+    "sspj",
+    "ssab",
+    "ssqb",
+    "webassembly",
+    "wasm"
+  ],
+  "author": "CRI Middleware Co., Ltd.",
+  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core#readme",
+  "bugs": {
+    "url": "https://github.com/cri-middleware/SSPlayerForWeb/issues"
+  },
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {
@@ -23,12 +38,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/cri-middleware/SpriteStudio-SDK"
+    "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",
+    "directory": "packages/ssconverter-core"
   },
   "scripts": {
     "build": "tsdown",
     "clean": "rimraf dist",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },
   "devDependencies": {
     "vitest": "^4.1.9"

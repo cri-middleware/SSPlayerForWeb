@@ -2,6 +2,26 @@
   "name": "@spritestudio/ssplayer-core",
   "version": "7.0.0-beta.1",
   "description": "Engine-agnostic WebAssembly core for SpriteStudio-SDK player",
+  "keywords": [
+    "spritestudio",
+    "spritestudio7",
+    "animation",
+    "2d",
+    "webassembly",
+    "wasm",
+    "runtime",
+    "player"
+  ],
+  "author": "CRI Middleware Co., Ltd.",
+  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",
+    "directory": "packages/ssplayer-core"
+  },
+  "bugs": {
+    "url": "https://github.com/cri-middleware/SSPlayerForWeb/issues"
+  },
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {
@@ -24,7 +44,8 @@
   "scripts": {
     "build": "tsdown && copyfiles -u 1 \"wasm/*.wasm\" dist/",
     "clean": "rimraf dist",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },
   "devDependencies": {
     "copyfiles": "^2.4.1",
