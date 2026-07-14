@@ -1,0 +1,90 @@
+name: Release
+
+# One-shot npm publish, triggered manually. On dispatch it consumes the
+# changesets accumulated on main:
+#   1. `changeset version` bumps each affected package's version + CHANGELOG
+#      (independent versioning) and deletes the consumed changeset files.
+#   2. the bump is committed to main.
+#   3. every package is built (wasm fetched first) and the public ones are
+#      published to npm — the per-package `prepack` guard refuses any package
+#      whose dist/wasm is missing.
+#   4. the version-bump commit and the per-package git tags are pushed.
+#
+# If no changesets are pending the run is a no-op.
+#
+# Runs on `main` only: the version-bump commit, the tags, and the published
+# code all follow whichever ref the workflow is dispatched from, so a release
+# must originate from main. Requires the `NPM_TOKEN` secret (an npm automation
+# token — automation tokens bypass 2FA, which CI cannot satisfy interactively).
+on:
+  workflow_dispatch:
+
+# Never let two releases run at once.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push the version-bump commit + tags back to main
+  id-token: write # npm provenance (see NPM_CONFIG_PROVENANCE below)
+
+jobs:
+  release:
+    # Refuse to publish from anywhere but main, even if dispatched on another ref.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with SpriteStudio-SDK submodule)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.13.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Version, build and publish
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # 1. Consume accumulated changesets -> bump versions + CHANGELOG.
+          pnpm changeset version
+
+          # 2. Nothing to release? `changeset version` left the tree untouched.
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "::notice::No changesets pending — nothing to release."
+            exit 0
+          fi
+
+          # 3. Commit the version bump (new CHANGELOG.md files are untracked, so add -A).
+          git add -A
+          git commit -m "chore: release packages"
+
+          # 4. Fetch wasm, build every package, publish the public ones + create tags.
+          #    ci:publish = download:wasm && build && changeset publish
+          pnpm run ci:publish
+
+          # 5. Push the version-bump commit and the per-package tags.
+          #    changeset creates lightweight tags, so push them explicitly
+          #    (--follow-tags would only push annotated ones).
+          git push origin HEAD:main
+          git push origin --tags
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # npm provenance attestation (needs a public repo + id-token: write).
+          # Remove this line if a publish ever errors on provenance.
+          NPM_CONFIG_PROVENANCE: 'true'

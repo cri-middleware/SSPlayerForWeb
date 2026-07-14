@@ -17,6 +17,12 @@ on:
     - cron: '0 15 * * 1'
   release:
     types: [published]
+  # After the Release workflow finishes an npm publish on main, rebuild the site
+  # so the docs and CDN examples reflect the just-published versions. (Release
+  # creates git tags, not a GitHub Release, so it would not fire `release` above.)
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
 
 # Permissions required by the artifact-based Pages deploy.
@@ -33,6 +39,9 @@ concurrency:
 
 jobs:
   build:
+    # For the workflow_run trigger, only rebuild when the Release run succeeded;
+    # the other triggers (schedule, release, manual) always proceed.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (with SpriteStudio-SDK submodule)
