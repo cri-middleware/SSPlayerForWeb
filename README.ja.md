@@ -144,7 +144,7 @@ flowchart TD
 
 ### 初回のみの準備
 
-- **`NPM_TOKEN`** — npm の **automation** トークンを repo secret に登録（Settings → Secrets and variables → Actions）。必須。Release ワークフローがこれで認証します。
+- **`SS_NPM_TOKEN`** — npm の **automation** トークンを repo secret に登録（Settings → Secrets and variables → Actions）。必須。Release ワークフローがこれで認証します。
 - **npm 権限** — publish する人が `@spritestudio` org のメンバーで publish 権限を持つこと。
 - **[changeset-bot](https://github.com/apps/changeset-bot)** — repo にインストールすると、各 PR に「changeset ある？」の助言コメント（非ブロッキング）が付きます。
 

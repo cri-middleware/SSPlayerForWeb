@@ -144,7 +144,7 @@ Packages are versioned **independently** with [Changesets](https://github.com/ch
 
 ### One-time setup
 
-- **`NPM_TOKEN`** — add an npm **automation** token as a repository secret (Settings → Secrets and variables → Actions). Required: the Release workflow authenticates with it.
+- **`SS_NPM_TOKEN`** — add an npm **automation** token as a repository secret (Settings → Secrets and variables → Actions). Required: the Release workflow authenticates with it.
 - **npm access** — the publisher must be a member of the `@spritestudio` org with publish rights.
 - **[changeset-bot](https://github.com/apps/changeset-bot)** — install the app on the repo so every PR gets an advisory "is there a changeset?" comment (non-blocking).
 
