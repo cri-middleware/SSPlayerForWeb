@@ -2,6 +2,27 @@
   "name": "@spritestudio/ssplayer-pixi",
   "version": "7.0.0-beta.1",
   "description": "PixiJS renderer for SpriteStudio-SDK player",
+  "keywords": [
+    "spritestudio",
+    "spritestudio7",
+    "animation",
+    "2d",
+    "pixijs",
+    "pixi",
+    "webgl",
+    "player",
+    "wasm"
+  ],
+  "author": "CRI Middleware Co., Ltd.",
+  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-pixi#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",
+    "directory": "packages/ssplayer-pixi"
+  },
+  "bugs": {
+    "url": "https://github.com/cri-middleware/SSPlayerForWeb/issues"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
@@ -30,7 +51,8 @@
   },
   "scripts": {
     "build": "tsdown",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },
   "devDependencies": {
     "pixi.js": "^8.19.0",

@@ -2,6 +2,29 @@
   "name": "@spritestudio/ssplayer-webgl",
   "version": "7.0.0-beta.1",
   "description": "Zero-dependency, ad-grade WebGL1/2 renderer for SpriteStudio-SDK player",
+  "keywords": [
+    "spritestudio",
+    "spritestudio7",
+    "animation",
+    "2d",
+    "webgl",
+    "canvas",
+    "custom-element",
+    "web-component",
+    "player",
+    "wasm",
+    "zero-dependency"
+  ],
+  "author": "CRI Middleware Co., Ltd.",
+  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-webgl#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",
+    "directory": "packages/ssplayer-webgl"
+  },
+  "bugs": {
+    "url": "https://github.com/cri-middleware/SSPlayerForWeb/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -37,7 +60,8 @@
   "scripts": {
     "build": "tsdown",
     "clean": "rimraf dist",
-    "size": "node scripts/measure-size.mjs"
+    "size": "node scripts/measure-size.mjs",
+    "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },
   "license": "BSD-3-Clause",
   "devDependencies": {

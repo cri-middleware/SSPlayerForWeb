@@ -8,7 +8,9 @@
     "download:wasm": "node scripts/download-sdk.js",
     "deploy-examples": "node scripts/deploy-examples.js",
     "test": "pnpm -r run test",
-    "clean": "pnpm -r run clean"
+    "clean": "pnpm -r run clean",
+    "release": "pnpm run download:wasm && pnpm run build && pnpm -r publish",
+    "release:dry": "pnpm run download:wasm && pnpm run build && pnpm -r publish --dry-run"
   },
   "devDependencies": {
     "rimraf": "^6.1.3",
