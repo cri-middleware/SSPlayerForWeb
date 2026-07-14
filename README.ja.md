@@ -136,6 +136,48 @@ flowchart TD
 - [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — `libssruntime` および `libssconverter` を提供するコア SDK です。
 - [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — `.sspj` から `.ssab` へ変換するためのデスクトップ GUI ツールです。
 
+## 🚢 リリース手順（メンテナ向け）
+
+パッケージは [Changesets](https://github.com/changesets/changesets) で**独立にバージョニング**し、**Release** GitHub Action（`main` からのみ実行する手動ワンショット。[`release.yml`](./.github/workflows/release.yml)）で publish します。
+
+**npm 公開対象**（public）: `ssplayer-core` / `ssplayer-pixi` / `ssplayer-webgl` / `ssconverter-core`。`ssplayer-rmmz` / `ssplayer-tyrano` / `ssconverter-web` は `private` で、npm ではなく GitHub Releases で配布します。
+
+### 初回のみの準備
+
+- **`NPM_TOKEN`** — npm の **automation** トークンを repo secret に登録（Settings → Secrets and variables → Actions）。必須。Release ワークフローがこれで認証します。
+- **npm 権限** — publish する人が `@spritestudio` org のメンバーで publish 権限を持つこと。
+- **[changeset-bot](https://github.com/apps/changeset-bot)** — repo にインストールすると、各 PR に「changeset ある？」の助言コメント（非ブロッキング）が付きます。
+
+### 日常: 変更ごとに changeset を積む
+
+リリース対象に影響する PR では、意図を記録し、生成ファイルを PR と一緒にコミットします:
+
+```bash
+pnpm changeset          # パッケージと bump 種別(patch/minor/major)を選び、要約を書く
+```
+
+リリース不要な変更（docs / CI / リファクタ）は changeset 不要です（明示的に「リリースなし」を残したいときだけ `pnpm changeset --empty`）。
+
+### リリースを切る
+
+1. changeset 付きの PR を `main` にマージ。
+2. **Actions → Release → Run workflow** を `main` で実行。
+
+ワークフローが1回の実行で:
+
+- 貯まった changeset を消費 → 各パッケージの版と `CHANGELOG.md` を更新、
+- それを `main` にコミット、
+- WASM を取得し全パッケージをビルド（`prepack` ガードが `dist`/`wasm` 欠けのパッケージの publish を拒否）、
+- 公開パッケージを npm に publish し、パッケージ単位の git タグ（`@spritestudio/…@x.y.z`）を push。
+
+changeset が無ければ no-op。実行後、ドキュメント/デモサイトが自動で再ビルドされます（[`pages.yml`](./.github/workflows/pages.yml) が Release 実行に連鎖）。
+
+> **WASM はプレイヤーと同じ版に固定。** `.wasm` と JS グルーは ABI を共有するので、CDN 利用者は `ssplayer-core` の `.wasm` とプレイヤーバンドルで同一の正確な版を使ってください（各パッケージの「CDN から使う」節を参照）。
+
+### 手動フォールバック
+
+通常は Action 経由です。クリーンな `main` からローカルで publish する場合: `pnpm changeset version` → コミット → `pnpm run ci:publish`（`download:wasm` → `build` → `changeset publish`）→ コミットとタグを push。
+
 ## ライセンス
 
 このプロジェクトは BSD-3-Clause License の下でライセンスされています。詳細は [LICENSE.md](./LICENSE.md) ファイルを参照してください。

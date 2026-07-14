@@ -136,6 +136,48 @@ Ready-to-run example apps live under [`examples/`](./examples/) — one per rend
 - [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — the core SDK providing `libssruntime` and `libssconverter`.
 - [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — desktop GUI tool for converting `.sspj` to `.ssab`.
 
+## 🚢 Releasing (maintainers)
+
+Packages are versioned **independently** with [Changesets](https://github.com/changesets/changesets) and published by the **Release** GitHub Action — a manual, one-shot workflow ([`release.yml`](./.github/workflows/release.yml)) that runs only from `main`.
+
+**Published to npm** (public): `ssplayer-core`, `ssplayer-pixi`, `ssplayer-webgl`, `ssconverter-core`. `ssplayer-rmmz`, `ssplayer-tyrano` and `ssconverter-web` are `private` — distributed via GitHub Releases, not npm.
+
+### One-time setup
+
+- **`NPM_TOKEN`** — add an npm **automation** token as a repository secret (Settings → Secrets and variables → Actions). Required: the Release workflow authenticates with it.
+- **npm access** — the publisher must be a member of the `@spritestudio` org with publish rights.
+- **[changeset-bot](https://github.com/apps/changeset-bot)** — install the app on the repo so every PR gets an advisory "is there a changeset?" comment (non-blocking).
+
+### Everyday: add a changeset per change
+
+In any PR that should affect a released package, record the intent and commit the generated file with your PR:
+
+```bash
+pnpm changeset          # pick packages + bump type (patch/minor/major), write a summary
+```
+
+Changes that don't need a release (docs, CI, refactors) need no changeset — use `pnpm changeset --empty` only if you want an explicit "no release" marker.
+
+### Cut a release
+
+1. Merge the PRs (each carrying its changeset) to `main`.
+2. Run **Actions → Release → Run workflow** on `main`.
+
+The workflow then, in one shot:
+
+- consumes the accumulated changesets → bumps each package's version + `CHANGELOG.md`,
+- commits that to `main`,
+- fetches the WASM and builds every package (the per-package `prepack` guard refuses to publish a package whose `dist`/`wasm` is missing),
+- publishes the public packages to npm and pushes the per-package git tags (`@spritestudio/…@x.y.z`).
+
+If no changesets are pending, the run is a no-op. Afterwards the docs/demo site rebuilds automatically ([`pages.yml`](./.github/workflows/pages.yml) chains on the Release run).
+
+> **Pin the WASM to the player version.** The `.wasm` and its JS glue share an ABI, so CDN consumers must use the same exact version for the `ssplayer-core` `.wasm` and the player bundle (see each package's "Use from a CDN" section).
+
+### Manual fallback
+
+Publishing normally goes through the Action. To publish from a clean `main` locally: `pnpm changeset version` → commit → `pnpm run ci:publish` (runs `download:wasm` → `build` → `changeset publish`) → push the commit and tags.
+
 ## 📄 License
 
 This project is licensed under the BSD-3-Clause License. See [LICENSE.md](./LICENSE.md) for details.
