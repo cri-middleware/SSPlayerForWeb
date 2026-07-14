@@ -70,28 +70,34 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Fetches and binds an SSAB file to the player.
+     * Fetches and binds an SSAB file to the player. Textures and instance packs
+     * always resolve relative to the SSAB's own location (the structure that
+     * ssconverter emits) — there is no separate asset-base override.
      * @param ssabUrl The URL of the SSAB file.
-     * @param assetBaseUrl Optional base URL for assets. If omitted, uses the ssabUrl directory.
      */
-    public async load(ssabUrl: string, assetBaseUrl?: string) {
+    public async load(ssabUrl: string) {
         const response = await fetch(ssabUrl);
         if (!response.ok) {
             throw new Error(`Failed to load SSAB: ${response.statusText}`);
         }
         const buffer = await response.arrayBuffer();
-        
+
         this._ssabUrl = ssabUrl;
-        this._assetBaseUrl = assetBaseUrl || ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
-        
-        this.bindResource(new Uint8Array(buffer));
+        this.bindResource(new Uint8Array(buffer), ssabUrl);
     }
 
     /**
      * Binds the SSAB buffer to the player and extracts required texture paths.
      * @param buffer The raw byte array of the SSAB file.
+     * @param ssabUrl Optional source URL of the SSAB. When given, textures and
+     *   instance packs resolve relative to its directory (siblings of the SSAB —
+     *   the structure ssconverter emits). Omit for inline / ArrayBuffer loads
+     *   whose textures are supplied by hash rather than fetched.
      */
-    public bindResource(buffer: Uint8Array) {
+    public bindResource(buffer: Uint8Array, ssabUrl?: string) {
+        if (ssabUrl !== undefined) {
+            this._assetBaseUrl = ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
+        }
         if (this._ssabResource) {
             this._ssabResource.destroy();
         }
@@ -104,14 +110,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Loads all textures required by the bound SSAB resource via the ResourceManager.
-     * @param assetBaseUrl The base URL to prepend to the texture paths. If not provided, uses the URL inferred from load().
+     * Textures resolve relative to the SSAB's own location (set on load/bind).
      */
-    public async loadTextures(assetBaseUrl?: string): Promise<void> {
+    public async loadTextures(): Promise<void> {
         if (!this._resourceManager) {
             throw new Error("ResourceManager is not set on InternalPlayerBase.");
         }
-        
-        const base = assetBaseUrl || this._assetBaseUrl;
+
+        const base = this._assetBaseUrl;
         const prefix = base && !base.endsWith('/') ? base + '/' : base;
 
         const rm = this._resourceManager;
@@ -145,11 +151,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /**
      * Helper to load textures and set the animation in one call.
      * @param animationName The name of the animation to set.
-     * @param assetBaseUrl The base URL for asset loading. If not provided, uses the URL inferred from load().
      */
-    public async setAnimation(animationName: string, assetBaseUrl?: string) {
-        await this.loadTextures(assetBaseUrl);
-        await this.loadInstancePacks(assetBaseUrl);
+    public async setAnimation(animationName: string) {
+        await this.loadTextures();
+        await this.loadInstancePacks();
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
         
@@ -159,7 +164,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             }
             const sounds = this.runtimeManager.getSounds();
             if (sounds.length > 0) {
-                const base = assetBaseUrl || this._assetBaseUrl;
+                const base = this._assetBaseUrl;
                 const prefix = base && !base.endsWith('/') ? base + '/' : base;
                 const preppedSounds = sounds.map(s => ({
                     name: s.name,
@@ -268,13 +273,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * (delegated to the engine-agnostic `resolveInstancePacks`). The runtime
      * manager then creates the child contexts on `setupAnimation`.
      */
-    private async loadInstancePacks(assetBaseUrl?: string): Promise<void> {
+    private async loadInstancePacks(): Promise<void> {
         const buf = this.getSsabBuffer();
         if (!buf) return;
 
         await resolveInstancePacks({
             rootSsab: buf,
-            assetBaseUrl: assetBaseUrl || this._assetBaseUrl,
+            assetBaseUrl: this._assetBaseUrl,
             provider: this._instancePackProvider,
             resourceManager: this._resourceManager,
             into: this._instancePackResources,

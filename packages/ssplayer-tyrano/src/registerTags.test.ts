@@ -203,7 +203,8 @@ describe('registerSSTags', () => {
     expect(FakeSSCanvasPlayer.instances).toHaveLength(1);
     const p = FakeSSCanvasPlayer.instances[0];
     expect(layer.querySelector('canvas')).toBe(p.canvas);
-    expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab', 'data/others/ssdata');
+    // Textures resolve relative to the .ssab's own directory — no base arg is passed.
+    expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
     expect(p.internalPlayer.setLoop).toHaveBeenCalledWith(-1); // loop=true → infinite
     expect(p.play).toHaveBeenCalled();

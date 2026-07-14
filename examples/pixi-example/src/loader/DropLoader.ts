@@ -246,7 +246,7 @@ export class DropLoader {
             }));
 
             const ssabBlobUrl = URL.createObjectURL(ssabObj.file);
-            await this.player.load(ssabBlobUrl, "");
+            await this.player.load(ssabBlobUrl);
             URL.revokeObjectURL(ssabBlobUrl);
 
             const anims = extractAnimationNames(buffer);

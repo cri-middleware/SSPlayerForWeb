@@ -5,7 +5,7 @@ This page collects the playback-control API shared by `SSCanvasPlayer` (WebGL) a
 ## Loading and selecting an animation
 
 ```ts
-await player.load(ssabUrl); // 2nd arg sets the texture base URL (assetBaseUrl)
+await player.load(ssabUrl); // textures load from the .ssab's own directory
 ```
 
 WebGL (`SSCanvasPlayer`):
@@ -15,7 +15,7 @@ await player.setAnimation(name);                       // select an animation
 
 PixiJS (`SSPlayer`):
 ```ts
-await player.setAnimation(name); // 2nd arg: loop count (default -1), 3rd arg: assetBaseUrl
+await player.setAnimation(name); // 2nd arg: loop count (default -1)
 player.animationName;            // current animation name
 ```
 

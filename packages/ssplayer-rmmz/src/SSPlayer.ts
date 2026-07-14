@@ -70,10 +70,9 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public readonly internalPlayer: DirectInternalPlayer;
   public readonly resourceManager: RMMZResourceManager;
   private readonly _gl: GL;
-  // Retained .ssab bytes + inferred asset base, so we can list animation names
-  // (SSRuntimeManager.extractAnimationNames) and resolve textures on setAnimation.
+  // Retained .ssab bytes so we can list animation names
+  // (SSRuntimeManager.extractAnimationNames) and validate the requested name.
   private _ssabBuffer: Uint8Array | null = null;
-  private _assetBase = '';
 
   private _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
   private _signalListeners = new Set<(e: SSSignalEvent) => void>();
@@ -101,20 +100,25 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
 
   // --- Loading & playback (thin wrappers over the core player) ---
 
-  public async load(ssabUrl: string, assetBaseUrl?: string): Promise<void> {
+  public async load(ssabUrl: string): Promise<void> {
     // Fetch the .ssab ourselves (single fetch) so we can retain the bytes for
     // animation-name introspection, then bind it via the public bindResource.
+    // Forward the ssab URL so the core resolves textures relative to it (siblings
+    // of the .ssab — the structure ssconverter emits).
     const res = await fetch(ssabUrl);
     if (!res.ok) throw new Error(`[ssplayer-rmmz] failed to load SSAB: ${res.status} ${res.statusText}`);
     const buffer = new Uint8Array(await res.arrayBuffer());
-    this._assetBase = assetBaseUrl ?? ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
-    this.bindResource(buffer);
+    this.bindResource(buffer, ssabUrl);
   }
 
-  /** Bind an already-fetched .ssab (bytes). Pair with setAnimation. */
-  public bindResource(buffer: Uint8Array): void {
+  /**
+   * Bind an already-fetched .ssab (bytes). Pair with setAnimation. Pass the ssab's
+   * source URL (when known) so textures resolve relative to it; omit for inline
+   * bytes whose textures are supplied by other means.
+   */
+  public bindResource(buffer: Uint8Array, ssabUrl?: string): void {
     this._ssabBuffer = buffer;
-    this.internalPlayer.bindResource(buffer);
+    this.internalPlayer.bindResource(buffer, ssabUrl);
     // Direct render mode + Y-down, matching ssplayer-pixi (MZ world space is y-down).
     this.internalPlayer.runtimeManager.context.set_render_mode(0);
     this.internalPlayer.runtimeManager.context.set_coordinate_system(1);
@@ -131,7 +135,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * to the first — so authors who mistype in the plugin command still see
    * *something*, and get the exact names in the console.
    */
-  public async setAnimation(animationName: string, loop = -1, assetBaseUrl?: string): Promise<void> {
+  public async setAnimation(animationName: string, loop = -1): Promise<void> {
     const names = this.getAnimationNames();
     let target = animationName;
     if (!target) {
@@ -142,7 +146,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       );
       target = names[0];
     }
-    await this.internalPlayer.setAnimation(target, assetBaseUrl ?? (this._assetBase || undefined));
+    await this.internalPlayer.setAnimation(target);
     this.internalPlayer.setLoop(loop);
   }
 
