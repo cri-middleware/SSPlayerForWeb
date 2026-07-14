@@ -2,8 +2,8 @@
   "name": "@spritestudio/ssplayer-pixi",
   "version": "7.0.0-beta.1",
   "description": "PixiJS renderer for SpriteStudio-SDK player",
-  "main": "index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "module",
   "exports": {
     ".": {
@@ -11,6 +11,8 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "unpkg": "./dist/browser/ssplayer-pixi.browser.min.js",
+  "jsdelivr": "./dist/browser/ssplayer-pixi.browser.min.js",
   "files": [
     "dist",
     "README.md",

@@ -75,9 +75,12 @@ export class SSPlayerElement extends HTMLElement {
 
     const token = ++this._loadToken;
     try {
-      // Global, idempotent wasm init (deduped across every element). A `wasm`
-      // attribute overrides the bundler-resolved default (inline/custom hosting).
-      await ensureWasm(this.getAttribute('wasm') ?? undefined);
+      // Global, idempotent wasm init (deduped across every element). Resolution
+      // order: this element's `wasm` attribute → a page-wide default set once via
+      // setSSPlayerWasmUrl() (e.g. from the CDN bundle's `data-wasm`) → the
+      // bundler-resolved default. Only the first element to connect actually runs
+      // init; later elements reuse the cached promise (their `wasm` is ignored).
+      await ensureWasm(this.getAttribute('wasm') ?? _defaultWasmUrl ?? undefined);
       if (token !== this._loadToken || !this.isConnected) return;
 
       this.createPlayer();
@@ -277,6 +280,14 @@ let _wasmInit: Promise<void> | null = null;
 function ensureWasm(wasm?: string): Promise<void> {
   if (!_wasmInit) _wasmInit = SSCanvasPlayer.initialize(wasm);
   return _wasmInit;
+}
+
+// Page-wide default WASM URL, applied to every <ss-player> that lacks a `wasm`
+// attribute. Set it ONCE (before elements connect) instead of repeating the URL on
+// each tag. The CDN bundle wires this from the loading `<script data-wasm="…">`.
+let _defaultWasmUrl: string | undefined;
+export function setSSPlayerWasmUrl(url: string): void {
+  _defaultWasmUrl = url;
 }
 
 /**

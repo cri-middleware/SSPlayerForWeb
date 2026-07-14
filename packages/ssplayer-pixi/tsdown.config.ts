@@ -15,7 +15,9 @@ export default defineConfig([
   {
     entry: ['src/index.ts'],
     format: 'iife',
-    globalName: 'SSPlayer',
+    // Namespace global for classic <script> / CDN use, symmetric with
+    // ssplayer-webgl's `SSWebGLPlayer`. The renderer class is `SSPixiPlayer.SSPlayer`.
+    globalName: 'SSPixiPlayer',
     minify: true, // Oxc minify
     outDir: 'dist/browser',
     outputOptions: {

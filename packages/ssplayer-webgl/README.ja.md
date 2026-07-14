@@ -112,6 +112,90 @@ player.play();                       // drives itself via requestAnimationFrame
 > 全体が自己完結の単一リクエストとして読み込まれます。`examples/webgl-example` で
 > 両方に対して検証済みです。
 
+## CDN から使う（ビルド不要）
+
+本パッケージはゼロ依存のブラウザ直読み用ビルドを同梱しており、CDN からそのまま読み込め
+ます。**手動でやることは1つだけ — WASM バイナリの場所を明示する**ことです。ランタイムは
+別ファイルの `.wasm` で、バンドラの外（クラシックな `<script>` や CDN 経由）ではバンドラが
+行う自動パス解決が効きません。そのため URL を `SSCanvasPlayer.initialize(wasm)` に渡して
+ください。
+
+> **WASM は読み込むプレイヤーと同じバージョンに固定してください。** `.wasm` と JS グルー
+> は ABI を共有するため、片方だけ `@latest` にすると不整合が起こり得ます。`ssplayer-webgl`
+> のバンドルと `ssplayer-core` の `.wasm` の **両方** で正確なバージョン（例:
+> `@7.0.0-beta.1`）を指定してください。
+
+### 宣言的 `<ss-player>` 要素 — JS 不要
+
+最も直接的な方法です。自己登録する専用バンドルを読み込むと `<ss-player>` カスタム要素が
+その場で定義され、マークアップだけでアニメーションが再生されます。クラシックな
+`<script>` ではランタイムを自動解決できないため、WASM の URL は **ページに1回だけ**
+`data-wasm`(script タグ)で指定します — 各 `<ss-player>` は省略できます。
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ss-player.element.min.js"
+        data-wasm="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm"></script>
+
+<ss-player src="chara.ssab" animation="run"  autoplay style="width:640px;height:480px"></ss-player>
+<ss-player src="boss.ssab"  animation="idle" autoplay style="width:640px;height:480px"></ss-player>
+```
+
+WASM URL の指定方法は3通り（要素ごとに最初に見つかったものが優先）:
+
+1. **script タグの `data-wasm`** — ページに1回（上記）。JS 不要。
+2. **`SSWebGLPlayerElement.setSSPlayerWasmUrl(url)`** — 要素が接続される前に JS で1回。
+3. **個々の `<ss-player>` の `wasm="…"`** — その要素だけ既定値を上書き。
+
+> ビルドツールを使う場合はこのバンドルは不要です — `import { defineSSPlayerElement }
+> from '@spritestudio/ssplayer-webgl/element'` して呼び出してください（tree-shaking 維持）。
+> [エントリーポイント](#エントリーポイント)を参照。
+
+### クラシック `<script>` — グローバル `SSWebGLPlayer`
+
+先に読み込むピア依存はありません。プレイヤークラスは `SSWebGLPlayer.SSCanvasPlayer` です。
+
+```html
+<canvas id="stage" width="1280" height="960"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ssplayer-webgl.browser.min.js"></script>
+<script>
+  const { SSCanvasPlayer } = SSWebGLPlayer;
+  const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
+
+  (async () => {
+    // WASM の URL を明示的に渡す（バンドラが無いので自動解決されない）。
+    await SSCanvasPlayer.initialize(WASM_URL);
+
+    const player = new SSCanvasPlayer(document.getElementById('stage'), {
+      backgroundColor: 0x1a1a2e,
+    });
+    await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
+    await player.setAnimation('run');
+    player.play();
+  })();
+</script>
+```
+
+### ESM を CDN から — `<script type="module">`
+
+ビルド無しでネイティブモジュールを使いたい場合は ESM CDN（下記は esm.sh）から import
+します。ルールは同じで、WASM の URL を明示的に渡します。
+
+```html
+<canvas id="stage" width="1280" height="960"></canvas>
+<script type="module">
+  import { SSCanvasPlayer } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1';
+
+  await SSCanvasPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
+
+  const player = new SSCanvasPlayer(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
+  await player.load('./Ringo.ssab');
+  await player.setAnimation('run');
+  player.play();
+</script>
+```
+
+両方の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります。
+
 ## エントリーポイント
 
 必要なものだけをインポートしてください — 3 つすべてがツリーシェイク可能です(`sideEffects: false`):

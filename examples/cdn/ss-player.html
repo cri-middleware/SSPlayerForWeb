@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>&lt;ss-player&gt; — CDN Web Component sample (no JS)</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color: #e8e8f0; }
+    header { padding: 12px 16px; font-size: 14px; line-height: 1.5; }
+    header code { background: rgba(255,255,255,.1); padding: 1px 5px; border-radius: 4px; }
+    ss-player { display: block; width: 640px; height: 480px; max-width: 100%; }
+    #status { padding: 10px 16px; font-size: 13px; white-space: pre-wrap; }
+    #status.error { color: #ff8a8a; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>&lt;ss-player&gt;</strong> — the WebGL renderer as a declarative Web Component,
+    loaded from a CDN. The animation below plays with <strong>no JavaScript</strong>: dropping
+    the bundle registers the element, and the tag's attributes do the rest. The WASM URL is
+    written <strong>once</strong> as <code>data-wasm</code> on the script tag (a classic
+    <code>&lt;script&gt;</code> can't self-locate the runtime), so every
+    <code>&lt;ss-player&gt;</code> can omit it.
+  </header>
+
+  <!--
+    Drop this one bundle → <ss-player> is defined immediately (self-registering IIFE).
+    `data-wasm` sets the page-wide WASM URL once, so no per-element `wasm` attribute is
+    needed. Pin the same version on the bundle AND the core `.wasm` (shared ABI).
+  -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ss-player.element.min.js"
+    data-wasm="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm"
+  ></script>
+
+  <!-- The whole player, declared in markup — no `wasm` attribute needed (see data-wasm above).
+       Add more <ss-player> tags freely; they all reuse the one WASM URL. A per-element
+       `wasm="…"` still works and overrides the default for that element. -->
+  <ss-player
+    id="player"
+    src="./Ringo_embedded.ssab"
+    animation="run"
+    autoplay
+  ></ss-player>
+
+  <div id="status">Loading…</div>
+
+  <!--
+    Everything below is OPTIONAL demo scaffolding — the <ss-player> above needs none of it.
+    It only (a) shows a status line, (b) surfaces the element's `error` event, and
+    (c) lets you override the asset/animation via ?ssab=… & ?anim=… for this demo.
+  -->
+  <script>
+    const el = document.getElementById('player');
+    const statusEl = document.getElementById('status');
+    const q = new URLSearchParams(location.search);
+    if (q.get('ssab')) el.setAttribute('src', q.get('ssab'));
+    if (q.get('anim')) el.setAttribute('animation', q.get('anim'));
+
+    el.addEventListener('load', () => {
+      statusEl.textContent = `Playing "${el.getAttribute('animation')}" from ${el.getAttribute('src')}`;
+    });
+    el.addEventListener('error', (e) => {
+      const msg = (e.detail && e.detail.message) || String(e.detail);
+      statusEl.classList.add('error');
+      statusEl.textContent =
+        'Failed to start.\n' + msg +
+        '\n\nCommon causes:\n' +
+        '  • Opened via file:// — serve this folder over http(s) instead.\n' +
+        '  • The `data-wasm` URL (on the <script> tag) is wrong/unreachable.\n' +
+        '  • ' + el.getAttribute('src') + ' not found — see README.md to supply an .ssab.\n' +
+        '  • The npm packages are not published yet — the CDN URLs 404 until then\n' +
+        '    (README.md shows how to point them at the locally-built bundle).';
+    });
+  </script>
+</body>
+</html>
