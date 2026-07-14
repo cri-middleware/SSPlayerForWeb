@@ -5,7 +5,7 @@
 ## 読み込みとアニメーション選択
 
 ```ts
-await player.load(ssabUrl); // 第2引数でテクスチャの基準URL(assetBaseUrl)を指定可
+await player.load(ssabUrl); // テクスチャは .ssab と同じディレクトリから読み込まれます
 ```
 
 WebGL (`SSCanvasPlayer`):
@@ -15,7 +15,7 @@ await player.setAnimation(name);                       // アニメーション�
 
 PixiJS (`SSPlayer`):
 ```ts
-await player.setAnimation(name); // 第2引数: loop回数(既定-1), 第3引数: assetBaseUrl
+await player.setAnimation(name); // 第2引数: loop回数(既定-1)
 player.animationName;            // 現在のアニメーション名
 ```
 

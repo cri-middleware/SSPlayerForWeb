@@ -97,7 +97,7 @@ const player = new SSCanvasPlayer(canvas, {
   backgroundColor: 0x1a1a2e, // opaque backdrop; omit for a transparent canvas
 });
 
-await player.load('/Ringo.ssab');   // optional 2nd arg: assetBaseUrl for textures
+await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 await player.setAnimation('run');
 
 player.play();                       // drives itself via requestAnimationFrame

@@ -39,7 +39,7 @@ async function main() {
   document.body.appendChild(canvas);
 
   const player = new SSCanvasPlayer(canvas, { autoStart: true });
-  await player.load('/Ringo.ssab');   // 2nd arg sets the texture assetBaseUrl
+  await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
   await player.setAnimation('run');    // loop defaults to -1 (infinite)
   player.play();
 }
@@ -67,7 +67,7 @@ async function main() {
 
   // 2. Create the player, load the .ssab, and select an animation
   const player = new SSPlayer();
-  await player.load('/Ringo.ssab');   // 2nd arg sets the texture assetBaseUrl
+  await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
   await player.setAnimation('run');    // loop defaults to -1 (infinite)
 
   player.position.set(640, 480);
@@ -87,7 +87,7 @@ main().catch(console.error);
 - **Don't call `update()` with Pixi**: `SSPlayer` is registered with `Ticker.shared`
   automatically.
 - **No `.ssab`**: see [Preparing assets](/usage/assets) for converting from `.sspj`.
-- **Textures don't appear**: check the base URL for textures via the 2nd argument of
-  `load(url, assetBaseUrl)`.
+- **Textures don't appear**: textures load from the `.ssab`'s own directory — make sure
+  the texture files sit next to the `.ssab` (or use an `--embedded` `.ssab`).
 
 Next, explore the playback-control API in [Basic playback](/usage/basic).

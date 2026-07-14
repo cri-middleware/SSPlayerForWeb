@@ -256,8 +256,8 @@ export class SSCanvasPlayer {
     }
   }
 
-  public async load(ssabUrl: string, assetBaseUrl?: string): Promise<void> {
-    await this.internalPlayer.load(ssabUrl, assetBaseUrl);
+  public async load(ssabUrl: string): Promise<void> {
+    await this.internalPlayer.load(ssabUrl);
     this.configureContext();
   }
 

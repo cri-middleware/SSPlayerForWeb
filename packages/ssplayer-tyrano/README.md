@@ -93,7 +93,7 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 
 | Tag | Role | Key attributes |
 | --- | --- | --- |
-| `[ss_init]` | Initialize the runtime once + audio config | `wasm=` (effectively required), `base=`, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
+| `[ss_init]` | Initialize the runtime once + audio config | `wasm=` (effectively required), `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
 | `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` |
 | `[ss_play]` | Play / switch animation | `name=`(req) `anime=` `loop=` `start=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |

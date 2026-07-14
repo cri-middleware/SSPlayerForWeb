@@ -92,7 +92,7 @@
 
 | タグ | 役割 | 主な属性 |
 | --- | --- | --- |
-| `[ss_init]` | ランタイム初期化（一度）＋音声設定 | `wasm=`（必須相当）, `base=`, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
+| `[ss_init]` | ランタイム初期化（一度）＋音声設定 | `wasm=`（必須相当）, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
 | `[ss_new]` | プレイヤー生成 → ssab ロード → レイヤーへ挿入 → 再生 | `name=`(必須) `storage=`(必須) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` |
 | `[ss_play]` | 再生 / アニメ切替 | `name=`(必須) `anime=` `loop=` `start=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | 個別プレイヤーの停止 / 一時停止 / 再開 | `name=`(必須) |

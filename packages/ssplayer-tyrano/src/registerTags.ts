@@ -17,11 +17,9 @@ interface AdapterState {
   initialized: boolean;
   /** In-flight init promise so a second `[ss_init]` awaits the first. */
   initPromise: Promise<void> | null;
-  /** Default asset base dir for texture resolution (from `[ss_init base=]`). */
-  assetBase: string;
 }
 
-const state: AdapterState = { initialized: false, initPromise: null, assetBase: '' };
+const state: AdapterState = { initialized: false, initPromise: null };
 
 /** Audio routing config (set by `[ss_init]`; see TyranoAudioManager). */
 interface AudioState {
@@ -80,11 +78,6 @@ function resolveDataPath(p: string): string {
   return `data/${p}`;
 }
 
-function dirOf(path: string): string {
-  const i = path.lastIndexOf('/');
-  return i < 0 ? '' : path.slice(0, i);
-}
-
 function gameResolution(kag: TyranoKag): { w: number; h: number } {
   return { w: num(kag.config?.scWidth, 1280), h: num(kag.config?.scHeight, 720) };
 }
@@ -121,7 +114,6 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   if (!layerEl) throw new Error(`[ss] layer "${opts.layer}" (${opts.page}) not found on the page.`);
 
   const storageUrl = resolveDataPath(opts.storage);
-  const assetBase = state.assetBase || dirOf(storageUrl);
   const { w, h } = gameResolution(kag);
   const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio ?? 1;
 
@@ -133,7 +125,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   player.resize(w, h, dpr);
   ensureAudioManager()?.bindToPlayer(player);
 
-  await player.load(storageUrl, assetBase);
+  await player.load(storageUrl);
 
   // Pick the animation: the given name, else the ssab's first animation.
   let anime = opts.anime;
@@ -213,12 +205,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     return entry;
   };
 
-  // [ss_init wasm= base=] — initialize the WASM runtime once and record the
-  // default asset base. Async: advances only after WASM is ready.
+  // [ss_init wasm=] — initialize the WASM runtime once. Async: advances only
+  // after WASM is ready.
   ftag.master_tag['ss_init'] = {
-    pm: { wasm: '', base: '', audio: 'true', sounddir: '', soundext: '', sevolume: '' },
+    pm: { wasm: '', audio: 'true', sounddir: '', soundext: '', sevolume: '' },
     start(pm) {
-      state.assetBase = pm.base ? resolveDataPath(String(pm.base)) : '';
       // Audio routing config (TyranoAudioManager via howler). Re-buildable, so
       // reset the cached manager if settings changed.
       audio.enabled = String(pm.audio) !== 'false';
@@ -513,5 +504,4 @@ export function __resetStateForTest(): void {
   registry.destroyAll();
   state.initialized = false;
   state.initPromise = null;
-  state.assetBase = '';
 }

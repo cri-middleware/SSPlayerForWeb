@@ -380,12 +380,12 @@ export class SSPlayer extends Container {
     }
 
     /**
-     * Loads the SSAB file and its associated textures.
+     * Loads the SSAB file and its associated textures. Textures resolve relative
+     * to the .ssab's own location (the structure ssconverter emits).
      * @param ssabUrl URL to the .ssab file
-     * @param assetBaseUrl Base URL for assets (defaults to ssabUrl's directory)
      */
-    public async load(ssabUrl: string, assetBaseUrl?: string) {
-        await this.internalPlayer.load(ssabUrl, assetBaseUrl);
+    public async load(ssabUrl: string) {
+        await this.internalPlayer.load(ssabUrl);
         this.internalPlayer.runtimeManager.context.set_render_mode(0); // 0 corresponds to RenderMode::Direct
         this.internalPlayer.runtimeManager.context.set_coordinate_system(1); // 1 = YDown
 
@@ -399,8 +399,8 @@ export class SSPlayer extends Container {
         }
     }
 
-    public async setAnimation(animationName: string, loop: number = -1, assetBaseUrl?: string) {
-        await this.internalPlayer.setAnimation(animationName, assetBaseUrl);
+    public async setAnimation(animationName: string, loop: number = -1) {
+        await this.internalPlayer.setAnimation(animationName);
         this.internalPlayer.setLoop(loop);
     }
 

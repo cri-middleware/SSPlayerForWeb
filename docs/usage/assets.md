@@ -183,7 +183,7 @@ responsibility. For the full API, see the
 ## Placement and texture resolution
 
 - Place the generated `.ssab` and the texture images output alongside it somewhere your web server can serve as the application's static assets.
-- By default, texture images are loaded from the same directory as the `.ssab`. If the images live elsewhere, set the texture base URL via each player's load method (e.g. `player.load(ssabUrl, assetBaseUrl)`).
+- Texture images are loaded from the same directory as the `.ssab` (the structure ssconverter emits). Keep them next to the `.ssab`, or in a subdirectory the `.ssab` references — there is no option to point them at an unrelated directory.
 - An `.ssab` converted in **Embedded** mode contains its textures inside the file, so no separate image placement is needed. Having everything in a single file makes the asset convenient to manage.
 
 For load-and-play steps, see the [Quick start](/setup/quickstart).

@@ -39,7 +39,7 @@ async function main() {
   document.body.appendChild(canvas);
 
   const player = new SSCanvasPlayer(canvas, { autoStart: true });
-  await player.load('/Ringo.ssab');   // 第 2 引数でテクスチャの assetBaseUrl を指定可
+  await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   await player.setAnimation('run');    // loop 既定値は -1（無限ループ）
   player.play();
 }
@@ -66,7 +66,7 @@ async function main() {
 
   // 2. プレイヤーを生成し、.ssab を読み込んでアニメーションを選択
   const player = new SSPlayer();
-  await player.load('/Ringo.ssab');   // 第 2 引数でテクスチャの assetBaseUrl を指定可
+  await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   await player.setAnimation('run');    // loop 既定値は -1（無限ループ）
 
   player.position.set(640, 480);
@@ -85,7 +85,7 @@ main().catch(console.error);
   十分です（`SSCanvasPlayer.initialize()` / `SSPlayer.initialize()`）。
 - **Pixi では `update()` を呼ばない**：`SSPlayer` は `Ticker.shared` に自動登録されます。
 - **`.ssab` が無い**：`.sspj` からの変換は [アセットの準備](/ja/usage/assets) を参照してください。
-- **テクスチャが表示されない**：`load(url, assetBaseUrl)` の第 2 引数で、テクスチャ
-  の基準 URL を確認してください。
+- **テクスチャが表示されない**：テクスチャは `.ssab` と同じディレクトリから読み込まれます。
+  テクスチャファイルを `.ssab` の隣に置く（または `--embedded` の `.ssab` を使う）でください。
 
 次は [基本的な再生](/ja/usage/basic) で再生制御 API を見ていきます。

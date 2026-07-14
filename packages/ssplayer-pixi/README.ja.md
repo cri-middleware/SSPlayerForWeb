@@ -59,7 +59,7 @@ document.body.appendChild(app.canvas);
 
 // 2. Create a player, load a .ssab, and pick an animation.
 const player = new SSPlayer();
-await player.load('/Ringo.ssab');   // optional 2nd arg: assetBaseUrl for textures
+await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 await player.setAnimation('run');   // loop = -1 (infinite) by default
 
 player.position.set(640, 480);
