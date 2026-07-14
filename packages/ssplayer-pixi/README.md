@@ -73,6 +73,76 @@ player.play();
 > the binary — no sibling fetch, so the whole animation loads as a single
 > self-contained request. Verified against both in `examples/pixi-example`.
 
+## Use from a CDN (no build step)
+
+Don't want a bundler? This package also ships a browser build you can load straight
+from a CDN. **The one thing you must do by hand is point the loader at the WASM
+binary.** The runtime is a separate `.wasm` file, and outside a bundler (a classic
+`<script>`, or any CDN context) the automatic path resolution bundlers rely on
+isn't available — so pass its URL to `SSPlayer.initialize(wasmUrl)`.
+
+> **Pin the WASM to the same version as the player you load.** The `.wasm` and its
+> JS glue share an ABI, so a floating `@latest` on one and a pinned version on the
+> other can desync. Use an exact version (e.g. `@7.0.0-beta.1`) on **both** the
+> `ssplayer-pixi` bundle and the `ssplayer-core` `.wasm`.
+
+### Classic `<script>` — global `SSPixiPlayer`
+
+`pixi.js` is a peer dependency, so load Pixi's own global build first; the player
+bundle reads `window.PIXI`. The renderer class is `SSPixiPlayer.SSPlayer`.
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-pixi@7.0.0-beta.1/dist/browser/ssplayer-pixi.browser.min.js"></script>
+<script>
+  const { SSPlayer } = SSPixiPlayer;
+  const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
+
+  (async () => {
+    // Pass the explicit WASM URL — no bundler means no automatic resolution.
+    await SSPlayer.initialize(WASM_URL);
+
+    const app = new PIXI.Application();
+    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+    document.body.appendChild(app.canvas);
+
+    const player = new SSPlayer();
+    await player.load('./Ringo.ssab');   // serve over http(s), not file://
+    await player.setAnimation('run');
+    player.position.set(640, 480);
+    app.stage.addChild(player);
+    player.play();
+  })();
+</script>
+```
+
+### ESM via CDN — `<script type="module">`
+
+Prefer native modules without a build step? Import from an ESM CDN (esm.sh below).
+Same rule: pass the WASM URL explicitly.
+
+```html
+<script type="module">
+  import { Application } from 'https://esm.sh/pixi.js@8';
+  import { SSPlayer } from 'https://esm.sh/@spritestudio/ssplayer-pixi@7.0.0-beta.1';
+
+  await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
+
+  const app = new Application();
+  await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+  document.body.appendChild(app.canvas);
+
+  const player = new SSPlayer();
+  await player.load('./Ringo.ssab');
+  await player.setAnimation('run');
+  player.position.set(640, 480);
+  app.stage.addChild(player);
+  player.play();
+</script>
+```
+
+A runnable copy of both is in [`examples/cdn`](../../examples/cdn/).
+
 ## Playback API (excerpt)
 
 ```ts

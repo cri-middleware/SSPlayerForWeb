@@ -75,6 +75,76 @@ player.play();
 > アニメーション全体が自己完結の単一リクエストとして読み込まれます。いずれも
 > `examples/pixi-example` で検証済みです。
 
+## CDN から使う（ビルド不要）
+
+バンドラを使いたくない場合、本パッケージはブラウザ直読み用のビルドも同梱しており、CDN
+からそのまま読み込めます。**手動でやることは1つだけ — WASM バイナリの場所を明示する**
+ことです。ランタイムは別ファイルの `.wasm` で、バンドラの外（クラシックな `<script>` や
+CDN 経由）ではバンドラが行う自動パス解決が効きません。そのため URL を
+`SSPlayer.initialize(wasmUrl)` に渡してください。
+
+> **WASM は読み込むプレイヤーと同じバージョンに固定してください。** `.wasm` と JS グルー
+> は ABI を共有するため、片方だけ `@latest` にすると不整合が起こり得ます。`ssplayer-pixi`
+> のバンドルと `ssplayer-core` の `.wasm` の **両方** で正確なバージョン（例:
+> `@7.0.0-beta.1`）を指定してください。
+
+### クラシック `<script>` — グローバル `SSPixiPlayer`
+
+`pixi.js` はピア依存なので、先に Pixi 本体のグローバルビルドを読み込みます（バンドルは
+`window.PIXI` を参照します）。レンダラークラスは `SSPixiPlayer.SSPlayer` です。
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-pixi@7.0.0-beta.1/dist/browser/ssplayer-pixi.browser.min.js"></script>
+<script>
+  const { SSPlayer } = SSPixiPlayer;
+  const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
+
+  (async () => {
+    // WASM の URL を明示的に渡す（バンドラが無いので自動解決されない）。
+    await SSPlayer.initialize(WASM_URL);
+
+    const app = new PIXI.Application();
+    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+    document.body.appendChild(app.canvas);
+
+    const player = new SSPlayer();
+    await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
+    await player.setAnimation('run');
+    player.position.set(640, 480);
+    app.stage.addChild(player);
+    player.play();
+  })();
+</script>
+```
+
+### ESM を CDN から — `<script type="module">`
+
+ビルド無しでネイティブモジュールを使いたい場合は ESM CDN（下記は esm.sh）から import
+します。ルールは同じで、WASM の URL を明示的に渡します。
+
+```html
+<script type="module">
+  import { Application } from 'https://esm.sh/pixi.js@8';
+  import { SSPlayer } from 'https://esm.sh/@spritestudio/ssplayer-pixi@7.0.0-beta.1';
+
+  await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
+
+  const app = new Application();
+  await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+  document.body.appendChild(app.canvas);
+
+  const player = new SSPlayer();
+  await player.load('./Ringo.ssab');
+  await player.setAnimation('run');
+  player.position.set(640, 480);
+  app.stage.addChild(player);
+  player.play();
+</script>
+```
+
+両方の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります。
+
 ## 再生 API（抜粋）
 
 ```ts

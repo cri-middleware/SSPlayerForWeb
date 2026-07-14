@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ssplayer-pixi — CDN / classic &lt;script&gt; sample</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a2e; color: #e8e8f0; }
+    header { padding: 12px 16px; font-size: 14px; line-height: 1.5; }
+    header code { background: rgba(255,255,255,.1); padding: 1px 5px; border-radius: 4px; }
+    #stage { display: block; }
+    #status { padding: 10px 16px; font-size: 13px; white-space: pre-wrap; }
+    #status.error { color: #ff8a8a; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>@spritestudio/ssplayer-pixi</strong> — loaded from a CDN via a classic
+    <code>&lt;script&gt;</code>. Note the <strong>explicit WASM URL</strong> passed to
+    <code>SSPlayer.initialize()</code>: outside a bundler the runtime can't self-locate.
+  </header>
+  <div id="app"></div>
+  <div id="status">Loading…</div>
+
+  <!--
+    1) PixiJS is a peer dependency — load its own global build first (exposes window.PIXI).
+       Pixi v8's global bundle lives at dist/pixi.min.js (the bare specifier does NOT resolve to it).
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <!-- 2) The player IIFE bundle (bundles ssplayer-core + flatbuffers; reads window.PIXI). -->
+  <script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-pixi@7.0.0-beta.1/dist/browser/ssplayer-pixi.browser.min.js"></script>
+  <script>
+    // ---- Config ------------------------------------------------------------
+    // Keep the WASM version pinned to the SAME version as the player bundle above.
+    const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
+    // The .ssab to play. Override with ?ssab=<url>. Use an *embedded* ssab so it is
+    // fully self-contained (textures inlined — no sibling PNG fetches needed).
+    const SSAB_URL = new URLSearchParams(location.search).get('ssab') || './Ringo_embedded.ssab';
+    const ANIM = new URLSearchParams(location.search).get('anim') || 'run';
+    // ------------------------------------------------------------------------
+
+    const { SSPlayer } = SSPixiPlayer; // renderer class lives on the namespace global
+    const statusEl = document.getElementById('status');
+    const setStatus = (msg, isError) => { statusEl.textContent = msg; statusEl.classList.toggle('error', !!isError); };
+
+    (async () => {
+      try {
+        // Pass the explicit WASM URL — no bundler means no automatic resolution.
+        await SSPlayer.initialize(WASM_URL);
+
+        const app = new PIXI.Application();
+        await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+        document.getElementById('app').appendChild(app.canvas);
+        app.canvas.id = 'stage';
+
+        const player = new SSPlayer();
+        await player.load(SSAB_URL);       // must be served over http(s), not file://
+        await player.setAnimation(ANIM);   // loops infinitely by default
+        player.position.set(640, 480);
+        app.stage.addChild(player);
+        player.play();
+
+        setStatus(`Playing "${ANIM}" from ${SSAB_URL}`);
+      } catch (err) {
+        console.error(err);
+        setStatus(
+          'Failed to start.\n' + (err && err.message ? err.message : err) +
+          '\n\nCommon causes:\n' +
+          '  • Opened via file:// — serve this folder over http(s) instead.\n' +
+          '  • ' + SSAB_URL + ' not found — see examples/cdn/README.md to supply an .ssab.\n' +
+          '  • The npm packages are not published yet — the CDN URLs above 404 until then\n' +
+          '    (README.md shows how to point them at the locally-built bundles).',
+          true,
+        );
+      }
+    })();
+  </script>
+</body>
+</html>
