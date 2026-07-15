@@ -44,7 +44,7 @@ player.fps;                 // フレームレート（get / set）
 player.totalFrames;         // 総フレーム数
 player.startFrame;          // 開始フレーム
 player.endFrame;            // 終了フレーム
-player.loopCount;           // 完了したループ回数
+player.loopCount;           // 設定したループ回数（-1 = 無限）
 player.isPausing;           // 一時停止中か
 ```
 

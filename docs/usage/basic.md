@@ -44,7 +44,7 @@ player.fps;                 // frame rate (get / set)
 player.totalFrames;         // total frame count
 player.startFrame;          // start frame
 player.endFrame;            // end frame
-player.loopCount;           // number of completed loops
+player.loopCount;           // configured loop count (-1 = infinite)
 player.isPausing;           // whether playback is paused
 ```
 

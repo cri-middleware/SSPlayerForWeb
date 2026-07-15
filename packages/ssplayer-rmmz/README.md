@@ -82,7 +82,7 @@ Use event → **Plugin Command** → `ssplayer-rpgmakermz`. An SS animation ride
 | Command | Internal name | Description |
 |---|---|---|
 | Play / Pause / Stop / Remove SS | — | By `pictureId`. |
-| Wait for SS | — | Holds the event until a **non-looping** animation finishes (use a finite `loop`, or it waits forever). |
+| Wait for SS | — | Holds the event until every configured loop has played (use a finite `loop`; `0` is a synonym for infinite, so it waits forever). |
 
 ### Lip-sync (talking portrait — advanced)
 
