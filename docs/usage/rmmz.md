@@ -78,8 +78,8 @@ free.
 **Playback / lifecycle**
 
 - **Play / Pause / Stop / Remove SS**, and **Wait for SS** — by `pictureId`. *Wait for
-  SS* holds the event until a **non-looping** animation finishes (give it a finite
-  `loop`, or it waits forever).
+  SS* holds the event until every configured loop has played (give it a finite
+  `loop`; note `0` is a synonym for infinite, so it waits forever).
 
 **Lip-sync (talking portrait — advanced)**
 

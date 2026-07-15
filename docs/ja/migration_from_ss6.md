@@ -80,7 +80,7 @@ player.loopCount = -1;               // ループ回数は分離
 | SS6Player | 本バージョン | ペイロード |
 |---|---|---|
 | `SetUserDataCalback(fn)` | `onUserData(listener)` | `SSUserDataEvent`（int/string/rect/point + partIndex/partName） |
-| `SetPlayEndCallback(fn)` | `onAnimationEnd(listener)` | なし（非ループ再生の終了時に発火） |
+| `SetPlayEndCallback(fn)` | `onAnimationEnd(listener)` | なし（指定したループ回数をすべて再生し終えたときに発火。無限ループでは発火しない） |
 | （なし・新規） | `onAnimationLoop(listener)` | なし（ループ境界ごと） |
 | （なし・新規） | `onSignal(listener)` | `SSSignalEvent`（commandId + パラメータ） |
 | （なし・新規） | `onAudio(listener)` | `SSAudioEvent`（サウンドキュー） |

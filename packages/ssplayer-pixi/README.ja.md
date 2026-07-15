@@ -152,7 +152,7 @@ player.play(startFrame?);  player.pause();  player.resume();  player.stop();
 
 player.frame;                       // get/set the current frame
 player.speedScale = 1.5;            // playback speed multiplier
-player.loopCount;                   // number of completed loops
+player.loopCount;                   // 設定したループ回数（-1 = 無限）
 player.totalFrames; player.startFrame; player.endFrame; player.fps;
 player.isPlaying; player.isPausing;
 

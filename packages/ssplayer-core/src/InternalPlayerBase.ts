@@ -29,6 +29,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public runtimeManager: SSRuntimeManager;
     public audioManager: IAudioManager | null = null;
     private _speedRate: number = 1.0;
+    private _prevFinished: boolean = false;
     private _resourceManager: IResourceManager | null = null;
     private _ssabUrl: string = '';
     private _assetBaseUrl: string = '';
@@ -303,7 +304,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         } else {
             this.runtimeManager.context.play();
         }
-        
+
+        // Re-arm the finished edge so a replayed animation reports its next
+        // completion (is_finished stays latched until play/setup).
+        this._prevFinished = false;
+
         // Restarting playback should also reset independent slots (effects and instances)
         this.setupInstanceChildren();
         this.setupEffectChildren();
@@ -361,6 +366,26 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this.runtimeManager.update(deltaMs);
         this.stepEffectSlots(deltaSeconds, this.runtimeManager.context.is_looped());
         this.stepInstanceSlots(deltaSeconds, this.runtimeManager.context.is_looped());
+    }
+
+    /**
+     * Reads the playback events produced by the most recent {@link update}.
+     *
+     * Must be called on the same tick that advanced, and only on that tick —
+     * `looped` is a pulse the runtime clears on entry to every update, so a
+     * later read loses it.
+     *
+     * `finished` is a sticky state rather than a pulse, so it is reported only
+     * on its rising edge; {@link play} re-arms it. It is never raised under an
+     * infinite loop count, nor by a commanded {@link stop}.
+     */
+    public pollPlaybackEvents(): { looped: boolean; finished: boolean } {
+        const ctx = this.runtimeManager.context;
+        const looped = ctx.is_looped();
+        const finished = ctx.is_finished();
+        const rising = finished && !this._prevFinished;
+        this._prevFinished = finished;
+        return { looped, finished: rising };
     }
 
     /**

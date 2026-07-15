@@ -144,10 +144,6 @@ export class SSCanvasPlayer {
   private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
   private readonly _animEndListeners = new Set<() => void>();
   private readonly _animLoopListeners = new Set<() => void>();
-  // Rising-edge memory for onAnimationEnd (!playing && end-reached): the runtime
-  // leaves is_end_frame_reached() asserted after stopping, so we notify once on
-  // the false→true transition.
-  private _prevFinished = false;
   // Guards the one-time default-audio auto-wire (see ensureAutoAudio).
   private _audioAutoWired = false;
 
@@ -475,7 +471,7 @@ export class SSCanvasPlayer {
     return () => { this._audioListeners.delete(listener); };
   }
 
-  /** Fires once when a non-looping animation reaches its end and stops. */
+  /** Fires once every configured loop has played. Never under an infinite loop count, nor on stop(). */
   public onAnimationEnd(listener: () => void): Unsubscribe {
     this._animEndListeners.add(listener);
     return () => { this._animEndListeners.delete(listener); };
@@ -498,19 +494,11 @@ export class SSCanvasPlayer {
   private pollEvents(): void {
     const ctx = this.internalPlayer.runtimeManager.context;
 
-    // onAnimationEnd: rising edge of "stopped at end" (the runtime leaves
-    // is_end_frame_reached() asserted after stopping, so notify once).
-    const finished = !ctx.is_playing() && ctx.is_end_frame_reached();
-    if (finished && !this._prevFinished) {
-      if (this._animEndListeners.size > 0) {
-        this._animEndListeners.forEach(cb => cb());
-      }
+    const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
+    if (finished && this._animEndListeners.size > 0) {
+      this._animEndListeners.forEach(cb => cb());
     }
-    this._prevFinished = finished;
-
-    // onAnimationLoop: is_looped() pulses true for the single update that crossed
-    // a loop boundary, so dispatch it verbatim.
-    if (this._animLoopListeners.size > 0 && ctx.is_looped()) {
+    if (looped && this._animLoopListeners.size > 0) {
       this._animLoopListeners.forEach(cb => cb());
     }
 
