@@ -80,7 +80,7 @@ player.loopCount = -1;               // loop count is separate
 | SS6Player | This version | Payload |
 |---|---|---|
 | `SetUserDataCalback(fn)` | `onUserData(listener)` | `SSUserDataEvent` (int/string/rect/point + partIndex/partName) |
-| `SetPlayEndCallback(fn)` | `onAnimationEnd(listener)` | none (fires when a non-looping animation ends) |
+| `SetPlayEndCallback(fn)` | `onAnimationEnd(listener)` | none (fires once every configured loop has played; never under an infinite loop count) |
 | (new) | `onAnimationLoop(listener)` | none (on each loop boundary) |
 | (new) | `onSignal(listener)` | `SSSignalEvent` (commandId + params) |
 | (new) | `onAudio(listener)` | `SSAudioEvent` (sound cue) |

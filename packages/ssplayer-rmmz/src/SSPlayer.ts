@@ -79,7 +79,6 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   private _audioListeners = new Set<(e: SSAudioEvent) => void>();
   private _animEndListeners = new Set<() => void>();
   private _animLoopListeners = new Set<() => void>();
-  private _prevFinished = false;
 
   /**
    * @param gl the MZ shared WebGL context. Defaults to `Graphics._app.renderer.gl`
@@ -249,15 +248,11 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   private pollEvents(): void {
-    const ctx = this.internalPlayer.runtimeManager.context;
-
-    const finished = !ctx.is_playing() && ctx.is_end_frame_reached();
-    if (finished && !this._prevFinished && this._animEndListeners.size > 0) {
+    const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
+    if (finished && this._animEndListeners.size > 0) {
       this._animEndListeners.forEach((cb) => cb());
     }
-    this._prevFinished = finished;
-
-    if (this._animLoopListeners.size > 0 && ctx.is_looped()) {
+    if (looped && this._animLoopListeners.size > 0) {
       this._animLoopListeners.forEach((cb) => cb());
     }
 

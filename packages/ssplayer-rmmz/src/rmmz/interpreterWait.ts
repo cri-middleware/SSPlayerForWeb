@@ -3,8 +3,9 @@
 // ('ssplayer'); we alias Game_Interpreter.updateWaitMode to hold the event until
 // the tracked picture's animation finishes.
 //
-// Intended for NON-looping playback (loop 0/1). A looping animation never fires
-// onAnimationEnd, so waiting on one would block the event forever.
+// Intended for a finite loop count (1, or any n > 0). An infinite loop never
+// fires onAnimationEnd, so waiting on one would block the event forever -- note
+// that loopCount 0 is a synonym for infinite, not "play once".
 
 import { getLiveStatus } from './liveRegistry.js';
 
