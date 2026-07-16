@@ -13,7 +13,6 @@ export interface EffectChildState {
 export interface InstanceChildState<T> {
     slot: InstanceSlotHandle;
     player: T;
-    prevChildFrame: number;
     visible: boolean;
     parentMatrix: Float32Array;
 }
@@ -237,7 +236,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
                 this._instanceChildren.set(ref.partIndex, {
                     slot,
                     player: childPlayer,
-                    prevChildFrame: childPlayer.runtimeManager.context.get_frame_no(),
                     visible: false,
                     parentMatrix: new Float32Array(6),
                 });
@@ -537,7 +535,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const parentFrame = this.runtimeManager.context.get_frame_no();
         for (const [partIndex, childState] of this._instanceChildren.entries()) {
             const ev = this.runtimeManager.context.get_active_event_instance(partIndex);
-            const visible = childState.slot.raw.step(ev, childState.player.runtimeManager.context, childState.prevChildFrame, parentFrame, deltaSeconds, parentLooped);
+            const visible = childState.slot.raw.step(ev, childState.player.runtimeManager.context, parentFrame, deltaSeconds, parentLooped);
 
             const childDeltaSeconds = ev ? deltaSeconds * Math.abs(ev.speed) : deltaSeconds;
 
@@ -547,7 +545,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             if (childState.slot.raw.transitioned()) {
                 childState.player.runtimeManager.context.play();
             }
-            childState.prevChildFrame = childState.player.runtimeManager.context.get_frame_no();
 
             // Advance the child's own effects
             childState.player.stepEffectSlots(childDeltaSeconds, childState.slot.raw.child_looped());
