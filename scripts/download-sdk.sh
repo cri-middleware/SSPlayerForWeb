@@ -9,13 +9,13 @@ set -e
 # assets is available, this script fails at the download step — build from
 # source with `pnpm run build:wasm` in the meantime.
 #
-# Asset names and layout follow SpriteStudio-SDK/.github/workflows/release.yml:
-#   - spritestudio-sdk-runtime-web.zip         -> packages/ssplayer-core/wasm/
-#   - spritestudio-sdk-runtime-web-nosimd.zip  -> packages/ssplayer-core/wasm-nosimd/
-#   - spritestudio-sdk-converter-web.zip       -> packages/ssconverter-core/wasm/
-# Both zips are flattened (`zip -rj`), so their files extract directly into the
-# target directory. The no-SIMD runtime variant is consumed by ssplayer-rmmz
-# (RPG Maker MZ / NW.js lacks WASM simd128).
+# The SDK publishes one combined archive, spritestudio-sdk-web-libs.zip, holding the
+# three wasm-pack packages as subdirectories. Each is extracted into its target:
+#   - runtime-web/         -> packages/ssplayer-core/wasm/
+#   - runtime-web-nosimd/  -> packages/ssplayer-core/wasm-nosimd/
+#   - converter-web/       -> packages/ssconverter-core/wasm/
+# The no-SIMD runtime variant is consumed by ssplayer-rmmz (RPG Maker MZ / NW.js
+# lacks WASM simd128).
 
 BASEDIR=$(dirname "$0")
 SCRIPTDIR=$(cd "$BASEDIR" && pwd -P)
@@ -27,6 +27,9 @@ RUNTIME_DIR="${ROOTDIR}/packages/ssplayer-core/wasm"
 RUNTIME_NOSIMD_DIR="${ROOTDIR}/packages/ssplayer-core/wasm-nosimd"
 CONVERTER_DIR="${ROOTDIR}/packages/ssconverter-core/wasm"
 VERSION_MARKER="${RUNTIME_DIR}/VERSION"
+# Downloaded zip is cached here (gitignored) so a re-run that needs the same
+# version reuses it instead of re-downloading.
+CACHE_DIR="${SCRIPTDIR}/.sdk-cache"
 
 TARGET_VERSION=$(tr -d '\r\n' < "$VERSION_FILE")
 
@@ -39,60 +42,68 @@ if [ -f "$VERSION_MARKER" ]; then
 fi
 
 BASE_URL="https://github.com/${REPO}/releases/download/${TARGET_VERSION}"
-RUNTIME_ASSET="spritestudio-sdk-runtime-web.zip"
-RUNTIME_NOSIMD_ASSET="spritestudio-sdk-runtime-web-nosimd.zip"
-CONVERTER_ASSET="spritestudio-sdk-converter-web.zip"
-
-TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"' EXIT
-SUMS_FILE="${TMP_DIR}/SHA256SUMS"
+# Keep the release asset's own name so it matches the SHA256SUMS entry directly.
+WEB_ASSET="spritestudio-sdk-web-libs.zip"
+WEB_ZIP="${CACHE_DIR}/${WEB_ASSET}"
+SUMS_FILE="${CACHE_DIR}/SHA256SUMS"
 
 echo "Target SDK Version: ${TARGET_VERSION}"
+mkdir -p "$CACHE_DIR"
 
-# Verify <file> against the release's SHA256SUMS manifest entry for <asset-name>
-# before extracting, so a corrupted or tampered download fails loudly. Uses
-# sha256sum (Linux) or shasum -a 256 (macOS); matches the entry by asset name.
-verify_sha256() {
-    local file="$1" name="$2" expected actual
-    expected=$(awk -v n="$name" '$2 == n {print $1}' "$SUMS_FILE")
-    if [ -z "$expected" ]; then
-        echo "ERROR: no checksum entry for ${name} in SHA256SUMS" >&2
-        exit 1
-    fi
+sha256_of() {
     if command -v sha256sum >/dev/null 2>&1; then
-        actual=$(sha256sum "$file" | awk '{print $1}')
+        sha256sum "$1" | awk '{print $1}'
     else
-        actual=$(shasum -a 256 "$file" | awk '{print $1}')
+        shasum -a 256 "$1" | awk '{print $1}'
     fi
-    if [ "$expected" != "$actual" ]; then
-        echo "ERROR: checksum mismatch for ${name}" >&2
-        echo "  expected: ${expected}" >&2
-        echo "  actual:   ${actual}" >&2
-        exit 1
-    fi
-    echo "Checksum OK: ${name}"
 }
 
+# Fetch the checksum manifest (small): it both verifies integrity and decides
+# whether an already-cached zip can be reused without re-downloading.
 echo "Downloading checksum manifest:   ${BASE_URL}/SHA256SUMS"
 curl -fL -o "$SUMS_FILE" "${BASE_URL}/SHA256SUMS"
 
-for asset in "$RUNTIME_ASSET" "$RUNTIME_NOSIMD_ASSET" "$CONVERTER_ASSET"; do
-    echo "Downloading ${BASE_URL}/${asset}"
-    curl -fL -o "${TMP_DIR}/${asset}" "${BASE_URL}/${asset}"
-    verify_sha256 "${TMP_DIR}/${asset}" "$asset"
-done
+# ensure_asset <asset-name>: leave a checksum-verified copy of the asset in the
+# cache under its own name, reusing an already-matching one instead of
+# re-downloading.
+ensure_asset() {
+    local asset="$1" file="${CACHE_DIR}/$1" expected
+    expected=$(awk -v n="$asset" '$2 == n {print $1}' "$SUMS_FILE")
+    if [ -z "$expected" ]; then
+        echo "ERROR: no checksum entry for ${asset} in SHA256SUMS" >&2
+        exit 1
+    fi
+    if [ -f "$file" ] && [ "$(sha256_of "$file")" = "$expected" ]; then
+        echo "Reusing cached ${asset}"
+    else
+        echo "Downloading ${BASE_URL}/${asset}"
+        curl -fL -o "$file" "${BASE_URL}/${asset}"
+        if [ "$(sha256_of "$file")" != "$expected" ]; then
+            echo "ERROR: checksum mismatch for ${asset}" >&2
+            rm -f "$file"
+            exit 1
+        fi
+    fi
+    echo "Checksum OK: ${asset}"
+}
 
+ensure_asset "$WEB_ASSET"
+
+# The archive holds runtime-web/, runtime-web-nosimd/ and converter-web/ as
+# subdirectories. Extract each into its target with -j so the subdir prefix is
+# stripped and files land flat (as the packages expect). 'runtime-web/*' does
+# not match 'runtime-web-nosimd/*' — the literal prefixes differ.
 echo "Extracting runtime WASM          -> ${RUNTIME_DIR}"
 mkdir -p "$RUNTIME_DIR"
-unzip -q -o "${TMP_DIR}/${RUNTIME_ASSET}" -d "$RUNTIME_DIR"
+unzip -q -o -j "$WEB_ZIP" 'runtime-web/*' -d "$RUNTIME_DIR"
 
 echo "Extracting runtime WASM (nosimd) -> ${RUNTIME_NOSIMD_DIR}"
 mkdir -p "$RUNTIME_NOSIMD_DIR"
-unzip -q -o "${TMP_DIR}/${RUNTIME_NOSIMD_ASSET}" -d "$RUNTIME_NOSIMD_DIR"
+unzip -q -o -j "$WEB_ZIP" 'runtime-web-nosimd/*' -d "$RUNTIME_NOSIMD_DIR"
 
 echo "Extracting converter WASM        -> ${CONVERTER_DIR}"
 mkdir -p "$CONVERTER_DIR"
-unzip -q -o "${TMP_DIR}/${CONVERTER_ASSET}" -d "$CONVERTER_DIR"
+unzip -q -o -j "$WEB_ZIP" 'converter-web/*' -d "$CONVERTER_DIR"
 
 echo "$TARGET_VERSION" > "$VERSION_MARKER"
 

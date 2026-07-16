@@ -824,5 +824,8 @@ packages/ssplayer-core/wasm/
 packages/ssplayer-core/wasm-nosimd
 packages/ssconverter-core/wasm/
 
+# Cached SDK download zips (scripts/download-sdk.*)
+/scripts/.sdk-cache/
+
 # Ignore test assets in public
 public/
