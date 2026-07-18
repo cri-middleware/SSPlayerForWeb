@@ -45,11 +45,14 @@ export class PixiResourceManager implements IResourceManager {
     }
 
     public destroy(): void {
-        this.loadedAliases.forEach(alias => {
-            Assets.unload(alias);
-        });
-        this.loadedAliases.clear();
+        // Free only the textures this instance owns: the embedded (`--embedded`
+        // mode) textures kept out of the Pixi Assets cache. URL-loaded textures
+        // live in Pixi's global, deliberately-shared Assets cache and may be in
+        // use by other SSPlayers that loaded the same URL/hash, so we do NOT
+        // Assets.unload() them here — that would yank a texture still in use
+        // elsewhere. The host owns the global Assets-cache lifecycle.
         this.embeddedTextures.forEach(tex => tex.destroy(true));
         this.embeddedTextures.clear();
+        this.loadedAliases.clear();
     }
 }

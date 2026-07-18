@@ -44,7 +44,7 @@
 変換済み（プリビルド）のランタイムファイルです。`.sspj` を次のいずれかで変換してください。
 
 - **Web（インストール不要）：** ホスト版コンバータ
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** を開き、`.sspj`
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>**（🚧 初回リリース後に利用可能）を開き、`.sspj`
   プロジェクトが入ったフォルダ（ディレクトリ）をドロップすると `.ssab`（＋テクスチャ）が
   zip ファイルでダウンロードできます。
 - **デスクトップ：** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases) を使います。

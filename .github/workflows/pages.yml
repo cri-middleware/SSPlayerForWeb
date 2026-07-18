@@ -25,11 +25,10 @@ on:
     types: [completed]
   workflow_dispatch:
 
-# Permissions required by the artifact-based Pages deploy.
+# Least-privilege: the build job only needs to read the repo; the Pages write /
+# OIDC token permissions are granted to the deploy job alone (see below).
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Never run two deploys at once; let an in-progress deploy finish rather than
 # cancelling it.
@@ -54,8 +53,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -139,6 +136,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Only the deploy job needs to publish the Pages artifact + mint the OIDC token.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

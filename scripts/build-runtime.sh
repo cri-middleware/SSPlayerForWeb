@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 # Get absolute paths to avoid confusion with wasm-pack relative directories
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

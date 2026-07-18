@@ -66,6 +66,20 @@ if (!fs.existsSync(wasmPath)) {
     process.exit(1);
 }
 
+// Resolve `target` under `baseDir` and refuse anything that escapes it. Output
+// filenames and asset paths are derived from the (potentially untrusted) project,
+// so a crafted `.sspj` yielding `../…` entries must not read or write outside the
+// intended directory (zip-slip-style traversal).
+function resolveWithin(baseDir, target, label) {
+    const base = path.resolve(baseDir);
+    const resolved = path.resolve(base, target);
+    if (resolved !== base && !resolved.startsWith(base + path.sep)) {
+        console.error(`Error: ${label} escapes the target directory: ${target}`);
+        process.exit(1);
+    }
+    return resolved;
+}
+
 async function main() {
     await init(fs.readFileSync(wasmPath));
 
@@ -101,7 +115,7 @@ async function main() {
     fs.mkdirSync(outDir, { recursive: true });
 
     for (const [filename, data] of outputs.entries()) {
-        const dest = path.join(outDir, filename);
+        const dest = resolveWithin(outDir, filename, 'output path');
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         fs.writeFileSync(dest, data);
         console.log(`Generated: ${dest}`);
@@ -110,8 +124,8 @@ async function main() {
     // Copy referenced assets (skipped in suffix mode — embedded .ssab inline them).
     if (result.assets && !suffix) {
         for (const [destPath, srcPath] of result.assets.entries()) {
-            const srcFullPath = path.join(sspjDir, srcPath);
-            const destFullPath = path.join(outDir, destPath);
+            const srcFullPath = resolveWithin(sspjDir, srcPath, 'asset source path');
+            const destFullPath = resolveWithin(outDir, destPath, 'asset output path');
 
             if (fs.existsSync(srcFullPath)) {
                 fs.mkdirSync(path.dirname(destFullPath), { recursive: true });

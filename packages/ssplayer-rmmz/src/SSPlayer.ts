@@ -248,6 +248,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   private pollEvents(): void {
+    const ctx = this.internalPlayer.runtimeManager.context;
     const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
     if (finished && this._animEndListeners.size > 0) {
       this._animEndListeners.forEach((cb) => cb());

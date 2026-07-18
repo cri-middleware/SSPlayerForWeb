@@ -642,6 +642,11 @@ export class SSCanvasPlayer {
       this._onContextRestored = null;
     }
 
+    // Free the core player's WASM allocation (SSAB resource, runtime context,
+    // instance/effect slot handles). Mirrors ssplayer-pixi's SSPlayer.destroy();
+    // without this the entire DirectInternalPlayer leaks on every teardown.
+    this.internalPlayer?.destroy();
+
     this.renderer.destroy();
     this.resourceManager.destroy();
   }

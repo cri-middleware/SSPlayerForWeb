@@ -4,7 +4,7 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 /**
  * Optional `<ss-player>` Custom Element wrapper around {@link SSCanvasPlayer}.
  *
- * Native Custom Elements only — no framework dependency (依存ゼロ).
+ * Native Custom Elements only — no framework dependency.
  * Lives behind the `@spritestudio/ssplayer-webgl/element` subpath and is NOT
  * auto-registered (`sideEffects: false` is preserved): call
  * {@link defineSSPlayerElement} to register the tag, so ads that don't use the

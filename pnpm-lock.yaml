@@ -178,7 +178,7 @@ importers:
   packages/ssplayer-pixi:
     dependencies:
       '@spritestudio/ssplayer-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ssplayer-core
     devDependencies:
       pixi.js:
@@ -191,7 +191,7 @@ importers:
   packages/ssplayer-rmmz:
     dependencies:
       '@spritestudio/ssplayer-webgl':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ssplayer-webgl
     devDependencies:
       jsdom:
@@ -210,7 +210,7 @@ importers:
   packages/ssplayer-tyrano:
     dependencies:
       '@spritestudio/ssplayer-webgl':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ssplayer-webgl
     devDependencies:
       jsdom:
@@ -226,7 +226,7 @@ importers:
   packages/ssplayer-webgl:
     dependencies:
       '@spritestudio/ssplayer-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ssplayer-core
     devDependencies:
       typescript:

@@ -39,7 +39,7 @@ runtime file the plugin actually plays — it's what `[ss_new storage="..."]` lo
 Convert your `.sspj` with either:
 
 - **Web — no install:** the hosted converter at
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop the
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** (🚧 live after the first release) — drop the
   **folder** containing your `.sspj` project in and download the `.ssab` (+ its
   texture) as a zip file.
 - **Desktop:** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases).
@@ -274,5 +274,3 @@ pnpm --filter @spritestudio/ssplayer-tyrano run test    # vitest (mock TYRANO ha
 ## License
 
 BSD-3-Clause © CRI Middleware Co., Ltd. — see [LICENSE.md](./LICENSE.md).
-</content>
-</invoke>

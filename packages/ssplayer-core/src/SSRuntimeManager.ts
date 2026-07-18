@@ -154,10 +154,6 @@ export class SSRuntimeManager {
         this.context.bind_resource(resource.raw);
     }
 
-    public loadSsab(data: Uint8Array): boolean {
-        return this.context.load_ssab_borrow(data);
-    }
-
     public setupAnimation(animationName: string) {
         this.context.setup_animation(animationName);
         // Part counts and buffer layouts change per animation; drop stale views.
@@ -297,7 +293,7 @@ export class SSRuntimeManager {
      * without this a seek would leave particles frozen at their last frame.
      * delta_seconds = 0 means dependent effects snap deterministically to the
      * seeked frame, while the independent real-time clock does not advance
-     * (independent effects cannot be seeked — see docs/00_limitations).
+     * (independent effects cannot be seeked).
      */
 
     /**
@@ -435,9 +431,14 @@ export class SSRuntimeManager {
      */
     public static extractTexturePaths(ssabBuffer: Uint8Array): { hash: number, path: string }[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // These static extractors run on raw, possibly untrusted `.ssab` bytes
+        // (e.g. drag-and-drop). FlatBuffers generates no verifier, so gate on the
+        // "SSAB" file identifier and bail out on any non-SSAB / truncated buffer
+        // instead of walking file-controlled offsets and vector lengths.
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const results: { hash: number, path: string }[] = [];
-        
+
         for (let i = 0; i < ssab.cellmapsLength(); i++) {
             const cellmap = ssab.cellmaps(i);
             if (cellmap) {
@@ -467,6 +468,8 @@ export class SSRuntimeManager {
      */
     public static extractEmbeddedTextures(ssabBuffer: Uint8Array): { hash: number, bytes: Uint8Array }[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const embLen = ssab.embeddedAssetsLength();
         if (embLen === 0) return [];
@@ -496,6 +499,8 @@ export class SSRuntimeManager {
      */
     public static extractPackInfo(ssabBuffer: Uint8Array): { hash: number, name: string | null } {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return { hash: 0, name: null };
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         return { hash: ssab.nameHash() >>> 0, name: ssab.name() };
     }
@@ -507,6 +512,8 @@ export class SSRuntimeManager {
      */
     public static extractInstancePackRefs(ssabBuffer: Uint8Array): { hash: number, name: string }[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const seen = new Set<number>();
         const out: { hash: number, name: string }[] = [];
@@ -532,6 +539,8 @@ export class SSRuntimeManager {
      */
     public static extractAnimationNames(ssabBuffer: Uint8Array): string[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const out: string[] = [];
         for (let i = 0; i < ssab.animationsLength(); i++) {
@@ -547,6 +556,8 @@ export class SSRuntimeManager {
      */
     public static extractSounds(ssabBuffer: Uint8Array): SoundAsset[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const seen = new Set<string>();
         const out: SoundAsset[] = [];

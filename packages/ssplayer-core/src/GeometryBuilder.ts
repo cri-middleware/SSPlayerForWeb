@@ -474,8 +474,8 @@ export class GeometryBuilder {
             const wx = m00 * vx + m01 * vy + tx;
             const wy = m10 * vx + m11 * vy + ty;
             if (pm) {
-                outPositions[ov * 2 + 0] = pm[0] * wx + pm[2] * wy + pm[4];
-                outPositions[ov * 2 + 1] = pm[1] * wx + pm[3] * wy + pm[5];
+                outPositions[ov * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[ov * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
             } else {
                 outPositions[ov * 2 + 0] = wx;
                 outPositions[ov * 2 + 1] = wy;

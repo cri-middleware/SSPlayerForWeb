@@ -49,6 +49,19 @@ function requireFile(ref, label) {
   if (!existsSync(abs)) missing.push(`${label}: ${ref}`);
 }
 
+/** Does a directory (recursively) contain at least one *.wasm binary? */
+function dirHasWasm(absDir) {
+  if (!existsSync(absDir) || !statSync(absDir).isDirectory()) return false;
+  for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (dirHasWasm(join(absDir, entry.name))) return true;
+    } else if (entry.isFile() && entry.name.endsWith('.wasm')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** For a glob like "./wasm/*", require its directory to be non-empty. */
 function requireGlobDir(ref, label) {
   const dir = dirname(ref.replace(/\*.*$/, 'x')); // "./wasm/*" -> "./wasm"
@@ -81,8 +94,15 @@ for (const entry of pkg.files ?? []) {
   const abs = join(pkgDir, entry);
   if (!existsSync(abs)) {
     missing.push(`files: ${entry} (missing)`);
-  } else if (statSync(abs).isDirectory() && !dirHasFiles(abs)) {
-    missing.push(`files: ${entry} (directory is empty)`);
+  } else if (statSync(abs).isDirectory()) {
+    if (!dirHasFiles(abs)) {
+      missing.push(`files: ${entry} (directory is empty)`);
+    } else if ((entry === 'wasm' || entry.endsWith('/wasm')) && !dirHasWasm(abs)) {
+      // Non-emptiness is not enough: a wasm/ populated with only VERSION /
+      // LICENSE but missing the actual *_bg.wasm binary would still pass and
+      // ship a broken, immutable release. Require the binary itself.
+      missing.push(`files: ${entry} (no *.wasm binary present)`);
+    }
   }
 }
 

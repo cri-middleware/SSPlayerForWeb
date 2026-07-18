@@ -132,7 +132,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             const buf = this.getSsabBuffer();
             if (buf) {
                 const list = SSRuntimeManager.extractEmbeddedTextures(buf);
-                if (list.length > 0) embedded = new Map(list.map(e => [e.hash, e.bytes] as const));
+                // extractEmbeddedTextures returns views over WASM memory; copy them
+                // (.slice) before the awaited decode below, since a concurrent WASM
+                // grow on any context would detach the backing buffer mid-await.
+                if (list.length > 0) embedded = new Map(list.map(e => [e.hash, e.bytes.slice()] as const));
             }
         }
 
@@ -562,9 +565,17 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     protected abstract createChildPlayer(resourceManager?: IResourceManager): T;
 
+    private _destroyed = false;
+
     public destroy() {
+        // Idempotent: a second destroy() would re-enter stop() after
+        // runtimeManager.destroy() has nulled the context, throwing a TypeError.
+        // Hosts/frameworks commonly call destroy() defensively more than once.
+        if (this._destroyed) return;
+        this._destroyed = true;
+
         this.stop();
-        
+
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
             try { child.slot.destroy(); } catch { /* ignore */ }

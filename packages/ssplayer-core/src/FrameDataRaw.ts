@@ -9,7 +9,7 @@ import { DrawBatch } from './ss/runtime/draw-batch.js';
  * Raw (per-field, byte-offset) reader for the fixed-length FlatBuffers `struct`
  * vectors in `FrameData` — `parts`, `parts_color` and `draw_batches`.
  *
- * Why this exists (07_render_loop.ja.md §2 "生読み"): those vectors are
+ * Why this exists: those vectors are
  * FlatBuffers *structs* (fixed layout, contiguous, no vtable). Reading them
  * through the generated per-element accessors — e.g. the nested
  * `frameData.partsColor(i).lt().rgba().r()` chain, once per corner per part,
@@ -173,7 +173,7 @@ export class FrameDataRaw {
     public batchKind(i: number): number { return this._dv!.getUint8(this._dbBase + i * DB_STRIDE + DB_KIND_OFF); }
     public batchFlags(i: number): number { return this._dv!.getUint8(this._dbBase + i * DB_STRIDE + DB_FLAGS_OFF); }
 
-    // ── self-check (07_render_loop.ja.md §2 メンテ上の注意) ───────────────────
+    // ── self-check (guards against silent .fbs layout drift) ─────────────────
     // Cross-checks every raw read against the generated FlatBuffers accessor for
     // real data, once per struct-vector, catching silent .fbs layout drift
     // (a same-size field reorder that `sizeOf` alone would miss). Each vector is

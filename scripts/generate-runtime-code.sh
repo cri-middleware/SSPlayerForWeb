@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 # Setup paths
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)

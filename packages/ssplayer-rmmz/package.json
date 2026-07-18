@@ -21,7 +21,7 @@
     "LICENSE.md"
   ],
   "dependencies": {
-    "@spritestudio/ssplayer-webgl": "workspace:*"
+    "@spritestudio/ssplayer-webgl": "workspace:^"
   },
   "peerDependencies": {
     "pixi.js": "^5.3.12"

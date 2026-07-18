@@ -20,7 +20,7 @@
     "LICENSE.md"
   ],
   "dependencies": {
-    "@spritestudio/ssplayer-webgl": "workspace:*"
+    "@spritestudio/ssplayer-webgl": "workspace:^"
   },
   "scripts": {
     "build": "tsdown",

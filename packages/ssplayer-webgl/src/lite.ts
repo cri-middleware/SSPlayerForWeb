@@ -1,4 +1,4 @@
-// Normal+blend のみの最小エントリ
+// Minimal entry point: Normal + blend rendering only.
 export * from '@spritestudio/ssplayer-core';
 export { SSCanvasPlayer, type SSCanvasPlayerOptions } from './SSCanvasPlayer.js';
 export { SSWebGLRenderer } from './SSWebGLRenderer.js';

@@ -55,7 +55,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@spritestudio/ssplayer-core": "workspace:*"
+    "@spritestudio/ssplayer-core": "workspace:^"
   },
   "scripts": {
     "build": "tsdown",

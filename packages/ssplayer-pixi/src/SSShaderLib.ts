@@ -1,4 +1,4 @@
-// SpriteStudio "integration shader" (統合シェーダ) library for the Pixi renderer.
+// SpriteStudio "integration shader" library for the Pixi renderer.
 //
 // SpriteStudio's shader feature is a per-part attribute (ssae tag `SHDR`), not a
 // part type: a Normal part references one of the built-in `ss-*` shaders by id

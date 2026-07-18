@@ -1,7 +1,6 @@
 // PartsColor shader variant for parts clipped by a mask (the bit-packed
-// coverage *replay*; see SpriteStudio-SDK/libs/ssruntime/docs/09_mask.ja.md
-// §3-2). Colour is computed exactly as PartsColorShader, then the fragment is
-// discarded (output 0) when it fails the mask test.
+// coverage *replay*). Colour is computed exactly as PartsColorShader, then the
+// fragment is discarded (output 0) when it fails the mask test.
 //
 // Per-vertex aMaskUV = (u, v, thisRank, visibleInside):
 //   - (u, v): this part's position mapped into the coverage texture's UV space

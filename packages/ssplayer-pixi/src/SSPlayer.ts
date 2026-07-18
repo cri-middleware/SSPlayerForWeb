@@ -358,6 +358,9 @@ export class SSPlayer extends Container {
         if (this.internalPlayer) {
             this.internalPlayer.destroy();
         }
+        // Free this instance's owned (embedded-mode) textures; never invoked
+        // before, so those textures leaked on every player teardown.
+        this.pixiResourceManager.destroy();
         for (const rt of this.rtPool) rt.destroy(true);
         this.rtPool.length = 0;
 
@@ -662,7 +665,6 @@ export class SSPlayer extends Container {
     }
 
     private update(ticker: Ticker) {
-        // console.log("update tick", this.internalPlayer.isPlaying, this.internalPlayer.isPausing, this.internalPlayer.getFrameNo());
         if (!this.internalPlayer.isPlaying) return;
 
         const deltaMs = ticker.deltaMS;

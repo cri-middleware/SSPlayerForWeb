@@ -47,7 +47,7 @@
     "pixi.js": "^8.19.0"
   },
   "dependencies": {
-    "@spritestudio/ssplayer-core": "workspace:*"
+    "@spritestudio/ssplayer-core": "workspace:^"
   },
   "scripts": {
     "build": "tsdown",
