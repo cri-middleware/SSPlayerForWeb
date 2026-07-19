@@ -5,3 +5,5 @@ packages:
 allowBuilds:
   esbuild: true
   puppeteer: true
+minimumReleaseAgeExclude:
+  - tsdown@0.22.11

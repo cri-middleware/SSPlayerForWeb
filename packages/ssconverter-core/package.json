@@ -48,7 +48,7 @@
     "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },
   "devDependencies": {
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "license": "BSD-3-Clause"
 }
