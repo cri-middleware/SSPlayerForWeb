@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SDK_DIR="$ROOT_DIR/SpriteStudio-SDK"
 PIXI_PUBLIC="$ROOT_DIR/examples/pixi-example/public"
 WEBGL_PUBLIC="$ROOT_DIR/examples/webgl-example/public"
+# override-example only ever plays Ringo, so it takes just that project's output.
+OVERRIDE_PUBLIC="$ROOT_DIR/examples/override-example/public"
 # TyranoScript serves assets from data/others/ssdata (see tyrano-example README).
 TYRANO_SSDATA="$ROOT_DIR/examples/tyrano-example/data/others/ssdata"
 
@@ -28,6 +30,11 @@ node packages/ssconverter-web/scripts/cli.js --stem-dir --embedded --suffix _emb
 # Copy compiled assets to webgl-example as well (the overall/ and Ringo/ subdirs).
 cp -R "$PIXI_PUBLIC/"* "$WEBGL_PUBLIC/"
 
+# override-example: the Override Layer demo runs on Ringo alone (reference
+# textures, so the sibling PNG comes along).
+mkdir -p "$OVERRIDE_PUBLIC/Ringo"
+cp -R "$PIXI_PUBLIC/Ringo/"* "$OVERRIDE_PUBLIC/Ringo/"
+
 # tyrano-example uses the REFERENCE Ringo (ssab + sibling PNG), not the embedded
 # variant, to exercise real texture-path resolution.
 mkdir -p "$TYRANO_SSDATA/Ringo"
@@ -42,4 +49,4 @@ RMMZ_SS="$ROOT_DIR/examples/rmmz-example/SampleProject/img/spritestudio"
 mkdir -p "$RMMZ_SS"
 node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$RMMZ_SS" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
-echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/tyrano-example/data/others/ssdata and examples/rmmz-example/SampleProject/img/spritestudio."
+echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyrano-example/data/others/ssdata and examples/rmmz-example/SampleProject/img/spritestudio."

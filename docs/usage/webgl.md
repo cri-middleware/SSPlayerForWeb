@@ -46,6 +46,15 @@ The Custom Element is the quickest way to get started.
 To control it from JavaScript, grab the DOM element and call `play()` or `stop()`. See
 [Basic playback](/usage/basic) for the full API.
 
+The element deliberately carries only the playback verbs; everything else — including the
+per-part overrides — is reached through `el.player`, the `SSCanvasPlayer` underneath:
+
+```js
+const el = document.querySelector('ss-player');
+await el.ready;
+el.player.setPartColorOverride('apple', 0 /* Mix */, 0x0033ffbf);
+```
+
 ## Using SSCanvasPlayer directly
 
 You can also initialize a player against a canvas directly from TypeScript /

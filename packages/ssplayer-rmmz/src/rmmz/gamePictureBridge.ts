@@ -13,6 +13,7 @@
 import type { ISpriteSpriteStudio } from './Sprite_SpriteStudio.js';
 import { setLivePlayer, clearLivePlayer, markLivePlayerEnded } from './liveRegistry.js';
 import { isWasmOk } from './boot.js';
+import { applyPartOverrides, type SSPartOverride } from '@spritestudio/ssplayer-webgl';
 
 let _warnedNoWasm = false;
 
@@ -24,6 +25,14 @@ export interface SSPictureData {
   signalSwitch?: number;
   /** Optional playback speed multiplier (1 = normal). Persisted for save/load. */
   speed?: number;
+  /**
+   * Optional per-part overrides (colour / cell / visibility). Persisted for
+   * save/load and re-applied when a player mounts — the runtime's own table
+   * lives on the WASM context, which does not survive a rebuild. The list's
+   * policy (merge / prune / apply) lives in core's PartOverride, shared with
+   * the TyranoScript adapter.
+   */
+  overrides?: SSPartOverride[];
 }
 
 interface GamePictureLike {
@@ -90,6 +99,10 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       this._ssKey = key;
       // Reset the "ended" flag so waitForSS tracks the new animation.
       if (typeof this._pictureId === 'number') setLivePlayer(this._pictureId, this._ssChild.player);
+      // No override re-application here: the context survives an in-place
+      // switch, so the runtime already kept the Permanent ones and dropped the
+      // rest itself (the persisted copy is pruned to match by the command that
+      // changed the animation).
       this._ssChild.switchAnimation(ss.animation, ss.loop).catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to switch SS animation:', e);
       });
@@ -117,9 +130,15 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
         (globalThis as any).$gameSwitches?.setValue(switchId, true);
       });
     }
-    child.loadAnimation({ ssabUrl: ss.ssabUrl, animation: ss.animation, loop: ss.loop }).catch((e: unknown) => {
-      console.error('[ssplayer-rmmz] failed to load SS animation:', e);
-    });
+    child
+      .loadAnimation({ ssabUrl: ss.ssabUrl, animation: ss.animation, loop: ss.loop })
+      // This is a fresh WASM context, so its override table starts empty. Restore
+      // the picture's persisted overrides once the animation is set up (before
+      // that, part names cannot resolve).
+      .then(() => applyPartOverrides(child.player, ss.overrides))
+      .catch((e: unknown) => {
+        console.error('[ssplayer-rmmz] failed to load SS animation:', e);
+      });
     if (typeof ss.speed === 'number') child.player.speedScale = ss.speed;
   };
 

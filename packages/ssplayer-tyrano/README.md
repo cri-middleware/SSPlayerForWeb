@@ -100,6 +100,10 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
 | `[ss_pos]` | Instant move/scale (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` |
 | `[ss_move]` | Tweened move/scale (easeOut, non-blocking) | `name=`(req) `x=` `y=` `scale=` `time=` |
+| `[ss_part_color]` | Tint a part, winning over the animation (Normal parts only) | `name=`(req) `part=`(req) `color=`(req) `blend=` `priority=` |
+| `[ss_part_visible]` | Force-hide a part (or revert it); `cascade=` takes its descendants too | `name=`(req) `part=`(req) `hide=` `cascade=` |
+| `[ss_part_cell]` | Make a part draw another cell (Normal / mask parts only) | `name=`(req) `part=`(req) `cellmap=`(req) `cell=`(req) `priority=` |
+| `[ss_part_clear]` | Clear part overrides (every part when `part=` is omitted) | `name=`(req) `part=` |
 | `[ss_free]` | Release one player | `name=`(req) |
 | `[ss_free_all]` | Release every player (scene transition / layer clear) | — |
 | `[ss_pause_all]` / `[ss_resume_all]` | Pause / resume all (e.g. around a menu) | — |

@@ -80,6 +80,10 @@ data/others/ssdata/<project>.ssab
 | `[ss_wait]` | アニメ終了（ループ時は 1 周）までシナリオを待つ | `name=`(必須) |
 | `[ss_pos]` | 瞬間移動 / スケール（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` |
 | `[ss_move]` | 補間移動 / スケール（easeOut・非ブロッキング） | `name=`(必須) `x=` `y=` `scale=` `time=` |
+| `[ss_part_color]` | パーツの色をアニメより優先して上書き（通常パーツのみ） | `name=`(必須) `part=`(必須) `color=`(必須) `blend=` `priority=` |
+| `[ss_part_visible]` | パーツを強制的に非表示 / 解除 | `name=`(必須) `part=`(必須) `hide=` `cascade=` |
+| `[ss_part_cell]` | パーツが描くセルを差し替え（通常 / マスクパーツのみ） | `name=`(必須) `part=`(必須) `cellmap=`(必須) `cell=`(必須) `priority=` |
+| `[ss_part_clear]` | パーツ上書きを解除（`part=` 省略で全パーツ） | `name=`(必須) `part=` |
 | `[ss_free]` | 1 プレイヤーを解放 | `name=`(必須) |
 | `[ss_free_all]` | 全プレイヤー解放（シーン遷移 / レイヤークリア時） | — |
 | `[ss_pause_all]` / `[ss_resume_all]` | 全プレイヤー一時停止 / 再開（メニュー等で使用） | — |
@@ -87,6 +91,26 @@ data/others/ssdata/<project>.ssab
 
 座標は他の画面要素と同じく、Tyrano の通常の左上原点ピクセル（`config.scWidth × scHeight`）を
 使います。`loop` は `true`→無限 / `false`→1 回 / 数値→回数です。
+
+### パーツ上書きについて
+
+`[ss_part_*]` はアニメのキーフレームより **優先** して、特定パーツの見た目を差し替えます
+（SS6 の PartsColorChange / CellChangeParts / HideSet に相当）。
+
+```
+[ss_part_color name="chr" part="apple" color="#0033FFBF" blend="mul"]
+[ss_part_visible name="chr" part="heta" cascade="true"]
+[ss_part_cell    name="chr" part="apple" cellmap="Ringo" cell="effect3"]
+[ss_part_clear   name="chr"]
+```
+
+- `color=` は `#RRGGBB` / `#RRGGBBAA`（α 省略時は不透明）。`#RGB` の短縮形も使えます
+- `blend=` は `mix`（既定）/ `mul` / `add` / `sub`、数値 `0`〜`3` でも指定できます
+- `priority=` は `keyframe`（次のキーフレームに譲る）/ `anime`（既定・アニメが変わるまで保持）/
+  `permanent`（アニメ変更をまたいで維持）、数値 `0`〜`2` でも可
+- `cellmap=` に `.ssce` 拡張子は付けません
+- **アニメを切り替えると `permanent` 以外の上書きは解除されます。** セーブ内容も同時に整理されるため、
+  ロード時に復活することはありません。表示（`[ss_part_visible]`）に優先度はなく、アニメ切替で必ず解除されます
 
 ## 5. 移動・エフェクトは `[anim]` / `[kanim]` で
 

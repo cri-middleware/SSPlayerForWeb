@@ -5,7 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // scope). Each constructed player is recorded on `SSCanvasPlayer.instances` so
 // tests can assert on the calls the adapter made; we reach the class back via
 // the (now-mocked) import below.
-vi.mock('@spritestudio/ssplayer-webgl', () => {
+vi.mock('@spritestudio/ssplayer-webgl', async () => {
+  // The part-override store is pure data policy with no imports of its own, so
+  // the REAL implementation is pulled straight from core's source — the adapter
+  // must be tested against it, not against a second copy of the same rules.
+  const store = await import('../../ssplayer-core/src/PartOverride.js');
+
   class FakeSSCanvasPlayer {
     static initialize = vi.fn().mockResolvedValue(undefined);
     static instances: FakeSSCanvasPlayer[] = [];
@@ -25,6 +30,16 @@ vi.mock('@spritestudio/ssplayer-webgl', () => {
     resume = vi.fn(() => { this._playing = true; });
     stop = vi.fn(() => { this._playing = false; });
     destroy = vi.fn();
+    // Part overrides: the real player returns false when the runtime rejects a
+    // call; the fake accepts everything so the adapter's own bookkeeping is what
+    // these tests exercise.
+    setPartColorOverride = vi.fn(() => true);
+    setPartCellOverride = vi.fn(() => true);
+    setPartVisibilityOverride = vi.fn(() => true);
+    clearPartColorOverride = vi.fn(() => true);
+    clearPartCellOverride = vi.fn(() => true);
+    clearPartVisibilityOverride = vi.fn(() => true);
+    clearAllPartOverrides = vi.fn(() => true);
     get isPlaying() { return this._playing; }
     onAnimationEnd(cb: () => void) { this._endListeners.add(cb); return () => this._endListeners.delete(cb); }
     onAnimationLoop(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
@@ -40,6 +55,7 @@ vi.mock('@spritestudio/ssplayer-webgl', () => {
     }
   }
   return {
+    ...store,
     SSCanvasPlayer: FakeSSCanvasPlayer,
     SSRuntimeManager: {
       extractAnimationNames: vi.fn(() => ['Anime_1', 'Anime_2']),
@@ -66,6 +82,13 @@ const FakeSSCanvasPlayer = SSCanvasPlayerMock as unknown as {
     resume: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
+    setPartColorOverride: ReturnType<typeof vi.fn>;
+    setPartCellOverride: ReturnType<typeof vi.fn>;
+    setPartVisibilityOverride: ReturnType<typeof vi.fn>;
+    clearPartColorOverride: ReturnType<typeof vi.fn>;
+    clearPartCellOverride: ReturnType<typeof vi.fn>;
+    clearPartVisibilityOverride: ReturnType<typeof vi.fn>;
+    clearAllPartOverrides: ReturnType<typeof vi.fn>;
     isPlaying: boolean;
     audioManager: unknown;
     _fireEnd(): void;
@@ -166,6 +189,10 @@ describe('registerSSTags', () => {
       'ss_init',
       'ss_move',
       'ss_new',
+      'ss_part_cell',
+      'ss_part_clear',
+      'ss_part_color',
+      'ss_part_visible',
       'ss_pause',
       'ss_pause_all',
       'ss_play',
@@ -443,5 +470,104 @@ describe('registerSSTags', () => {
     expect(played[1]).toEqual({ src: ['data/sound/bgm_loop.ogg'], loop: true });
 
     vi.unstubAllGlobals();
+  });
+
+  // --- Part overrides (65_override_layer) ---------------------------------
+  //
+  // Each tag has to do two things: drive the live player now, and mirror the
+  // change into the save slot so [ss_restore] can put it back on a player whose
+  // WASM context (and its override table) was rebuilt from nothing.
+
+  it('ss_part_color applies the override and mirrors it into the save slot', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#0033FFBF' }, h.nextOrder);
+
+    // Defaults: blend="mix" (0), priority="anime" (HoldUntilNextAnimation = 1).
+    expect(p.setPartColorOverride).toHaveBeenCalledWith('apple', 0, 0x0033ffbf, 1);
+    expect(savedSlot(h).chr.overrides).toEqual([
+      { kind: 'color', part: 'apple', blendOp: 0, rgba: 0x0033ffbf, priority: 1 },
+    ]);
+  });
+
+  it('ss_part_color reads blend and priority as words as well as numbers', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#F00', blend: 'mul', priority: 'permanent' }, h.nextOrder);
+    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 1, 0xff0000ff, 2);
+
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#F00', blend: '3', priority: '0' }, h.nextOrder);
+    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 3, 0xff0000ff, 0);
+  });
+
+  it('ss_part_color leaves the player alone when the colour cannot be read', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+
+    // Errors are logged and the scenario still advances — a typo must not stall it.
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: 'crimson' }, h.nextOrder);
+
+    expect(p.setPartColorOverride).not.toHaveBeenCalled();
+    expect(savedSlot(h).chr.overrides ?? []).toEqual([]);
+  });
+
+  it('ss_part_visible and ss_part_cell record alongside each other', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+
+    await runTag(h.tags.ss_part_visible, { name: 'chr', part: 'heta', cascade: 'true' }, h.nextOrder);
+    await runTag(h.tags.ss_part_cell, { name: 'chr', part: 'apple', cellmap: 'Ringo', cell: 'effect3' }, h.nextOrder);
+
+    expect(p.setPartVisibilityOverride).toHaveBeenCalledWith('heta', true, true);
+    expect(p.setPartCellOverride).toHaveBeenCalledWith('apple', 'Ringo', 'effect3', 1);
+    expect(savedSlot(h).chr.overrides).toEqual([
+      { kind: 'visibility', part: 'heta', hide: true, cascade: true },
+      { kind: 'cell', part: 'apple', cellmap: 'Ringo', cell: 'effect3', priority: 1 },
+    ]);
+  });
+
+  it('ss_part_clear drops one part, or every part when none is named', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#F00' }, h.nextOrder);
+    await runTag(h.tags.ss_part_visible, { name: 'chr', part: 'heta' }, h.nextOrder);
+
+    await runTag(h.tags.ss_part_clear, { name: 'chr', part: 'apple' }, h.nextOrder);
+    expect(p.clearPartColorOverride).toHaveBeenCalledWith('apple');
+    expect(savedSlot(h).chr.overrides).toEqual([{ kind: 'visibility', part: 'heta', hide: true, cascade: false }]);
+
+    await runTag(h.tags.ss_part_clear, { name: 'chr' }, h.nextOrder);
+    expect(p.clearAllPartOverrides).toHaveBeenCalled();
+    expect(savedSlot(h).chr.overrides).toEqual([]);
+  });
+
+  it('ss_play with a new anime prunes everything the runtime drops', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#F00', priority: 'permanent' }, h.nextOrder);
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'heta', color: '#0F0' }, h.nextOrder);
+    await runTag(h.tags.ss_part_visible, { name: 'chr', part: 'heta' }, h.nextOrder);
+
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2' }, h.nextOrder);
+
+    // Only the Permanent colour survives a new setup — same rule as the runtime.
+    expect(savedSlot(h).chr.overrides).toEqual([
+      { kind: 'color', part: 'apple', blendOp: 0, rgba: 0xff0000ff, priority: 2 },
+    ]);
+  });
+
+  it('ss_restore re-applies the saved overrides to the rebuilt player', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#0033FF', priority: 'permanent' }, h.nextOrder);
+    await runTag(h.tags.ss_part_visible, { name: 'chr', part: 'heta' }, h.nextOrder);
+
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    // A second player was built; it must carry the overrides the first one had.
+    const restored = FakeSSCanvasPlayer.instances[1];
+    expect(restored).toBeDefined();
+    expect(restored.setPartColorOverride).toHaveBeenCalledWith('apple', 0, 0x0033ffff, 2);
+    expect(restored.setPartVisibilityOverride).toHaveBeenCalledWith('heta', true, false);
   });
 });

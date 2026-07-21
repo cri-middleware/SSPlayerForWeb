@@ -1,5 +1,6 @@
 import * as flatbuffers from 'flatbuffers';
-import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, EffectDrawPlan, getWasmMemory } from './SSRuntimeManager.js';
+import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, EffectDrawPlan, getWasmMemory, hashString } from './SSRuntimeManager.js';
+import { SSBlendOp, SSOverridePriority } from './PartOverride.js';
 import { IResourceManager } from './IResourceManager.js';
 import { IAudioManager } from './IAudioManager.js';
 import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
@@ -514,6 +515,165 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     public isSkipFrames(): boolean {
         return this.runtimeManager.context.get_skip_frames();
+    }
+
+    // --- Part overrides (SDK docs: 40_components/65_override_layer) ---
+    //
+    // Per-part runtime overrides (colour / cell / visibility): an imperative
+    // "make this part this colour / cell / hidden now" that wins over both the
+    // keyframe and the blend, applied by the runtime on the resolved pose. The
+    // runtime owns the override table and its whole lifecycle
+    // (HoldUntilNextAnimation is cleared by setAnimation, Permanent is
+    // re-validated, and binding another SSAB clears everything), so nothing is
+    // cached or re-applied per frame here.
+    //
+    // Part indices are stable within one SSAB, so resolve a name once with
+    // findPartIndex and pass the index if you set overrides often. Every method
+    // takes either form. Overrides do not reach inside an instance part: its
+    // child animation runs as its own context (get the child player from
+    // getInstanceChild and override there).
+
+    /**
+     * Resolve a part name to its index in the current animation, or -1 when the
+     * name is unknown / no animation is set up yet.
+     */
+    public findPartIndex(partName: string): number {
+        return this.runtimeManager.context.find_part_index(partName);
+    }
+
+    /**
+     * Force-hide a part (`hide` = true) or revert it to the animation (false).
+     * With `cascade` the force-hide propagates to the part's descendants — note
+     * that a keyframe `hide` never cascades, so this is the only way to hide a
+     * whole sub-tree. Visibility has no priority mode: it always beats the
+     * keyframe and is always cleared when a new animation is set up.
+     */
+    public setPartVisibilityOverride(part: number | string, hide: boolean, cascade: boolean = false): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        // force: 0 = revert, 1 = force-hide (2 = force-visible is reserved by the runtime).
+        return this.applyOverride(ctx => ctx.set_part_visibility_override(index, hide ? 1 : 0, cascade));
+    }
+
+    /** Clear a part's visibility override (revert it to the animation). */
+    public clearPartVisibilityOverride(part: number | string): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        return this.applyOverride(ctx => ctx.clear_part_visibility_override(index));
+    }
+
+    /**
+     * Override a part's colour with a single value applied to all four corners.
+     * `rgba` is packed `0xRRGGBBAA` and is interpreted in the same 8-bit sRGB
+     * space as the authored PartColor: the runtime pre-multiplies its alpha with
+     * the part's composed alpha itself, so do not pre-multiply or gamma-convert
+     * it here.
+     *
+     * Applies to Normal parts only. Other part types silently ignore it — the
+     * call still returns true, so success does not mean the part changed.
+     */
+    public setPartColorOverride(
+        part: number | string,
+        blendOp: SSBlendOp,
+        rgba: number,
+        priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+    ): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        return this.applyOverride(ctx => ctx.set_part_color_override(index, blendOp, rgba >>> 0, priority));
+    }
+
+    /**
+     * Override a part's colour with four distinct corners, for a gradient. Same
+     * contract as {@link setPartColorOverride}; `corners` is in the runtime's
+     * order — left-top, right-top, left-bottom, right-bottom — and getting that
+     * order wrong silently flips the gradient rather than failing.
+     */
+    public setPartColorOverrideCorners(
+        part: number | string,
+        blendOp: SSBlendOp,
+        corners: readonly [number, number, number, number],
+        priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+    ): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        const packed = Uint32Array.from(corners, c => c >>> 0);
+        return this.applyOverride(ctx => ctx.set_part_color_override_corners(index, blendOp, packed, priority));
+    }
+
+    /** Clear a part's colour override (revert it to the animation). */
+    public clearPartColorOverride(part: number | string): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        return this.applyOverride(ctx => ctx.clear_part_color_override(index));
+    }
+
+    /**
+     * Make a part draw a different cell, named by its cell map (without the
+     * `.ssce` extension) and cell name. The names are resolved once, here, so an
+     * unresolvable cell returns false immediately rather than failing per frame;
+     * empty names revert the part to the animation. See getCellMapNames /
+     * getCellNames for the valid targets.
+     *
+     * Applies to Normal and mask parts only. Swapping in a cell from another
+     * texture changes that part's draw batch, which the runtime plans for.
+     */
+    public setPartCellOverride(
+        part: number | string,
+        cellmapName: string,
+        cellName: string,
+        priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+    ): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        // (0, 0) is the runtime's "follow the animation" sentinel; empty names hash to 0.
+        return this.applyOverride(ctx =>
+            ctx.set_part_cell_override(index, hashString(cellmapName), hashString(cellName), priority));
+    }
+
+    /** Clear a part's cell override (revert it to the animation). */
+    public clearPartCellOverride(part: number | string): boolean {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return false;
+        return this.applyOverride(ctx => ctx.clear_part_cell_override(index));
+    }
+
+    /** Clear every per-part override on this player (all parts, all attributes). */
+    public clearAllPartOverrides(): boolean {
+        return this.applyOverride(ctx => ctx.clear_all_part_overrides());
+    }
+
+    /**
+     * Cell-map names in the bound SSAB (no `.ssce` extension) — the namespace
+     * {@link setPartCellOverride} takes.
+     */
+    public getCellMapNames(): string[] {
+        return this.runtimeManager.getCellMapNames();
+    }
+
+    /** Cell names inside `cellmapName`, empty if that map isn't in this SSAB. */
+    public getCellNames(cellmapName: string): string[] {
+        return this.runtimeManager.getCellNames(cellmapName);
+    }
+
+    private resolvePartIndex(part: number | string): number {
+        if (typeof part === 'string') return this.findPartIndex(part);
+        return Number.isInteger(part) && part >= 0 ? part : -1;
+    }
+
+    /**
+     * Run one override call against the runtime. The WASM boundary reports a
+     * rejected override by throwing (bad blend op / priority, unresolvable cell,
+     * part index out of range), while the API contract shared with the Godot and
+     * Unity players is a boolean — so the throw is translated here.
+     */
+    private applyOverride(action: (ctx: SSRuntimeManager['context']) => void): boolean {
+        try {
+            action(this.runtimeManager.context);
+            return true;
+        } catch {
+            return false;
+        }
     }
 
         private stepEffectSlots(deltaSeconds: number, parentLooped: boolean) {

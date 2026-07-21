@@ -75,6 +75,28 @@ free.
 - **Set SS Speed** (`setSSSpeed`) — a playback-speed multiplier (subframe-interpolated,
   smooth even when slow).
 
+**Part overrides (colour / cell / visibility)**
+
+Replace how one part looks at run time, **winning over the animation's keyframes**. The
+settings are stored on the picture, so they **survive save/load**.
+
+- **Set SS Part Color** (`setSSPartColor`) — tint one part. The colour is hex
+  (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type. **Normal parts only.**
+- **Set SS Part Visibility** (`setSSPartVisibility`) — force-hide one part. Turn on
+  `cascade` to hide its descendants too: an authored hide never cascades, so this is the
+  way to hide a whole body part.
+- **Set SS Part Cell** (`setSSPartCell`) — make a part draw a different cell (swapping
+  equipment, for instance). The cell-map name carries no `.ssce` extension. **Normal and
+  mask parts only.**
+- **Clear SS Part Overrides** (`clearSSPartOverrides`) — leave `part` blank to clear every
+  part on that picture.
+
+**Priority** (colour / cell only) is one of *yield to the next keyframe* / *hold until the
+animation changes* (default) / *permanent*. Changing the animation clears everything but
+the **permanent** ones — the saved copy is pruned at the same time, so nothing the runtime
+discarded comes back on load. Visibility has no priority mode and is always cleared by an
+animation change.
+
 **Playback / lifecycle**
 
 - **Play / Pause / Stop / Remove SS**, and **Wait for SS** — by `pictureId`. *Wait for

@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, IAudioManager, initializeWasm, ssFormat } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, IAudioManager, initializeWasm, ssFormat, SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-core';
 import { SSWebGLRenderer } from './SSWebGLRenderer.js';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
@@ -318,6 +318,88 @@ export class SSCanvasPlayer {
 
   public get subFrameEnabled(): boolean { return this.internalPlayer.subFrameEnabled; }
   public set subFrameEnabled(v: boolean) { this.internalPlayer.subFrameEnabled = v; }
+
+  // --- Part overrides (65_override_layer) ---
+  //
+  // Thin pass-throughs to the core player, which owns the contract (see
+  // InternalPlayerBase): part is a name or an index, false means the part is
+  // unknown or the runtime rejected the call, and the runtime keeps the override
+  // itself — nothing is re-applied per frame here.
+  //
+  // An override changes the output without changing the frame number. That is
+  // invisible to this player because draw() is unconditional: the RAF ticker
+  // paints every frame even while stopped, and a host driving frames by hand
+  // already calls draw() itself. Nothing needs invalidating here.
+
+  /** Resolve a part name to its index, or -1 if the part is not in the current animation. */
+  public findPartIndex(partName: string): number {
+    return this.internalPlayer.findPartIndex(partName);
+  }
+
+  /** Force-hide a part (or revert it to the animation), optionally cascading to its descendants. */
+  public setPartVisibilityOverride(part: number | string, hide: boolean, cascade: boolean = false): boolean {
+    return this.internalPlayer.setPartVisibilityOverride(part, hide, cascade);
+  }
+
+  /** Clear a part's visibility override (revert it to the animation). */
+  public clearPartVisibilityOverride(part: number | string): boolean {
+    return this.internalPlayer.clearPartVisibilityOverride(part);
+  }
+
+  /** Override a Normal part's colour with a single `0xRRGGBBAA` value (all four corners). */
+  public setPartColorOverride(
+    part: number | string,
+    blendOp: SSBlendOp,
+    rgba: number,
+    priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+  ): boolean {
+    return this.internalPlayer.setPartColorOverride(part, blendOp, rgba, priority);
+  }
+
+  /** Override a Normal part's colour with four `0xRRGGBBAA` corners (left-top, right-top, left-bottom, right-bottom). */
+  public setPartColorOverrideCorners(
+    part: number | string,
+    blendOp: SSBlendOp,
+    corners: readonly [number, number, number, number],
+    priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+  ): boolean {
+    return this.internalPlayer.setPartColorOverrideCorners(part, blendOp, corners, priority);
+  }
+
+  /** Clear a part's colour override (revert it to the animation). */
+  public clearPartColorOverride(part: number | string): boolean {
+    return this.internalPlayer.clearPartColorOverride(part);
+  }
+
+  /** Make a Normal / mask part draw a different cell, named by its cell map (without .ssce) and cell name. */
+  public setPartCellOverride(
+    part: number | string,
+    cellmapName: string,
+    cellName: string,
+    priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+  ): boolean {
+    return this.internalPlayer.setPartCellOverride(part, cellmapName, cellName, priority);
+  }
+
+  /** Clear a part's cell override (revert it to the animation). */
+  public clearPartCellOverride(part: number | string): boolean {
+    return this.internalPlayer.clearPartCellOverride(part);
+  }
+
+  /** Clear every per-part override on this player. */
+  public clearAllPartOverrides(): boolean {
+    return this.internalPlayer.clearAllPartOverrides();
+  }
+
+  /** Cell-map names in the loaded .ssab (for discovering cell-override targets). */
+  public getCellMapNames(): string[] {
+    return this.internalPlayer.getCellMapNames();
+  }
+
+  /** Cell names in the named cell map (for discovering cell-override targets). */
+  public getCellNames(cellmapName: string): string[] {
+    return this.internalPlayer.getCellNames(cellmapName);
+  }
 
   public startTicker(): void {
     this._wantTicker = true;

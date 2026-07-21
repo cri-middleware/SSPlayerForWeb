@@ -1,5 +1,6 @@
-import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, SSRuntimeInstanceSlot, WebEffectEventInfo, WebPlaybackDirection, WebPlaybackStyle } from '../wasm/ssruntime.js';
+import init, { SSRuntimeContext, SSRuntimeResource, InitOutput, WebCoordinateSystem, SSRuntimeEffectSlot, SSRuntimeInstanceSlot, WebEffectEventInfo, WebPlaybackDirection, WebPlaybackStyle, ss_runtime_hash_string } from '../wasm/ssruntime.js';
 export { WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle };
+import { CellMap } from './ss/format/cell-map.js';
 import * as flatbuffers from 'flatbuffers';
 import type { SoundAsset } from './IAudioManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
@@ -43,6 +44,19 @@ export async function initializeWasm(
 export function getWasmMemory(): WebAssembly.Memory {
     if (!wasmMemory) throw new Error("WASM is not initialized");
     return wasmMemory;
+}
+
+/**
+ * FNV-1a hash of `name`, computed by the runtime itself so it always matches the
+ * hashes baked into the SSAB (cell-map / cell / animation names). Needed by the
+ * name-keyed runtime calls that take a hash rather than a string — the cell
+ * override in particular.
+ *
+ * The empty string maps to 0 without entering WASM, which is also the "follow
+ * the animation" sentinel for the cell override.
+ */
+export function hashString(name: string): number {
+    return name ? ss_runtime_hash_string(name) >>> 0 : 0;
 }
 
 let _simdSupported: boolean | undefined;
@@ -340,6 +354,33 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Cell-map names in the bound SSAB (table order, no `.ssce` extension) —
+     * the cell-override target namespace. Empty before a resource is bound.
+     */
+    public getCellMapNames(): string[] {
+        if (!this.resource) return [];
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return [];
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        return SSRuntimeManager.extractCellMapNames(buf);
+    }
+
+    /**
+     * Cell names inside `cellmapName` in the bound SSAB (empty if that map isn't
+     * in this SSAB). Pair with {@link getCellMapNames} to discover the valid
+     * targets of a cell override.
+     */
+    public getCellNames(cellmapName: string): string[] {
+        if (!this.resource) return [];
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return [];
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        return SSRuntimeManager.extractCellNames(buf, cellmapName);
+    }
+
+    /**
      * Cached name of the part at `partIndex` (SSAB parts-table order), or
      * `null` if out of range / before an animation is set up.
      */
@@ -548,6 +589,49 @@ export class SSRuntimeManager {
             if (name) out.push(name);
         }
         return out;
+    }
+
+    /**
+     * Parse the SSAB buffer and list its cell-map names in table order (without
+     * the `.ssce` extension, as the runtime stores them). These are the names a
+     * cell override takes — see {@link extractCellNames} for the cells inside one.
+     */
+    public static extractCellMapNames(ssabBuffer: Uint8Array): string[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const out: string[] = [];
+        for (let i = 0; i < ssab.cellmapsLength(); i++) {
+            const name = ssab.cellmaps(i)?.name();
+            if (name) out.push(name);
+        }
+        return out;
+    }
+
+    /**
+     * Parse the SSAB buffer and list the cell names in the named cell map (empty
+     * if that map isn't in this SSAB). Together with {@link extractCellMapNames}
+     * this is enough to discover every valid target of a cell override.
+     */
+    public static extractCellNames(ssabBuffer: Uint8Array, cellmapName: string): string[] {
+        if (!cellmapName) return [];
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const scratch = new CellMap();
+        for (let i = 0; i < ssab.cellmapsLength(); i++) {
+            const cellmap = ssab.cellmaps(i, scratch);
+            if (!cellmap || cellmap.name() !== cellmapName) continue;
+            const out: string[] = [];
+            for (let j = 0; j < cellmap.cellsLength(); j++) {
+                const name = cellmap.cells(j)?.name();
+                if (name) out.push(name);
+            }
+            return out;
+        }
+        return [];
     }
 
     /**

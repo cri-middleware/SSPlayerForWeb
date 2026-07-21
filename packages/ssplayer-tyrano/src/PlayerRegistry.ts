@@ -1,4 +1,4 @@
-import type { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import type { SSCanvasPlayer, SSPartOverride } from '@spritestudio/ssplayer-webgl';
 
 /**
  * A live SS player mounted into a Tyrano layer. The `meta` block is everything
@@ -27,6 +27,12 @@ export interface SSPlayerEntry {
     y: number;
     scale: number;
     loop: number;
+    /**
+     * Per-part overrides set by the `[ss_part_*]` tags. The runtime keeps its
+     * own table on the WASM context, which `[ss_restore]` rebuilds from
+     * scratch — so the list is mirrored here to be re-applied then.
+     */
+    overrides?: SSPartOverride[];
   };
 }
 

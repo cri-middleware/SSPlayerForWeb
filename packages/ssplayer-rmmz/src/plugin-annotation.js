@@ -260,6 +260,123 @@
  * @max 100
  * @default 1
  *
+ * @command setSSPartColor
+ * @text Set SS Part Color
+ * @desc Tint ONE part, winning over the animation. Normal parts only. Saved with the picture.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text Part Name
+ * @desc Part name as authored in the SpriteStudio project (e.g. "apple").
+ * @type string
+ * @default
+ * @arg color
+ * @text Color (hex)
+ * @desc #RRGGBB or #RRGGBBAA. Alpha defaults to opaque. e.g. #0033FF, #0033FFBF
+ * @type string
+ * @default #FFFFFF
+ * @arg blendOp
+ * @text Blend
+ * @desc How the color combines with the part, same four operations as an authored Parts Color.
+ * @type select
+ * @option Mix
+ * @value 0
+ * @option Multiply
+ * @value 1
+ * @option Add
+ * @value 2
+ * @option Subtract
+ * @value 3
+ * @default 0
+ * @arg priority
+ * @text Priority
+ * @desc Who wins when the animation drives the same attribute.
+ * @type select
+ * @option Yield to the next keyframe
+ * @value 0
+ * @option Hold until the animation changes
+ * @value 1
+ * @option Permanent (survives animation changes)
+ * @value 2
+ * @default 1
+ *
+ * @command setSSPartVisibility
+ * @text Set SS Part Visibility
+ * @desc Force-hide ONE part (or revert it), winning over the animation. Saved with the picture.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text Part Name
+ * @type string
+ * @default
+ * @arg hide
+ * @text Hide
+ * @desc ON = force-hide, OFF = revert to the animation.
+ * @type boolean
+ * @default true
+ * @arg cascade
+ * @text Cascade to descendants
+ * @desc ON also hides the part's children. (An authored hide never cascades.)
+ * @type boolean
+ * @default false
+ *
+ * @command setSSPartCell
+ * @text Set SS Part Cell
+ * @desc Make ONE part draw a different cell, winning over the animation. Normal / mask parts only. Saved with the picture.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text Part Name
+ * @type string
+ * @default
+ * @arg cellmap
+ * @text Cell Map Name
+ * @desc Name WITHOUT the .ssce extension (e.g. "Ringo").
+ * @type string
+ * @default
+ * @arg cell
+ * @text Cell Name
+ * @desc Cell inside that map (e.g. "effect3"). Leave both blank to revert to the animation.
+ * @type string
+ * @default
+ * @arg priority
+ * @text Priority
+ * @type select
+ * @option Yield to the next keyframe
+ * @value 0
+ * @option Hold until the animation changes
+ * @value 1
+ * @option Permanent (survives animation changes)
+ * @value 2
+ * @default 1
+ *
+ * @command clearSSPartOverrides
+ * @text Clear SS Part Overrides
+ * @desc Remove the color / cell / visibility overrides. Blank part = every part.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text Part Name
+ * @desc Leave blank to clear every part on this picture.
+ * @type string
+ * @default
+ *
  * @command playSS
  * @text Play SS
  * @arg pictureId
@@ -554,6 +671,123 @@
  * @min 1
  * @max 100
  * @default 1
+ *
+ * @command setSSPartColor
+ * @text SSパーツ色変更
+ * @desc 特定パーツの色をアニメより優先して上書きします。通常パーツのみ。設定はセーブされます。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text パーツ名
+ * @desc SpriteStudio プロジェクトで付けたパーツ名（例: apple）。
+ * @type string
+ * @default
+ * @arg color
+ * @text 色（16進）
+ * @desc #RRGGBB または #RRGGBBAA。α 省略時は不透明。例: #0033FF, #0033FFBF
+ * @type string
+ * @default #FFFFFF
+ * @arg blendOp
+ * @text 合成方法
+ * @desc パーツカラーと同じ 4 種類です。
+ * @type select
+ * @option ミックス
+ * @value 0
+ * @option 乗算
+ * @value 1
+ * @option 加算
+ * @value 2
+ * @option 減算
+ * @value 3
+ * @default 0
+ * @arg priority
+ * @text 優先度
+ * @desc アニメが同じ属性を持つ場合、どちらを優先するか。
+ * @type select
+ * @option 次のキーフレームに譲る
+ * @value 0
+ * @option アニメが変わるまで保持
+ * @value 1
+ * @option 恒久（アニメ変更をまたいで維持）
+ * @value 2
+ * @default 1
+ *
+ * @command setSSPartVisibility
+ * @text SSパーツ表示切替
+ * @desc 特定パーツをアニメより優先して強制的に非表示にします（解除も可）。設定はセーブされます。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text パーツ名
+ * @type string
+ * @default
+ * @arg hide
+ * @text 非表示にする
+ * @desc ON で強制非表示、OFF でアニメの状態に戻します。
+ * @type boolean
+ * @default true
+ * @arg cascade
+ * @text 子パーツにも波及
+ * @desc ON にすると子孫パーツも一緒に非表示になります（アニメの非表示は波及しません）。
+ * @type boolean
+ * @default false
+ *
+ * @command setSSPartCell
+ * @text SSパーツセル差替
+ * @desc 特定パーツが描くセルをアニメより優先して差し替えます。通常パーツとマスクパーツのみ。設定はセーブされます。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text パーツ名
+ * @type string
+ * @default
+ * @arg cellmap
+ * @text セルマップ名
+ * @desc 拡張子 .ssce は付けません（例: Ringo）。
+ * @type string
+ * @default
+ * @arg cell
+ * @text セル名
+ * @desc そのセルマップ内のセル名（例: effect3）。両方空にするとアニメの状態に戻ります。
+ * @type string
+ * @default
+ * @arg priority
+ * @text 優先度
+ * @type select
+ * @option 次のキーフレームに譲る
+ * @value 0
+ * @option アニメが変わるまで保持
+ * @value 1
+ * @option 恒久（アニメ変更をまたいで維持）
+ * @value 2
+ * @default 1
+ *
+ * @command clearSSPartOverrides
+ * @text SSパーツ上書き解除
+ * @desc 色 / セル / 表示の上書きを解除します。パーツ名を空にすると全パーツが対象です。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg part
+ * @text パーツ名
+ * @desc 空にするとこのピクチャの全パーツを解除します。
+ * @type string
+ * @default
  *
  * @command playSS
  * @text SS再生

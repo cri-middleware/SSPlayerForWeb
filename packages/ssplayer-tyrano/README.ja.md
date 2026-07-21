@@ -99,6 +99,10 @@
 | `[ss_wait]` | アニメ終了（ループ時は1周）までシナリオを待つ | `name=`(必須) |
 | `[ss_pos]` | 瞬間移動/スケール（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` |
 | `[ss_move]` | 補間移動/スケール（easeOut, 非ブロッキング） | `name=`(必須) `x=` `y=` `scale=` `time=` |
+| `[ss_part_color]` | パーツの色をアニメより優先して上書き（通常パーツのみ） | `name=`(必須) `part=`(必須) `color=`(必須) `blend=` `priority=` |
+| `[ss_part_visible]` | パーツを強制的に非表示 / 解除。`cascade=` で子孫にも波及 | `name=`(必須) `part=`(必須) `hide=` `cascade=` |
+| `[ss_part_cell]` | パーツが描くセルを差し替え（通常 / マスクパーツのみ） | `name=`(必須) `part=`(必須) `cellmap=`(必須) `cell=`(必須) `priority=` |
+| `[ss_part_clear]` | パーツ上書きを解除（`part=` 省略で全パーツ） | `name=`(必須) `part=` |
 | `[ss_free]` | 1 プレイヤーを解放 | `name=`(必須) |
 | `[ss_free_all]` | 全プレイヤー解放（シーン遷移 / レイヤークリア時） | — |
 | `[ss_pause_all]` / `[ss_resume_all]` | 全プレイヤー一時停止 / 再開（メニュー等で使用） | — |

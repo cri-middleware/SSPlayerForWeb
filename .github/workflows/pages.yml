@@ -108,6 +108,7 @@ jobs:
         run: |
           pnpm --filter=pixi-example exec vite build --base="${SITE_BASE}examples/pixi/"
           pnpm --filter=webgl-example exec vite build --base="${SITE_BASE}examples/webgl/"
+          pnpm --filter=override-example exec vite build --base="${SITE_BASE}examples/override/"
 
       # ssconverter-web: build every schema version from versions.json into
       # _site/ssconverter/<schema>/.
@@ -121,6 +122,7 @@ jobs:
           cp -R docs/.vitepress/dist/. _site/
           mkdir -p _site/examples/pixi  && cp -R examples/pixi-example/dist/.  _site/examples/pixi/
           mkdir -p _site/examples/webgl && cp -R examples/webgl-example/dist/. _site/examples/webgl/
+          mkdir -p _site/examples/override && cp -R examples/override-example/dist/. _site/examples/override/
           # rmmz-example: copy the static MZ project as-is (relative paths, so it
           # runs fine under the /examples/rmmz/ subpath — no base rewrite needed).
           mkdir -p _site/examples/rmmz  && cp -R examples/rmmz-example/SampleProject/. _site/examples/rmmz/
