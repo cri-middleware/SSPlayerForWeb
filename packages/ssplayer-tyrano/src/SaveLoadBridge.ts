@@ -1,3 +1,4 @@
+import type { SSPartOverride } from '@spritestudio/ssplayer-webgl';
 import type { PlayerRegistry } from './PlayerRegistry.js';
 import type { TyranoKag } from './tyranoTypes.js';
 
@@ -32,6 +33,12 @@ export interface SavedPlayer {
   scale: number;
   loop: number;
   playing: boolean;
+  /**
+   * Per-part overrides (colour / cell / visibility) set by `[ss_part_*]`. Plain
+   * data, so it round-trips through the save; `[ss_restore]` re-applies it to
+   * the rebuilt player, whose WASM context starts with an empty override table.
+   */
+  overrides?: SSPartOverride[];
 }
 
 function saveSlot(kag: TyranoKag): Record<string, SavedPlayer> {
@@ -70,6 +77,7 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       scale: meta.scale,
       loop: meta.loop,
       playing: player.isPlaying,
+      overrides: meta.overrides,
     };
   }
   const stat = kag.stat as { f?: Record<string, unknown> };

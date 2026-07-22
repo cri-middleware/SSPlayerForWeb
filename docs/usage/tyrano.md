@@ -83,6 +83,10 @@ A runnable minimal project lives at `examples/tyrano-example`.
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
 | `[ss_pos]` | Instant move / scale (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` |
 | `[ss_move]` | Tweened move / scale (easeOut, non-blocking) | `name=`(req) `x=` `y=` `scale=` `time=` |
+| `[ss_part_color]` | Tint a part, winning over the animation (Normal parts only) | `name=`(req) `part=`(req) `color=`(req) `blend=` `priority=` |
+| `[ss_part_visible]` | Force-hide a part (or revert it) | `name=`(req) `part=`(req) `hide=` `cascade=` |
+| `[ss_part_cell]` | Make a part draw another cell (Normal / mask parts only) | `name=`(req) `part=`(req) `cellmap=`(req) `cell=`(req) `priority=` |
+| `[ss_part_clear]` | Clear part overrides (every part when `part=` is omitted) | `name=`(req) `part=` |
 | `[ss_free]` | Release one player | `name=`(req) |
 | `[ss_free_all]` | Release every player (scene transition / layer clear) | — |
 | `[ss_pause_all]` / `[ss_resume_all]` | Pause / resume all (e.g. around a menu) | — |
@@ -91,6 +95,27 @@ A runnable minimal project lives at `examples/tyrano-example`.
 Coordinates use Tyrano's normal top-left pixels (`config.scWidth × scHeight`), the same
 as any other on-screen element. `loop`: `true` → infinite / `false` → once / a number →
 that many loops.
+
+### Part overrides
+
+The `[ss_part_*]` tags replace how one part looks, **winning over the animation's
+keyframes** (the SS6 PartsColorChange / CellChangeParts / HideSet equivalents).
+
+```
+[ss_part_color name="chr" part="apple" color="#0033FFBF" blend="mul"]
+[ss_part_visible name="chr" part="heta" cascade="true"]
+[ss_part_cell    name="chr" part="apple" cellmap="Ringo" cell="effect3"]
+[ss_part_clear   name="chr"]
+```
+
+- `color=` is `#RRGGBB` / `#RRGGBBAA` (alpha defaults to opaque); the `#RGB` shorthand works too.
+- `blend=` is `mix` (default) / `mul` / `add` / `sub`, or the numbers `0`–`3`.
+- `priority=` is `keyframe` (yield to the next keyframe) / `anime` (default — hold until the
+  animation changes) / `permanent` (survives animation changes), or the numbers `0`–`2`.
+- `cellmap=` carries no `.ssce` extension.
+- **Changing the animation clears everything but `permanent`.** The saved copy is pruned at the
+  same time, so nothing the runtime discarded comes back on load. Visibility has no priority
+  mode and is always cleared by an animation change.
 
 ## 5. Movement & effects with `[anim]` / `[kanim]`
 

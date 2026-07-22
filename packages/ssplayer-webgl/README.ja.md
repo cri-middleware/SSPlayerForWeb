@@ -224,6 +224,8 @@ off();
 
 `<ss-player>` 要素では、これらと同じイベントが DOM の `CustomEvent` として再ディスパッチされるため、`addEventListener` で受け取ることもできます。
 
+パーツ単位の上書き（色 / セル / 表示）も同じファサード上にあります（`setPartColorOverride` / `setPartCellOverride` / `setPartVisibilityOverride` / `clearAllPartOverrides`）。`<ss-player>` 要素自体は再生系の動詞だけを持つ薄い皮なので、これらは `el.player` 経由で呼んでください（先に `await el.ready`）。
+
 サウンドは「そのまま動きます」: 読み込んだ `.ssab` がオーディオを参照しており、`audioManager` が設定されていない場合、デフォルトの `SSWebAudioManager` が遅延インポートされて接続されます(必要なときにのみフェッチされる別チャンク)。完全に手動でコントロールするには `autoAudio: false` を設定してください。
 
 > **加算系ブレンドモードに関する注意:** 加算 / バックドロップ参照モード(Add、Screen、Mul、…)はフレームバッファに対して合成されるため、アニメーションがそれらを使用する場合は不透明な `backgroundColor` を設定してください。透明なキャンバス上では、黒地に焼き込まれたグローが不透明なブロックとして描画されることがあります — これは乗算済みアルファ合成に固有の挙動です。

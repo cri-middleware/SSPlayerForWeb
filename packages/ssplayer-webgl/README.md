@@ -222,6 +222,8 @@ off();
 
 With the `<ss-player>` element these same events are re-dispatched as DOM `CustomEvent`s, so you can `addEventListener` for them instead.
 
+Per-part overrides (colour / cell / visibility) are on the same facade — `setPartColorOverride`, `setPartCellOverride`, `setPartVisibilityOverride`, `clearAllPartOverrides`. The element keeps only the playback verbs of its own, so reach them through `el.player` (`await el.ready` first).
+
 Sound "just works": if a loaded `.ssab` references audio and no `audioManager` is set, a default `SSWebAudioManager` is lazily imported and wired up (a separate chunk fetched only when needed). Set `autoAudio: false` to take full manual control.
 
 > **Note on additive blend modes:** additive / backdrop-reading modes (Add, Screen, Mul, …) composite against the framebuffer, so set an opaque `backgroundColor` when your animation uses them. On a transparent canvas they can render baked-on-black glows as opaque blocks — inherent to premultiplied-alpha compositing.

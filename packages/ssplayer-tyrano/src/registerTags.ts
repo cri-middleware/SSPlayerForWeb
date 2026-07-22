@@ -1,4 +1,15 @@
-import { SSCanvasPlayer, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
+import {
+  applyPartOverrides,
+  mergePartOverride,
+  parsePartOverrideColor,
+  prunePartOverridesForNewAnimation,
+  removePartOverrides,
+  SSCanvasPlayer,
+  SSRuntimeManager,
+  type SSBlendOp,
+  type SSOverridePriority,
+  type SSPartOverride,
+} from '@spritestudio/ssplayer-webgl';
 import { PlayerRegistry, type SSPlayerEntry } from './PlayerRegistry.js';
 import { createLayerCanvas, getLayerElement, toTransform, type LayerPage } from './LayerCanvas.js';
 import { persistPlayers, readSavedPlayers } from './SaveLoadBridge.js';
@@ -65,6 +76,31 @@ function loopCount(value: unknown): number {
   return num(value, -1);
 }
 
+/** Read a Tyrano boolean attribute (`"true"` / `"false"`), falling back when omitted. */
+function bool(value: unknown, fallback: boolean): boolean {
+  if (value === undefined || value === null || value === '') return fallback;
+  return value === true || String(value) === 'true';
+}
+
+// Part-override attributes are written by hand in a scenario, so the tags take
+// readable words as well as the raw runtime numbers.
+const BLEND_OPS: Record<string, number> = { mix: 0, mul: 1, multiply: 1, add: 2, sub: 3, subtract: 3 };
+const PRIORITIES: Record<string, number> = { keyframe: 0, anime: 1, animation: 1, permanent: 2 };
+
+/** `blend="mul"` (or `blend="1"`) → the runtime's blend-op number. */
+function blendOp(value: unknown): SSBlendOp {
+  const key = String(value ?? '').trim().toLowerCase();
+  const named = BLEND_OPS[key];
+  return (named !== undefined ? named : num(value, 0)) as SSBlendOp;
+}
+
+/** `priority="permanent"` (or `priority="2"`) → the runtime's priority number. */
+function priorityMode(value: unknown): SSOverridePriority {
+  const key = String(value ?? '').trim().toLowerCase();
+  const named = PRIORITIES[key];
+  return (named !== undefined ? named : num(value, 1)) as SSOverridePriority;
+}
+
 /**
  * Resolve an author path (ssab / wasm) against the Tyrano data root. Absolute
  * URLs and already-rooted paths pass through; a bare relative path is taken as
@@ -97,6 +133,8 @@ interface CreateOpts {
   y: number;
   scale: number;
   loop: number;
+  /** Per-part overrides to re-apply once the animation is set up (restore path). */
+  overrides?: SSPartOverride[];
 }
 
 /**
@@ -138,6 +176,10 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 
   player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale));
   player.internalPlayer.setLoop(opts.loop);
+  // A fresh player means a fresh WASM context, whose override table starts
+  // empty — so a restore has to put the saved overrides back. Must run after
+  // setAnimation: before that, part names cannot resolve.
+  applyPartOverrides(player, opts.overrides);
 
   const entry: SSPlayerEntry = {
     player,
@@ -153,6 +195,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
       y: opts.y,
       scale: opts.scale,
       loop: opts.loop,
+      overrides: opts.overrides,
     },
   };
   registry.set(entry);
@@ -275,6 +318,10 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         if (pm.anime) {
           meta.anime = String(pm.anime);
           await player.setAnimation(meta.anime);
+          // Setting up an animation makes the runtime drop every override but
+          // the Permanent ones; keep the saved mirror in step so a later
+          // [ss_restore] cannot resurrect what the runtime discarded.
+          meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
         }
         if (pm.loop !== undefined && pm.loop !== '') {
           meta.loop = loopCount(pm.loop);
@@ -310,6 +357,104 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start(pm) {
       runSync('ss_resume', () => {
         lookup('ss_resume', String(pm.name)).player.resume();
+        persist();
+      });
+    },
+  };
+
+  // --- Part overrides (SDK docs: 40_components/65_override_layer) ---
+  //
+  // "Make this part this colour / this cell / hidden NOW", winning over the
+  // keyframed animation — the SS6 PartsColorChange / CellChangeParts / HideSet
+  // equivalents. Each tag applies the change to the live player and mirrors it
+  // into the player's meta, so a save taken afterwards restores it.
+  //
+  // Attributes are read as words (blend="mul", priority="permanent") as well as
+  // the raw runtime numbers, since they are written by hand in a scenario.
+
+  /** Apply one override now and remember it for save/restore. */
+  const setOverride = (label: string, name: string, entry: SSPartOverride): void => {
+    const target = lookup(label, name);
+    applyPartOverrides(target.player, [entry]);
+    target.meta.overrides = mergePartOverride(target.meta.overrides, entry);
+    persist();
+  };
+
+  // [ss_part_color name= part= color= blend= priority=] — tint one part.
+  // `color` is #RRGGBB or #RRGGBBAA (alpha defaults to opaque). Normal parts only.
+  ftag.master_tag['ss_part_color'] = {
+    vital: ['name', 'part', 'color'],
+    pm: { blend: 'mix', priority: 'anime' },
+    start(pm) {
+      runSync('ss_part_color', () => {
+        const rgba = parsePartOverrideColor(String(pm.color));
+        if (rgba === null) {
+          throw new Error(`[ss_part_color] cannot read color "${pm.color}" (try #FF0000 or #FF0000BF).`);
+        }
+        setOverride('ss_part_color', String(pm.name), {
+          kind: 'color',
+          part: String(pm.part),
+          blendOp: blendOp(pm.blend),
+          rgba,
+          priority: priorityMode(pm.priority),
+        });
+      });
+    },
+  };
+
+  // [ss_part_visible name= part= hide= cascade=] — force-hide a part (hide=false
+  // reverts it). `cascade` takes the descendants with it, which a keyframed hide
+  // never does. Visibility has no priority mode.
+  ftag.master_tag['ss_part_visible'] = {
+    vital: ['name', 'part'],
+    pm: { hide: 'true', cascade: 'false' },
+    start(pm) {
+      runSync('ss_part_visible', () => {
+        setOverride('ss_part_visible', String(pm.name), {
+          kind: 'visibility',
+          part: String(pm.part),
+          hide: bool(pm.hide, true),
+          cascade: bool(pm.cascade, false),
+        });
+      });
+    },
+  };
+
+  // [ss_part_cell name= part= cellmap= cell= priority=] — make a part draw
+  // another cell. `cellmap` carries no .ssce extension. Normal / mask parts only.
+  ftag.master_tag['ss_part_cell'] = {
+    vital: ['name', 'part', 'cellmap', 'cell'],
+    pm: { priority: 'anime' },
+    start(pm) {
+      runSync('ss_part_cell', () => {
+        setOverride('ss_part_cell', String(pm.name), {
+          kind: 'cell',
+          part: String(pm.part),
+          cellmap: String(pm.cellmap),
+          cell: String(pm.cell),
+          priority: priorityMode(pm.priority),
+        });
+      });
+    },
+  };
+
+  // [ss_part_clear name= part=] — drop the overrides on one part, or on every
+  // part when `part` is omitted.
+  ftag.master_tag['ss_part_clear'] = {
+    vital: ['name'],
+    pm: { part: '' },
+    start(pm) {
+      runSync('ss_part_clear', () => {
+        const entry = lookup('ss_part_clear', String(pm.name));
+        const part = String(pm.part ?? '');
+        if (part) {
+          entry.player.clearPartColorOverride(part);
+          entry.player.clearPartCellOverride(part);
+          entry.player.clearPartVisibilityOverride(part);
+        } else {
+          entry.player.clearAllPartOverrides();
+        }
+        entry.meta.overrides = removePartOverrides(entry.meta.overrides, part || undefined);
         persist();
       });
     },
@@ -482,6 +627,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
             y: s.y,
             scale: s.scale,
             loop: s.loop,
+            overrides: s.overrides,
           });
           if (s.playing) entry.player.play();
           else entry.player.pause();

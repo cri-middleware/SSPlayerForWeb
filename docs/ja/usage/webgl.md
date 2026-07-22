@@ -39,6 +39,14 @@ pnpm add @spritestudio/ssplayer-webgl
 
 JavaScript から制御する場合は、対象の DOM 要素を取得して `play()` や `stop()` を呼び出します。詳細な API は [基本的な再生](/ja/usage/basic) を参照してください。
 
+この要素は意図的に再生系の動詞だけを持つ薄い皮です。それ以外 — パーツ単位の上書きを含む — は、下層の `SSCanvasPlayer` である `el.player` 経由で呼び出します:
+
+```js
+const el = document.querySelector('ss-player');
+await el.ready;
+el.player.setPartColorOverride('apple', 0 /* Mix */, 0x0033ffbf);
+```
+
 ## SSCanvasPlayer を直接使う場合
 
 TypeScript / JavaScript から直接 Canvas を指定して初期化することもできます。

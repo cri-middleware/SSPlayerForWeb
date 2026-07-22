@@ -3,6 +3,8 @@ $ErrorActionPreference = "Stop"
 $ROOT_DIR = (Resolve-Path "$PSScriptRoot\..").Path
 $PIXI_PUBLIC = Join-Path $ROOT_DIR "examples\pixi-example\public"
 $WEBGL_PUBLIC = Join-Path $ROOT_DIR "examples\webgl-example\public"
+# override-example only ever plays Ringo, so it takes just that project's output.
+$OVERRIDE_PUBLIC = Join-Path $ROOT_DIR "examples\override-example\public"
 # TyranoScript serves assets from data/others/ssdata (see tyrano-example README).
 $TYRANO_SSDATA = Join-Path $ROOT_DIR "examples\tyrano-example\data\others\ssdata"
 
@@ -32,6 +34,12 @@ node packages/ssconverter-web/scripts/cli.js --stem-dir --embedded --suffix _emb
 
 Copy-Item -Path "$PIXI_PUBLIC\*" -Destination $WEBGL_PUBLIC -Recurse -Force
 
+# override-example: the Override Layer demo runs on Ringo alone (reference
+# textures, so the sibling PNG comes along).
+$OVERRIDE_RINGO = Join-Path $OVERRIDE_PUBLIC "Ringo"
+New-Item -ItemType Directory -Force -Path $OVERRIDE_RINGO | Out-Null
+Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\*") -Destination $OVERRIDE_RINGO -Recurse -Force
+
 # tyrano-example uses the REFERENCE Ringo (ssab + sibling PNG), not the embedded
 # variant, to exercise real texture-path resolution.
 $TYRANO_RINGO = Join-Path $TYRANO_SSDATA "Ringo"
@@ -47,4 +55,4 @@ $RMMZ_SS = Join-Path $ROOT_DIR "examples\rmmz-example\SampleProject\img\spritest
 New-Item -ItemType Directory -Force -Path $RMMZ_SS | Out-Null
 node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$RMMZ_SS" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
-Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $TYRANO_SSDATA and $RMMZ_SS."
+Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $OVERRIDE_PUBLIC, $TYRANO_SSDATA and $RMMZ_SS."

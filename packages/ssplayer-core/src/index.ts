@@ -16,5 +16,6 @@ export * from './IResourceManager.js';
 export * from './IAudioManager.js';
 export * from './PackResolver.js';
 export * from './MaskPlanner.js';
+export * from './PartOverride.js';
 export * from './FrameDataMaskSource.js';
 export * from './InternalPlayerBase.js';

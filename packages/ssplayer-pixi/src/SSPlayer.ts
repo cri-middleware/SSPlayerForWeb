@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -491,6 +491,100 @@ export class SSPlayer extends Container {
 
     public getPartsCount(): number {
         return this.internalPlayer.runtimeManager.getPartsCount();
+    }
+
+    // --- Part overrides (65_override_layer) ---
+    //
+    // Thin pass-throughs to the core player, which owns the contract (see
+    // InternalPlayerBase): part is a name or an index, false means the part is
+    // unknown or the runtime rejected the call, and the runtime keeps the
+    // override itself — nothing is re-applied per frame here.
+    //
+    // The one renderer-side concern is that update() early-returns while the
+    // player is stopped, so a change made then would not reach the screen until
+    // playback resumed. Each successful call therefore re-renders the current
+    // frame, which is this player's equivalent of invalidating a frame cache.
+
+    /** Resolve a part name to its index, or -1 if the part is not in the current animation. */
+    public findPartIndex(partName: string): number {
+        return this.internalPlayer.findPartIndex(partName);
+    }
+
+    /** Force-hide a part (or revert it to the animation), optionally cascading to its descendants. */
+    public setPartVisibilityOverride(part: number | string, hide: boolean, cascade: boolean = false): boolean {
+        return this.afterOverride(this.internalPlayer.setPartVisibilityOverride(part, hide, cascade));
+    }
+
+    /** Clear a part's visibility override (revert it to the animation). */
+    public clearPartVisibilityOverride(part: number | string): boolean {
+        return this.afterOverride(this.internalPlayer.clearPartVisibilityOverride(part));
+    }
+
+    /** Override a Normal part's colour with a single `0xRRGGBBAA` value (all four corners). */
+    public setPartColorOverride(
+        part: number | string,
+        blendOp: SSBlendOp,
+        rgba: number,
+        priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+    ): boolean {
+        return this.afterOverride(this.internalPlayer.setPartColorOverride(part, blendOp, rgba, priority));
+    }
+
+    /** Override a Normal part's colour with four `0xRRGGBBAA` corners (left-top, right-top, left-bottom, right-bottom). */
+    public setPartColorOverrideCorners(
+        part: number | string,
+        blendOp: SSBlendOp,
+        corners: readonly [number, number, number, number],
+        priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+    ): boolean {
+        return this.afterOverride(this.internalPlayer.setPartColorOverrideCorners(part, blendOp, corners, priority));
+    }
+
+    /** Clear a part's colour override (revert it to the animation). */
+    public clearPartColorOverride(part: number | string): boolean {
+        return this.afterOverride(this.internalPlayer.clearPartColorOverride(part));
+    }
+
+    /** Make a Normal / mask part draw a different cell, named by its cell map (without .ssce) and cell name. */
+    public setPartCellOverride(
+        part: number | string,
+        cellmapName: string,
+        cellName: string,
+        priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
+    ): boolean {
+        return this.afterOverride(this.internalPlayer.setPartCellOverride(part, cellmapName, cellName, priority));
+    }
+
+    /** Clear a part's cell override (revert it to the animation). */
+    public clearPartCellOverride(part: number | string): boolean {
+        return this.afterOverride(this.internalPlayer.clearPartCellOverride(part));
+    }
+
+    /** Clear every per-part override on this player. */
+    public clearAllPartOverrides(): boolean {
+        return this.afterOverride(this.internalPlayer.clearAllPartOverrides());
+    }
+
+    /** Cell-map names in the loaded .ssab (for discovering cell-override targets). */
+    public getCellMapNames(): string[] {
+        return this.internalPlayer.getCellMapNames();
+    }
+
+    /** Cell names in the named cell map (for discovering cell-override targets). */
+    public getCellNames(cellmapName: string): string[] {
+        return this.internalPlayer.getCellNames(cellmapName);
+    }
+
+    /**
+     * Repaint after an override took effect while the ticker is not advancing.
+     * Overrides change the output without changing the frame number, so a
+     * stopped player would otherwise keep showing its last drawn frame.
+     */
+    private afterOverride(applied: boolean): boolean {
+        if (applied && !this.internalPlayer.isPlaying) {
+            this.renderFrame(this.internalPlayer.getFrameNo());
+        }
+        return applied;
     }
 
     // --- Animation events (06_playback_control.ja.md) ---

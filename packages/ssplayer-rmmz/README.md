@@ -77,6 +77,24 @@ Use event → **Plugin Command** → `ssplayer-rpgmakermz`. An SS animation ride
 | Play SS Sequence | `playSSSequence` | A comma-separated list where each entry plays once except the **last, which loops** (e.g. `attack1,attack2,wait1`). |
 | Set SS Speed | `setSSSpeed` | Playback-speed multiplier (subframe-interpolated, smooth even when slow). |
 
+### Part overrides (colour / cell / visibility)
+
+Replace how one part looks at run time, **winning over the animation's keyframes**. The settings are
+stored on the picture, so they **survive save/load** (playback resumes from the start of the animation,
+as it does for every other picture state).
+
+| Command | Internal name | Description |
+|---|---|---|
+| Set SS Part Color | `setSSPartColor` | Tint one part. The colour is hex (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type; the four blend operations are the authored Parts Color ones. **Normal parts only.** |
+| Set SS Part Visibility | `setSSPartVisibility` | Force-hide one part (or revert it). Turn on `cascade` to hide its descendants too — an authored hide never cascades, so this is the way to hide a whole body part. |
+| Set SS Part Cell | `setSSPartCell` | Make a part draw a different cell (swapping equipment, for instance). The cell-map name carries no `.ssce` extension. **Normal and mask parts only.** |
+| Clear SS Part Overrides | `clearSSPartOverrides` | Remove the overrides. Leave `part` blank to clear every part on that picture. |
+
+> **Priority** (colour / cell only): *yield to the next keyframe* / *hold until the animation changes*
+> (default) / *permanent*. Changing the animation clears everything but the **permanent** ones — the
+> saved copy is pruned at the same time, to match what the runtime itself discards. Visibility has no
+> priority mode and is always cleared by an animation change.
+
 ### Playback / lifecycle
 
 | Command | Internal name | Description |
