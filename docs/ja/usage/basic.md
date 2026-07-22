@@ -64,6 +64,10 @@ player.getPartsCount();                 // パーツ数
 player.getPartIndexFromName('body');    // 名前 → インデックス
 ```
 
+パーツ単位で色 / セル / 表示を実行時に上書きするには
+[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください
+（こちらは PixiJS・WebGL 共通です）。
+
 ---
 
 ## Web Components (`<ss-player>`)
