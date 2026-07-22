@@ -64,6 +64,10 @@ player.getPartsCount();                 // number of parts
 player.getPartIndexFromName('body');    // name → index
 ```
 
+To override a part's colour, cell or visibility at run time, see
+[Part control (visibility / cell / color)](/customize/part-overrides) — that API is
+shared by the PixiJS and WebGL players.
+
 ---
 
 ## Web Components (`<ss-player>`)
