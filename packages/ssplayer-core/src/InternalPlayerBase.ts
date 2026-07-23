@@ -656,6 +656,49 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.getCellNames(cellmapName);
     }
 
+    // --- Part following (transform read-out) -----------------------------
+    //
+    // Read a part's current-frame transform so an external object can follow it
+    // (a weapon, effect or hitbox tracking a null part). Unlike the overrides
+    // above these are pure reads: they report whatever frame the last update() /
+    // setFrame() finalized, so call them after the player has advanced (a facade
+    // drives its attachments from its per-frame seam). Part indices are stable
+    // within one SSAB, so resolve a name once and pass the index if you follow a
+    // part every frame.
+
+    /**
+     * The part's current-frame transform as a 2D affine `[m00, m01, m10, m11,
+     * tx, ty]` in animation-local (Y-down) space, copied out of WASM (safe to
+     * retain). Returns null when the part name/index is unknown in the current
+     * animation. Pass `out` (a `Float32Array(6)`) to avoid allocation. Valid for
+     * the frame the last update()/setFrame() produced; the matrix is computed
+     * for every part regardless of `hide`, so a hidden part still reports where
+     * it would be.
+     */
+    public getPartTransform(part: number | string, out?: Float32Array): Float32Array | null {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return null;
+        return this.runtimeManager.getWorldMatrix2D(index, out);
+    }
+
+    /**
+     * Whether the part is hidden on the current frame — the animation's `hide`
+     * keyframe (the same visibility the renderer honours), read at the drawn
+     * frame (`floor` of the subframe playhead). Returns null when the part is
+     * unknown. This reflects the animation, not a {@link setPartVisibilityOverride}
+     * force-hide.
+     */
+    public isPartHidden(part: number | string): boolean | null {
+        const index = this.resolvePartIndex(part);
+        if (index < 0) return null;
+        const frameData = this.runtimeManager.getFrameData(Math.floor(this.getFrame()));
+        // The frame's parts vector is num_parts long, ordered by part index
+        // (same indexing as the renderer's per-part reads), so `index` addresses
+        // this part directly. A part absent from the frame reads as visible.
+        const state = frameData ? frameData.parts(index) : null;
+        return state ? state.hide() : false;
+    }
+
     private resolvePartIndex(part: number | string): number {
         if (typeof part === 'string') return this.findPartIndex(part);
         return Number.isInteger(part) && part >= 0 ? part : -1;
