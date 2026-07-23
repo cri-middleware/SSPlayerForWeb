@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, decomposePartAffine, type SSPartFollowOptions } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -68,6 +68,31 @@ export interface SSAudioEvent {
 /** Unsubscribe handle returned by the `onX` event-registration methods. */
 export type Unsubscribe = () => void;
 
+/**
+ * A live part attachment created by {@link SSPlayer.attachToPart}: `target`
+ * follows the part each frame until {@link detach} (or `detachFromPart`) is
+ * called. Re-export of the follow options lives in ssplayer-core
+ * ({@link SSPartFollowOptions}).
+ */
+export interface SSPartAttachment {
+    readonly target: Container;
+    detach(): void;
+}
+
+// Internal per-attachment state. `autoHidden` tracks whether *we* hid the target
+// (part absent / hidden) so detach and re-appearance only restore visibility we
+// took away — a target the user hid themselves is left alone.
+interface PartAttachmentState {
+    part: number | string;
+    target: Container;
+    position: boolean;
+    rotation: boolean;
+    scale: boolean;
+    onHide: 'follow' | 'hide';
+    addedAsChild: boolean;
+    autoHidden: boolean;
+}
+
 // Per-context mask coverage produced by the pre-pass: the offscreen texture,
 // the affine that maps a part's player-local position into the coverage's
 // [0,1] UV space, and the writer metadata replayed by the masked shader.
@@ -126,6 +151,18 @@ export class SSPlayer extends Container {
     private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
     private readonly _animEndListeners = new Set<() => void>();
     private readonly _animLoopListeners = new Set<() => void>();
+    private readonly _frameListeners = new Set<(frame: number) => void>();
+
+    // --- Part following (part-following) ---
+    // Targets driven to follow a part each frame. `_attachmentLayer` holds the
+    // targets attached with addAsChild (the default): renderFrame() clears our
+    // children every frame, so the layer is re-added and driven at the end of
+    // renderFrame() — after the meshes, so followers draw on top.
+    private readonly _attachmentLayer = new Container();
+    private readonly _attachments: PartAttachmentState[] = [];
+    private readonly _attachAffine = new Float32Array(6);
+    private readonly _attachMatrix = new Matrix();
+
     private partsColorShaders: Map<Texture, Shader> = new Map();
     private effectShaders: Map<Texture, Shader> = new Map();
 
@@ -355,6 +392,13 @@ export class SSPlayer extends Container {
     
     public override destroy(options?: any) {
         Ticker.shared.remove(this.update, this);
+
+        // Detach followers (removes them from our layer and restores any
+        // visibility we changed) so destroying the player never destroys or
+        // hides a target the host still owns, then free the now-empty layer.
+        for (const a of [...this._attachments]) this.detachFromPart(a.target);
+        this._attachmentLayer.destroy({ children: false });
+
         if (this.internalPlayer) {
             this.internalPlayer.destroy();
         }
@@ -493,6 +537,27 @@ export class SSPlayer extends Container {
         return this.internalPlayer.runtimeManager.getPartsCount();
     }
 
+    // --- Part following: transform read-out ---
+    // Pull API for following a part by hand (place your own object, or drive a
+    // DOM overlay). For a managed follower use attachToPart below. See the core
+    // player (InternalPlayerBase.getPartTransform) for the contract.
+
+    /**
+     * The part's current-frame transform as a 2D affine `[m00, m01, m10, m11,
+     * tx, ty]` in animation-local (Y-down) space — the space this Container draws
+     * its parts in, so an object placed under the player lands on the part. Null
+     * when the part is unknown. Pass `out` (a `Float32Array(6)`) to avoid
+     * allocation. Read it after a frame has advanced (e.g. from `onFrame`).
+     */
+    public getPartTransform(part: number | string, out?: Float32Array): Float32Array | null {
+        return this.internalPlayer.getPartTransform(part, out);
+    }
+
+    /** Whether the part is hidden on the current frame (animation `hide`), or null if unknown. */
+    public isPartHidden(part: number | string): boolean | null {
+        return this.internalPlayer.isPartHidden(part);
+    }
+
     // --- Part overrides (65_override_layer) ---
     //
     // Thin pass-throughs to the core player, which owns the contract (see
@@ -621,6 +686,103 @@ export class SSPlayer extends Container {
     public onAnimationLoop(listener: () => void): Unsubscribe {
         this._animLoopListeners.add(listener);
         return () => { this._animLoopListeners.delete(listener); };
+    }
+
+    /**
+     * Fires once per advanced frame, right after the timeline updated and its
+     * world matrices are final — the point at which {@link getPartTransform} is
+     * valid for the new frame. Returns an unsubscribe function. Not fired while
+     * the player is stopped (the ticker early-returns).
+     */
+    public onFrame(listener: (frame: number) => void): Unsubscribe {
+        this._frameListeners.add(listener);
+        return () => { this._frameListeners.delete(listener); };
+    }
+
+    // --- Part following: managed attachments ---
+
+    /**
+     * Make `target` follow `part` (a name or index) every frame — a weapon,
+     * effect or hitbox tracking a null part. By default the target is parented
+     * under the player (so it inherits the player's own transform and lands
+     * exactly on the part) and its position, rotation and scale are all driven;
+     * see {@link SSPartFollowOptions} to change any of that. When all three axes
+     * are driven the full affine is applied, so a skewed / mirrored part is
+     * reproduced exactly; otherwise only the enabled axes are written and the
+     * target keeps its own value for the rest. Attaching the same target twice
+     * replaces the earlier attachment. Returns a handle whose `detach()` stops
+     * the following.
+     */
+    public attachToPart(part: number | string, target: Container, options: SSPartFollowOptions = {}): SSPartAttachment {
+        // Replace any existing attachment for this target first.
+        this.detachFromPart(target);
+
+        const addedAsChild = options.addAsChild ?? true;
+        const state: PartAttachmentState = {
+            part,
+            target,
+            position: options.position ?? true,
+            rotation: options.rotation ?? true,
+            scale: options.scale ?? true,
+            onHide: options.onHide ?? 'follow',
+            addedAsChild,
+            autoHidden: false,
+        };
+        if (addedAsChild) this._attachmentLayer.addChild(target);
+        this._attachments.push(state);
+
+        return { target, detach: () => this.detachFromPart(target) };
+    }
+
+    /** Stop following for `target`; reverses the parenting/visibility attach set up. */
+    public detachFromPart(target: Container): void {
+        const i = this._attachments.findIndex(a => a.target === target);
+        if (i < 0) return;
+        const [state] = this._attachments.splice(i, 1);
+        if (state.addedAsChild && target.parent === this._attachmentLayer) {
+            this._attachmentLayer.removeChild(target);
+        }
+        // Undo only a hide we imposed; leave a user-hidden target hidden.
+        if (state.autoHidden) target.visible = true;
+    }
+
+    /**
+     * Drive every attachment to its part's current-frame transform. Called from
+     * renderFrame() after the meshes are placed, so followers read the same
+     * finalized world matrices the frame drew with.
+     */
+    private updateAttachments(): void {
+        for (const a of this._attachments) {
+            const idx = typeof a.part === 'string' ? this.internalPlayer.findPartIndex(a.part) : a.part;
+
+            // Part not in this animation, or hidden and onHide === 'hide': hide
+            // the target (once) and stop driving it.
+            const hide = idx < 0 || (a.onHide === 'hide' && this.internalPlayer.isPartHidden(idx) === true);
+            if (hide) {
+                if (!a.autoHidden) { a.target.visible = false; a.autoHidden = true; }
+                continue;
+            }
+            if (a.autoHidden) { a.target.visible = true; a.autoHidden = false; }
+
+            const affine = this.internalPlayer.getPartTransform(idx, this._attachAffine);
+            if (!affine) continue;
+            this.applyAffineToTarget(a, affine);
+        }
+    }
+
+    private applyAffineToTarget(a: PartAttachmentState, affine: Float32Array): void {
+        if (a.position && a.rotation && a.scale) {
+            // Full affine → exact, preserving skew and mirroring. Pixi Matrix is
+            // (a, b, c, d, tx, ty) = (m00, m10, m01, m11, tx, ty).
+            this._attachMatrix.set(affine[0], affine[2], affine[1], affine[3], affine[4], affine[5]);
+            a.target.setFromMatrix(this._attachMatrix);
+            return;
+        }
+        // Component-wise: write only the enabled axes, keep the target's own rest.
+        const d = decomposePartAffine(affine);
+        if (a.position) a.target.position.set(d.x, d.y);
+        if (a.rotation) a.target.rotation = d.rotation;
+        if (a.scale) a.target.scale.set(d.scaleX, d.scaleY);
     }
 
     /**
@@ -786,6 +948,12 @@ export class SSPlayer extends Container {
         }
         
         this.renderFrame(frameNo);
+
+        // After the frame is placed (meshes + attachments), notify per-frame
+        // listeners — the point at which getPartTransform is valid for frameNo.
+        if (this._frameListeners.size > 0) {
+            this._frameListeners.forEach(cb => cb(frameNo));
+        }
     }
 
     private renderFrame(frameNo: number) {
@@ -819,6 +987,14 @@ export class SSPlayer extends Container {
             null,
             1.0
         );
+
+        // renderContext addChild'd this frame's meshes onto us; re-add the
+        // attachment layer last so followers draw above the animation, then
+        // drive each target to its part's just-finalized transform.
+        if (this._attachments.length > 0) {
+            this.addChild(this._attachmentLayer);
+            this.updateAttachments();
+        }
     }
 
     /**

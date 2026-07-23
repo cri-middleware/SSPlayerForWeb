@@ -144,6 +144,7 @@ export class SSCanvasPlayer {
   private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
   private readonly _animEndListeners = new Set<() => void>();
   private readonly _animLoopListeners = new Set<() => void>();
+  private readonly _frameListeners = new Set<(frame: number) => void>();
   // Guards the one-time default-audio auto-wire (see ensureAutoAudio).
   private _audioAutoWired = false;
 
@@ -401,6 +402,26 @@ export class SSCanvasPlayer {
     return this.internalPlayer.getCellNames(cellmapName);
   }
 
+  // --- Part following: transform read-out ---
+  // This player draws to a canvas with no scene graph, so there is no managed
+  // attach; read a part's transform here and drive your own DOM/canvas element
+  // (compose the affine with this player's own screen transform). Pair with
+  // onFrame to update every frame.
+
+  /**
+   * The part's current-frame transform as a 2D affine `[m00, m01, m10, m11, tx,
+   * ty]` in animation-local (Y-down) space, or null if the part is unknown. Read
+   * after a frame advanced (e.g. from onFrame). Pass `out` to avoid allocation.
+   */
+  public getPartTransform(part: number | string, out?: Float32Array): Float32Array | null {
+    return this.internalPlayer.getPartTransform(part, out);
+  }
+
+  /** Whether the part is hidden on the current frame (animation `hide`), or null if unknown. */
+  public isPartHidden(part: number | string): boolean | null {
+    return this.internalPlayer.isPartHidden(part);
+  }
+
   public startTicker(): void {
     this._wantTicker = true;
     this.ensureVisibilityWatch();
@@ -481,6 +502,13 @@ export class SSCanvasPlayer {
       // still valid. Must run on the same tick that advanced — including the tick a
       // non-looping animation finishes on.
       this.pollEvents();
+    }
+
+    // World matrices are final for this frame: notify per-frame listeners (the
+    // point getPartTransform is valid for the new frame).
+    if (this._frameListeners.size > 0) {
+      const f = this.internalPlayer.getFrameNo();
+      this._frameListeners.forEach(cb => cb(f));
     }
   }
 
@@ -563,6 +591,18 @@ export class SSCanvasPlayer {
   public onAnimationLoop(listener: () => void): Unsubscribe {
     this._animLoopListeners.add(listener);
     return () => { this._animLoopListeners.delete(listener); };
+  }
+
+  /**
+   * Fires once per advanced frame from update(), after the timeline advanced and
+   * its world matrices are final — the point at which {@link getPartTransform} is
+   * valid for the new frame. This player has no scene graph, so follow a part by
+   * reading getPartTransform here and positioning your own element (compose it
+   * with this player's own screen transform). Returns an unsubscribe function.
+   */
+  public onFrame(listener: (frame: number) => void): Unsubscribe {
+    this._frameListeners.add(listener);
+    return () => { this._frameListeners.delete(listener); };
   }
 
   /**

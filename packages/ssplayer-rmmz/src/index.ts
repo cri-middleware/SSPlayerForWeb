@@ -18,6 +18,7 @@ export {
   type SSSignalEvent,
   type SSAudioEvent,
   type Unsubscribe,
+  type SSPartAttachment,
 } from './SSPlayer.js';
 export {
   SSPlayerRenderer,

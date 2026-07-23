@@ -5,5 +5,5 @@
 // The renderer-specific API (SSPlayer, PixiResourceManager) is exported below.
 export * from '@spritestudio/ssplayer-core';
 
-export { SSPlayer, type SSUserDataEvent, type SSSignalEvent, type SSAudioEvent, type Unsubscribe } from './SSPlayer.js';
+export { SSPlayer, type SSUserDataEvent, type SSSignalEvent, type SSAudioEvent, type Unsubscribe, type SSPartAttachment } from './SSPlayer.js';
 export * from './PixiResourceManager.js';
