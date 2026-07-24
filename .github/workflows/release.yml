@@ -1,16 +1,30 @@
 name: Release
 
-# One-shot npm publish, triggered manually. On dispatch it consumes the
-# changesets accumulated on main:
-#   1. `changeset version` bumps each affected package's version + CHANGELOG
-#      (independent versioning) and deletes the consumed changeset files.
-#   2. the bump is committed to main.
-#   3. every package is built (wasm fetched first) and the public ones are
-#      published to npm — the per-package `prepack` guard refuses any package
-#      whose dist/wasm is missing.
-#   4. the version-bump commit and the per-package git tags are pushed.
+# One-shot release, triggered manually from main. Two independent boolean inputs
+# (both default true) select what this dispatch uploads. Same ref + same inputs
+# always produce the same result, so the run stays deterministic:
 #
-# If no changesets are pending the run is a no-op.
+#   publish_npm=true      Consume the accumulated changesets: `changeset version`
+#                         bumps each affected package's version + CHANGELOG
+#                         (independent versioning), commit to main, build every
+#                         package (wasm fetched first), publish the PUBLIC ones to
+#                         npm (per-package `prepack` guard refuses a package whose
+#                         dist/wasm is missing), and push the commit + per-package
+#                         tags. No changesets pending -> this half is a no-op.
+#
+#   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyrano) are
+#                         never on npm, so GitHub Releases are their only channel.
+#                         changeset does not tag private packages: pack each plugin
+#                         whose current-version Release does not exist yet and cut
+#                         one Release per plugin, tagged `<pkg>@<version>`
+#                         (prerelease when the version contains a `-`). Already
+#                         released -> skipped, so re-runs and deferred plugin
+#                         releases are safe.
+#
+# Common cases: defaults (true/true) = full release. release_plugins=false ships
+# npm only (cut the plugin Releases later with publish_npm=false + release_plugins
+# =true). Hold a plugin persistently by adding it to `ignore` in
+# .changeset/config.json instead.
 #
 # Runs on `main` only: the version-bump commit, the tags, and the published
 # code all follow whichever ref the workflow is dispatched from, so a release
@@ -18,6 +32,15 @@ name: Release
 # token — automation tokens bypass 2FA, which CI cannot satisfy interactively).
 on:
   workflow_dispatch:
+    inputs:
+      publish_npm:
+        description: 'Publish public packages to npm (changeset version + publish)'
+        type: boolean
+        default: true
+      release_plugins:
+        description: 'Cut GitHub Releases for private plugins (rmmz / tyrano)'
+        type: boolean
+        default: true
 
 # Never let two releases run at once.
 concurrency:
@@ -53,36 +76,80 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Version, build and publish
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # 1. Consume accumulated changesets -> bump versions + CHANGELOG.
-          pnpm changeset version
-
-          # 2. Nothing to release? `changeset version` left the tree untouched.
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "::notice::No changesets pending — nothing to release."
-            exit 0
-          fi
-
-          # 3. Commit the version bump (new CHANGELOG.md files are untracked, so add -A).
-          git add -A
-          git commit -m "chore: release packages"
-
-          # 4. Fetch wasm, build every package, publish the public ones + create tags.
-          #    ci:publish = download:wasm && build && changeset publish
-          pnpm run ci:publish
-
-          # 5. Push the version-bump commit and the per-package tags.
-          #    changeset creates lightweight tags, so push them explicitly
-          #    (--follow-tags would only push annotated ones).
-          git push origin HEAD:main
-          git push origin --tags
+      - name: Version, publish (npm) and release plugins (GitHub Releases)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SS_NPM_TOKEN }}
           # npm provenance attestation (needs a public repo + id-token: write).
           # Remove this line if a publish ever errors on provenance.
           NPM_CONFIG_PROVENANCE: 'true'
+          # gh CLI auth for the plugin GitHub Releases (contents: write above).
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_NPM: ${{ inputs.publish_npm }}
+          RELEASE_PLUGINS: ${{ inputs.release_plugins }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          built=0
+
+          # --- npm channel (public packages) ------------------------------------
+          if [ "$PUBLISH_NPM" = "true" ]; then
+            # Consume accumulated changesets -> bump versions + CHANGELOG.
+            pnpm changeset version
+            if [ -n "$(git status --porcelain)" ]; then
+              # Commit the bump (new CHANGELOG.md files are untracked, so add -A).
+              git add -A
+              git commit -m "chore: release packages"
+              # ci:publish = download:wasm && build && changeset publish.
+              pnpm run ci:publish
+              built=1
+              # changeset creates lightweight tags; push them explicitly
+              # (--follow-tags would only push annotated ones).
+              git push origin HEAD:main
+              git push origin --tags
+            else
+              echo "::notice::No changesets pending — nothing to publish to npm."
+            fi
+          else
+            echo "::notice::publish_npm=false — skipping npm version bump & publish."
+          fi
+
+          # --- GitHub Releases channel (private plugins rmmz / tyrano) -----------
+          # Never on npm, so GitHub Releases are their only distribution channel.
+          if [ "$RELEASE_PLUGINS" = "true" ]; then
+            # Plugins are packed from build outputs; make sure they exist even when
+            # the npm half was skipped or was a no-op.
+            if [ "$built" = "0" ]; then
+              pnpm run download:wasm
+              pnpm run build
+            fi
+            release_sha="$(git rev-parse HEAD)"
+            # changeset does not tag private packages. Cut one Release per plugin
+            # whose current-version Release is absent; already released -> skip, so
+            # re-runs and deferred plugin releases stay idempotent.
+            release_plugin() {
+              local pkg="$1" dir="$2" stem="$3"
+              local version tag zip prerelease
+              version="$(node -p "require('./packages/${dir}/package.json').version")"
+              tag="${pkg}@${version}"
+              if gh release view "$tag" >/dev/null 2>&1; then
+                echo "::notice::${tag} already released — skipping."
+                return 0
+              fi
+              pnpm --filter "$pkg" run pack
+              zip="packages/${dir}/dist/pack/${stem}-${version}.zip"
+              prerelease=""
+              case "$version" in *-*) prerelease="--prerelease";; esac
+              gh release create "$tag" "$zip" \
+                --target "$release_sha" \
+                --title "${pkg} ${version}" \
+                --generate-notes \
+                $prerelease
+              echo "::notice::Released ${tag}"
+            }
+            release_plugin "@spritestudio/ssplayer-rmmz"   ssplayer-rmmz   ssplayer-rmmz-plugin
+            release_plugin "@spritestudio/ssplayer-tyrano" ssplayer-tyrano ssplayer-tyrano-plugin
+          else
+            echo "::notice::release_plugins=false — skipping plugin GitHub Releases."
+          fi

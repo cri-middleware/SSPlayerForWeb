@@ -17,9 +17,11 @@ on:
     - cron: '0 15 * * 1'
   release:
     types: [published]
-  # After the Release workflow finishes an npm publish on main, rebuild the site
-  # so the docs and CDN examples reflect the just-published versions. (Release
-  # creates git tags, not a GitHub Release, so it would not fire `release` above.)
+  # After the Release workflow finishes on main, rebuild the site so the docs and
+  # CDN examples reflect the just-published versions. Release now also cuts the
+  # private-plugin GitHub Releases, so the `release: published` trigger above can
+  # fire too; both paths are fine — `concurrency: pages` serializes and dedups the
+  # rebuilds.
   workflow_run:
     workflows: ["Release"]
     types: [completed]
