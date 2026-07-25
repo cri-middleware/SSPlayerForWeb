@@ -24,6 +24,9 @@
             padding: 16px 24px;
             display: flex;
             align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: calc(100% - 40px);
             gap: 20px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
@@ -181,7 +184,7 @@
 </head>
 <body>
     <div id="canvas-container">
-        <div id="hint" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.5); padding: 8px 16px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 10; white-space: nowrap;">Tip: drag &amp; drop an .ssab folder or an embedded .ssab file to play your own asset.</div>
+        <div id="hint" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.5); padding: 8px 16px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 10; white-space: nowrap;">Tip: drag to move, wheel to zoom &mdash; or drop an .ssab folder / embedded .ssab file to play your own asset.</div>
         <div id="drop-zone">Drop an ssab folder or an embedded .ssab file</div>
         <!-- Canvas will be injected here -->
         <div id="controls">
@@ -192,7 +195,8 @@
             </select>
             <button id="btn-restart" title="Play from beginning">⏮ Restart</button>
             <button id="btn-play-pause">⏸ Pause</button>
-            
+            <button id="btn-reset-view" title="Recentre the animation and reset the zoom">⤢ Reset view</button>
+
             <div class="control-group">
                 <label for="seek-bar">Timeline</label>
                 <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1">

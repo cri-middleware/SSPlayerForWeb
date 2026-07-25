@@ -1,5 +1,6 @@
 import { Ticker } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
+import { ViewControls } from '../view/ViewControls.js';
 
 export function showToast(message: string, type: 'info' | 'error' | 'warning' | 'success' = 'info') {
     const container = document.getElementById('toast-container');
@@ -35,8 +36,10 @@ export function showToast(message: string, type: 'info' | 'error' | 'warning' | 
 
 export class UIManager {
     private player: SSPlayer;
+    private view: ViewControls;
     private btnRestart = document.getElementById('btn-restart') as HTMLButtonElement;
     private btnPlayPause = document.getElementById('btn-play-pause') as HTMLButtonElement;
+    private btnResetView = document.getElementById('btn-reset-view') as HTMLButtonElement;
     private seekBar = document.getElementById('seek-bar') as HTMLInputElement;
     private frameDisplay = document.getElementById('frame-display') as HTMLDivElement;
     private speedBar = document.getElementById('speed-bar') as HTMLInputElement;
@@ -48,8 +51,9 @@ export class UIManager {
 
     private isDraggingSeekBar = false;
 
-    constructor(player: SSPlayer) {
+    constructor(player: SSPlayer, view: ViewControls) {
         this.player = player;
+        this.view = view;
         this.setupControls();
     }
 
@@ -77,6 +81,8 @@ export class UIManager {
                 this.btnPlayPause.textContent = '▶️ Play';
             }
         });
+
+        this.btnResetView.addEventListener('click', () => this.view.reset());
 
         this.seekBar.addEventListener('mousedown', () => { this.isDraggingSeekBar = true; });
         this.seekBar.addEventListener('mouseup', () => { this.isDraggingSeekBar = false; });
@@ -111,10 +117,7 @@ export class UIManager {
             const animName = (e.target as HTMLSelectElement).value;
             if (animName) {
                 await this.player.setAnimation(animName);
-                this.seekBar.max = this.player.endFrame.toString();
-                this.player.position.set(640, 480);
-                this.player.play();
-                this.btnPlayPause.textContent = '⏸ Pause';
+                this.syncAfterLoad();
             }
         });
     }
@@ -145,8 +148,14 @@ export class UIManager {
         this.ssabSelect.value = primaryPath;
     }
 
+    /**
+     * Bring the UI in line with a newly-shown animation: refresh the seek-bar
+     * range (otherwise stale from the previous animation), drop the pan/zoom back
+     * to the default view so the new animation is on-screen, and start playback.
+     */
     public syncAfterLoad() {
         this.seekBar.max = this.player.endFrame.toString();
+        this.view.reset();
         this.player.play();
         this.btnPlayPause.textContent = '⏸ Pause';
     }

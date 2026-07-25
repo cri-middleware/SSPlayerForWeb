@@ -1,6 +1,7 @@
-import { Application, Rectangle } from 'pixi.js';
+import { Application } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 import { UIManager, showToast } from './ui/UIManager.js';
+import { ViewControls } from './view/ViewControls.js';
 import { DropLoader } from './loader/DropLoader.js';
 import { extractAnimationNames } from './utils/ssabExtractor.js';
 
@@ -34,34 +35,13 @@ async function main() {
     await player.load(ssabUrl('Ringo.ssab'));
     await player.setAnimation("run");
 
-    player.position.set(640, 480);
     app.stage.addChild(player);
-    
-    // --- Setup Drag and Drop for SSPlayer ---
-    player.eventMode = 'dynamic';
-    player.cursor = 'pointer';
 
-    let dragging = false;
-    let dragOffset = { x: 0, y: 0 };
+    // --- Pan (drag) / zoom (wheel) of the animation itself ---
+    // Owns the view transform: every newly-shown animation is re-centred and
+    // unscaled through view.reset() (called by UIManager.syncAfterLoad).
+    const view = new ViewControls(app, player);
 
-    player.on('pointerdown', (e) => {
-        dragging = true;
-        dragOffset.x = player.position.x - e.global.x;
-        dragOffset.y = player.position.y - e.global.y;
-    });
-
-    app.stage.eventMode = 'static';
-    app.stage.hitArea = new Rectangle(0, 0, 1280, 960);
-
-    app.stage.on('pointerup', () => { dragging = false; });
-    app.stage.on('pointerupoutside', () => { dragging = false; });
-    app.stage.on('pointermove', (e) => {
-        if (dragging) {
-            player.position.set(e.global.x + dragOffset.x, e.global.y + dragOffset.y);
-        }
-    });
-    // ----------------------------------------
-    
     console.log("SSPlayer initialized successfully.");
 
     // --- Animation event listeners (06_playback_control) ---
@@ -87,7 +67,7 @@ async function main() {
     player.play();
 
     // 3. Initialize UI Manager
-    const uiManager = new UIManager(player);
+    const uiManager = new UIManager(player, view);
 
     // 4. Populate the SSAB dropdown with the bundled sample assets so any of them
     //    (BlendMode, PartsColor, Effect, Mask, …) can be loaded straight from the
@@ -117,8 +97,7 @@ async function main() {
             const anims = extractAnimationNames(buffer);
             uiManager.updateAnimationSelect(anims, anims[0]);
             if (anims.length > 0) await player.setAnimation(anims[0]);
-            player.position.set(640, 480);
-            // Refresh the seek-bar range / frame display for the new animation and
+            // Refresh the seek-bar range for the new animation, reset the view and
             // start playback (the seek bar's max is otherwise stale from Ringo).
             uiManager.syncAfterLoad();
         } catch (e) {

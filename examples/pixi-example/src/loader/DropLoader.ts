@@ -254,7 +254,6 @@ export class DropLoader {
 
             if (anims.length > 0) {
                 await this.player.setAnimation(anims[0]);
-                this.player.position.set(640, 480);
                 this.ui.syncAfterLoad();
             }
 

@@ -1,74 +1,248 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WebGL Example</title>
-  <style>
-    body { margin: 0; padding: 0; overflow: hidden; background-color: #333; font-family: sans-serif;
-           display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    /* The drawing buffer is a fixed 1280x960; show it at its native pixel size
-       (no CSS scaling) so it renders pixel-by-pixel (crisp), centered in the
-       window. Drawing cost stays fixed at 1280x960 regardless of window size. */
-    canvas { display: block; }
-    #panel {
-      position: absolute; top: 10px; left: 10px; z-index: 10;
-      background: rgba(0,0,0,0.55); padding: 10px; color: #fff; border-radius: 6px;
-      display: flex; flex-direction: column; gap: 8px; max-width: 60vw;
-    }
-    #panel .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    #panel select { font-size: 15px; padding: 5px; max-width: 320px; }
-    #panel label { font-size: 12px; opacity: 0.8; }
-    #status { font-size: 12px; opacity: 0.85; word-break: break-all; }
-    #hint { font-size: 11px; opacity: 0.6; }
-    /* Full-window drop overlay */
-    #drop-overlay {
-      position: fixed; inset: 0; z-index: 100; pointer-events: none;
-      display: none; align-items: center; justify-content: center;
-      background: rgba(30,80,160,0.35); border: 4px dashed rgba(255,255,255,0.8);
-      color: #fff; font-size: 24px; box-sizing: border-box;
-    }
-    #drop-overlay.active { display: flex; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSPlayerForWeb - WebGL Example</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; background: linear-gradient(135deg, #1f1c2c 0%, #928DAB 100%); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Inter', sans-serif; color: #fff; }
+        #canvas-container { position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); border-radius: 16px; overflow: hidden; }
+        /* The drawing buffer is a fixed 1280x960; show it at its native pixel size
+           (no CSS scaling) so it renders pixel-by-pixel (crisp). Drawing cost stays
+           fixed at 1280x960 regardless of window size. */
+        canvas { display: block; }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: calc(100% - 40px);
+            gap: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .control-group label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 150px;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        #frame-display {
+            font-variant-numeric: tabular-nums;
+            min-width: 50px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #ssab-select, #animation-select {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px;
+            font-family: inherit;
+            outline: none;
+            max-width: 150px;
+        }
+
+        #drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 600;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #drop-zone.active {
+            opacity: 1;
+        }
+
+        #toast-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .toast {
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 250px;
+            max-width: 400px;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            border-left: 4px solid #f87171;
+        }
+
+        .toast.warning {
+            border-left: 4px solid #fbbf24;
+        }
+
+        .toast.info {
+            border-left: 4px solid #60a5fa;
+        }
+
+        .toast.success {
+            border-left: 4px solid #34d399;
+        }
+    </style>
 </head>
 <body>
-  <div id="panel">
-    <div class="row">
-      <label for="ssab-select">SSAB</label>
-      <select id="ssab-select">
-        <option value="/overall/Basic.ssab">Basic.ssab</option>
-        <option value="/overall/Shape.ssab">Shape.ssab</option>
-        <option value="/overall/PartsColor.ssab">PartsColor.ssab</option>
-        <option value="/overall/Mesh.ssab">Mesh.ssab</option>
-        <option value="/Ringo/Ringo.ssab">Ringo.ssab</option>
-        <option value="/overall/Effect.ssab">Effect.ssab</option>
-        <option value="/overall/Mask.ssab">Mask.ssab</option>
-        <option value="/overall/Instance.ssab">Instance.ssab</option>
-        <option value="/overall/BlendMode.ssab">BlendMode.ssab</option>
-        <option value="/overall/Shader.ssab">Shader.ssab</option>
-        <optgroup label="Events (fire on onAudio / onUserData / onSignal)">
-          <option value="/overall/Sound.ssab">Sound.ssab (♪ auto-plays audio)</option>
-          <option value="/overall/UserData.ssab">UserData.ssab</option>
-          <option value="/overall/Signal.ssab">Signal.ssab</option>
-        </optgroup>
-        <optgroup label="Embedded (textures inlined, no sibling PNG)">
-          <option value="/overall/Basic_embedded.ssab">Basic (embedded)</option>
-          <option value="/overall/PartsColor_embedded.ssab">PartsColor (embedded)</option>
-          <option value="/overall/Mesh_embedded.ssab">Mesh (embedded)</option>
-          <option value="/overall/Mask_embedded.ssab">Mask (embedded)</option>
-          <option value="/overall/Effect_embedded.ssab">Effect (embedded)</option>
-          <option value="/overall/BlendMode_embedded.ssab">BlendMode (embedded)</option>
-          <option value="/overall/Shader_embedded.ssab">Shader (embedded)</option>
-        </optgroup>
-      </select>
-      <label for="animation-select">Animation</label>
-      <select id="animation-select" disabled></select>
+    <div id="canvas-container">
+        <canvas id="view"></canvas>
+        <div id="hint" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.5); padding: 8px 16px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 10; white-space: nowrap;">Tip: drag to move, wheel to zoom &mdash; or drop an .ssab folder / embedded .ssab file to play your own asset.</div>
+        <div id="drop-zone">Drop an ssab folder or an embedded .ssab file</div>
+        <div id="controls">
+            <select id="ssab-select">
+                <option value="/overall/Basic.ssab">Basic.ssab</option>
+                <option value="/overall/Shape.ssab">Shape.ssab</option>
+                <option value="/overall/PartsColor.ssab">PartsColor.ssab</option>
+                <option value="/overall/Mesh.ssab">Mesh.ssab</option>
+                <option value="/Ringo/Ringo.ssab">Ringo.ssab</option>
+                <option value="/overall/Effect.ssab">Effect.ssab</option>
+                <option value="/overall/Mask.ssab">Mask.ssab</option>
+                <option value="/overall/Instance.ssab">Instance.ssab</option>
+                <option value="/overall/BlendMode.ssab">BlendMode.ssab</option>
+                <option value="/overall/Shader.ssab">Shader.ssab</option>
+                <optgroup label="Events (fire on onAudio / onUserData / onSignal)">
+                    <option value="/overall/Sound.ssab">Sound.ssab (♪ auto-plays audio)</option>
+                    <option value="/overall/UserData.ssab">UserData.ssab</option>
+                    <option value="/overall/Signal.ssab">Signal.ssab</option>
+                </optgroup>
+                <optgroup label="Embedded (textures inlined, no sibling PNG)">
+                    <option value="/overall/Basic_embedded.ssab">Basic (embedded)</option>
+                    <option value="/overall/PartsColor_embedded.ssab">PartsColor (embedded)</option>
+                    <option value="/overall/Mesh_embedded.ssab">Mesh (embedded)</option>
+                    <option value="/overall/Mask_embedded.ssab">Mask (embedded)</option>
+                    <option value="/overall/Effect_embedded.ssab">Effect (embedded)</option>
+                    <option value="/overall/BlendMode_embedded.ssab">BlendMode (embedded)</option>
+                    <option value="/overall/Shader_embedded.ssab">Shader (embedded)</option>
+                </optgroup>
+            </select>
+            <select id="animation-select" disabled></select>
+            <button id="btn-restart" title="Play from beginning">⏮ Restart</button>
+            <button id="btn-play-pause">⏸ Pause</button>
+            <button id="btn-reset-view" title="Recentre the animation and reset the zoom">⤢ Reset view</button>
+
+            <div class="control-group">
+                <label for="seek-bar">Timeline</label>
+                <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1">
+            </div>
+
+            <div id="frame-display">0.0 / 0</div>
+
+            <div class="control-group">
+                <label for="subframe-check">Subframe</label>
+                <input type="checkbox" id="subframe-check" checked>
+            </div>
+
+            <div class="control-group">
+                <label for="speed-bar">Speed: <span id="speed-display">1.0</span>x</label>
+                <input type="range" id="speed-bar" min="0.1" max="3.0" value="1.0" step="0.1">
+            </div>
+        </div>
     </div>
-    <div id="status">Initializing…</div>
-    <div id="hint">Tip: drag &amp; drop a folder containing an .ssab and its textures, or an embedded .ssab file, to play your own asset.</div>
-  </div>
-  <canvas id="view"></canvas>
-  <div id="drop-overlay">Drop an ssab folder or an embedded .ssab file to play</div>
-  <script type="module" src="/src/main.ts"></script>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

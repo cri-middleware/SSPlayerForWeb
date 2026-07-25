@@ -1,4 +1,6 @@
 import { SSCanvasPlayer, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
+import { UIManager, showToast } from './ui/UIManager.js';
+import { ViewControls } from './view/ViewControls.js';
 import { collectDroppedFiles, fileToDataUrl, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
 
 // Bundled sample ssabs served from public/. The deploy nests each project under
@@ -20,21 +22,27 @@ async function main() {
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
 
-  const ssabSelect = document.getElementById('ssab-select') as HTMLSelectElement;
-  const animSelect = document.getElementById('animation-select') as HTMLSelectElement;
-  const statusEl = document.getElementById('status') as HTMLElement | null;
-  const dropOverlay = document.getElementById('drop-overlay') as HTMLElement | null;
-  const setStatus = (msg: string) => { if (statusEl) statusEl.textContent = msg; console.log(msg); };
-
   await SSCanvasPlayer.initialize();
 
-  // Opaque backdrop (matches the page's #333 body). Additive / backdrop-reading
-  // blend modes (Add, Screen, …) only composite correctly against a real opaque
-  // backdrop — on a transparent canvas an additive glow baked on a black
-  // background renders that black as an opaque block. Omit backgroundColor for a
-  // transparent overlay (accepting that limitation for such blends).
-  const player = new SSCanvasPlayer(canvas, { autoStart: true, backgroundColor: 0x333333 });
-  player.subFrameEnabled = true;
+  // Opaque backdrop (matches the page's dark canvas frame). Additive /
+  // backdrop-reading blend modes (Add, Screen, …) only composite correctly against
+  // a real opaque backdrop — on a transparent canvas an additive glow baked on a
+  // black background renders that black as an opaque block. Omit backgroundColor
+  // for a transparent overlay (accepting that limitation for such blends).
+  const player = new SSCanvasPlayer(canvas, { autoStart: true, backgroundColor: 0x1a1a2e });
+
+  // Pan (drag) / zoom (wheel) of the animation. Owns the view transform: every
+  // newly-shown animation is re-centred and unscaled via view.reset(), which
+  // UIManager.syncAfterLoad() calls.
+  const view = new ViewControls(player, canvas);
+  // Playback panel (restart / play-pause / reset view / timeline / speed).
+  // Subframe interpolation follows its checkbox, on by default.
+  const ui = new UIManager(player, view);
+
+  const notify = (msg: string, type: 'info' | 'error' | 'warning' | 'success' = 'info') => {
+    showToast(msg, type);
+    console.log(msg);
+  };
 
   // --- Sound ---
   // Nothing to wire up: when an SSAB references sounds, the player auto-creates a
@@ -48,55 +56,46 @@ async function main() {
   // --- Animation event listeners (06_playback_control) ---
   player.onAnimationEnd(() => console.log('[SS][end] animation finished'));
   player.onAnimationLoop(() => console.log('[SS][loop] animation looped'));
-  player.onUserData((e) => console.log('[SS][userData]', e));
-  player.onSignal((e) => console.log('[SS][signal]', e));
+  player.onUserData((e) => {
+    console.log('[SS][userData]', e);
+    showToast(`UserData @${e.partName ?? e.partIndex}`, 'info');
+  });
+  player.onSignal((e) => {
+    console.log('[SS][signal]', e);
+    showToast(`Signal "${e.commandId}" @${e.partName ?? e.partIndex}`, 'info');
+  });
   player.onAudio((e) => {
     console.log('[SS][audio]', e);
-    setStatus(`♪ Audio "${e.soundName ?? e.soundNameHash}" (loop ${e.loopNum})`);
+    showToast(`Audio "${e.soundName ?? e.soundNameHash}" (loop ${e.loopNum})`, 'success');
   });
-
-  // Fixed drawing buffer (1280x960): re-centre the animation. The projection is
-  // recomputed from canvas.width/height each frame, so no per-resize work is
-  // needed — the CSS layout scales the fixed buffer to fit the window.
-  player.setTransform({ x: canvas.width / 2, y: canvas.height / 2 });
 
   // Dropped ssab files by their dropdown value (path); empty until a folder is dropped.
   let droppedSsabs = new Map<string, DroppedFile>();
   let droppedFiles: DroppedFile[] = [];
 
-  const populateAnimations = (anims: string[]) => {
-    animSelect.innerHTML = '';
-    for (const name of anims) {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      animSelect.appendChild(opt);
-    }
-    animSelect.disabled = anims.length === 0;
-  };
-
   const playAnimation = async (name: string) => {
     if (!name) return;
     await player.setAnimation(name);
-    player.play();
+    // Refreshes the seek-bar range, resets the pan/zoom and starts playback.
+    ui.syncAfterLoad();
   };
 
   // --- Bundled ssab (loaded by URL; textures fetched from public/) ---
   const loadBundled = async (url: string) => {
-    setStatus(`Loading ${url}...`);
+    notify(`Loading ${url}...`);
     await player.load(url);
     const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
     const anims = SSRuntimeManager.extractAnimationNames(buf);
-    populateAnimations(anims);
+    ui.updateAnimationSelect(anims);
     if (anims.length > 0) await playAnimation(anims[0]);
-    setStatus(`Loaded ${url} (${anims.length} animation${anims.length === 1 ? '' : 's'})`);
+    notify(`Loaded ${url} (${anims.length} animation${anims.length === 1 ? '' : 's'})`, 'success');
   };
 
   const dirOf = (p: string) => p.split('/').slice(0, -1).join('/');
 
   // --- Dropped ssab (loaded from the dropped buffer + sibling texture files) ---
   const loadDropped = async (ssabObj: DroppedFile) => {
-    setStatus(`Loading ${ssabObj.path}...`);
+    notify(`Loading ${ssabObj.path}...`);
     const ssabBuffer = await ssabObj.file.arrayBuffer();
     const rootBuf = new Uint8Array(ssabBuffer);
 
@@ -140,7 +139,7 @@ async function main() {
         if (!visited.has(nested.hash >>> 0)) queue.push(nested);
       }
     }
-    if (missingPacks.length > 0) setStatus(`Missing instance pack(s): ${[...new Set(missingPacks)].join(', ')} — include them in the dropped folder.`);
+    if (missingPacks.length > 0) notify(`Missing instance pack(s): ${[...new Set(missingPacks)].join(', ')} — include them in the dropped folder.`, 'warning');
 
     // Resolve every involved ssab's textures to a dropped file (data URL → <img> src),
     // each relative to ITS own ssab's directory. Textures embedded in the ssab
@@ -159,38 +158,38 @@ async function main() {
         textures.set(hash, await fileToDataUrl(texFile.file));
       }
     }
-    if (missingTex.length > 0) setStatus(`Missing texture(s): ${[...new Set(missingTex)].join(', ')}`);
+    if (missingTex.length > 0) notify(`Missing texture(s): ${[...new Set(missingTex)].join(', ')}`, 'error');
 
     await player.loadBuffer(ssabBuffer, textures);
     const anims = SSRuntimeManager.extractAnimationNames(rootBuf);
-    populateAnimations(anims);
+    ui.updateAnimationSelect(anims);
     if (anims.length > 0) await playAnimation(anims[0]);
-    setStatus(`Loaded ${ssabObj.file.name} (${anims.length} animation${anims.length === 1 ? '' : 's'})`);
+    notify(`Loaded ${ssabObj.file.name} (${anims.length} animation${anims.length === 1 ? '' : 's'})`, 'success');
   };
 
   // ssab dropdown: value is a dropped path (if any) or a bundled URL.
-  ssabSelect.addEventListener('change', () => {
-    const value = ssabSelect.value;
+  ui.ssabSelect.addEventListener('change', () => {
+    const value = ui.ssabSelect.value;
     const dropped = droppedSsabs.get(value);
-    (dropped ? loadDropped(dropped) : loadBundled(value)).catch((e) => setStatus(`Error: ${e?.message ?? e}`));
+    (dropped ? loadDropped(dropped) : loadBundled(value)).catch((e) => notify(`Error: ${e?.message ?? e}`, 'error'));
   });
 
   // animation dropdown
-  animSelect.addEventListener('change', () => {
-    playAnimation(animSelect.value).catch((e) => setStatus(`Error: ${e?.message ?? e}`));
+  ui.animationSelect.addEventListener('change', () => {
+    playAnimation(ui.animationSelect.value).catch((e) => notify(`Error: ${e?.message ?? e}`, 'error'));
   });
 
   // --- Drag & drop a folder (or files) of ssab + textures ---
-  window.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay?.classList.add('active'); });
-  window.addEventListener('dragleave', (e) => { if (e.target === dropOverlay) dropOverlay?.classList.remove('active'); });
+  window.addEventListener('dragover', (e) => { e.preventDefault(); ui.dropZone?.classList.add('active'); });
+  window.addEventListener('dragleave', (e) => { if (e.target === ui.dropZone) ui.dropZone?.classList.remove('active'); });
   window.addEventListener('drop', async (e) => {
     e.preventDefault();
-    dropOverlay?.classList.remove('active');
+    ui.dropZone?.classList.remove('active');
     if (!e.dataTransfer) return;
     try {
       droppedFiles = await collectDroppedFiles(e.dataTransfer);
       const ssabs = sortByPath(droppedFiles.filter((f) => f.path.toLowerCase().endsWith('.ssab')));
-      if (ssabs.length === 0) { setStatus('No .ssab file found in the dropped items.'); return; }
+      if (ssabs.length === 0) { notify('No .ssab file found in the dropped items.', 'error'); return; }
 
       // Pick a primary ssab: prefer one not referenced as an instance pack by another.
       let primary = ssabs[0];
@@ -207,23 +206,16 @@ async function main() {
 
       // Repopulate the ssab dropdown with the dropped ssab paths.
       droppedSsabs = new Map(ssabs.map((f) => [f.path, f]));
-      ssabSelect.innerHTML = '';
-      for (const f of ssabs) {
-        const opt = document.createElement('option');
-        opt.value = f.path;
-        opt.textContent = f.path;
-        ssabSelect.appendChild(opt);
-      }
-      ssabSelect.value = primary.path;
+      ui.updateSsabSelect(ssabs.map((f) => f.path), primary.path);
       await loadDropped(primary);
     } catch (err) {
-      setStatus(`Error loading dropped files: ${(err as Error)?.message ?? err}`);
+      notify(`Error loading dropped files: ${(err as Error)?.message ?? err}`, 'error');
       console.error(err);
     }
   });
 
   // Initial bundled load.
-  await loadBundled(ssabSelect.value);
+  await loadBundled(ui.ssabSelect.value);
 }
 
 main().catch(console.error);
