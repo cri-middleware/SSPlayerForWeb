@@ -48,10 +48,10 @@ export class SSPlayerElement extends HTMLElement {
   // load started or the element was torn down — prevents races and use-after-destroy.
   private _loadToken = 0;
 
-  // Resolves once the player is constructed (wasm ready). Re-created on each connect
-  // so imperative callers can `await el.ready` before loadBuffer/play. See connectedCallback.
+  // Settles once the player is constructed (wasm ready), and REJECTS if that
+  // never happens. Re-created on each connect so imperative callers can
+  // `await el.ready` before loadBuffer/play. See connectedCallback.
   private _readyPromise: Promise<void> = Promise.resolve();
-  private _readyResolve: (() => void) | null = null;
 
   // Player-event unsubscribers, torn down on disconnect. The player's on* hooks
   // are re-dispatched as DOM CustomEvents (see wireEvents). Audio playback itself
@@ -59,7 +59,12 @@ export class SSPlayerElement extends HTMLElement {
   // (the 'audio' CustomEvent is still emitted regardless, for host wiring).
   private _unsubscribe: Array<() => void> = [];
 
-  /** Resolves when the player exists and wasm is initialised (safe to load/play). */
+  /**
+   * Resolves when the player exists and wasm is initialised (safe to load/play).
+   * Rejects if the element can never become ready — wasm init failed, or the
+   * element was disconnected (or a newer connect superseded this one) while it
+   * was still initialising. It always settles, so `await el.ready` cannot hang.
+   */
   public get ready(): Promise<void> {
     return this._readyPromise;
   }
@@ -71,7 +76,15 @@ export class SSPlayerElement extends HTMLElement {
 
   async connectedCallback(): Promise<void> {
     if (!this._canvas) this.buildDom();
-    this._readyPromise = new Promise<void>((resolve) => { this._readyResolve = resolve; });
+    // Captured as locals, not fields: a re-connect installs a fresh promise, and
+    // this cycle must still be able to settle the one it handed out.
+    let readyResolve!: () => void;
+    let readyReject!: (reason: unknown) => void;
+    this._readyPromise = new Promise<void>((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+    // Awaiting `ready` is optional (declarative hosts never do), so keep a failed
+    // init from surfacing as an unhandled rejection. Callers that DO await it
+    // still get the rejection — this only marks the promise as handled.
+    this._readyPromise.catch(() => {});
 
     const token = ++this._loadToken;
     try {
@@ -81,7 +94,12 @@ export class SSPlayerElement extends HTMLElement {
       // bundler-resolved default. Only the first element to connect actually runs
       // init; later elements reuse the cached promise (their `wasm` is ignored).
       await ensureWasm(this.getAttribute('wasm') ?? _defaultWasmUrl ?? undefined);
-      if (token !== this._loadToken || !this.isConnected) return;
+      if (token !== this._loadToken || !this.isConnected) {
+        // No player will be built for this cycle, so `ready` must not be left
+        // pending forever — a caller awaiting it would hang with no error.
+        readyReject(new Error('<ss-player>: disconnected before it became ready.'));
+        return;
+      }
 
       this.createPlayer();
       this.applyResize();
@@ -91,12 +109,14 @@ export class SSPlayerElement extends HTMLElement {
       this._resizeObserver = new ResizeObserver(() => this.applyResize());
       this._resizeObserver.observe(this);
 
-      this._readyResolve?.();
-      this._readyResolve = null;
+      readyResolve();
 
       const src = this.getAttribute('src');
       if (src) await this.loadSrc(src, token);
     } catch (err) {
+      // A no-op once `ready` has resolved (a later loadSrc failure only emits
+      // the DOM event); before that it reports the init failure to the awaiter.
+      readyReject(err);
       this.dispatchEvent(new CustomEvent('error', { detail: err }));
     }
   }
@@ -183,7 +203,10 @@ export class SSPlayerElement extends HTMLElement {
       maxDPR: this.numAttr('max-dpr'),
       powerPreference: this.powerAttr(),
       antialias: this.hasAttribute('antialias'),
-      pauseWhenHidden: this.hasAttribute('pause-when-hidden'),
+      // Tri-state: the facade default is ON, so an absent attribute must pass
+      // `undefined` (inherit) rather than a `false` that would switch the
+      // gating off — opt out explicitly with pause-when-hidden="false".
+      pauseWhenHidden: this.boolAttr('pause-when-hidden'),
       backgroundColor: this.colorAttr('background'),
     };
     this._player = new SSCanvasPlayer(this._canvas!, options);
@@ -252,6 +275,17 @@ export class SSPlayerElement extends HTMLElement {
     this.dispatchEvent(new CustomEvent(type, { detail }));
   }
 
+  /**
+   * Read an opt-out boolean attribute: absent → `undefined` (keep the option's
+   * own default), `="false"` → false, present in any other form (including the
+   * bare attribute) → true. Plain `hasAttribute` can only express default-off.
+   */
+  private boolAttr(name: string): boolean | undefined {
+    const v = this.getAttribute(name);
+    if (v === null) return undefined;
+    return v.trim().toLowerCase() !== 'false';
+  }
+
   private numAttr(name: string): number | undefined {
     const v = this.getAttribute(name);
     if (v === null) return undefined;
@@ -278,7 +312,15 @@ export class SSPlayerElement extends HTMLElement {
 // underlying init promise too, but this avoids re-compiling an ArrayBuffer per element).
 let _wasmInit: Promise<void> | null = null;
 function ensureWasm(wasm?: string): Promise<void> {
-  if (!_wasmInit) _wasmInit = SSCanvasPlayer.initialize(wasm);
+  if (!_wasmInit) {
+    // Cache the success only: a failed init (bad URL, offline) must stay
+    // retryable, or the next element to connect would inherit the same
+    // rejection forever. Matches initializeWasm() in the core.
+    _wasmInit = SSCanvasPlayer.initialize(wasm).catch((e) => {
+      _wasmInit = null;
+      throw e;
+    });
+  }
   return _wasmInit;
 }
 

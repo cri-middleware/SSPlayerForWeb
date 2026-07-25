@@ -73,6 +73,8 @@ el.play();
 
 Observed attributes (`src`, `animation`, `speed`) react live; construction-time options (`max-dpr`, `power-preference`, `antialias`, `stencil`, `pause-when-hidden`) are read once at connect. Player events are re-dispatched as DOM `CustomEvent`s.
 
+`pause-when-hidden` is **on by default** — the ticker stops while the canvas is off-screen or the tab is backgrounded. Turn it off with `pause-when-hidden="false"`.
+
 > **Why call `defineSSPlayerElement()` yourself?** The element is deliberately
 > **not** auto-registered on import, so the package keeps its `sideEffects: false`
 > tree-shaking contract (see [Entry points](#entry-points)). One call registers

@@ -113,6 +113,23 @@ describe('MaskPlanner', () => {
         expect(p.bit[MAX_MASK_WRITERS - 1]).toBe(MAX_MASK_WRITERS - 1);
     });
 
+    it('flags exceeded on truncation even when the finalized count falls below the cap', () => {
+        const p = new MaskPlanner();
+        // 30 candidates: selection stops at 24 (6 dropped), then pass 2 filters
+        // the 10 inert ones. The surviving count says nothing about truncation.
+        const parts = Array.from({ length: MAX_MASK_WRITERS + 6 }, (_, i) => i);
+        const inert = Object.fromEntries(parts.slice(0, 10).map(i => [i, { mask: 0 }]));
+        expect(p.plan(makeSource([{ kind: DrawBatchKind.Mask, parts }], inert))).toBe(MAX_MASK_WRITERS - 10);
+        expect(p.exceeded).toBe(true);
+    });
+
+    it('does not flag exceeded when exactly MAX_MASK_WRITERS writers fit', () => {
+        const p = new MaskPlanner();
+        const parts = Array.from({ length: MAX_MASK_WRITERS }, (_, i) => i);
+        expect(p.plan(makeSource([{ kind: DrawBatchKind.Mask, parts }]))).toBe(MAX_MASK_WRITERS);
+        expect(p.exceeded).toBe(false); // full, but nothing was dropped
+    });
+
     it('plans multiple writers with distinct bits', () => {
         const p = new MaskPlanner();
         const src = makeSource([{ kind: DrawBatchKind.Mask, parts: [10, 11, 12] }]);

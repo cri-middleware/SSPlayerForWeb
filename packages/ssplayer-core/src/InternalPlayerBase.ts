@@ -311,9 +311,32 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // completion (is_finished stays latched until play/setup).
         this._prevFinished = false;
 
-        // Restarting playback should also reset independent slots (effects and instances)
-        this.setupInstanceChildren();
+        // Restarting playback should also reset independent slots (effects and
+        // instances). Reset them IN PLACE: rebuilding the children here
+        // (setupInstanceChildren) would destroy every child player, and a child's
+        // destroy() runs stop() against the audioManager it SHARES with this
+        // player — silently cutting the parent's own sound on every replay — as
+        // well as invalidating any player the host took from getInstanceChild().
+        this.resetInstanceSlots();
         this.setupEffectChildren();
+    }
+
+    /**
+     * Re-arm the instance slots (and, recursively, each child's own slots) for a
+     * replay, without touching the child players themselves: a fresh
+     * InstanceSlotHandle is the runtime's reset for one instance part's playback
+     * state. Rebuilding the child players is `setupInstanceChildren`'s job, and
+     * belongs to setAnimation alone — see {@link play}.
+     */
+    private resetInstanceSlots() {
+        this._instanceChildren.forEach(child => {
+            try { child.slot.destroy(); } catch { /* ignore */ }
+            child.slot = new InstanceSlotHandle();
+            child.visible = false;
+            child.player._prevFinished = false;
+            child.player.resetInstanceSlots();
+            child.player.setupEffectChildren();
+        });
     }
 
     /**
@@ -392,9 +415,17 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Sets the coordinate system for the runtime.
+     *
+     * Propagates to the instance children (each sub-animation is its own runtime
+     * context): they inherit the system once, when they are created, so without
+     * this a later switch would flip the root animation while every instance part
+     * kept rendering mirrored. Mirrors {@link subFrameEnabled}.
      */
     public setCoordinateSystem(system: WebCoordinateSystem) {
         this.runtimeManager.setCoordinateSystem(system);
+        this._instanceChildren.forEach(child => {
+            child.player.setCoordinateSystem(system);
+        });
     }
 
     // --- Playback Control Methods ---
@@ -676,7 +707,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * it would be.
      */
     public getPartTransform(part: number | string, out?: Float32Array): Float32Array | null {
-        const index = this.resolvePartIndex(part);
+        const index = this.resolveKnownPartIndex(part);
         if (index < 0) return null;
         return this.runtimeManager.getWorldMatrix2D(index, out);
     }
@@ -689,7 +720,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * force-hide.
      */
     public isPartHidden(part: number | string): boolean | null {
-        const index = this.resolvePartIndex(part);
+        const index = this.resolveKnownPartIndex(part);
         if (index < 0) return null;
         const frameData = this.runtimeManager.getFrameData(Math.floor(this.getFrame()));
         // The frame's parts vector is num_parts long, ordered by part index
@@ -702,6 +733,20 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private resolvePartIndex(part: number | string): number {
         if (typeof part === 'string') return this.findPartIndex(part);
         return Number.isInteger(part) && part >= 0 ? part : -1;
+    }
+
+    /**
+     * {@link resolvePartIndex} for the read-out path, which additionally bounds a
+     * numeric index against the parts table: those methods index the runtime's
+     * per-part buffers directly, so an out-of-range part would read past the view
+     * and yield NaN instead of the documented `null`. The override calls need no
+     * such check — the runtime validates the index itself and `applyOverride`
+     * reports its rejection as false.
+     */
+    private resolveKnownPartIndex(part: number | string): number {
+        if (typeof part === 'string') return this.findPartIndex(part);
+        if (!Number.isInteger(part) || part < 0) return -1;
+        return part < this.runtimeManager.getPartsCount() ? part : -1;
     }
 
     /**
