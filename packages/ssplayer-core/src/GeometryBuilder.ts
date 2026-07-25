@@ -218,6 +218,9 @@ export class GeometryBuilder {
         // no-PartColor path it becomes the corner alpha so output alpha is
         // texColor.a * vColor.a with the parent chain applied once via mesh.alpha.
         const stateAlpha = hasParts ? raw.partAlpha(partIdx) : 1;
+        // Per-part, not per-vertex: hoisted out of the loop below like every other
+        // part-level read here (a 64-vertex star re-read this 64 times per frame).
+        const hasCell = hasParts && raw.partCell(partIdx) >= 0;
 
         // Corner colors/rates live in shared scratch ([LT,RT,LB,RB] × rgba);
         // the per-vertex loop below interpolates them as scalars.
@@ -289,7 +292,7 @@ export class GeometryBuilder {
                 outPositions[v * 2 + 1] = wy;
             }
 
-            if (hasParts && raw.partCell(partIdx) >= 0) {
+            if (hasCell) {
                 const uvBase = partIdx * 10;
                 const tlU = uvData[uvBase + 2]; const tlV = uvData[uvBase + 3];
                 const trU = uvData[uvBase + 4]; const trV = uvData[uvBase + 5];

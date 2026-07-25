@@ -74,6 +74,8 @@ el.play();
 
 監視される属性(`src`、`animation`、`speed`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`stencil`、`pause-when-hidden`)は接続時に一度だけ読み取られます。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。
 
+`pause-when-hidden` は **既定で有効** です(キャンバスが画面外にある間やタブが非アクティブな間はティッカーを停止します)。無効にするには `pause-when-hidden="false"` を指定してください。
+
 > **なぜ `defineSSPlayerElement()` を自分で呼ぶのか?** この要素はインポート時に
 > 意図的に **自動登録されません**。これにより、パッケージの `sideEffects: false`
 > というツリーシェイク契約が保たれます([エントリーポイント](#エントリーポイント)参照)。

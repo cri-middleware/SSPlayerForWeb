@@ -36,6 +36,14 @@ export async function initializeWasm(
         initPromise = init({ module_or_path: wasmUrl }).then(output => {
             wasmMemory = output.memory;
             return output;
+        }).catch(e => {
+            // Only a SUCCESSFUL init is cached. Caching the rejection too would
+            // poison the module for the lifetime of the page: a transient fetch
+            // failure would make every later call (a host retry, or a second
+            // player created after the network recovered) return that same
+            // rejected promise and never start.
+            initPromise = null;
+            throw e;
         });
     }
     return initPromise;
@@ -177,9 +185,15 @@ export class SSRuntimeManager {
 
         this.currentAnimationFps = this.context.get_fps();
 
-        // Reset per-animation event-resolution caches; repopulated below.
+        // Reset every per-animation cache; repopulated below. All of them must be
+        // dropped here, not just before a successful walk: on the early return
+        // below (no resource) or on a throw (caught at the bottom), leftovers from
+        // the PREVIOUS animation would be read against the new animation's part
+        // indices — wrong mask polarity, and effect slots bound to the wrong parts.
         this.currentAnimationIndex = -1;
         this.partNames = null;
+        this.partMaskFlags = null;
+        this.effectPartRefs = [];
 
         if (!this.resource) return;
 

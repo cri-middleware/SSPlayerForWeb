@@ -203,6 +203,14 @@ export class SSWebGLRenderer {
       this._whiteTex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, this._whiteTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+      // Required, not cosmetic: the default TEXTURE_MIN_FILTER is
+      // NEAREST_MIPMAP_LINEAR, so a single-level texture is mipmap-INCOMPLETE and
+      // samples as opaque black — every fallback below would draw black instead of
+      // white (a colour-only Shape part, a missing effect/mask cutout atlas).
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     }
     return this._whiteTex;
   }
@@ -434,9 +442,11 @@ export class SSWebGLRenderer {
       const invW = texInfo ? 1.0 / texInfo.width : 1.0;
       const invH = texInfo ? 1.0 / texInfo.height : 1.0;
 
-      const meshVOff = player.runtimeManager.getMeshVertexOffsets();
-      const meshIOff = player.runtimeManager.getMeshIndexOffsets();
-      const shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
+      // Re-fetched after instance recursion together with fd/drawOrder — the
+      // WasmViewCache hands back the same view unless memory grew (see below).
+      let meshVOff = player.runtimeManager.getMeshVertexOffsets();
+      let meshIOff = player.runtimeManager.getMeshIndexOffsets();
+      let shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
 
       const startRank = b.startRank();
       const count = b.count();
@@ -725,9 +735,15 @@ export class SSWebGLRenderer {
             gl.stencilMask(0xFF);
           }
 
-          // Re-fetch WASM views in case the child's rendering grew WASM memory.
+          // Re-fetch WASM views in case the child's rendering grew WASM memory —
+          // a grow detaches the ArrayBuffer these views point into, and the next
+          // masked child in this batch feeds them straight to syncMasksTo /
+          // buildOnePart (a detached view reads as undefined, i.e. NaN counts).
           fd = player.runtimeManager.getFrameData(frameNo)!;
           drawOrder = fd.drawOrderArray()!;
+          meshVOff = player.runtimeManager.getMeshVertexOffsets();
+          meshIOff = player.runtimeManager.getMeshIndexOffsets();
+          shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
 
           // Restore this context's program state after the child rebound it.
           gl.useProgram(this.partsColorProgram.program);

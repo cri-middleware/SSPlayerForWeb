@@ -121,6 +121,12 @@ export class SSCanvasPlayer {
   private lastTime: number = 0;
   private _wantTicker: boolean = false;
   private _isPlaying: boolean = false;
+  // Whether the player is live at all — set by play()/resume(), cleared by
+  // stop(). A PAUSED player stays live (`_isPlaying` false, `_isLive` true) so
+  // update() keeps being forwarded: the core advances `independent` effect /
+  // instance slots on the real delta while the timeline is frozen. Gating
+  // update() on `_isPlaying` alone would freeze those too.
+  private _isLive: boolean = false;
 
   // --- Visibility gating (pauseWhenHidden) ---
   // Whether the canvas currently intersects the viewport. Starts true so hosts
@@ -294,6 +300,7 @@ export class SSCanvasPlayer {
   public play(startFrame?: number): void {
     this.internalPlayer.play(startFrame);
     this._isPlaying = true;
+    this._isLive = true;
   }
 
   public pause(): void {
@@ -304,11 +311,13 @@ export class SSCanvasPlayer {
   public resume(): void {
     this.internalPlayer.resume();
     this._isPlaying = true;
+    this._isLive = true;
   }
 
   public stop(): void {
     this.internalPlayer.stop();
     this._isPlaying = false;
+    this._isLive = false;
   }
 
   public get frame(): number { return this.internalPlayer.getFrameNo(); }
@@ -491,18 +500,19 @@ export class SSCanvasPlayer {
   }
 
   public update(deltaMs: number): void {
-    if (!this._isPlaying) return;
+    if (!this._isLive) return;
     // While paused, internalPlayer.update() still advances `independent` slots but
-    // does NOT move the timeline, so no events are passed — skip polling then.
+    // does NOT move the timeline, so no events are passed and no frame is reached —
+    // skip polling and the per-frame listeners then.
     const pausing = this.internalPlayer.isPausing;
     this.internalPlayer.update(deltaMs);
-    if (!pausing) {
-      // Drain the events accumulated by this update (user-data / signal / audio +
-      // animation end/loop) right away, while the runtime's passed-event buffer is
-      // still valid. Must run on the same tick that advanced — including the tick a
-      // non-looping animation finishes on.
-      this.pollEvents();
-    }
+    if (pausing) return;
+
+    // Drain the events accumulated by this update (user-data / signal / audio +
+    // animation end/loop) right away, while the runtime's passed-event buffer is
+    // still valid. Must run on the same tick that advanced — including the tick a
+    // non-looping animation finishes on.
+    this.pollEvents();
 
     // World matrices are final for this frame: notify per-frame listeners (the
     // point getPartTransform is valid for the new frame).

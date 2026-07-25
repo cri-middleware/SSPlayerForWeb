@@ -46,7 +46,10 @@ export class SSWebGLResourceManager implements IResourceManager {
         this.createTextureFromSource(img, hash, img.width, img.height);
         resolve();
       };
-      img.onerror = reject;
+      // `img.onerror` is handed a bare DOM Event, which surfaces to the host as
+      // an "Uncaught (in promise) Event" with no message and no indication of
+      // which atlas failed — reject with a real Error naming the URL instead.
+      img.onerror = () => reject(new Error(`[SSWebGLResourceManager] Failed to load texture: ${url}`));
       img.src = url;
     });
   }
@@ -65,10 +68,17 @@ export class SSWebGLResourceManager implements IResourceManager {
 
     gl.bindTexture(gl.TEXTURE_2D, tex);
 
-    // Premultiplied alpha is essential for SS
+    // Premultiplied alpha is essential for SS. UNPACK_PREMULTIPLY_ALPHA_WEBGL is
+    // CONTEXT state, not texture state, so restore whatever the host had: in a
+    // shared context (RPG Maker MZ / PIXI) leaving it set makes the host's next
+    // upload of an already-premultiplied atlas premultiply a second time, and its
+    // sprites render darkened.
+    const prevPremultiply = gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, prevPremultiply);
 
     // NPOT textures require CLAMP_TO_EDGE and no mipmap in WebGL1
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);

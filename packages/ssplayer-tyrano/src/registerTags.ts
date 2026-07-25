@@ -84,20 +84,27 @@ function bool(value: unknown, fallback: boolean): boolean {
 
 // Part-override attributes are written by hand in a scenario, so the tags take
 // readable words as well as the raw runtime numbers.
-const BLEND_OPS: Record<string, number> = { mix: 0, mul: 1, multiply: 1, add: 2, sub: 3, subtract: 3 };
-const PRIORITIES: Record<string, number> = { keyframe: 0, anime: 1, animation: 1, permanent: 2 };
+// Maps, not object literals: a plain object would resolve inherited keys, so
+// blend="constructor" (or "__proto__") would pass the "is it a known name?"
+// check and hand a function to the runtime instead of falling back to num().
+const BLEND_OPS = new Map<string, number>([
+  ['mix', 0], ['mul', 1], ['multiply', 1], ['add', 2], ['sub', 3], ['subtract', 3],
+]);
+const PRIORITIES = new Map<string, number>([
+  ['keyframe', 0], ['anime', 1], ['animation', 1], ['permanent', 2],
+]);
 
 /** `blend="mul"` (or `blend="1"`) → the runtime's blend-op number. */
 function blendOp(value: unknown): SSBlendOp {
   const key = String(value ?? '').trim().toLowerCase();
-  const named = BLEND_OPS[key];
+  const named = BLEND_OPS.get(key);
   return (named !== undefined ? named : num(value, 0)) as SSBlendOp;
 }
 
 /** `priority="permanent"` (or `priority="2"`) → the runtime's priority number. */
 function priorityMode(value: unknown): SSOverridePriority {
   const key = String(value ?? '').trim().toLowerCase();
-  const named = PRIORITIES[key];
+  const named = PRIORITIES.get(key);
   return (named !== undefined ? named : num(value, 1)) as SSOverridePriority;
 }
 

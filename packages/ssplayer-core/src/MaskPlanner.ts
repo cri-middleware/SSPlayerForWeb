@@ -91,14 +91,22 @@ export class MaskPlanner {
         //   clipping    — drawn parts with mask_write (no twin batch emitted),
         //                 detected via the static PartData flags; mask_influence
         //                 doubles as the OP, and they scope FORWARD.
+        // `truncated` is latched HERE, the only place writers are actually
+        // dropped: a candidate was selected but there was no room left for it.
+        // It cannot be inferred from the finalized count below, which pass 2
+        // shrinks by dropping inert/degenerate writers (that count reaching the
+        // cap does not mean anything was lost, and falling short of it does not
+        // mean nothing was).
         let cand = 0;
+        let truncated = false;
         const nb = src.drawBatchCount();
-        for (let i = 0; i < nb && cand < MAX_MASK_WRITERS; i++) {
+        for (let i = 0; i < nb && !truncated; i++) {
             src.readBatch(i, b);
             const texHash = b.textureHash >>> 0;
             if (b.kind === DrawBatchKind.Mask) {
                 const opInvert = (b.flags & 0x01) !== 0 ? 1 : 0;
-                for (let c = 0; c < b.count && cand < MAX_MASK_WRITERS; c++) {
+                for (let c = 0; c < b.count; c++) {
+                    if (cand >= MAX_MASK_WRITERS) { truncated = true; break; }
                     const partIdx = src.drawOrderAt(b.startRank + c);
                     sel[cand * 4 + 0] = partIdx;
                     sel[cand * 4 + 1] = b.startRank + c;
@@ -108,12 +116,13 @@ export class MaskPlanner {
                     cand++;
                 }
             } else if (b.kind === DrawBatchKind.Normal || b.kind === DrawBatchKind.Shape || b.kind === DrawBatchKind.Mesh) {
-                for (let c = 0; c < b.count && cand < MAX_MASK_WRITERS; c++) {
+                for (let c = 0; c < b.count; c++) {
                     const partIdx = src.drawOrderAt(b.startRank + c);
                     const mf = src.maskFlag(partIdx);
                     // mask_write drawn part = clipping writer (draw_as_mask parts
                     // are pure masks, emitted via Mask batches above).
                     if ((mf & 0x02) === 0 || (mf & 0x08) !== 0) continue;
+                    if (cand >= MAX_MASK_WRITERS) { truncated = true; break; }
                     sel[cand * 4 + 0] = partIdx;
                     sel[cand * 4 + 1] = b.startRank + c;
                     sel[cand * 4 + 2] = (mf & 0x04) !== 0 ? 1 : 0;
@@ -173,7 +182,7 @@ export class MaskPlanner {
         }
 
         this.count = count;
-        this.exceeded = count >= MAX_MASK_WRITERS;
+        this.exceeded = truncated;
         return count;
     }
 }
