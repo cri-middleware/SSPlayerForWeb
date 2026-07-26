@@ -7,7 +7,7 @@
 npm で公開されています。
 
 ```bash
-pnpm add @spritestudio/ssplayer-webgl
+pnpm add @spritestudio/ssplayer-webgl@beta
 ```
 
 ## ポイント

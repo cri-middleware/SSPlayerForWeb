@@ -5,8 +5,10 @@
 Engine-agnostic WebAssembly core for the **SpriteStudio 7** player.
 
 > **Who this is for:** developers building their own renderer / advanced integrators — the engine-agnostic WASM playback core to bind a new engine onto.
-> **Install:** `npm install @spritestudio/ssplayer-core`
+> **Install:** `npm install @spritestudio/ssplayer-core@beta`
 > **Not what you need?** → [ssplayer-pixi](../ssplayer-pixi) / [ssplayer-webgl](../ssplayer-webgl) — drop-in renderers if you just want to render animations.
+
+> **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
 

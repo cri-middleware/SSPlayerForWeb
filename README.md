@@ -166,14 +166,23 @@ Changes that don't need a release (docs, CI, refactors) need no changeset — us
 
 The workflow then, in one shot:
 
+- builds and tests everything up front — an npm version is immutable, so a red build must stop the release before anything is versioned or uploaded,
 - consumes the accumulated changesets → bumps each package's version + `CHANGELOG.md`,
-- commits that to `main`,
+- rewrites the version-pinned CDN snippets in the READMEs / docs / `examples/cdn` to match (`scripts/sync-doc-versions.mjs`), and commits that together with the bump,
 - fetches the WASM and builds every package (the per-package `prepack` guard refuses to publish a package whose `dist`/`wasm` is missing),
 - publishes the public packages to npm and pushes the per-package git tags (`@spritestudio/…@x.y.z`).
 
-If no changesets are pending, the run is a no-op. Afterwards the docs/demo site rebuilds automatically ([`pages.yml`](./.github/workflows/pages.yml) chains on the Release run).
+**No changesets pending is not a no-op.** `changeset publish` compares every package against the registry and ships whatever is missing, so a dispatch with nothing to version still performs the *first* release of the current versions — and recovers a run that died between publishing and pushing. Only "everything already on npm" is a true no-op.
 
-> **Pin the WASM to the player version.** The `.wasm` and its JS glue share an ABI, so CDN consumers must use the same exact version for the `ssplayer-core` `.wasm` and the player bundle (see each package's "Use from a CDN" section).
+Afterwards the docs/demo site rebuilds automatically ([`pages.yml`](./.github/workflows/pages.yml) chains on the Release run).
+
+### Prerelease (beta) line
+
+`.changeset/pre.json` puts the repo in Changesets **pre mode**: `changeset version` produces `X.Y.Z-beta.N` and publishes under the `beta` dist-tag. There is therefore **no `latest` tag** while the line is open — `npm install @spritestudio/ssplayer-webgl` fails and consumers must ask for `@beta`, which is what the package READMEs say. End the line with `pnpm changeset pre exit`, then release: that ships `X.Y.Z` to `latest`, and the `@beta` in the install instructions can drop away.
+
+> **Provenance is off** while the repository is private — npm rejects an attested publish from a private repo. Flip `NPM_CONFIG_PROVENANCE` back to `'true'` in `release.yml` the moment it goes public.
+
+> **CDN version pairs are not required to be equal.** The `.wasm` and its JS glue share an ABI, so both URLs need an exact version — but packages release independently, so `ssplayer-webgl@7.0.1` may legitimately pair with `ssplayer-core@7.0.0`. Don't hand-edit these pins; `pnpm run sync:docs` derives them from the manifests (and `pnpm run check:docs` reports drift without writing).
 
 ### Manual fallback
 

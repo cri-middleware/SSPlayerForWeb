@@ -5,8 +5,10 @@
 **SpriteStudio 7** プレイヤーのためのエンジン非依存な WebAssembly コアです。
 
 > **対象読者:** 自分でレンダラーを作る開発者 / 上級インテグレーター — 新しいエンジンをバインドするための、エンジン非依存な WASM 再生コアです。
-> **インストール:** `npm install @spritestudio/ssplayer-core`
+> **インストール:** `npm install @spritestudio/ssplayer-core@beta`
 > **目的が違う場合:** → [ssplayer-pixi](../ssplayer-pixi) / [ssplayer-webgl](../ssplayer-webgl) — アニメーションを描画したいだけなら、すぐ使えるレンダラーをどうぞ。
+
+> **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
 

@@ -33,17 +33,28 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./lite": {
-      "import": "./dist/lite.js",
-      "types": "./dist/lite.d.ts"
+      "types": "./dist/lite.d.ts",
+      "import": "./dist/lite.js"
     },
     "./element": {
-      "import": "./dist/element.js",
-      "types": "./dist/element.d.ts"
+      "types": "./dist/element.d.ts",
+      "import": "./dist/element.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "//typesVersions": "TypeScript only reads `exports` under moduleResolution bundler/node16+. Projects still on the legacy `\"node\"` resolution (common even when the bundler itself is Vite, which resolves the runtime import fine) would fail to find the ./lite and ./element subpaths. This maps them the old way so those projects typecheck.",
+  "typesVersions": {
+    "*": {
+      "lite": ["./dist/lite.d.ts"],
+      "element": ["./dist/element.d.ts"]
     }
+  },
+  "engines": {
+    "node": ">=20"
   },
   "files": [
     "dist",

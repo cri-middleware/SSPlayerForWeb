@@ -14,7 +14,7 @@
 | [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | 未公開（現状はソースからビルドしてローカル起動。公開後は GitHub Pages でホスト 🚧） |
 | [`SSConverterGUI`](#ssconvertergui-デスクトップguiツール) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
-| [`@spritestudio/ssconverter-core`](#ssconverter-core-ライブラリ-自作アプリへの組み込み) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core` |
+| [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-ライブラリ-自作アプリへの組み込み) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
 
 全体の流れは [トップページの概要図](/ja/#概要-sspj-描画まで) を参照してください。
 
@@ -140,7 +140,7 @@ TypeScript API を被せたもので、これ単体は npm で公開していま
 （`ssconverter-web` のブラウザ UI と Node CLI もこのコアの上に載っています）。
 
 ```bash
-npm i @spritestudio/ssconverter-core
+npm i @spritestudio/ssconverter-core@beta
 ```
 
 ```ts

@@ -10,7 +10,11 @@ name: Release
 #                         package (wasm fetched first), publish the PUBLIC ones to
 #                         npm (per-package `prepack` guard refuses a package whose
 #                         dist/wasm is missing), and push the commit + per-package
-#                         tags. No changesets pending -> this half is a no-op.
+#                         tags. No changesets pending is NOT a no-op: `changeset
+#                         publish` still ships any package whose CURRENT version is
+#                         absent from the registry, which is what makes the very
+#                         first release (and a retry after a half-failed one)
+#                         possible. Everything already published -> no-op.
 #
 #   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyrano) are
 #                         never on npm, so GitHub Releases are their only channel.
@@ -25,6 +29,13 @@ name: Release
 # npm only (cut the plugin Releases later with publish_npm=false + release_plugins
 # =true). Hold a plugin persistently by adding it to `ignore` in
 # .changeset/config.json instead.
+#
+# Prerelease lines are handled by changesets' pre mode (`.changeset/pre.json`):
+# while it is active, `changeset version` produces `X.Y.Z-<tag>.N` and publishes
+# under that dist-tag instead of `latest`. Note this applies to a brand-new
+# package too, so while pre mode is on there is NO `latest` tag and
+# `npm install <pkg>` fails — consumers must ask for `<pkg>@<tag>` until
+# `pnpm changeset pre exit` + a release ends the line.
 #
 # Runs on `main` only: the version-bump commit, the tags, and the published
 # code all follow whichever ref the workflow is dispatched from, so a release
@@ -76,12 +87,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Gate the whole release on a green build + test run. An npm version is
+      # immutable once published, so this must fail BEFORE anything is versioned
+      # or uploaded. `build` doubles as the typecheck (tsdown emits .d.ts, which
+      # fails on type errors); `test` needs the wasm, hence download:wasm first.
+      # ci:publish re-runs download+build afterwards against the bumped versions
+      # — the duplicate work is a few seconds and keeps the publish self-contained.
+      - name: Verify (build + test)
+        run: |
+          pnpm run download:wasm
+          pnpm run build
+          pnpm run test
+
       - name: Version, publish (npm) and release plugins (GitHub Releases)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SS_NPM_TOKEN }}
-          # npm provenance attestation (needs a public repo + id-token: write).
-          # Remove this line if a publish ever errors on provenance.
-          NPM_CONFIG_PROVENANCE: 'true'
+          # npm provenance attestation needs a PUBLIC repository (plus the
+          # id-token: write permission above, which is already granted). This
+          # repo is still private, and npm rejects the publish outright rather
+          # than degrading, so provenance stays off. Flip to 'true' the moment
+          # the repo goes public — nothing else has to change.
+          NPM_CONFIG_PROVENANCE: 'false'
           # gh CLI auth for the plugin GitHub Releases (contents: write above).
           GH_TOKEN: ${{ github.token }}
           PUBLISH_NPM: ${{ inputs.publish_npm }}
@@ -97,20 +123,43 @@ jobs:
           if [ "$PUBLISH_NPM" = "true" ]; then
             # Consume accumulated changesets -> bump versions + CHANGELOG.
             pnpm changeset version
+
+            # Repoint the version-pinned CDN/esm.sh snippets in the READMEs, the
+            # docs site and examples/cdn at whatever the manifests now say. These
+            # exist to be copy-pasted, and versions move independently per package,
+            # so without this a release that bumps one package leaves every snippet
+            # naming it pointing at a version that no longer pairs correctly.
+            # Runs before the status check below so the rewrite lands in the same
+            # commit as the bump.
+            node scripts/sync-doc-versions.mjs
+
+            # An empty tree here only means "no version changed" — it does NOT
+            # mean "nothing to publish". `changeset publish` compares each
+            # package against the registry and ships whatever is missing, which
+            # is how the FIRST release goes out (versions already committed, no
+            # changeset to consume) and how a run that died between publish and
+            # `git push` recovers. So always fall through to publish.
+            bumped=0
             if [ -n "$(git status --porcelain)" ]; then
               # Commit the bump (new CHANGELOG.md files are untracked, so add -A).
               git add -A
               git commit -m "chore: release packages"
-              # ci:publish = download:wasm && build && changeset publish.
-              pnpm run ci:publish
-              built=1
-              # changeset creates lightweight tags; push them explicitly
-              # (--follow-tags would only push annotated ones).
-              git push origin HEAD:main
-              git push origin --tags
+              bumped=1
             else
-              echo "::notice::No changesets pending — nothing to publish to npm."
+              echo "::notice::No changesets pending — publishing the current versions as-is (no-op if already on npm)."
             fi
+
+            # ci:publish = download:wasm && build && changeset publish.
+            pnpm run ci:publish
+            built=1
+
+            # Push the bump commit first (only when there was one), then the
+            # per-package tags changeset created for what it actually published.
+            # They are lightweight tags, so --follow-tags would skip them.
+            if [ "$bumped" = "1" ]; then
+              git push origin HEAD:main
+            fi
+            git push origin --tags
           else
             echo "::notice::publish_npm=false — skipping npm version bump & publish."
           fi

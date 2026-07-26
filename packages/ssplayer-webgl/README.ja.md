@@ -7,8 +7,10 @@
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
 
 > **対象読者:** フレームワークを使わない Web 開発者 — SpriteStudio プレイヤーを任意のページに、`<ss-player>` という HTML タグ 1 つ、または `SSCanvasPlayer` の JS API で、ランタイム依存ゼロで組み込めます。
-> **インストール:** `npm install @spritestudio/ssplayer-webgl`
+> **インストール:** `npm install @spritestudio/ssplayer-webgl@beta`
 > **目的が違う場合:** → [パッケージ表](../../README.ja.md#-どのパッケージを使うか) — すでに PixiJS や RPG ツクール MZ を使っていますか? それ専用のレンダラーがあります。
+
+> **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
 ## ✨ なぜ素の WebGL で SpriteStudio なのか?
 
@@ -122,17 +124,23 @@ player.play();                       // drives itself via requestAnimationFrame
 行う自動パス解決が効きません。そのため URL を `SSCanvasPlayer.initialize(wasm)` に渡して
 ください。
 
-> **WASM は読み込むプレイヤーと同じバージョンに固定してください。** `.wasm` と JS グルー
-> は ABI を共有するため、片方だけ `@latest` にすると不整合が起こり得ます。`ssplayer-webgl`
-> のバンドルと `ssplayer-core` の `.wasm` の **両方** で正確なバージョン（例:
-> `@7.0.0-beta.1`）を指定してください。
+> **URL のペアは下記スニペットからそのままコピーし、手で組み立てないでください。**
+> `.wasm` と JS グルーは ABI を共有するため、両方の URL で正確なバージョンを指定する
+> 必要があります（片方だけ `@latest` にすると不整合が起こり得ます）。2つのバージョンは
+> **一致するとは限りません** — パッケージは独立してリリースされるため、
+> `ssplayer-webgl@7.0.1` が `ssplayer-core@7.0.0` と組むこともあります。本ドキュメントの
+> スニペットはリリースのたびに実際のマニフェストから書き換えられる
+> （`scripts/sync-doc-versions.mjs`）ので、記載のペアは常に有効な組み合わせです。
+> URL が未指定・到達不能な場合はプレイヤーが明示的なエラーをログに出し、
+> `<ss-player>` は描画されません。
 
 ### 宣言的 `<ss-player>` 要素 — JS 不要
 
 最も直接的な方法です。自己登録する専用バンドルを読み込むと `<ss-player>` カスタム要素が
 その場で定義され、マークアップだけでアニメーションが再生されます。クラシックな
 `<script>` ではランタイムを自動解決できないため、WASM の URL は **ページに1回だけ**
-`data-wasm`(script タグ)で指定します — 各 `<ss-player>` は省略できます。
+`data-wasm`(script タグ)で指定します — 各 `<ss-player>` は省略できます。2行まとめて
+コピーしてください（2つのバージョンは独立しており、一致するとは限りません）。
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ss-player.element.min.js"
@@ -147,6 +155,10 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
 1. **script タグの `data-wasm`** — ページに1回（上記）。JS 不要。
 2. **`SSWebGLPlayerElement.setSSPlayerWasmUrl(url)`** — 要素が接続される前に JS で1回。
 3. **個々の `<ss-player>` の `wasm="…"`** — その要素だけ既定値を上書き。
+
+指定を忘れると描画されませんが、無言ではありません。console に
+`[ss-player] WebAssembly runtime failed to initialise` と、渡すべき URL を示す
+メッセージが出ます。
 
 > ビルドツールを使う場合はこのバンドルは不要です — `import { defineSSPlayerElement }
 > from '@spritestudio/ssplayer-webgl/element'` して呼び出してください（tree-shaking 維持）。

@@ -118,4 +118,7 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-console.log(`✓ ${pkg.name}: publish artifacts present`);
+// stderr, not stdout: `npm pack --json` / `npm publish --json` emit their result
+// on stdout, and a prepack script writing there corrupts that JSON for anything
+// parsing it. The success line is progress output, so stderr is where it belongs.
+console.error(`✓ ${pkg.name}: publish artifacts present`);

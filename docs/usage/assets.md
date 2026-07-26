@@ -14,7 +14,7 @@ want to embed conversion itself into your own app, use the library
 | [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Unpublished (build from source and run locally for now; will be hosted on GitHub Pages once released 🚧) |
 | [`SSConverterGUI`](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
-| [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core` |
+| [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core@beta` |
 
 For the overall flow, see the [overview diagram on the home page](/#overview-from-sspj-to-rendering).
 
@@ -139,7 +139,7 @@ the same core runs in the browser, Node, a Web Worker, or an edge runtime
 (`ssconverter-web`'s browser UI and Node CLI both sit on top of this core).
 
 ```bash
-npm i @spritestudio/ssconverter-core
+npm i @spritestudio/ssconverter-core@beta
 ```
 
 ```ts

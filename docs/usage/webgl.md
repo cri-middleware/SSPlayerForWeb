@@ -10,7 +10,7 @@ frameworkless pages.
 It is published on npm.
 
 ```bash
-pnpm add @spritestudio/ssplayer-webgl
+pnpm add @spritestudio/ssplayer-webgl@beta
 ```
 
 ## Highlights

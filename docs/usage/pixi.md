@@ -7,7 +7,7 @@ together.
 ## Install
 
 ```bash
-pnpm add @spritestudio/ssplayer-pixi pixi.js
+pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
 ```
 
 `pixi.js@^8.19` is a peer dependency.

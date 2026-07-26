@@ -166,14 +166,23 @@ pnpm changeset          # パッケージと bump 種別(patch/minor/major)を�
 
 ワークフローが1回の実行で:
 
+- 最初に全体をビルド＆テスト（npm の版は immutable なので、失敗は版を上げる前・アップロード前に止める）、
 - 貯まった changeset を消費 → 各パッケージの版と `CHANGELOG.md` を更新、
-- それを `main` にコミット、
+- README / docs / `examples/cdn` のバージョン固定された CDN スニペットを追従（`scripts/sync-doc-versions.mjs`）し、版上げと同じコミットに含める、
 - WASM を取得し全パッケージをビルド（`prepack` ガードが `dist`/`wasm` 欠けのパッケージの publish を拒否）、
 - 公開パッケージを npm に publish し、パッケージ単位の git タグ（`@spritestudio/…@x.y.z`）を push。
 
-changeset が無ければ no-op。実行後、ドキュメント/デモサイトが自動で再ビルドされます（[`pages.yml`](./.github/workflows/pages.yml) が Release 実行に連鎖）。
+**changeset が無くても no-op ではありません。** `changeset publish` は各パッケージをレジストリと比較して未公開のものを publish するため、版上げが無い実行でも現在の版の**初回リリース**が行われます（publish 後 push 前に落ちた実行の復旧も同様）。真の no-op は「全部すでに npm にある」場合だけです。
 
-> **WASM はプレイヤーと同じ版に固定。** `.wasm` と JS グルーは ABI を共有するので、CDN 利用者は `ssplayer-core` の `.wasm` とプレイヤーバンドルで同一の正確な版を使ってください（各パッケージの「CDN から使う」節を参照）。
+実行後、ドキュメント/デモサイトが自動で再ビルドされます（[`pages.yml`](./.github/workflows/pages.yml) が Release 実行に連鎖）。
+
+### プレリリース（beta）ライン
+
+`.changeset/pre.json` により Changesets の **pre モード**が有効です。`changeset version` は `X.Y.Z-beta.N` を生成し、`beta` dist-tag で publish されます。したがってライン継続中は **`latest` タグが存在せず**、`npm install @spritestudio/ssplayer-webgl` は失敗します（各パッケージの README が案内しているとおり `@beta` 指定が必要）。`pnpm changeset pre exit` でラインを終了してリリースすると `X.Y.Z` が `latest` に出て、install 手順の `@beta` は不要になります。
+
+> **provenance は無効**です（リポジトリが private の間は npm が attested publish を拒否するため）。公開に切り替えたら `release.yml` の `NPM_CONFIG_PROVENANCE` を `'true'` に戻してください。
+
+> **CDN のバージョンのペアは一致している必要はありません。** `.wasm` と JS グルーは ABI を共有するので両方の URL に正確な版が必要ですが、パッケージは独立してリリースされるため `ssplayer-webgl@7.0.1` が `ssplayer-core@7.0.0` と組むのは正常です。手で編集せず `pnpm run sync:docs` でマニフェストから導出してください（`pnpm run check:docs` は書き換えずにズレを報告）。
 
 ### 手動フォールバック
 
