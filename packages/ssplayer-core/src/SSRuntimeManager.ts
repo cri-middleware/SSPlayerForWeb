@@ -32,6 +32,26 @@ export async function initializeWasm(
             'Catch this error to fall back (e.g. show a static image).'
         );
     }
+    // With no explicit source, the wasm-bindgen glue self-locates via
+    // `new URL('ssruntime_bg.wasm', import.meta.url)`. That only works where
+    // `import.meta.url` survives bundling — an ESM build. In an IIFE/classic
+    // <script> build there is no import.meta, so bundlers rewrite it to a stub
+    // whose `.url` is undefined and the glue throws a bare
+    // "Failed to construct 'URL': Invalid URL" that says nothing about wasm.
+    // Detect the situation up front and say what the caller actually has to do.
+    // ASCII only: this string ends up inside the IIFE bundles, which load through
+    // a classic <script>. A host that serves .js without `charset=utf-8` makes the
+    // browser decode the file as latin-1, and any non-ASCII byte here would show
+    // up mangled in the one message a stuck consumer has to go on.
+    if (wasmUrl === undefined && typeof (import.meta as { url?: unknown } | undefined)?.url !== 'string') {
+        throw new Error(
+            '[ssplayer-core] No WebAssembly URL given and the runtime cannot locate itself in this build ' +
+            '(a classic <script> / IIFE bundle has no import.meta.url). Pass the URL of ' +
+            "`ssruntime_bg.wasm` explicitly, e.g. initialize('https://cdn.jsdelivr.net/npm/" +
+            "@spritestudio/ssplayer-core@<version>/wasm/ssruntime_bg.wasm'), pinning the SAME version " +
+            'as the player bundle, since the two share a wasm ABI.'
+        );
+    }
     if (!initPromise) {
         initPromise = init({ module_or_path: wasmUrl }).then(output => {
             wasmMemory = output.memory;

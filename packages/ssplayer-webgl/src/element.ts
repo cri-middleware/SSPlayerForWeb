@@ -318,6 +318,13 @@ function ensureWasm(wasm?: string): Promise<void> {
     // rejection forever. Matches initializeWasm() in the core.
     _wasmInit = SSCanvasPlayer.initialize(wasm).catch((e) => {
       _wasmInit = null;
+      // Also log it. This failure is page-wide and fatal — nothing will ever
+      // render — but the only channels for it are the element's `error` event
+      // and `ready`, and a declarative page subscribes to neither. Worse, the
+      // event is dispatched from connectedCallback during parsing, so even a
+      // listener added in a <script> AFTER the tag can miss it. Without this
+      // line a forgotten wasm URL is a blank canvas and an empty console.
+      console.error('[ss-player] WebAssembly runtime failed to initialise. No <ss-player> will render.', e);
       throw e;
     });
   }
