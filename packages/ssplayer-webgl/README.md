@@ -7,8 +7,10 @@ Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio 7** pl
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
 
 > **Who this is for:** web developers with no framework — drop a SpriteStudio player into any page, either as a single `<ss-player>` HTML tag or via the `SSCanvasPlayer` JS API, with zero runtime dependencies.
-> **Install:** `npm install @spritestudio/ssplayer-webgl`
+> **Install:** `npm install @spritestudio/ssplayer-webgl@beta`
 > **Not what you need?** → [package table](../../README.md#-which-package-should-i-use) — already on PixiJS or RPG Maker MZ? there's a dedicated renderer for that.
+
+> **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
 ## ✨ Why SpriteStudio with plain WebGL?
 
@@ -120,17 +122,23 @@ The runtime is a separate `.wasm` file, and outside a bundler (a classic
 `<script>`, or any CDN context) the automatic path resolution bundlers rely on
 isn't available — so pass its URL to `SSCanvasPlayer.initialize(wasm)`.
 
-> **Pin the WASM to the same version as the player you load.** The `.wasm` and its
-> JS glue share an ABI, so a floating `@latest` on one and a pinned version on the
-> other can desync. Use an exact version (e.g. `@7.0.0-beta.1`) on **both** the
-> `ssplayer-webgl` bundle and the `ssplayer-core` `.wasm`.
+> **Copy the URL pair from a snippet below; don't assemble it by hand.** The
+> `.wasm` and its JS glue share an ABI, so both URLs must carry an exact version —
+> a floating `@latest` on one can desync it from the other. The two versions are
+> **not** necessarily identical: packages are released independently, so
+> `ssplayer-webgl@7.0.1` may well pair with `ssplayer-core@7.0.0`. The snippets
+> here are rewritten from the actual manifests on every release
+> (`scripts/sync-doc-versions.mjs`), so the pair as printed is always a valid one.
+> If the URL is missing or unreachable the player logs an explicit error and no
+> `<ss-player>` renders.
 
 ### Declarative `<ss-player>` element — no JS
 
 The most direct option: a separate self-registering bundle defines the `<ss-player>`
 custom element on load, so animations play straight from markup. A classic `<script>`
 can't self-locate the runtime, so give the WASM URL **once for the whole page** via
-`data-wasm` on the script tag — every `<ss-player>` then omits it.
+`data-wasm` on the script tag — every `<ss-player>` then omits it. Copy both lines
+as a unit (the two versions are independent and need not be equal).
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ss-player.element.min.js"
@@ -145,6 +153,10 @@ Three ways to supply the WASM URL (first match wins, per element):
 1. **`data-wasm` on the script tag** — once for the page (above). No JS.
 2. **`SSWebGLPlayerElement.setSSPlayerWasmUrl(url)`** — once in JS, before the elements connect.
 3. **`wasm="…"` on a single `<ss-player>`** — overrides the default for that element.
+
+Leave it out and nothing renders, but it fails loudly: the console gets
+`[ss-player] WebAssembly runtime failed to initialise` plus a message naming the URL
+you need to pass.
 
 > Bundling with a build tool? You don't need this bundle — `import { defineSSPlayerElement }
 > from '@spritestudio/ssplayer-webgl/element'` and call it (kept tree-shakeable). See

@@ -5,8 +5,10 @@
 OPTPiX SpriteStudio 7 のプロジェクト（`.sspj`）をランタイムバイナリ（`.ssab` / `.ssqb`）へ変換する、エンジン非依存な WebAssembly コアです。
 
 > **対象読者:** 自作のアプリ・サービス・Worker・ビルドパイプラインに `.sspj → .ssab` 変換を組み込みたい開発者 — bytes-in / bytes-out のエンジンで、ファイルシステムや DOM を前提としません。
-> **インストール:** `npm install @spritestudio/ssconverter-core`
+> **インストール:** `npm install @spritestudio/ssconverter-core@beta`
 > **目的が違う場合:** → [ssconverter-web](../ssconverter-web/README.ja.md) — ファイルを変換したいだけなら、ブラウザツール + CLI をそのまま使ってください。
+
+> **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
 このパッケージは、Rust の [`libssconverter`] クレートを wasm ビルドしたものに、小さく使いやすい TypeScript レイヤーを添えたものです。**ファイルシステムや DOM への依存はありません**（bytes in, bytes out）。そのため、同じコアがブラウザ・Node・Worker・エッジランタイムのいずれでも動作します。[`ssconverter-web`]（Web UI）やその Node CLI といったホストが、周囲の I/O を受け持ちます。
 
@@ -25,7 +27,7 @@ OPTPiX SpriteStudio 7 のプロジェクト（`.sspj`）をランタイムバイ
 ## インストール
 
 ```sh
-npm install @spritestudio/ssconverter-core
+npm install @spritestudio/ssconverter-core@beta
 ```
 
 ## 使い方

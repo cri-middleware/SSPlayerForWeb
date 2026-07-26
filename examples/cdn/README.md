@@ -39,9 +39,11 @@ WASM URL explicitly**:
 await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
 ```
 
-> **Pin the WASM to the same version as the player bundle.** The `.wasm` and its JS glue
-> share an ABI; a floating `@latest` on one and a pinned version on the other can desync.
-> Use an exact version on **both**.
+> **Copy the URL pair as printed.** The `.wasm` and its JS glue share an ABI, so both
+> URLs need an exact version — a floating `@latest` on one can desync it from the other.
+> The two versions are **not** necessarily identical: packages release independently, so
+> `ssplayer-webgl@7.0.1` may pair with `ssplayer-core@7.0.0`. These pages are rewritten
+> from the actual manifests on every release (`scripts/sync-doc-versions.mjs`).
 
 ## Run it
 

@@ -5,8 +5,10 @@
 **SpriteStudio 7** プレイヤー向けの PixiJS v8 レンダラー。Rust/WebAssembly コアが駆動する高性能な**ダイレクト描画**（バッチ化メッシュ）を提供します。
 
 > **対象読者:** すでに PixiJS v8 でアプリを構築していて、SpriteStudio の `.ssab` アニメーションを組み込みたい開発者です。
-> **インストール:** `npm install @spritestudio/ssplayer-pixi pixi.js`（`pixi.js@^8` を peer 依存として必要とします）
+> **インストール:** `npm install @spritestudio/ssplayer-pixi@beta pixi.js`（`pixi.js@^8` を peer 依存として必要とします）
 > **目的が違う場合:** → Pixi を使っていないなら [ssplayer-webgl](../ssplayer-webgl/README.ja.md)、自作レンダラーを組むなら [ssplayer-core](../ssplayer-core/README.ja.md) をどうぞ。
+
+> **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
 
@@ -36,7 +38,7 @@
 ## インストール
 
 ```bash
-npm install @spritestudio/ssplayer-pixi pixi.js
+npm install @spritestudio/ssplayer-pixi@beta pixi.js
 ```
 
 `pixi.js`（v8）は **peer 依存**です。アプリがまだ依存していない場合は、プレイヤーと

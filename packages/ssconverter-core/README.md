@@ -5,8 +5,10 @@
 Engine-agnostic WebAssembly core that converts OPTPiX SpriteStudio 7 projects (`.sspj`) to runtime binaries (`.ssab` / `.ssqb`).
 
 > **Who this is for:** developers embedding `.sspj → .ssab` conversion into their own app, service, worker, or build pipeline — a bytes-in/bytes-out engine, no filesystem or DOM required.
-> **Install:** `npm install @spritestudio/ssconverter-core`
+> **Install:** `npm install @spritestudio/ssconverter-core@beta`
 > **Not what you need?** → [ssconverter-web](../ssconverter-web) — just want to convert a file? Use the browser tool + CLI instead.
+
+> **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
 This package is the wasm build of the Rust [`libssconverter`] crate plus a small
 ergonomic TypeScript layer. It has **no filesystem or DOM dependencies** — bytes
@@ -29,7 +31,7 @@ I/O around it.
 ## Install
 
 ```sh
-npm install @spritestudio/ssconverter-core
+npm install @spritestudio/ssconverter-core@beta
 ```
 
 ## Usage
