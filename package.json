@@ -8,6 +8,8 @@
     "build:wasm": "node scripts/build-wasm.js",
     "download:wasm": "node scripts/download-sdk.js",
     "deploy-examples": "node scripts/deploy-examples.js",
+    "sync:docs": "node scripts/sync-doc-versions.mjs",
+    "check:docs": "node scripts/sync-doc-versions.mjs --check",
     "test": "pnpm -r run test",
     "clean": "pnpm -r run clean",
     "changeset": "changeset",
