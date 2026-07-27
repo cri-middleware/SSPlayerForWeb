@@ -30,7 +30,11 @@ async function main() {
     
     // 2. Setup Player
     const player = new SSPlayer();
-    
+    // Hand over the renderer before the first draw so the mask coverage pre-pass
+    // can run on frame 1 — otherwise masked parts (Mask.ssab in the sample list)
+    // are held back for that one frame. Optional; only matters with masks.
+    player.attachRenderer(app.renderer);
+
     console.log("Loading default animation...");
     await player.load(ssabUrl('Ringo.ssab'));
     await player.setAnimation("run");
