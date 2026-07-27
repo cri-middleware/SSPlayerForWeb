@@ -378,18 +378,45 @@ export class SSPlayer extends Container {
         // Capture the renderer the first time we're drawn. The mask coverage
         // pre-pass renders to offscreen textures and needs a renderer; running
         // it from the ticker (before the stage render) keeps coverage ready by
-        // the time our masked children are drawn. Masking therefore starts on
-        // the second frame (the first has no renderer yet) — harmless.
+        // the time our masked children are drawn. Until then the pre-pass cannot
+        // run, so the parts a mask would clip are held back for that one frame
+        // rather than flashing unclipped — see renderContext. Call
+        // {@link attachRenderer} to have masks correct from the very first frame.
         this.onRender = (renderer: Renderer) => {
-            this.renderer = renderer;
-            // WebGL: register the SS fixed-function blend modes into this renderer's
-            // blend map (idempotent; no-op on WebGPU, handled at import time).
-            registerSSBlendModesGL(renderer);
+            this.attachRenderer(renderer);
         };
 
         Ticker.shared.add(this.update, this);
     }
     
+    /**
+     * Hand the player its renderer before it is first drawn.
+     *
+     * The mask coverage pre-pass rasterises into offscreen textures, so it needs
+     * a renderer; the player otherwise only learns of one when it is first drawn
+     * (`onRender`), which is one frame too late for that frame's masks. A player
+     * added to a stage and drawn straight away therefore holds its masked parts
+     * back for exactly one frame. Pass the renderer here — right after
+     * construction — and masking is correct from the first frame:
+     *
+     * ```ts
+     * const player = new SSPlayer();
+     * player.attachRenderer(app.renderer);
+     * ```
+     *
+     * Idempotent, and harmless to call with a renderer the player is already
+     * using. If the player is later drawn by a different renderer, `onRender`
+     * replaces this one. Nothing else needs it: an animation without masks
+     * renders identically either way.
+     */
+    public attachRenderer(renderer: Renderer) {
+        if (this.renderer === renderer) return;
+        this.renderer = renderer;
+        // WebGL: register the SS fixed-function blend modes into this renderer's
+        // blend map (idempotent; no-op on WebGPU, handled at import time).
+        registerSSBlendModesGL(renderer);
+    }
+
     public override destroy(options?: any) {
         Ticker.shared.remove(this.update, this);
 
@@ -1035,11 +1062,29 @@ export class SSPlayer extends Container {
 
         // Mask coverage pre-pass: rasterise this context's mask contributors
         // (DrawBatchKind.Mask batches) into an offscreen coverage texture, then
-        // masked content samples it below. Null when the context has no masks or
-        // no renderer is available yet (the first frame) — masked parts then draw
-        // unclipped. Runs here, in the ticker, so coverage is ready before the
-        // stage render draws our children. See buildMaskCoverage / 09_mask.ja.md.
-        const cov = (this.renderer && this.maskEnabled) ? this.buildMaskCoverage(manager, geometryBuilder, frameData, drawOrder) : null;
+        // masked content samples it below. Null when the context has no masks.
+        // Runs here, in the ticker, so coverage is ready before the stage render
+        // draws our children. See buildMaskCoverage / 09_mask.ja.md.
+        //
+        // Without a renderer we cannot rasterise at all. That happens on the
+        // first drawn frame of a player the host did not attachRenderer() to —
+        // onRender, which captures it, only fires once we are drawn. Drawing the
+        // masked parts unclipped for that frame is the wrong fallback: a mask
+        // exists precisely to remove pixels, so the miss reads as a full-bleed
+        // flash of content that should never have been visible. Plan the writers
+        // anyway (pure CPU, no renderer needed) and, if this frame does have
+        // masks, hold their targets back until coverage can be produced —
+        // one missing frame instead of one wrong one.
+        let cov: MaskCoverage | null = null;
+        let maskDeferred = false;
+        if (this.maskEnabled) {
+            if (this.renderer) {
+                cov = this.buildMaskCoverage(manager, geometryBuilder, frameData, drawOrder);
+            } else {
+                this.maskSource.bind(frameData, drawOrder, manager);
+                maskDeferred = this.maskPlanner.plan(this.maskSource) > 0;
+            }
+        }
 
         // When this context is a masked instance child, every drawn part is
         // clipped by the inherited (parent) coverage instead of this context's
@@ -1070,6 +1115,11 @@ export class SSPlayer extends Container {
 
                     const child = player.getInstanceChild(partIdx);
                     if (!child || !child.visible) continue;
+
+                    // Coverage is deferred this frame (see maskDeferred): a mask
+                    // target instance part would draw its whole sub-animation
+                    // unclipped, so hold it back instead.
+                    if (maskDeferred && maskFlags && (maskFlags[partIdx] & 0x04) !== 0) continue;
 
                     const childFrame = child.player.runtimeManager.context.get_frame_no();
                     const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
@@ -1107,6 +1157,12 @@ export class SSPlayer extends Container {
                 }
                 continue;
             }
+
+            // Coverage is deferred this frame (see maskDeferred): the parts this
+            // batch would have had clipped are held back rather than drawn
+            // unclipped. Same predicate as `masked` below, so exactly the parts
+            // the mask governs are the ones that wait for it.
+            if (maskDeferred && (batch.flags() & 0x01) !== 0) continue;
 
             const textureHash = batch.textureHash();
             // Effect batches (and root/null parts) carry textureHash 0; their real

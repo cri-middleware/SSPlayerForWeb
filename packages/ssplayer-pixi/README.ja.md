@@ -61,6 +61,7 @@ document.body.appendChild(app.canvas);
 
 // 2. Create a player, load a .ssab, and pick an animation.
 const player = new SSPlayer();
+player.attachRenderer(app.renderer); // 任意 — 下のマスクの注意を参照
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 await player.setAnimation('run');   // loop = -1 (infinite) by default
 
@@ -69,6 +70,14 @@ app.stage.addChild(player);
 
 player.play();
 ```
+
+> **`attachRenderer` とマスクについて。** マスク／クリッピングパーツはオフスクリーンの
+> カバレッジパスを経由して描画されるため renderer が必要ですが、プレイヤーが renderer を
+> 受け取るのは最初に描画された時です。`attachRenderer` を呼ばない場合、マスクの対象と
+> なるパーツは最初の1フレームだけ描画を保留し（マスク無しで描かれることはありません）、
+> 2フレーム目から正しく表示されます。あらかじめ renderer を渡しておけば1フレーム目から
+> 正しくなります。マスクを含まないアニメーションの表示はどちらでも同一なので、マスクを
+> 使う場合にのみ意味があります。
 
 > **参照（ssab）と埋め込み(embedded) ssab のどちらも動作します。** `load()` は
 > いずれの形式も扱います。外部テクスチャファイルを参照する ssab（兄弟階層の PNG として

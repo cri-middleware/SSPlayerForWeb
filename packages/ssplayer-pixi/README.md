@@ -60,6 +60,7 @@ document.body.appendChild(app.canvas);
 
 // 2. Create a player, load a .ssab, and pick an animation.
 const player = new SSPlayer();
+player.attachRenderer(app.renderer); // optional — see the mask note below
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 await player.setAnimation('run');   // loop = -1 (infinite) by default
 
@@ -68,6 +69,14 @@ app.stage.addChild(player);
 
 player.play();
 ```
+
+> **`attachRenderer` and masks.** Mask / clipping parts are drawn through an
+> offscreen coverage pass, which needs a renderer — and the player is only handed
+> one when it is first drawn. Without `attachRenderer` the parts a mask governs are
+> therefore held back for exactly one frame (never drawn unclipped), and masking is
+> correct from the second. Pass the renderer up front and it is correct from the
+> first frame. Animations without masks render identically either way, so this is
+> only worth doing if you have any.
 
 > **Reference *and* embedded ssab both work.** `load()` handles either variant:
 > an ssab that references external texture files (fetched as sibling PNGs), or one
