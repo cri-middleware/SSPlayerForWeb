@@ -123,5 +123,5 @@ player.getPartIndexFromName('body');  // part name → index
 - **Mask / clipping**: SS6Player only meshed mask parts (no real masking); this version does **full masking** via a coverage pre-pass (toggle with `player.maskEnabled`).
 - **Sound**: unsupported in SS6Player; this version integrates Web Audio (`SSWebAudioManager`) and auto-binds for `.ssab` files that contain sounds.
 - **WebGPU**: in addition to WebGL, a WebGPU backend is supported (every custom shader ships both GLSL and WGSL).
-- **Attaching objects to parts (world coordinates)**: in SS6Player each part was a Pixi child, so you could read its transform via `getChildByLabel(partName)`. This version uses **batched drawing**, so that route is gone — instead read the world matrix directly from the core via `player.internalPlayer.runtimeManager.getWorldMatrix2D(partIndex)`.
+- **Attaching objects to parts**: in SS6Player each part was a Pixi child, so you could read its transform via `getChildByLabel(partName)`. This version uses **batched drawing**, so that route is gone — use **part tracking** instead (`attachToPart()` drives any display object to follow a part; `getPartTransform()` reads the transform alone). See [Part tracking (following a specified part)](/customize/part-following).
 - **Environment**: PixiJS v8. See [PixiJS](/usage/pixi) for details.

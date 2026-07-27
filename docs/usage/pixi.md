@@ -21,7 +21,8 @@ pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
 - Dispose of it with `player.destroy()`, which also frees the WASM-side resources.
 
 For minimal code see [Quick Start](/setup/quickstart); for playback control see
-[Basic playback](/usage/basic).
+[Basic playback](/usage/basic). To make a display object of your own (a weapon, effect or
+hitbox) follow a part every frame, see [Part tracking](/customize/part-following).
 
 ## Blend modes and background
 

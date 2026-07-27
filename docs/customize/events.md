@@ -21,6 +21,10 @@ off(); // unsubscribe
 `onAnimationEnd` / `onAnimationLoop` are derived from playback state. User data,
 signals, and sounds are fired frame-by-frame by the runtime.
 
+There is one more hook, `onFrame`, which fires on every advanced frame rather than
+on an authored event — it is the point at which a part's transform is final for
+that frame. See [Part tracking](/customize/part-following).
+
 ## Sound playback is the host's job
 
 The runtime **does not play audio**. `onAudio` only hands you a reference to the
