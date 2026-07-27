@@ -18,7 +18,9 @@ pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
 - 破棄は `player.destroy()` で行い、WASM 側リソースも解放されます。
 
 最小コードは [クイックスタート](/ja/setup/quickstart)、再生制御は
-[基本的な再生](/ja/usage/basic) を参照してください。
+[基本的な再生](/ja/usage/basic) を参照してください。自前の表示オブジェクト（武器・
+エフェクト・当たり判定など）を毎フレームパーツに追従させる方法は
+[パーツトラッキング](/ja/customize/part-following) を参照してください。
 
 ## ブレンドモードと背景
 

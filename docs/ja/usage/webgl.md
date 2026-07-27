@@ -47,6 +47,8 @@ await el.ready;
 el.player.setPartColorOverride('apple', 0 /* Mix */, 0x0033ffbf);
 ```
 
+パーツ変換の読み出しも同じ経路です。このプレイヤーはシーングラフを持たないため、パーツへの追従は `onFrame()` から `el.player.getPartTransform()` を読んで自前の要素を配置する形になります。詳しくは [パーツトラッキング](/ja/customize/part-following) を参照してください。
+
 ## SSCanvasPlayer を直接使う場合
 
 TypeScript / JavaScript から直接 Canvas を指定して初期化することもできます。

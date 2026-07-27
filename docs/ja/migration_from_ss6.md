@@ -123,5 +123,5 @@ player.getPartIndexFromName('body');  // パーツ名 → インデックス
 - **マスク / クリッピング**: SS6Player はメッシュ化のみで**実際のマスクは非対応**でしたが、本バージョンは**カバレッジ前処理による本格的なマスク**に対応します（`player.maskEnabled` で切り替え）。
 - **サウンド**: SS6Player は**非対応**でしたが、本バージョンは Web Audio 連携（`SSWebAudioManager`）に対応し、サウンド付き `.ssab` で自動バインドされます。
 - **WebGPU**: WebGL に加えて WebGPU バックエンドに対応します（全カスタムシェーダーが GLSL/WGSL 両対応）。
-- **パーツへの追従（ワールド座標）**: SS6Player では各パーツが Pixi の子ノードだったため `getChildByLabel(partName)` で座標を取得できましたが、本バージョンは**バッチ描画**のためその方法は使えません。代わりにコアの `player.internalPlayer.runtimeManager.getWorldMatrix2D(partIndex)` でワールド行列を直接取得できます。
+- **パーツへの追従**: SS6Player では各パーツが Pixi の子ノードだったため `getChildByLabel(partName)` で座標を取得できましたが、本バージョンは**バッチ描画**のためその方法は使えません。代わりに **パーツトラッキング**（`attachToPart()` で任意の表示オブジェクトをパーツに追従させる機能。座標だけ読む `getPartTransform()` もあります）を利用してください。詳しくは [パーツトラッキング（指定パーツへの追従）](/ja/customize/part-following) を参照してください。
 - **対応環境**: PixiJS v8 系。詳細は [PixiJS で使う](/ja/usage/pixi) を参照してください。

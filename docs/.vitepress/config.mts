@@ -77,6 +77,7 @@ export default withMermaid({
             items: [
               { text: 'Events & user data', link: '/customize/events' },
               { text: 'Part control (visibility / cell / color)', link: '/customize/part-overrides' },
+              { text: 'Part tracking (following a part)', link: '/customize/part-following' },
               { text: 'Shaders & blend modes', link: '/customize/shaders' },
               { text: 'Performance tuning', link: '/customize/performance' },
             ],
@@ -138,6 +139,7 @@ export default withMermaid({
             items: [
               { text: 'イベントとユーザーデータ', link: '/ja/customize/events' },
               { text: 'パーツ制御（表示 / セル / 色）', link: '/ja/customize/part-overrides' },
+              { text: 'パーツトラッキング（指定パーツへの追従）', link: '/ja/customize/part-following' },
               { text: 'シェーダーとブレンドモード', link: '/ja/customize/shaders' },
               { text: 'パフォーマンスチューニング', link: '/ja/customize/performance' },
             ],

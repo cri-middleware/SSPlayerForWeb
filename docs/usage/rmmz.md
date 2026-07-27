@@ -97,6 +97,12 @@ the **permanent** ones — the saved copy is pruned at the same time, so nothing
 discarded comes back on load. Visibility has no priority mode and is always cleared by an
 animation change.
 
+**Part tracking (script only)**
+
+Making a display object of your own follow a part has **no plugin command**. Get the
+`SSPlayer` from a script and call `attachToPart()` — see
+[Part tracking](/customize/part-following).
+
 **Playback / lifecycle**
 
 - **Play / Pause / Stop / Remove SS**, and **Wait for SS** — by `pictureId`. *Wait for

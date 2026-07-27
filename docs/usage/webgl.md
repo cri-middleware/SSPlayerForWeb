@@ -55,6 +55,10 @@ await el.ready;
 el.player.setPartColorOverride('apple', 0 /* Mix */, 0x0033ffbf);
 ```
 
+The part-transform read-out is reached the same way. This player has no scene graph, so
+following a part means reading `el.player.getPartTransform()` from `onFrame()` and placing
+your own element — see [Part tracking](/customize/part-following).
+
 ## Using SSCanvasPlayer directly
 
 You can also initialize a player against a canvas directly from TypeScript /
