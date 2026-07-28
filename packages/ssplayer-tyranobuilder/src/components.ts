@@ -42,6 +42,30 @@ export interface ComponentContext {
 }
 
 /**
+ * Names already given to an `[ss_new]` in the scenario being edited.
+ *
+ * `app.tyrano.component` is the editor's live list of placed components — the
+ * same array its own search walks, matching on `data.tag_name`. It covers the
+ * open scenario only, exactly like the built-in `target` param, which lists the
+ * labels of one file; a name defined in another `.ks` still reaches the dropdown
+ * through {@link withCurrent}.
+ */
+function placedPlayerNames(): string[] {
+  const placed = (
+    globalThis as { app?: { tyrano?: { component?: { data?: { tag_name?: string; pm?: Record<string, unknown> } }[] } } }
+  ).app?.tyrano?.component;
+  if (!Array.isArray(placed)) return [];
+
+  const names = new Set<string>();
+  for (const component of placed) {
+    if (component?.data?.tag_name !== 'ss_new') continue;
+    const name = String(component.data.pm?.name ?? '').trim();
+    if (name) names.add(name);
+  }
+  return [...names];
+}
+
+/**
  * Values of the component being edited. `select_list` is handed the param
  * *view* (`js/app/param/param.js`), which reaches the component through
  * `.get('component')`, while `name()` / `header()` are handed the component
@@ -186,13 +210,34 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
     component: simple(icon, title, header, param),
   });
 
-  /** The name that ties every later tag back to its `[ss_new]`. */
+  /**
+   * The name `[ss_new]` gives a player. Free text there — it is the author's to
+   * choose — but a dropdown everywhere else, because every other tag has to
+   * match it exactly and a typo only shows up as a run-time error.
+   */
   const playerName = (help: string): BuilderParam => ({
     type: 'Text',
     name: t('Player name'),
     help: t(help),
     default_val: 'ss',
     validate: { required: true },
+  });
+
+  const playerRef = (): BuilderParam => ({
+    type: 'Select',
+    name: t('Player name'),
+    help: t('The name given when the animation was shown.'),
+    select_list: (view) => {
+      const placed = placedPlayerNames();
+      const options =
+        placed.length > 0
+          ? placed.map((name) => ({ name, val: name }))
+          : [{ name: t('(no animation shown in this scene yet)'), val: '' }];
+      // A player created in another scenario file is not in the list, and must
+      // not be silently replaced by whatever happens to be first.
+      return withCurrent(options, paramsOf(view).name, (v) => v);
+    },
+    default_val: () => placedPlayerNames()[0] ?? 'ss',
   });
 
   const byName: BuilderComponent['header'] = (c) => String(pm(c).name ?? '');
@@ -317,7 +362,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'Reveals an animation that was loaded hidden, optionally moving it first.',
       byName,
       {
-        name: playerName('The name given when the animation was shown.'),
+        name: playerRef(),
         time: {
           type: 'Num',
           name: t('Fade time'),
@@ -334,7 +379,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'Hides an animation without unloading it.',
       byName,
       {
-        name: playerName('The name given when the animation was shown.'),
+        name: playerRef(),
         time: {
           type: 'Num',
           name: t('Fade time'),
@@ -358,7 +403,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
         return anime ? `${name} — ${anime}` : name;
       },
       {
-        name: playerName('The name given when the animation was shown.'),
+        name: playerRef(),
         anime: {
           type: 'Select',
           name: t('Animation'),
@@ -388,7 +433,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
     ),
 
     ss_stop: entry('game-stop', 'SpriteStudio: stop', 'Stops playback and rewinds.', byName, {
-      name: playerName('The name given when the animation was shown.'),
+      name: playerRef(),
     }),
 
     ss_pause: entry(
@@ -396,7 +441,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'SpriteStudio: pause',
       'Freezes playback on the current frame.',
       byName,
-      { name: playerName('The name given when the animation was shown.') },
+      { name: playerRef() },
     ),
 
     ss_resume: entry(
@@ -404,7 +449,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'SpriteStudio: resume',
       'Resumes a paused animation.',
       byName,
-      { name: playerName('The name given when the animation was shown.') },
+      { name: playerRef() },
     ),
 
     ss_wait: entry(
@@ -412,7 +457,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'SpriteStudio: wait',
       'Holds the scenario until the animation finishes (or completes one loop).',
       byName,
-      { name: playerName('The name given when the animation was shown.') },
+      { name: playerRef() },
     ),
 
     // -----------------------------------------------------------------------
@@ -424,7 +469,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'Moves or scales an animation instantly.',
       byName,
       {
-        name: playerName('The name given when the animation was shown.'),
+        name: playerRef(),
         x: coord('x', 'X'),
         y: coord('y', 'Y'),
         scale,
@@ -437,7 +482,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'Slides an animation to a new position over time.',
       byName,
       {
-        name: playerName('The name given when the animation was shown.'),
+        name: playerRef(),
         x: coord('x', 'X'),
         y: coord('y', 'Y'),
         scale,
@@ -458,6 +503,68 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
     ),
 
     // -----------------------------------------------------------------------
+    // All animations at once — for scene changes and menus, where the point is
+    // that the author does not have to name each player.
+    // -----------------------------------------------------------------------
+    ss_fadeout: entry(
+      's-icon-eye-blocked',
+      'SpriteStudio: fade out all',
+      'Fades every animation out together, e.g. at a scene change.',
+      () => '',
+      {
+        time: {
+          type: 'Num',
+          name: t('Fade time'),
+          unit: t('ms'),
+          validate: { number: true },
+          default_val: 1000,
+        },
+        wait: {
+          type: 'Check',
+          text: t('Wait for the fade to finish'),
+          default_val: true,
+        },
+      },
+    ),
+
+    ss_fadein: entry(
+      's-icon-eye',
+      'SpriteStudio: fade in all',
+      'Brings back exactly the animations that were on screen before the fade out.',
+      () => '',
+      {
+        time: {
+          type: 'Num',
+          name: t('Fade time'),
+          unit: t('ms'),
+          validate: { number: true },
+          default_val: 1000,
+        },
+        wait: {
+          type: 'Check',
+          text: t('Wait for the fade to finish'),
+          default_val: true,
+        },
+      },
+    ),
+
+    ss_pause_all: entry(
+      's-icon-pause',
+      'SpriteStudio: pause all',
+      'Freezes every animation — for a menu or save screen. Ordinary text waits do not stop playback, so this is how you get it to stop.',
+      () => '',
+      {},
+    ),
+
+    ss_resume_all: entry(
+      's-icon-play',
+      'SpriteStudio: resume all',
+      'Resumes every animation paused by "pause all".',
+      () => '',
+      {},
+    ),
+
+    // -----------------------------------------------------------------------
     // Teardown
     // -----------------------------------------------------------------------
     ss_free: entry(
@@ -465,7 +572,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       'SpriteStudio: remove',
       'Unloads one animation and frees its memory.',
       byName,
-      { name: playerName('The name given when the animation was shown.') },
+      { name: playerRef() },
     ),
 
     ss_free_all: entry(

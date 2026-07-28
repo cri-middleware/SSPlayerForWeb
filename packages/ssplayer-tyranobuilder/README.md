@@ -174,9 +174,10 @@ which is why the bundle is minified.
 
 ## The components
 
-`defineComponents()` contributes thirteen entries under **プラグイン** in the
-palette: initialise, show, fade in/out, change animation, stop/pause/resume,
-wait, place, move, remove, remove all.
+`defineComponents()` contributes seventeen entries under **プラグイン** in the
+palette: sound settings, show, fade in/out, change animation,
+stop/pause/resume, wait, place, move, remove, remove all, and the four
+whole-screen ones (fade out/in all, pause/resume all).
 
 The host serialises a component as `$.tag(key, pm)` → `[<key> attr="value" …]`,
 so **the map key is the KAG tag name and the param keys are its attributes** —
@@ -196,6 +197,12 @@ the way the builder's own `storage`/`target` pair does it).
 
 `[ss_play]` names a player rather than a pack, so which pack it will be driving
 is only knowable at run time; its animation list is the union across the project.
+
+The player name is a dropdown too, everywhere except `[ss_new]` — which is where
+the author chooses it. The names come from `app.tyrano.component`, the editor's
+live list of placed components, filtered to `[ss_new]`. That covers the open
+scenario only, exactly like the built-in `target` param; a player created in
+another `.ks` reaches the list through the rule below.
 
 Two rules keep the pickers from becoming a cage:
 
@@ -224,17 +231,13 @@ translation is missing — so the English source strings are the fallback.
 
 ## Next steps
 
-- **Components for the remaining tags.** Thirteen of the runtime's twenty-three
-  have one. `[ss_fadeout]` / `[ss_fadein]` / `[ss_pause_all]` / `[ss_resume_all]`
-  take almost no parameters and are nearly free to add; `[ss_chara]` and the four
-  `[ss_part_*]` tags need part and cell names, which `SSRuntimeManager`'s
-  `extractCellMapNames` / `extractCellNames` can supply the same way animation
-  names are read today. (`[ss_restore]` deliberately has none — it is not a
-  timeline step, and restore is automatic now.) Until then those tags are written
-  with the builder's own TyranoScript-code component.
-- **Player name as a `Select`** of the names already used by `[ss_new]`
-  components in the scenario, instead of a free-text field that has to match by
-  hand.
+- **Components for the remaining tags.** Seventeen of the runtime's twenty-three
+  have one. `[ss_chara]` and the four `[ss_part_*]` tags are what is left: they
+  need part and cell names, which `SSRuntimeManager`'s `extractCellMapNames` /
+  `extractCellNames` can supply the same way animation names are read today.
+  (`[ss_restore]` deliberately has none — it is not a timeline step, and restore
+  is automatic.) Until then those tags are written with the builder's own
+  TyranoScript-code component.
 - **Move conversion into a Worker.** The wasm call is synchronous: 78 ms for one
   sample, but a first run over a folder of them blocks the editor for as long as
   it takes.

@@ -185,6 +185,38 @@ describe('defineSSComponents', () => {
     expect(list.slice(1).map((o) => o.val)).toEqual(['blink', 'idle', 'walk']);
   });
 
+  it('offers the players already placed in the scenario', () => {
+    // The editor's live component list for the open scenario.
+    (globalThis as { app?: unknown }).app = {
+      tyrano: {
+        component: [
+          { data: { tag_name: 'ss_new', pm: { name: 'akane' } } },
+          { data: { tag_name: 'ss_play', pm: { name: 'ignored' } } },
+          { data: { tag_name: 'ss_new', pm: { name: 'ringo' } } },
+        ],
+      },
+    };
+    const name = build().ss_play.component.param.name;
+    expect(name.type).toBe('Select');
+    expect(name.select_list?.(view({}))?.map((o) => o.val)).toEqual(['akane', 'ringo']);
+
+    // A player created in another .ks is not in the list, and must survive.
+    expect(name.select_list?.(view({ name: 'elsewhere' }))?.map((o) => o.val)).toContain(
+      'elsewhere',
+    );
+
+    // [ss_new] names the player, so it stays free text.
+    expect(build().ss_new.component.param.name.type).toBe('Text');
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('says so when the scenario has no animation yet', () => {
+    delete (globalThis as { app?: unknown }).app;
+    const list = build().ss_stop.component.param.name.select_list?.(view({})) ?? [];
+    expect(list).toHaveLength(1);
+    expect(list[0].val).toBe('');
+  });
+
   it('labels a placed component with its player name', () => {
     const model = { data: { pm: { name: 'akane', storage: 'others/ssdata/Ringo/Ringo.ssab' } } };
     expect(components.ss_new.component.header(model)).toBe('akane — Ringo.ssab');
