@@ -16,6 +16,8 @@
 // partial files behind. Only a marker written *after* a successful run lets the
 // next run skip.
 
+import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
+
 import { convertProjectAt, ensureConverter, type ConvertStats } from './converter.js';
 import type { HostFs } from './hostFs.js';
 
@@ -58,6 +60,14 @@ export interface AutoImporterOptions {
 export class AutoImporter {
   private readonly fs: HostFs;
   private readonly log: (line: string) => void;
+  private readonly projectRoot: string;
+  /** `<project>/data` — `storage=` attributes are written relative to it. */
+  private readonly dataDir: string;
+  /** Parsed animation lists, invalidated by a pack's mtime/size. */
+  private readonly animationCache = new Map<
+    string,
+    { mtimeMs: number; size: number; names: string[] }
+  >();
   readonly sourceDir: string;
   readonly outRoot: string;
   private readonly wasmPath: string;
@@ -69,8 +79,82 @@ export class AutoImporter {
     this.log = opts.log;
     this.wasmPath = opts.wasmPath;
     const p = this.fs.path;
+    this.projectRoot = opts.projectRoot;
+    this.dataDir = p.join(opts.projectRoot, 'data');
     this.sourceDir = p.join(opts.projectRoot, opts.sourceDirName ?? DEFAULT_SOURCE_DIR);
     this.outRoot = p.join(opts.projectRoot, opts.outDirName ?? DEFAULT_OUT_DIR);
+  }
+
+  /**
+   * Every `.ssab` in the project, as `[ss_new storage=]` values — paths relative
+   * to `data/`, which is what TyranoScript resolves storage against.
+   *
+   * Deliberately the whole of `data/`, not just this importer's output folder: a
+   * pack is a normal asset and an author may keep one anywhere (hand-converted,
+   * copied from another project, grouped next to its scene's images). Scanning
+   * only `others/ssdata` would turn the picker into a cage.
+   */
+  listPacks(): { name: string; val: string }[] {
+    const root = this.fs.exists(this.dataDir) ? this.dataDir : this.outRoot;
+    if (!this.fs.exists(root)) return [];
+
+    const packs: { name: string; val: string }[] = [];
+    for (const full of this.fs.walkFiles(root)) {
+      if (!full.toLowerCase().endsWith('.ssab')) continue;
+      const val = this.fs.path.relative(this.dataDir, full).replace(/\\/g, '/');
+      packs.push({ name: val, val });
+    }
+
+    // Imported packs first — that is where most of them come from — then the
+    // rest alphabetically.
+    const imported = this.fs.path.relative(this.dataDir, this.outRoot).replace(/\\/g, '/') + '/';
+    return packs.sort((a, b) => {
+      const rank = Number(!a.val.startsWith(imported)) - Number(!b.val.startsWith(imported));
+      return rank !== 0 ? rank : a.val.localeCompare(b.val);
+    });
+  }
+
+  /**
+   * Animation names inside a pack, for the `anime=` picker. Reads the `.ssab`
+   * directly — it is the artefact the runtime will load, so it is the only
+   * honest source for what can be played.
+   *
+   * Returns nothing for a pack this process cannot read (a remote URL, a path
+   * built from a variable); the caller keeps a free-form escape in that case.
+   */
+  listAnimations(storage: unknown): string[] {
+    const abs = this.resolvePack(storage);
+    if (!abs) return [];
+
+    const st = this.fs.statOf(abs);
+    if (!st || st.isDir) return [];
+
+    const cached = this.animationCache.get(abs);
+    if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) return cached.names;
+
+    let names: string[] = [];
+    try {
+      names = SSRuntimeManager.extractAnimationNames(this.fs.readBinary(abs));
+    } catch {
+      // A half-written or corrupt pack is not worth an error dialog; an empty
+      // picker plus the free-form option is a good enough signal.
+      names = [];
+    }
+    this.animationCache.set(abs, { mtimeMs: st.mtimeMs, size: st.size, names });
+    return names;
+  }
+
+  /** A `storage=` value → an absolute path, or null when it is not on disk. */
+  private resolvePack(storage: unknown): string | null {
+    const rel = String(storage ?? '').trim();
+    // Mirrors ssplayer-tyrano's resolveDataPath: bare paths hang off `data/`,
+    // `data/`- and `./`-prefixed ones off the project root. Remote and
+    // root-absolute paths are not ours to read.
+    if (!rel || /^(https?:)?\/\//.test(rel) || rel.startsWith('/')) return null;
+    const p = this.fs.path;
+    if (rel.startsWith('data/')) return p.join(this.projectRoot, rel);
+    if (rel.startsWith('./')) return p.join(this.projectRoot, rel.slice(2));
+    return p.join(this.dataDir, rel);
   }
 
   /** Every `.sspj` under the source folder, absolute paths. */

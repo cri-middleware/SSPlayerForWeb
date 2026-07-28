@@ -7,11 +7,13 @@
   "//private": "Not published to npm. TyranoBuilder authors install a .tbp (a zip the builder unpacks into data/others/plugin/), not an npm package. TyranoBuilder is a separate tool from TyranoScript; the runtime-side [ss_*] tags live in @spritestudio/ssplayer-tyrano.",
   "files": [
     "dist",
+    "lang",
     "README.md",
     "LICENSE.md"
   ],
   "dependencies": {
-    "@spritestudio/ssconverter-core": "workspace:^"
+    "@spritestudio/ssconverter-core": "workspace:^",
+    "@spritestudio/ssplayer-core": "workspace:^"
   },
   "scripts": {
     "build": "tsdown",

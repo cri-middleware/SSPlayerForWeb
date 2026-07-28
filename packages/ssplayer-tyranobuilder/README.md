@@ -10,8 +10,20 @@ the `[ss_*]` KAG tags that actually draw the animation — lives in
 and TyranoScript are different tools**; they share the runtime, not the editor,
 which is why this is a separate package.
 
-Status: **proof of concept.** The import pipeline works and is covered by tests;
-no GUI components are contributed yet.
+It also contributes the `[ss_*]` components to the editor's palette, so an
+animation can be placed and driven without writing any KAG by hand.
+
+One plugin folder holds both halves. This package is the editor half; the
+runtime half is `ssplayer-tyrano`'s `main.js`, which registers the tags the
+components write. `init.ks` ties them together: its presence makes
+`getPluginTag()` emit `[plugin name="ssplayer"]` into
+`data/scenario/system/plugin_third.ks`, which TyranoScript expands to
+`[call storage="../others/plugin/ssplayer/init.ks"]` →
+`[loadjs storage="plugin/ssplayer/main.js"]`. Without it a GUI-built scenario
+parses fine and then dies at run time on an unknown `[ss_init]` — the editor
+never sees a problem, because the tags only exist inside the running game.
+
+Status: **proof of concept**, verified in the real editor.
 
 ## The model it copies
 
@@ -106,6 +118,11 @@ The base64 path stays in as insurance for other builds and platforms.
   the sample, so it is invisible at this size; a Worker is the fix if larger
   projects make it felt, and the core's byte-in/byte-out API already suits one
   (a Worker has no filesystem access of its own anyway).
+- **No module resolution.** The builder hands the file straight to `import()`,
+  so one surviving bare specifier rejects the import and the plugin never loads
+  — with no error in the UI and nothing in the log, just missing components.
+  Every dependency is inlined, and `install-poc.mjs` refuses to deploy a bundle
+  that still has one.
 - **No DevTools in the main window** (`removeMenu()`), hence the log file.
 - **No hook for "preview was pressed"** — `map_preview_tag` is declared in
   `plugin.js` but never used. Polling covers it.
@@ -114,15 +131,62 @@ The base64 path stays in as insurance for other builds and platforms.
   would keep source art out of shipped builds automatically (Ren'Py needs an
   explicit `build.classify` for this). Worth confirming before release.
 
+## The components
+
+`defineComponents()` contributes thirteen entries under **プラグイン** in the
+palette: initialise, show, fade in/out, change animation, stop/pause/resume,
+wait, place, move, remove, remove all.
+
+The host serialises a component as `$.tag(key, pm)` → `[<key> attr="value" …]`,
+so **the map key is the KAG tag name and the param keys are its attributes** —
+these mirror the master tags in `ssplayer-tyrano`'s `registerTags.ts` exactly.
+Nothing else ties the two packages together, so `src/components.test.ts` parses
+that file and asserts every tag and attribute a component emits is one the
+runtime actually reads, and that no `vital` attribute is missing.
+
+### Pickers, not text fields
+
+`ss_new` chooses its pack from a dropdown, and then its animation from a second
+dropdown listing what is actually inside that pack — read out of the `.ssab`
+with `SSRuntimeManager.extractAnimationNames`, which is a pure FlatBuffers walk
+and needs no runtime wasm. Changing the pack refills the animation list in place
+(the host hands `onChange` only the new value, so the control is found by class,
+the way the builder's own `storage`/`target` pair does it).
+
+`[ss_play]` names a player rather than a pack, so which pack it will be driving
+is only knowable at run time; its animation list is the union across the project.
+
+Two rules keep the pickers from becoming a cage:
+
+- **The pack scan covers all of `data/`,** not just the importer's output. A
+  `.ssab` is an ordinary asset and an author may keep one anywhere — converted
+  by hand, copied from another project, filed next to its scene's images.
+  Imported packs simply sort first.
+- **A value the scan cannot see is still offered and stays selected.** A pack on
+  a CDN, or an animation name absent from the current pack, is added to the list
+  (flagged, for the animation) instead of being dropped. Without that, opening
+  such a component would show an empty dropdown and the next edit would quietly
+  discard a deliberate value.
+
+A path the editor cannot enumerate at all — one built from a variable at run
+time — still has to be written with the builder's own TyranoScript-code
+component. That is the one case the GUI cannot express.
+
+The lists are callbacks rather than captured arrays because the builder asks for
+the component definitions during boot, before the first import pass has
+finished; `select_list` runs later, when the inspector renders. Animation lists
+are cached per pack and invalidated by its mtime.
+
+Labels come from `lang/ja.json`. The builder merges a plugin's `<lang>.json`
+into its string table before importing it, and `$.s()` returns the key when a
+translation is missing — so the English source strings are the fallback.
+
 ## Next steps
 
-- `defineComponents()` — `[ss_new]` / `[ss_play]` etc. as GUI components, with
-  converted packs listed in a `Select`. Build the list lazily inside
-  `select_list`: the builder calls `defineComponents()` synchronously right
-  after the constructor, before the first import pass has finished.
-- Bundle the runtime (`ssplayer-tyrano`'s `main.js`, `ssruntime_bg.wasm`,
-  `init.ks`) into the same plugin folder, so `getPluginTag()` starts emitting
-  `[plugin name="ssplayer"]`.
+- `.tbp` packaging, so the whole folder installs from the editor's own plugin
+  dialog rather than a script.
+- Offer the player name as a `Select` of the names already used by `[ss_new]`
+  components in the scenario, instead of a free-text field.
 - `.tbp` packaging — the builder installs a plugin by unzipping it with
   `adm-zip` into `data/others/plugin/<id>/`, so packaging is a zip with the
   extension renamed.

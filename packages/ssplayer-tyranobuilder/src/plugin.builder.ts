@@ -7,17 +7,15 @@
 // when a project is opened, which is the counterpart of Ren'Py's `init python:`
 // block in `SSPlayerForRenPy/game/spritestudio/auto_importer.rpy`.
 //
-// PoC scope: the import pipeline only (no GUI components yet). It proves the
-// four things that were unknown before writing any of this:
-//   1. an ES module in the project folder really is loaded by the editor,
-//   2. `window.studio_api` gives it working filesystem access,
-//   3. binary payloads survive the contextBridge (or need the base64 fallback),
-//   4. the converter wasm instantiates and produces a real `.ssab` in-editor.
+// The plugin does two things from there:
+//   - imports SpriteStudio projects, and keeps watching for changes; and
+//   - contributes the `[ss_*]` GUI components (see `components.ts`).
 //
-// Everything it learns is written to `<project>/ss_import_log.txt`.
+// Everything the importer does is written to `<project>/ss_import_log.txt`.
 
 import { AutoImporter, DEFAULT_SOURCE_DIR } from './autoImporter.js';
-import type { TB } from './builderTypes.js';
+import type { BuilderComponentEntry, TB } from './builderTypes.js';
+import { defineSSComponents } from './components.js';
 import { HostFs } from './hostFs.js';
 import { ImportLog } from './importLog.js';
 
@@ -70,6 +68,43 @@ function listMethods(obj: object): string[] {
   return [...names].sort();
 }
 
+/** Everything the plugin needs from the editor, resolved once at construction. */
+interface Host {
+  fs: HostFs;
+  pluginDir: string;
+  projectRoot: string;
+  log: ImportLog;
+  importer: AutoImporter;
+}
+
+/**
+ * Synchronous so `defineComponents()` — which the builder calls immediately
+ * after the constructor — already has an importer to list packs from.
+ */
+function createHost(TB: TB | undefined): Host | null {
+  const pluginDir = moduleDir();
+
+  let fs: HostFs;
+  try {
+    fs = HostFs.fromWindow();
+  } catch (e) {
+    // Not fatal to the editor: log and stay out of the way.
+    console.warn('[ssplayer-tyranobuilder]', (e as Error).message);
+    return null;
+  }
+
+  const projectRoot = resolveProjectRoot(TB, fs, pluginDir);
+  const log = new ImportLog(fs, fs.path.join(projectRoot, LOG_FILENAME));
+  const importer = new AutoImporter({
+    fs,
+    projectRoot,
+    wasmPath: fs.path.join(pluginDir, WASM_FILENAME),
+    log: (line) => log.line(line),
+  });
+
+  return { fs, pluginDir, projectRoot, log, importer };
+}
+
 function describeEnvironment(log: ImportLog, TB: TB | undefined, fs: HostFs): void {
   const api = fs.api;
   log.line(`studio_api keys: ${Object.keys(api).join(', ')}`);
@@ -83,20 +118,8 @@ function describeEnvironment(log: ImportLog, TB: TB | undefined, fs: HostFs): vo
   log.line(`user agent: ${navigator.userAgent}`);
 }
 
-async function boot(TB: TB | undefined): Promise<void> {
-  const pluginDir = moduleDir();
-
-  let fs: HostFs;
-  try {
-    fs = HostFs.fromWindow();
-  } catch (e) {
-    // Not fatal to the editor: log and stay out of the way.
-    console.warn('[ssplayer-tyranobuilder]', (e as Error).message);
-    return;
-  }
-
-  const projectRoot = resolveProjectRoot(TB, fs, pluginDir);
-  const log = new ImportLog(fs, fs.path.join(projectRoot, LOG_FILENAME));
+async function boot(host: Host, TB: TB | undefined): Promise<void> {
+  const { fs, pluginDir, projectRoot, log, importer } = host;
 
   log.line(`plugin dir:   ${pluginDir}`);
   log.line(`project root: ${projectRoot}`);
@@ -114,13 +137,6 @@ async function boot(TB: TB | undefined): Promise<void> {
   const wasmPath = fs.path.join(pluginDir, WASM_FILENAME);
   log.line(`converter wasm: ${wasmPath} (${fs.statOf(wasmPath)?.size ?? 0} bytes)`);
 
-  const importer = new AutoImporter({
-    fs,
-    projectRoot,
-    wasmPath,
-    log: (line) => log.line(line),
-  });
-
   // Create the drop folder on first run so there is somewhere obvious to put
   // projects — the Ren'Py version simply returns when it is missing, which
   // leaves a first-time user with nothing to go on.
@@ -136,11 +152,9 @@ async function boot(TB: TB | undefined): Promise<void> {
     `first pass: ${run.converted.length} converted, ${run.skipped.length} up to date, ` +
       `${run.failed.length} failed${run.empty ? ' (no .sspj found)' : ''}`,
   );
-  log.flush();
 
   importer.start(WATCH_INTERVAL_MS);
   log.line(`watching for changes every ${WATCH_INTERVAL_MS}ms`);
-  log.flush();
 
   // Deferred: the constructor runs mid-boot, and alertify is nicer once the
   // editor has finished painting.
@@ -160,16 +174,20 @@ async function boot(TB: TB | undefined): Promise<void> {
  */
 export class plugin_setting {
   private readonly TB: TB | undefined;
+  private readonly host: Host | null;
 
   constructor(TB?: TB) {
     this.TB = TB;
     // Must never throw: `loadPlugins()` does not guard the constructor, and an
     // exception here would abort loading of every plugin after this one.
+    let host: Host | null = null;
     try {
-      void boot(TB).catch((e) => console.error('[ssplayer-tyranobuilder] boot failed', e));
+      host = createHost(TB);
+      if (host) void boot(host, TB).catch((e) => console.error('[ssplayer-tyranobuilder]', e));
     } catch (e) {
       console.error('[ssplayer-tyranobuilder] boot failed', e);
     }
+    this.host = host;
   }
 
   /**
@@ -180,25 +198,26 @@ export class plugin_setting {
    * installed, or the game would fail on a missing `init.ks`.
    */
   getPluginTag(): string {
-    try {
-      const fs = HostFs.fromWindow();
-      if (fs.exists(fs.path.join(moduleDir(), 'init.ks'))) {
-        return '[plugin name="ssplayer"]\n';
-      }
-    } catch {
-      /* not in the editor */
+    const host = this.host;
+    if (host && host.fs.exists(host.fs.path.join(host.pluginDir, 'init.ks'))) {
+      return '[plugin name="ssplayer"]\n';
     }
     return '';
   }
 
   /**
-   * GUI components go here (`{ <tag>: { info, component } }`). None yet — the
-   * PoC is about the import pipeline. Note for later: the builder calls this
-   * synchronously right after the constructor, so a component listing converted
-   * packs must build its list lazily inside `select_list`, by which time the
-   * first import pass has finished.
+   * The `[ss_*]` palette entries. Called synchronously right after the
+   * constructor, before the first import pass has finished — which is why the
+   * pack list is a callback the `storage` dropdown resolves when it renders,
+   * not an array captured here.
    */
-  defineComponents(): Record<string, unknown> {
-    return {};
+  defineComponents(): Record<string, BuilderComponentEntry> {
+    const host = this.host;
+    if (!host) return {};
+    return defineSSComponents({
+      $: this.TB?.$ ?? (undefined as unknown as TB['$']),
+      listPacks: () => host.importer.listPacks(),
+      listAnimations: (storage) => host.importer.listAnimations(storage),
+    });
   }
 }

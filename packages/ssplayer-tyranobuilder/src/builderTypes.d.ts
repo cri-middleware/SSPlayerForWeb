@@ -44,6 +44,8 @@ export interface HostFsModule {
   statSync(path: string): HostStats;
   /** fs-extra: recursive copy, runs entirely on the Node side. */
   copySync(src: string, dest: string): void;
+  /** fs-extra: delete, no error when absent. */
+  removeSync(path: string): void;
 }
 
 /**
@@ -74,13 +76,96 @@ export interface TBIo {
   exists(path: string): boolean;
 }
 
+/** The slice of jQuery this plugin uses to repopulate a `<select>` in place. */
+export interface JQueryLike {
+  length: number;
+  find(selector: string): JQueryLike;
+  empty(): JQueryLike;
+  append(child: unknown): JQueryLike;
+  html(value: string): JQueryLike;
+  val(): string;
+  val(value: string): JQueryLike;
+  change(): JQueryLike;
+}
+
+/** A placed component, as handed to `name()` / `header()` / `select_list()`. */
+export interface BuilderComponentModel {
+  data: {
+    tag_name?: string;
+    /** Attribute values — serialised verbatim by `$.tag(tag_name, pm)`. */
+    pm: Record<string, unknown>;
+  };
+}
+
+/** One parameter of a component: a row in the inspector panel. */
+export interface BuilderParam {
+  /** `Text` | `Num` | `Select` | `Check` | … (see `js/app/param/`). */
+  type: string;
+  name?: string;
+  help?: string;
+  /** `Check` only: the label beside the checkbox. */
+  text?: string;
+  /** `Num` only: suffix shown after the field. */
+  unit?: string;
+  /**
+   * `Select` only. Receives the param *view*, not the component — reach the
+   * component's values through `.get('component').data.pm`.
+   */
+  select_list?: (view?: unknown) => { name: string; val: string }[];
+  /** Extra CSS class on the rendered control, so another param can find it. */
+  className?: string;
+  /** Called with the new value after the control changes. */
+  onChange?: (value: unknown) => void;
+  /** jQuery-validate rules, e.g. `{ number: true }`. */
+  validate?: Record<string, unknown>;
+  default_val?: unknown;
+}
+
+/** The definition installed into `_map_component[tag]`. */
+export interface BuilderComponent {
+  name: (component: BuilderComponentModel) => string;
+  /** Sub-title on the timeline card. */
+  header: (component: BuilderComponentModel) => string;
+  /** Picks the card template in `template/component/<type>.tmpl.html`. */
+  component_type: string;
+  default_view: {
+    base_img_url?: string;
+    /** Bare icon name; the card renders `class="tb-i-<icon>"`. */
+    icon: string;
+    icon_color?: string;
+    /** Becomes a CSS class on the card. */
+    category: string;
+  };
+  param_view: Record<string, unknown>;
+  param: Record<string, BuilderParam>;
+}
+
+/** One entry of `defineComponents()`; the key is the KAG tag name. */
+export interface BuilderComponentEntry {
+  /** Palette listing (`_component_manage.plugin.components[tag]`). */
+  info: {
+    /** Non-zero marks a PRO-only component. */
+    pro: number;
+    /** Whether it is enabled in the palette out of the box. */
+    default: boolean;
+    name: string;
+    help: string;
+    icon: string;
+  };
+  component: BuilderComponent;
+}
+
 /**
  * The object the builder constructs plugins with: `new plugin_setting(TB)`
  * (`Builder.Core.Plugin.createTB()`).
  */
 export interface TB {
-  /** jQuery, with alertify's `$.alert` mixed in. */
-  $: ((selector: unknown) => unknown) & { alert?: (html: string) => void };
+  /** jQuery, with alertify's `$.alert` and the builder's `$.s` i18n lookup. */
+  $: ((selector: unknown) => JQueryLike) & {
+    alert?: (html: string) => void;
+    /** Translates via `lang/<lang>.json`, returning the key itself when absent. */
+    s?: (key: string) => string;
+  };
   /** Absolute path of the open project, with a trailing slash. */
   getProjectPath(): string;
   io: TBIo;

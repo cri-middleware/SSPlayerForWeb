@@ -256,6 +256,9 @@ importers:
       '@spritestudio/ssconverter-core':
         specifier: workspace:^
         version: link:../ssconverter-core
+      '@spritestudio/ssplayer-core':
+        specifier: workspace:^
+        version: link:../ssplayer-core
     devDependencies:
       typescript:
         specifier: ^7.0.2

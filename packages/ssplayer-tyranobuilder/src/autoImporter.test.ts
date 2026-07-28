@@ -64,6 +64,9 @@ function makeStudioApi(behaviour: BridgeBehaviour) {
       existsSync,
       readdirSync,
       statSync,
+      removeSync(path: string) {
+        rmSync(path, { force: true, recursive: true });
+      },
       copySync(src: string, dest: string) {
         mkdirSync(nodePath.dirname(dest), { recursive: true });
         cpSync(src, dest, { recursive: true });
@@ -169,6 +172,38 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
         readFileSync(nodePath.join(faithfulRoot, rel, name)),
       );
     }
+  });
+
+  it('finds packs anywhere under data/, and reads their animation names', async () => {
+    const root = makeProject();
+    const fs = withApi('faithful');
+    const importer = importerFor(root, fs, []);
+    await importer.runOnce();
+
+    // A pack an author placed by hand, outside the importer's output folder.
+    const hand = nodePath.join(root, 'data/image/scene1');
+    mkdirSync(hand, { recursive: true });
+    cpSync(
+      nodePath.join(root, 'data/others/ssdata/Ringo/Ringo.ssab'),
+      nodePath.join(hand, 'Copy.ssab'),
+    );
+
+    const packs = importer.listPacks().map((p) => p.val);
+    expect(packs).toContain('others/ssdata/Ringo/Ringo.ssab');
+    expect(packs).toContain('image/scene1/Copy.ssab');
+    // Imported packs sort first; hand-placed ones follow.
+    expect(packs[0].startsWith('others/ssdata/')).toBe(true);
+
+    // The .ssab is what the runtime loads, so it is what the picker reads.
+    const names = importer.listAnimations('others/ssdata/Ringo/Ringo.ssab');
+    expect(names.length).toBeGreaterThan(0);
+    expect(names).toEqual(importer.listAnimations('image/scene1/Copy.ssab'));
+    expect(names.every((n) => typeof n === 'string' && n.length > 0)).toBe(true);
+
+    // Paths this process cannot read must come back empty, not throw.
+    expect(importer.listAnimations('https://example.com/Boss.ssab')).toEqual([]);
+    expect(importer.listAnimations('')).toEqual([]);
+    expect(importer.listAnimations('others/ssdata/Ringo/Ringo.png')).toEqual([]);
   });
 
   it('reports an empty run instead of failing when there is no .sspj', async () => {

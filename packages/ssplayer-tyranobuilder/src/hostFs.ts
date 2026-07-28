@@ -130,6 +130,14 @@ export class HostFs {
     this.api.fs.copySync(src, dest);
   }
 
+  remove(p: string): void {
+    try {
+      this.api.fs.removeSync(p);
+    } catch {
+      // Best effort; a leftover temp file is not worth surfacing.
+    }
+  }
+
   readBinary(p: string): Uint8Array {
     if (this.binaryMode === 'buffer') {
       const bytes = coerceBytes(this.api.fs.readFileSync(p));
@@ -242,6 +250,9 @@ export class HostFs {
         detail += `base64 fallback threw (${(e as Error).message}); `;
       }
     }
+
+    // Don't leave the probe behind: this folder ships inside an exported game.
+    this.remove(scratchPath);
 
     this.binaryMode = bufferOk ? 'buffer' : 'base64';
     return {

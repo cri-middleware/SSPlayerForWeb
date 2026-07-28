@@ -11,7 +11,7 @@
 //
 // The bundle and the wasm are always copied as a pair: the wasm-bindgen glue is
 // inlined into the bundle, so a mismatched pair is a LinkError at instantiation.
-import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -85,28 +85,79 @@ const opts = parseArgs(process.argv.slice(2));
 const project = resolveProject(opts);
 
 const bundle = join(pkgRoot, 'dist', 'ssplayer.builder.js');
-const wasm = join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');
 
-for (const [label, path] of [
-  ['dist/ssplayer.builder.js', bundle],
-  ['ssconverter_bg.wasm', wasm],
-]) {
+// One plugin folder, two halves. The editor half is this package; the runtime
+// half is @spritestudio/ssplayer-tyrano, whose main.js registers the [ss_*] tags
+// the components write. Without it a scenario placed in the GUI parses but dies
+// at run time with "no such tag" — TyranoBuilder itself never sees a problem,
+// because the tags only exist inside the running game.
+//
+// `init.ks` is what ties them together: its presence makes getPluginTag() emit
+// [plugin name="ssplayer"] into data/scenario/system/plugin_third.ks, which
+// TyranoScript expands to [call storage="../others/plugin/ssplayer/init.ks"] →
+// [loadjs storage="plugin/ssplayer/main.js"].
+const FILES = [
+  ['ssplayer.builder.js', bundle, 'pnpm --filter @spritestudio/ssplayer-tyranobuilder run build'],
+  [
+    'ssconverter_bg.wasm',
+    join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm'),
+    'pnpm download:wasm',
+  ],
+  [
+    'main.js',
+    join(repoRoot, 'packages/ssplayer-tyrano/dist/browser/main.js'),
+    'pnpm --filter @spritestudio/ssplayer-tyrano run build',
+  ],
+  [
+    'ssruntime_bg.wasm',
+    join(repoRoot, 'packages/ssplayer-core/dist/ssruntime_bg.wasm'),
+    'pnpm download:wasm && pnpm --filter @spritestudio/ssplayer-core run build',
+  ],
+  ['init.ks', join(repoRoot, 'packages/ssplayer-tyrano/plugin/init.ks'), null],
+];
+
+for (const [label, path, hint] of FILES) {
   if (!existsSync(path)) {
-    fail(
-      `missing ${label}: ${path}\n` +
-        '  → build first: pnpm --filter @spritestudio/ssplayer-tyranobuilder run build\n' +
-        '    (and `pnpm download:wasm` from the repo root if the wasm is absent)',
-    );
+    fail(`missing ${label}: ${path}${hint ? `\n  → build it first: ${hint}` : ''}`);
   }
+}
+
+// The builder resolves nothing: it hands the file straight to `import()`, so a
+// surviving bare specifier rejects the import and the plugin silently never
+// loads — no error in the UI, no log, just missing components. Catch it here,
+// where there is somewhere to print it.
+const bundleSource = readFileSync(bundle, 'utf8');
+const bareImports = [
+  // `import … from "pkg"` / `export … from "pkg"`, and the side-effect `import "pkg"`.
+  ...bundleSource.matchAll(/^\s*(?:import|export)[^'"]*from\s*['"]([^.'"][^'"]*)['"]/gm),
+  ...bundleSource.matchAll(/^\s*import\s*['"]([^.'"][^'"]*)['"]/gm),
+].map((m) => m[1]);
+if (bareImports.length > 0) {
+  fail(
+    `the bundle still imports ${[...new Set(bareImports)].join(', ')}.\n` +
+      '  TyranoBuilder cannot resolve bare specifiers — add them to `deps.alwaysBundle` in tsdown.config.ts.',
+  );
 }
 
 const pluginDir = join(project, 'data', 'others', 'plugin', PLUGIN_ID);
 mkdirSync(pluginDir, { recursive: true });
-copyFileSync(bundle, join(pluginDir, `${PLUGIN_ID}.builder.js`));
-copyFileSync(wasm, join(pluginDir, 'ssconverter_bg.wasm'));
+for (const [label, path] of FILES) {
+  // The builder finds the editor half by name: <plugin_id>/<plugin_id>.builder.js.
+  const dest = label === 'ssplayer.builder.js' ? `${PLUGIN_ID}.builder.js` : label;
+  copyFileSync(path, join(pluginDir, dest));
+}
+
+// Component labels. The builder merges <plugin>/<lang>.json into its own string
+// table before importing the plugin, and `$.s()` falls back to the key, so a
+// missing language just leaves the English source strings in place.
+const langDir = join(pkgRoot, 'lang');
+const langs = existsSync(langDir) ? readdirSync(langDir).filter((f) => f.endsWith('.json')) : [];
+for (const file of langs) copyFileSync(join(langDir, file), join(pluginDir, file));
 
 console.log(`[install-poc] project: ${project}`);
-console.log(`[install-poc] installed ${PLUGIN_ID}.builder.js + ssconverter_bg.wasm -> ${pluginDir}`);
+console.log(`[install-poc] plugin -> ${pluginDir}`);
+for (const [label] of FILES) console.log(`             ${label}`);
+for (const file of langs) console.log(`             ${file}`);
 
 if (opts.sample) {
   const src = join(repoRoot, 'SpriteStudio-SDK/tests', opts.sample);
