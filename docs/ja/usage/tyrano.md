@@ -1,9 +1,9 @@
 # TyranoScript / TyranoBuilder で使う
 
-::: warning 実験的 / アルファ版
-`@spritestudio/ssplayer-tyrano` は **実験的なアルファ版**（`7.0.0-alpha.1`）です。パッケージは
-**private で、npm には公開されていません**。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
-`SSCanvasPlayer` を土台にしており、タグ名や挙動はバージョン間で変わる可能性があります。
+::: warning ベータ版
+`@spritestudio/ssplayer-tyrano` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは
+揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
+[`ssplayer-webgl`](/ja/usage/webgl) の `SSCanvasPlayer` を土台にしています。
 
 **リリースはまだ 1 つもありません。** 正式リリース後はプラグイン ZIP が **GitHub Releases** で
 配布される予定ですが、現時点で入手する唯一の方法は [ソースからのビルド](#ソースからビルドする)です。

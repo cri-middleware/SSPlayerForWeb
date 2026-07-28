@@ -39,7 +39,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — the `<ss-player>` Web Component
 - ▶️ **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — for PixiJS v8 apps
 - ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (experimental)
-- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — a visual-novel scene (experimental)
+- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — a visual-novel scene (beta)
 
 ## How to read these docs
 

@@ -14,7 +14,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — zero-dependency standalone renderer (the `<ss-player>` Web Component). *Supports D&D of `.ssab` files.*
 - ▶️ **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — for PixiJS v8 apps. *Supports D&D of `.ssab` files.*
 - ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (SpriteStudio pictures)
-- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — a visual-novel scene driven by `[ss_*]` tags (experimental)
+- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — a visual-novel scene driven by `[ss_*]` tags (beta)
 
 ## 📚 Documentation
 
@@ -113,7 +113,7 @@ flowchart TD
         webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
         rmmz["ssplayer-rmmz<br/>RPG Maker MZ (experimental)"]
-        tyrano["ssplayer-tyrano<br/>TyranoScript (experimental)"]
+        tyrano["ssplayer-tyrano<br/>TyranoScript (beta)"]
         core --> webgl
         core --> pixi
         webgl --> rmmz

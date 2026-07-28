@@ -14,7 +14,7 @@
 - ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — 依存ゼロの単体レンダラー（`<ss-player>` Web コンポーネント）。※`.ssab` のD&D再生に対応
 - ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け。※`.ssab` のD&D再生に対応
 - ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（SpriteStudio ピクチャ）
-- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン（実験的）
+- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン（beta）
 
 ## 📚 ドキュメント
 
@@ -113,7 +113,7 @@ flowchart TD
         webgl["ssplayer-webgl<br/>単体 WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
         rmmz["ssplayer-rmmz<br/>RPG ツクール MZ（実験的）"]
-        tyrano["ssplayer-tyrano<br/>TyranoScript（実験的）"]
+        tyrano["ssplayer-tyrano<br/>TyranoScript（beta）"]
         core --> webgl
         core --> pixi
         webgl --> rmmz

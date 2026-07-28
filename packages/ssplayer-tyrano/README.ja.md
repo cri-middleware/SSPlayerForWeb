@@ -6,12 +6,11 @@
 **SpriteStudio 7** のアニメを表示・再生できます。プログラミングは不要です。
 
 > **対象読者:** TyranoScript / TyranoBuilder を使うヴィジュアルノベルのシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` シナリオタグを追加するドロップイン・プラグインです。
-> **ステータス:** 実験的 / alpha・private（npm 未公開）。
+> **ステータス:** beta。
 > **目的が違う場合:** → [ssplayer-webgl](../ssplayer-webgl/README.ja.md) — このプラグインの土台になっている単体レンダラです。
 
-> ⚠️ **alpha / 実験的 / private。** 本プラグインは初期段階で npm には公開していません。
-> タグ名や挙動はバージョン間で変わる可能性があります。設計ロードマップはリポジトリの
-> [`ROADMAP.md`](./ROADMAP.md) にあります。
+> ⚠️ **beta。** シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる
+> 可能性はあります。設計ロードマップはリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** —
 同梱の TyranoScript サンプルをブラウザで動かせます（🚧 初回リリース後に公開）。

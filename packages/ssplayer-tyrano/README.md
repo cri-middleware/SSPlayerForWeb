@@ -6,12 +6,12 @@ Show and play **SpriteStudio 7** animations inside a **TyranoScript / TyranoBuil
 visual novel by writing `[ss_*]` tags in your scenario — no coding required.
 
 > **Who this is for:** visual-novel scenario writers using TyranoScript / TyranoBuilder — a drop-in plugin that adds `[ss_*]` scenario tags for SpriteStudio animations.
-> **Status:** experimental / alpha, private — not on npm.
+> **Status:** beta.
 > **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) — the standalone renderer this plugin is built on.
 
-> ⚠️ **Alpha / experimental / private.** This plugin is early and not published to
-> npm. Tag names and behavior may still change between versions. The design roadmap
-> lives in the repo ([`ROADMAP.md`](./ROADMAP.md)).
+> ⚠️ **Beta.** The scenario-authoring tags are complete, but names and behavior may
+> still change before `7.0.0`. The design roadmap lives in the repo
+> ([`ROADMAP.md`](./ROADMAP.md)).
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** —
 the bundled TyranoScript sample, running in your browser (🚧 live after the first release).

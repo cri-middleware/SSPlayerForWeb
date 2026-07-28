@@ -1,10 +1,9 @@
 # TyranoScript / TyranoBuilder
 
-::: warning Experimental / alpha
-`@spritestudio/ssplayer-tyrano` is an **experimental alpha** (`7.0.0-alpha.1`). The
-package is **private and not published on npm**. Rendering is built on
-[`ssplayer-webgl`](/usage/webgl)'s `SSCanvasPlayer`, so tag names and behavior may
-still change between versions.
+::: warning Beta
+`@spritestudio/ssplayer-tyrano` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
+tags are complete, but names and behavior may still change before `7.0.0`. Rendering is
+built on [`ssplayer-webgl`](/usage/webgl)'s `SSCanvasPlayer`.
 
 **There are no releases yet.** Once the first release ships, a plugin ZIP will be
 distributed on **GitHub Releases** — but for now the only way to obtain it is to
