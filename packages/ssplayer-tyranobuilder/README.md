@@ -61,19 +61,39 @@ because `ssconverter-core` takes the wasm bytes from its host instead of
 fetching them, the plugin just reads the binary through `studio_api` and hands
 it over; `fetch()` on a `file://` URL is never needed.
 
-## Trying it
+## Installing
 
 ```sh
+pnpm --filter @spritestudio/ssplayer-tyrano run build        # the runtime half
 pnpm --filter @spritestudio/ssplayer-tyranobuilder run build
+pnpm --filter @spritestudio/ssplayer-tyranobuilder run pack  # → dist/pack/ssplayer.tbp
+```
+
+Then in TyranoBuilder: plugin settings → add → pick `ssplayer.tbp`.
+
+A `.tbp` is a plain zip. The dialog extracts it into
+`<project>/data/others/plugin/` and then reads `<id>/<id>.builder.js`, where the
+id is **the `.tbp` filename without its extension**. So the archive holds one
+top-level `ssplayer/` folder and **the file must keep that name** — rename it to
+`ssplayer-1.2.0.tbp` and the install looks for
+`ssplayer-1.2.0/ssplayer-1.2.0.builder.js` and finds nothing. Versions belong in
+the release, not the filename. `pack-tbp.mjs` verifies the layout from the
+finished archive rather than trusting the staging step.
+
+### While developing
+
+Going through the dialog on every build gets old, so `install-poc.mjs` copies
+the same files straight into a project:
+
+```sh
 node packages/ssplayer-tyranobuilder/scripts/install-poc.mjs --sample
 ```
 
-The installer finds the project under `~/TyranoBuilder/myproject` (or takes
-`--project <path>`), copies `ssplayer.builder.js` + `ssconverter_bg.wasm` into
-`data/others/plugin/ssplayer/`, and with `--sample` seeds
-`SpriteStudio_Source/Ringo/` from the SDK submodule.
+It finds the project under `~/TyranoBuilder/myproject` (or takes
+`--project <path>`), and with `--sample` seeds `SpriteStudio_Source/Ringo/` from
+the SDK submodule.
 
-Then open (or reopen) the project in TyranoBuilder. A dialog reports the result;
+Either way, open (or reopen) the project afterwards. A dialog reports the result;
 the details land in `<project>/ss_import_log.txt`, which records the host
 environment, the binary-bridge decision and every conversion. Converted packs
 appear under `data/others/ssdata/<project>/`, ready for
@@ -107,6 +127,8 @@ The base64 path stays in as insurance for other builds and platforms.
 
 ## Constraints found in the host
 
+- **The plugin id is the `.tbp` filename**, not anything inside the archive —
+  so the artefact cannot carry a version in its name (see Installing).
 - **Non-Steam builds load at most two plugins.** `plugin.js` has
   `if (global_build != "steam" && cnt_plugin >= 3) return false;`, and
   `index.html` sets `global_build = "standard"` — the third plugin aborts
@@ -183,10 +205,9 @@ translation is missing — so the English source strings are the fallback.
 
 ## Next steps
 
-- `.tbp` packaging, so the whole folder installs from the editor's own plugin
-  dialog rather than a script.
 - Offer the player name as a `Select` of the names already used by `[ss_new]`
   components in the scenario, instead of a free-text field.
+- A sample builder project, and a submission to plugin.tyrano.jp.
 - `.tbp` packaging — the builder installs a plugin by unzipping it with
   `adm-zip` into `data/others/plugin/<id>/`, so packaging is a zip with the
   extension renamed.

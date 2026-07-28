@@ -1,4 +1,7 @@
 {
+  "Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted automatically, every time you save it. Place the animation from the SpriteStudio components in the palette.": "SpriteStudio のプロジェクト（.sspj とそのフォルダ）を SpriteStudio_Source に入れておくと、保存するたびに自動で変換されます。配置はパレットの SpriteStudio 系コンポーネントから行えます。",
+  "Put your SpriteStudio projects here:": "SpriteStudio のプロジェクトはここに置いてください:",
+
   "SpriteStudio: initialise": "SpriteStudio 初期化",
   "Loads the SpriteStudio runtime. Place this once, before any other SpriteStudio component.": "SpriteStudio のランタイムを読み込みます。他の SpriteStudio 部品より前に、1回だけ置いてください。",
   "Runtime (wasm)": "ランタイム (wasm)",

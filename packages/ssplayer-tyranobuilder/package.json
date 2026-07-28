@@ -19,7 +19,8 @@
     "build": "tsdown",
     "install:poc": "node scripts/install-poc.mjs",
     "clean": "rimraf dist",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pack": "node scripts/pack-tbp.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

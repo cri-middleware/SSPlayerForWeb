@@ -176,8 +176,21 @@ export class plugin_setting {
   private readonly TB: TB | undefined;
   private readonly host: Host | null;
 
+  // Read as plain properties by the plugin manager panel and the install dialog
+  // (`js/app/window/window.js`). `plugin_img` is compared against the literal
+  // 'no_image'; leaving it unset would point an <img> at `<plugin>/undefined`.
+  readonly name: string;
+  readonly plugin_text: string;
+  readonly plugin_img = 'no_image';
+
   constructor(TB?: TB) {
     this.TB = TB;
+    const t = (text: string): string =>
+      typeof TB?.$?.s === 'function' ? TB.$.s(text) : text;
+    this.name = t('SpriteStudio');
+    this.plugin_text = t(
+      'Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted automatically, every time you save it. Place the animation from the SpriteStudio components in the palette.',
+    );
     // Must never throw: `loadPlugins()` does not guard the constructor, and an
     // exception here would abort loading of every plugin after this one.
     let host: Host | null = null;
@@ -203,6 +216,25 @@ export class plugin_setting {
       return '[plugin name="ssplayer"]\n';
     }
     return '';
+  }
+
+  /**
+   * Called once, straight after a `.tbp` is installed from the plugin dialog.
+   * The constructor's own import pass has already run by then and found nothing
+   * — the source folder was only just created — so the useful thing to do here
+   * is say where to put projects.
+   */
+  triggerInstall(): void {
+    const host = this.host;
+    const t = (text: string): string =>
+      typeof this.TB?.$?.s === 'function' ? this.TB.$.s(text) : text;
+    if (!host) return;
+    host.log.line('installed from a .tbp');
+    setTimeout(() => {
+      this.TB?.$?.alert?.(
+        `${t('Put your SpriteStudio projects here:')}<br /><b>${host.importer.sourceDir}</b>`,
+      );
+    }, 2500);
   }
 
   /**
