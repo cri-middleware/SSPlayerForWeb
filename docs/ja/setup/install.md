@@ -16,10 +16,13 @@
 ::: tip フレームワーク連携
 ゲーム/ノベルフレームワーク向けの連携は `ssplayer-webgl` を土台とし、各フレームワークの
 プラグイン機構で読み込む **IIFE バンドル**として提供されます（npm からインストールするのではなく
-プラグインとして利用）。いずれも現状は**実験的（alpha）**です:
+プラグインとして利用）:
 
-- **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
-- **TyranoScript / TyranoBuilder**（`@spritestudio/ssplayer-tyranoscript`）— [TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照。
+- **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— **実験的（alpha）**。[RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
+- **TyranoScript**（`@spritestudio/ssplayer-tyranoscript`）— beta。[TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照。
+- **ティラノビルダー**（`@spritestudio/ssplayer-tyranobuilder`）— beta。`.tbp` として配布されます。[TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照。
+
+それぞれの未対応範囲は [制約と適用範囲](/ja/limitations) にまとめてあります。
 :::
 
 ## インストール

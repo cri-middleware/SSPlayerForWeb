@@ -83,6 +83,12 @@ export default withMermaid({
             ],
           },
           {
+            text: 'Limitations & Scope',
+            items: [
+              { text: 'Limitations & Scope', link: '/limitations' },
+            ],
+          },
+          {
             text: 'Development',
             items: [
               { text: 'Contributing', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
@@ -142,6 +148,12 @@ export default withMermaid({
               { text: 'パーツトラッキング（指定パーツへの追従）', link: '/ja/customize/part-following' },
               { text: 'シェーダーとブレンドモード', link: '/ja/customize/shaders' },
               { text: 'パフォーマンスチューニング', link: '/ja/customize/performance' },
+            ],
+          },
+          {
+            text: '制約と適用範囲',
+            items: [
+              { text: '制約と適用範囲', link: '/ja/limitations' },
             ],
           },
           {

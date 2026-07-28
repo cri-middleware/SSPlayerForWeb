@@ -16,10 +16,13 @@ install the core separately.
 ::: tip Framework integrations
 Integrations for game/VN frameworks are built on `ssplayer-webgl` and ship as **IIFE
 plugin bundles** loaded by the host framework's plugin system — so they are consumed as
-plugins, not installed from npm. Both are currently **experimental (alpha)**:
+plugins, not installed from npm:
 
-- **RPG Maker MZ** (`@spritestudio/ssplayer-rmmz`) — see [Using RPG Maker MZ](/usage/rmmz).
-- **TyranoScript / TyranoBuilder** (`@spritestudio/ssplayer-tyranoscript`) — see [Using TyranoScript / TyranoBuilder](/usage/tyrano).
+- **RPG Maker MZ** (`@spritestudio/ssplayer-rmmz`) — **experimental (alpha)**. See [Using RPG Maker MZ](/usage/rmmz).
+- **TyranoScript** (`@spritestudio/ssplayer-tyranoscript`) — beta. See [Using TyranoScript / TyranoBuilder](/usage/tyrano).
+- **TyranoBuilder** (`@spritestudio/ssplayer-tyranobuilder`) — beta, distributed as a `.tbp`. See [Using TyranoScript / TyranoBuilder](/usage/tyrano).
+
+What each one does not cover yet is in [Limitations & Scope](/limitations).
 :::
 
 ## Install
