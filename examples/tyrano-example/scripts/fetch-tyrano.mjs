@@ -70,7 +70,7 @@ function patchConfig(systemDir) {
     .split('\n')
     .filter((line) => !/^[;\s]*(projectID|configSave)\s*=/.test(line));
   kept.push('');
-  kept.push('; --- ssplayer-tyrano example overrides (added by fetch-tyrano.mjs) ---');
+  kept.push('; --- ssplayer-tyranoscript example overrides (added by fetch-tyrano.mjs) ---');
   kept.push(`projectID = ${PROJECT_ID};`);
   kept.push('configSave = webstorage;');
   kept.push('');

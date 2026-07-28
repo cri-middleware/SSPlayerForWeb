@@ -13,16 +13,16 @@
 import { registerSSTags } from './registerTags.js';
 
 // Re-export so consumers who *do* load this as a module can still call it, and
-// so the IIFE global (`SSPlayerTyrano.registerSSTags`) is populated.
+// so the IIFE global (`SSPlayerTyranoScript.registerSSTags`) is populated.
 export { registerSSTags } from './registerTags.js';
 
 const registered = registerSSTags();
 if (registered) {
-  console.log('[ssplayer-tyrano] [ss_*] custom tags registered.');
+  console.log('[ssplayer-tyranoscript] [ss_*] custom tags registered.');
 } else {
   // Loaded before the Tyrano runtime existed. Rare (init.ks loads us after
   // boot), but warn rather than fail silently so the cause is discoverable.
   console.warn(
-    '[ssplayer-tyrano] TYRANO runtime not found at load time; call SSPlayerTyrano.registerSSTags() once it is ready.',
+    '[ssplayer-tyranoscript] TYRANO runtime not found at load time; call SSPlayerTyranoScript.registerSSTags() once it is ready.',
   );
 }

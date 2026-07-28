@@ -283,7 +283,7 @@ export class plugin_setting {
    * Contributed to `data/scenario/system/plugin_third.ks`, which the builder
    * regenerates on every load. `[plugin name="ssplayer"]` makes TyranoScript
    * run `data/others/plugin/ssplayer/init.ks` at game boot — that is the
-   * runtime half (`@spritestudio/ssplayer-tyrano`). Emit nothing when it is not
+   * runtime half (`@spritestudio/ssplayer-tyranoscript`). Emit nothing when it is not
    * installed, or the game would fail on a missing `init.ks`.
    */
   getPluginTag(): string {

@@ -12,11 +12,11 @@ data/others/plugin/ssplayer/
 ```
 
 `main.js` / `ssruntime_bg.wasm` はビルド生成物なのでこのフォルダにはコミットされて
-いません。配布用 zip は次で生成します（`dist/pack/ssplayer-tyrano-plugin-<ver>.zip`）:
+いません。配布用 zip は次で生成します（`dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip`）:
 
 ```bash
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # main.js を生成
-pnpm --filter @spritestudio/ssplayer-tyrano run pack    # 配布 zip を組み立て
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # main.js を生成
+pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # 配布 zip を組み立て
 ```
 
 ## 導入（手書きシナリオ）

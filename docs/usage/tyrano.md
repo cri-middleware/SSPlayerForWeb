@@ -1,7 +1,7 @@
 # TyranoScript / TyranoBuilder
 
 ::: warning Beta
-`@spritestudio/ssplayer-tyrano` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
+`@spritestudio/ssplayer-tyranoscript` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
 tags are complete, but names and behavior may still change before `7.0.0`. Rendering is
 built on [`ssplayer-webgl`](/usage/webgl)'s `SSCanvasPlayer`.
 
@@ -226,8 +226,8 @@ Tyrano volume-slider integration are still on the roadmap. Track progress in
 ## Building from source
 
 ```sh
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyrano run pack    # dist/pack/ssplayer-tyrano-plugin-<v>.zip
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
+pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
 `pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` — attach it to a GitHub

@@ -1,6 +1,6 @@
 [**English**](./README.md) | [**日本語**](./README.ja.md)
 
-# @spritestudio/ssplayer-tyrano
+# @spritestudio/ssplayer-tyranoscript
 
 **TyranoScript / TyranoBuilder** のシナリオに `[ss_*]` タグを書くだけで、
 **SpriteStudio 7** のアニメを表示・再生できます。プログラミングは不要です。
@@ -317,8 +317,8 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 npm には**公開しません**（`private`）。TyranoScript 作者はプラグイン一式を使います:
 
 ```bash
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyrano run pack    # dist/pack/ssplayer-tyrano-plugin-<ver>.zip
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
+pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip
 ```
 
 `pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。これを
@@ -338,7 +338,7 @@ data/others/ssdata/<project>.ssab
 ### API（ESM）
 
 ```ts
-import { registerSSTags } from '@spritestudio/ssplayer-tyrano';
+import { registerSSTags } from '@spritestudio/ssplayer-tyranoscript';
 
 // TyranoScript ランタイム起動後に呼ぶと [ss_*] を登録する。
 // 省略時はグローバル TYRANO を使用。Tyrano 不在なら false を返す no-op。
@@ -348,8 +348,8 @@ registerSSTags();
 ### 開発
 
 ```bash
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # dist/index.js + dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyrano run test    # vitest (モック TYRANO ハーネス, 実エンジン不要)
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/index.js + dist/browser/main.js
+pnpm --filter @spritestudio/ssplayer-tyranoscript run test    # vitest (モック TYRANO ハーネス, 実エンジン不要)
 ```
 
 ## ライセンス

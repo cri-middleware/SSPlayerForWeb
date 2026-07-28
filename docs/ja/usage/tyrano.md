@@ -1,7 +1,7 @@
 # TyranoScript / TyranoBuilder で使う
 
 ::: warning ベータ版
-`@spritestudio/ssplayer-tyrano` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは
+`@spritestudio/ssplayer-tyranoscript` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは
 揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
 [`ssplayer-webgl`](/ja/usage/webgl) の `SSCanvasPlayer` を土台にしています。
 
@@ -220,8 +220,8 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 ## ソースからビルドする
 
 ```sh
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyrano run pack    # dist/pack/ssplayer-tyrano-plugin-<v>.zip
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
+pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
 `pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。これを GitHub Release の

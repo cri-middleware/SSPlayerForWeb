@@ -1,5 +1,5 @@
 {
-  "name": "@spritestudio/ssplayer-tyrano",
+  "name": "@spritestudio/ssplayer-tyranoscript",
   "version": "7.0.0-beta.1",
   "description": "TyranoScript / TyranoBuilder plugin bindings for SpriteStudio-SDK player",
   "type": "module",

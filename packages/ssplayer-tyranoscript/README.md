@@ -1,6 +1,6 @@
 [**English**](./README.md) | [**日本語**](./README.ja.md)
 
-# @spritestudio/ssplayer-tyrano
+# @spritestudio/ssplayer-tyranoscript
 
 Show and play **SpriteStudio 7** animations inside a **TyranoScript / TyranoBuilder**
 visual novel by writing `[ss_*]` tags in your scenario — no coding required.
@@ -341,8 +341,8 @@ real TyranoScript; remaining work (builder support, converter import, …) lives
 Not published to npm (`private`). TyranoScript authors consume the plugin bundle:
 
 ```bash
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyrano run pack    # dist/pack/ssplayer-tyrano-plugin-<ver>.zip
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
+pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip
 ```
 
 `pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}`. Attach it to a **GitHub
@@ -362,7 +362,7 @@ data/others/ssdata/<project>.ssab
 ### API (ESM)
 
 ```ts
-import { registerSSTags } from '@spritestudio/ssplayer-tyrano';
+import { registerSSTags } from '@spritestudio/ssplayer-tyranoscript';
 
 // Call once the TyranoScript runtime is up to register [ss_*].
 // Uses the global TYRANO when omitted; a no-op returning false if Tyrano is absent.
@@ -372,8 +372,8 @@ registerSSTags();
 ### Development
 
 ```bash
-pnpm --filter @spritestudio/ssplayer-tyrano run build   # dist/index.js + dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyrano run test    # vitest (mock TYRANO harness, no real engine)
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/index.js + dist/browser/main.js
+pnpm --filter @spritestudio/ssplayer-tyranoscript run test    # vitest (mock TYRANO harness, no real engine)
 ```
 
 ## License

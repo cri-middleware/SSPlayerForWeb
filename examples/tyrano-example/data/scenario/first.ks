@@ -1,5 +1,5 @@
 ;============================================================================
-; ssplayer-tyrano — 手書きシナリオ最小確認 (PT1)
+; ssplayer-tyranoscript — 手書きシナリオ最小確認 (PT1)
 ;
 ; SpriteStudio アニメを [ss_*] カスタムタグで表示・再生する最小例。
 ; レンダラは @spritestudio/ssplayer-webgl (SSCanvasPlayer)。
@@ -17,7 +17,7 @@
 
 [cm]
 
-「ssplayer-tyrano デモ。SpriteStudio アニメを表示します。」[l][r]
+「ssplayer-tyranoscript デモ。SpriteStudio アニメを表示します。」[l][r]
 
 ; プレイヤーを生成 → ssab ロード → レイヤー0 に canvas を挿入 → 再生。
 ; anime を省略すると ssab の先頭アニメを自動選択する。

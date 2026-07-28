@@ -6,7 +6,7 @@
 ; エンジンは保存位置へ戻る直前にこのファイルを call する。Spine / Live2D
 ; プラグインが [*_restore] をここに書かせているのはそのため。
 ;
-; ssplayer-tyrano では書く必要がない。エンジンが make.ks を call する直前に発火する
+; ssplayer-tyranoscript では書く必要がない。エンジンが make.ks を call する直前に発火する
 ; load-beforemaking イベントを main.js が購読していて、そこで復元するため。
 ; 明示的に呼びたい場合（ロード完了まで待たせたい等）だけ [ss_restore] を置く。
 ;

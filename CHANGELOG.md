@@ -29,7 +29,7 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
       runs entirely client-side; nothing is uploaded.
 - **Framework integrations** (experimental / alpha, shipped as IIFE plugin bundles rather than npm
   installs): `@spritestudio/ssplayer-rmmz` for RPG Maker MZ (PixiJS v5) and
-  `@spritestudio/ssplayer-tyrano` for TyranoScript / TyranoBuilder.
+  `@spritestudio/ssplayer-tyranoscript` for TyranoScript / TyranoBuilder.
 - **Per-part runtime overrides**: `setPartColorOverride` / `setPartColorOverrideCorners`,
   `setPartCellOverride`, `setPartVisibilityOverride`, their `clear…` counterparts, and
   `clearAllPartOverrides` — each taking a part **name or index**. Available on every player, plus

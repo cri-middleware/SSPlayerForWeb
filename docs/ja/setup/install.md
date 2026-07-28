@@ -19,7 +19,7 @@
 プラグインとして利用）。いずれも現状は**実験的（alpha）**です:
 
 - **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
-- **TyranoScript / TyranoBuilder**（`@spritestudio/ssplayer-tyrano`）— [TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照。
+- **TyranoScript / TyranoBuilder**（`@spritestudio/ssplayer-tyranoscript`）— [TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照。
 :::
 
 ## インストール

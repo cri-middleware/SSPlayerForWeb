@@ -6,7 +6,7 @@ built into `data/others/ssdata/` without a terminal, a CLI or a separate app.
 
 This is the author-time half of the TyranoScript integration. The runtime half —
 the `[ss_*]` KAG tags that actually draw the animation — lives in
-[`@spritestudio/ssplayer-tyrano`](../ssplayer-tyrano/README.md). **TyranoBuilder
+[`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.md). **TyranoBuilder
 and TyranoScript are different tools**; they share the runtime, not the editor,
 which is why this is a separate package.
 
@@ -14,7 +14,7 @@ It also contributes the `[ss_*]` components to the editor's palette, so an
 animation can be placed and driven without writing any KAG by hand.
 
 One plugin folder holds both halves. This package is the editor half; the
-runtime half is `ssplayer-tyrano`'s `main.js`, which registers the tags the
+runtime half is `ssplayer-tyranoscript`'s `main.js`, which registers the tags the
 components write. `init.ks` ties them together: its presence makes
 `getPluginTag()` emit `[plugin name="ssplayer"]` into
 `data/scenario/system/plugin_third.ks`, which TyranoScript expands to
@@ -64,7 +64,7 @@ it over; `fetch()` on a `file://` URL is never needed.
 ## Installing
 
 ```sh
-pnpm --filter @spritestudio/ssplayer-tyrano run build        # the runtime half
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build        # the runtime half
 pnpm --filter @spritestudio/ssplayer-tyranobuilder run build
 pnpm --filter @spritestudio/ssplayer-tyranobuilder run pack  # → dist/pack/ssplayer.tbp
 ```
@@ -181,7 +181,7 @@ whole-screen ones (fade out/in all, pause/resume all).
 
 The host serialises a component as `$.tag(key, pm)` → `[<key> attr="value" …]`,
 so **the map key is the KAG tag name and the param keys are its attributes** —
-these mirror the master tags in `ssplayer-tyrano`'s `registerTags.ts` exactly.
+these mirror the master tags in `ssplayer-tyranoscript`'s `registerTags.ts` exactly.
 Nothing else ties the two packages together, so `src/components.test.ts` parses
 that file and asserts every tag and attribute a component emits is one the
 runtime actually reads, and that no `vital` attribute is missing.

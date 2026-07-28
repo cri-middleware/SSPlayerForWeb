@@ -1,9 +1,9 @@
-; ssplayer-tyrano plugin loader (§4.1)
+; ssplayer-tyranoscript plugin loader (§4.1)
 ;
 ; This is the canonical distribution template for the plugin. Ship this folder
 ; as `data/others/plugin/ssplayer/` in a TyranoScript project, alongside the
 ; built `main.js` and `ssruntime_bg.wasm` (added by
-; `pnpm --filter @spritestudio/ssplayer-tyrano run pack`).
+; `pnpm --filter @spritestudio/ssplayer-tyranoscript run pack`).
 ;
 ; A scenario reaches all of this with one line — `[plugin name="ssplayer"]` —
 ; which TyranoScript expands into a [call] of this file, the same way the Spine

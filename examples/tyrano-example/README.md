@@ -1,6 +1,6 @@
-# tyrano-example — ssplayer-tyrano 手書きシナリオ最小確認
+# tyrano-example — ssplayer-tyranoscript 手書きシナリオ最小確認
 
-`@spritestudio/ssplayer-tyrano` の `[ss_*]` カスタムタグを、実際の **TyranoScript**
+`@spritestudio/ssplayer-tyranoscript` の `[ss_*]` カスタムタグを、実際の **TyranoScript**
 プロジェクト上で表示・再生する最小サンプルです（PT1）。
 
 > **TyranoScript 本体はこのリポジトリに含まれません。**
@@ -75,7 +75,7 @@ examples/tyrano-example/
 
 ```bash
 # 1) パッケージをビルド（dist/browser/main.js を生成）
-pnpm --filter @spritestudio/ssplayer-tyrano run build
+pnpm --filter @spritestudio/ssplayer-tyranoscript run build
 
 # 2) 生成物（main.js + wasm）を data/others/plugin/ssplayer/ へ同期
 #    ★ パッケージを編集したら毎回これを回すのが基本ループ
@@ -101,8 +101,8 @@ pnpm --filter tyrano-example run dev
 ## 開発イテレーション（まとめ）
 
 ```
-packages/ssplayer-tyrano/src/* を編集
-  → pnpm --filter @spritestudio/ssplayer-tyrano run build
+packages/ssplayer-tyranoscript/src/* を編集
+  → pnpm --filter @spritestudio/ssplayer-tyranoscript run build
   → pnpm --filter tyrano-example run sync:plugin
   → dev サーバをリロード（サーバ再起動は不要。ブラウザ強制リロードでキャッシュ回避）
 ```
@@ -110,7 +110,7 @@ packages/ssplayer-tyrano/src/* を編集
 ロジックの速い内側ループは、実エンジン不要の vitest モックで回せます:
 
 ```bash
-pnpm --filter @spritestudio/ssplayer-tyrano run test
+pnpm --filter @spritestudio/ssplayer-tyranoscript run test
 ```
 
 ## トラブルシューティング
@@ -188,4 +188,4 @@ SS の音声イベントは TyranoScript 同梱の howler で再生されます�
 （`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
 本サンプルの Ringo には音声が無いため鳴りません。
 
-ティラノビルダー `.tbp` 対応は PT4（[ssplayer-tyrano ROADMAP](../../packages/ssplayer-tyrano/ROADMAP.md)）。
+ティラノビルダー `.tbp` 対応は PT4（[ssplayer-tyranoscript ROADMAP](../../packages/ssplayer-tyranoscript/ROADMAP.md)）。

@@ -40,7 +40,7 @@ export const DEFAULT_SOURCE_DIR = 'SpriteStudio_Source';
 
 /**
  * Where the runtime expects packs: `[ss_new storage="others/ssdata/…"]`.
- * See `packages/ssplayer-tyrano/README.md`.
+ * See `packages/ssplayer-tyranoscript/README.md`.
  */
 export const DEFAULT_OUT_DIR = 'data/others/ssdata';
 
@@ -172,7 +172,7 @@ export class AutoImporter {
   /** A `storage=` value → an absolute path, or null when it is not on disk. */
   private resolvePack(storage: unknown): string | null {
     const rel = String(storage ?? '').trim();
-    // Mirrors ssplayer-tyrano's resolveDataPath: bare paths hang off `data/`,
+    // Mirrors ssplayer-tyranoscript's resolveDataPath: bare paths hang off `data/`,
     // `data/`- and `./`-prefixed ones off the project root. Remote and
     // root-absolute paths are not ours to read.
     if (!rel || /^(https?:)?\/\//.test(rel) || rel.startsWith('/')) return null;

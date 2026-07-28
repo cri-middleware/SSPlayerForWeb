@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsdown';
 
-// ssplayer-tyrano ships two artefacts:
+// ssplayer-tyranoscript ships two artefacts:
 //
 //  1. ESM `dist/index.js` — for bundler consumers / tests. Exposes
 //     `registerSSTags()` and types; does NOT self-register (importing it in a
@@ -27,7 +27,7 @@ export default defineConfig([
   {
     entry: ['src/plugin.ts'],
     format: 'iife',
-    globalName: 'SSPlayerTyrano',
+    globalName: 'SSPlayerTyranoScript',
     minify: true,
     outDir: 'dist/browser',
     outputOptions: {
@@ -37,7 +37,7 @@ export default defineConfig([
     // needs must be inlined into main.js. Only the WASM binary stays external.
     deps: {
       alwaysBundle: [
-        '@spritestudio/ssplayer-tyrano',
+        '@spritestudio/ssplayer-tyranoscript',
         '@spritestudio/ssplayer-webgl',
         '@spritestudio/ssplayer-core',
         'flatbuffers',

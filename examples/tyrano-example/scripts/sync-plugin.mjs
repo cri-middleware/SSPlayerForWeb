@@ -1,8 +1,8 @@
-// Copy the freshly-built ssplayer-tyrano plugin assets into this TyranoScript
+// Copy the freshly-built ssplayer-tyranoscript plugin assets into this TyranoScript
 // project's plugin folder. Both files are git-ignored build artefacts — run
-// this after `pnpm --filter @spritestudio/ssplayer-tyrano run build`.
+// this after `pnpm --filter @spritestudio/ssplayer-tyranoscript run build`.
 //
-//   main.js            ← packages/ssplayer-tyrano/dist/browser/main.js (IIFE, self-registers [ss_*])
+//   main.js            ← packages/ssplayer-tyranoscript/dist/browser/main.js (IIFE, self-registers [ss_*])
 //   ssruntime_bg.wasm  ← packages/ssplayer-core/dist/ssruntime_bg.wasm (the runtime binary)
 //
 // The wasm is kept external (not bundled into main.js); [ss_init wasm=...]
@@ -17,7 +17,7 @@ const destDir = resolve(here, '../data/others/plugin/ssplayer');
 
 const copies = [
   {
-    from: resolve(repoRoot, 'packages/ssplayer-tyrano/dist/browser/main.js'),
+    from: resolve(repoRoot, 'packages/ssplayer-tyranoscript/dist/browser/main.js'),
     to: resolve(destDir, 'main.js'),
   },
   {
@@ -33,7 +33,7 @@ for (const { from, to } of copies) {
   } catch {
     console.error(
       `[sync-plugin] missing ${from}\n` +
-        `  → build first: pnpm --filter @spritestudio/ssplayer-tyrano run build`,
+        `  → build first: pnpm --filter @spritestudio/ssplayer-tyranoscript run build`,
     );
     process.exit(1);
   }

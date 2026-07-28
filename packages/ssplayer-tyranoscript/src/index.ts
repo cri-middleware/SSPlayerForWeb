@@ -1,4 +1,4 @@
-// @spritestudio/ssplayer-tyrano
+// @spritestudio/ssplayer-tyranoscript
 //
 // A thin TyranoScript / TyranoBuilder adapter over `@spritestudio/ssplayer-webgl`
 // (`SSCanvasPlayer`). All GPU/WebGL work lives in the webgl package; this layer

@@ -1,7 +1,7 @@
-; ssplayer-tyrano plugin loader (§4.1)
+; ssplayer-tyranoscript plugin loader (§4.1)
 ;
 ; Loaded by [plugin name="ssplayer"] from first.ks. `main.js` is the built
-; IIFE bundle (packages/ssplayer-tyrano/dist/browser/main.js), which on load
+; IIFE bundle (packages/ssplayer-tyranoscript/dist/browser/main.js), which on load
 ; self-registers the [ss_*] custom tags onto TYRANO.kag.ftag.master_tag. It is
 ; NOT an ES module, so load it WITHOUT type="module".
 ;

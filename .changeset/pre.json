@@ -14,7 +14,7 @@
     "@spritestudio/ssplayer-core": "7.0.0-beta.1",
     "@spritestudio/ssplayer-pixi": "7.0.0-beta.1",
     "@spritestudio/ssplayer-rmmz": "7.0.0-alpha.1",
-    "@spritestudio/ssplayer-tyrano": "7.0.0-beta.1",
+    "@spritestudio/ssplayer-tyranoscript": "7.0.0-beta.1",
     "@spritestudio/ssplayer-webgl": "7.0.0-beta.1"
   },
   "changesets": []

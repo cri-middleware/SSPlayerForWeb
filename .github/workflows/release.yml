@@ -16,7 +16,7 @@ name: Release
 #                         first release (and a retry after a half-failed one)
 #                         possible. Everything already published -> no-op.
 #
-#   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyrano /
+#   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyranoscript /
 #                         ssplayer-tyranobuilder) are
 #                         never on npm, so GitHub Releases are their only channel.
 #                         changeset does not tag private packages: pack each plugin
@@ -202,7 +202,7 @@ jobs:
               echo "::notice::Released ${tag}"
             }
             release_plugin "@spritestudio/ssplayer-rmmz"   ssplayer-rmmz   'dist/pack/ssplayer-rmmz-plugin-%v.zip'
-            release_plugin "@spritestudio/ssplayer-tyrano" ssplayer-tyrano 'dist/pack/ssplayer-tyrano-plugin-%v.zip'
+            release_plugin "@spritestudio/ssplayer-tyranoscript" ssplayer-tyranoscript 'dist/pack/ssplayer-tyranoscript-plugin-%v.zip'
             # ssplayer.tbp keeps that exact name on purpose: TyranoBuilder derives
             # the plugin id from the filename and then looks for <id>/<id>.builder.js
             # inside the archive, so `ssplayer-1.2.0.tbp` would install nothing.

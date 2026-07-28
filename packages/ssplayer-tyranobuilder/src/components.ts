@@ -3,7 +3,7 @@
 // A component is serialised by the host as `$.tag(key, pm)`, which expands to
 // `[<key> attr="value" …]` — so **the map key is the KAG tag name and the param
 // keys are its attributes**. That is why these mirror the `[ss_*]` master tags
-// registered by `@spritestudio/ssplayer-tyrano` exactly: the builder writes the
+// registered by `@spritestudio/ssplayer-tyranoscript` exactly: the builder writes the
 // tag, that package executes it at run time.
 //
 // Two consequences of `$.tag` worth knowing:

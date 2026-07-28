@@ -4,7 +4,7 @@
   "description": "TyranoBuilder plugin: auto-imports SpriteStudio projects (.sspj -> .ssab) from inside the editor",
   "type": "module",
   "private": true,
-  "//private": "Not published to npm. TyranoBuilder authors install a .tbp (a zip the builder unpacks into data/others/plugin/), not an npm package. TyranoBuilder is a separate tool from TyranoScript; the runtime-side [ss_*] tags live in @spritestudio/ssplayer-tyrano.",
+  "//private": "Not published to npm. TyranoBuilder authors install a .tbp (a zip the builder unpacks into data/others/plugin/), not an npm package. TyranoBuilder is a separate tool from TyranoScript; the runtime-side [ss_*] tags live in @spritestudio/ssplayer-tyranoscript.",
   "files": [
     "dist",
     "lang",

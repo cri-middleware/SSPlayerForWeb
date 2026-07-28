@@ -58,7 +58,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | Your environment | Package | Runnable example |
 |---|---|---|
 | **RPG Maker MZ** (PixiJS v5) | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
-| **TyranoScript / TyranoBuilder** (visual-novel engine) | [`@spritestudio/ssplayer-tyrano`](./packages/ssplayer-tyrano) | [examples/tyrano-example](./examples/tyrano-example) |
+| **TyranoScript / TyranoBuilder** (visual-novel engine) | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyrano-example](./examples/tyrano-example) |
 
 ## 🚀 Quick Start
 
@@ -113,7 +113,7 @@ flowchart TD
         webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
         rmmz["ssplayer-rmmz<br/>RPG Maker MZ (experimental)"]
-        tyrano["ssplayer-tyrano<br/>TyranoScript (beta)"]
+        tyrano["ssplayer-tyranoscript<br/>TyranoScript (beta)"]
         core --> webgl
         core --> pixi
         webgl --> rmmz
@@ -123,7 +123,7 @@ flowchart TD
     ssab ==>|feeds| core
 ```
 
-- **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyrano` further build on `ssplayer-webgl`.
+- **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyranoscript` further build on `ssplayer-webgl`.
 - **[`ssconverter-core`](./packages/ssconverter-core)** is a separate WASM core (a build of the Rust `libssconverter`) with the same bytes-in / bytes-out design, so the same converter runs in the browser, Node, a Worker, or an edge runtime — the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) covers the same step outside a build.
 
 Per-package details live in each package's README, linked from the tables above.
@@ -141,7 +141,7 @@ Ready-to-run example apps live under [`examples/`](./examples/) — one per rend
 
 Packages are versioned **independently** with [Changesets](https://github.com/changesets/changesets) and published by the **Release** GitHub Action — a manual, one-shot workflow ([`release.yml`](./.github/workflows/release.yml)) that runs only from `main`.
 
-**Published to npm** (public): `ssplayer-core`, `ssplayer-pixi`, `ssplayer-webgl`, `ssconverter-core`. `ssplayer-rmmz`, `ssplayer-tyrano` and `ssconverter-web` are `private` — distributed via GitHub Releases, not npm.
+**Published to npm** (public): `ssplayer-core`, `ssplayer-pixi`, `ssplayer-webgl`, `ssconverter-core`. `ssplayer-rmmz`, `ssplayer-tyranoscript` and `ssconverter-web` are `private` — distributed via GitHub Releases, not npm.
 
 ### One-time setup
 

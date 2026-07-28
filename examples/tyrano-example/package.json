@@ -2,7 +2,7 @@
   "name": "tyrano-example",
   "private": true,
   "version": "1.0.0",
-  "description": "Hand-written TyranoScript project exercising the ssplayer-tyrano [ss_*] tags",
+  "description": "Hand-written TyranoScript project exercising the ssplayer-tyranoscript [ss_*] tags",
   "type": "module",
   "scripts": {
     "fetch:engine": "node scripts/fetch-tyrano.mjs",
@@ -12,7 +12,7 @@
     "clean": "rimraf data/others/plugin/ssplayer/main.js data/others/plugin/ssplayer/ssruntime_bg.wasm"
   },
   "dependencies": {
-    "@spritestudio/ssplayer-tyrano": "workspace:*"
+    "@spritestudio/ssplayer-tyranoscript": "workspace:*"
   },
   "license": "BSD-3-Clause"
 }

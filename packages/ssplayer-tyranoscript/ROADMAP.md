@@ -1,4 +1,4 @@
-# @spritestudio/ssplayer-tyrano Roadmap
+# @spritestudio/ssplayer-tyranoscript Roadmap
 
 A thin TyranoScript / TyranoBuilder adapter. Rendering is delegated entirely to
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md) (`SSCanvasPlayer`);
@@ -40,7 +40,7 @@ canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 - [x] `[ss_pos]` (instant) / `[ss_move]` (RAF easeOut tween, non-blocking) — internal transform, anchor-accurate absolute placement
 - [x] Audio `TyranoAudioManager` (`IAudioManager` via `window.Howl`)
 - [x] Movement/effects also work through Tyrano's own `[anim]` / `[kanim]` (the canvas is tagged with the player-name class)
-- [x] Distribution: `plugin/` template + `pnpm run pack` → `ssplayer-tyrano-plugin-<ver>.zip`
+- [x] Distribution: `plugin/` template + `pnpm run pack` → `ssplayer-tyranoscript-plugin-<ver>.zip`
 - [x] `examples/tyrano-example` (real TyranoScript; engine fetched via `fetch:engine`, git-ignored)
 
 ### PT3.5 — parity with the official Spine / Live2D plugins

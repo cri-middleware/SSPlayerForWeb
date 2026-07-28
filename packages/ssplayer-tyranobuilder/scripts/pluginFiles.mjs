@@ -15,7 +15,7 @@ export const PLUGIN_ID = 'ssplayer';
  * One plugin folder, two halves.
  *
  * The editor half is this package. The runtime half is
- * `@spritestudio/ssplayer-tyrano`'s `main.js`, which registers the `[ss_*]` tags
+ * `@spritestudio/ssplayer-tyranoscript`'s `main.js`, which registers the `[ss_*]` tags
  * the components write — without it a GUI-built scenario parses fine and then
  * dies at run time on an unknown `[ss_init]`, with nothing visible in the
  * editor. `init.ks` ties them together (see the README).
@@ -38,8 +38,8 @@ export function pluginFiles(repoRoot, pkgRoot) {
     },
     {
       name: 'main.js',
-      path: join(repoRoot, 'packages/ssplayer-tyrano/dist/browser/main.js'),
-      hint: 'pnpm --filter @spritestudio/ssplayer-tyrano run build',
+      path: join(repoRoot, 'packages/ssplayer-tyranoscript/dist/browser/main.js'),
+      hint: 'pnpm --filter @spritestudio/ssplayer-tyranoscript run build',
     },
     {
       name: 'ssruntime_bg.wasm',
@@ -48,7 +48,7 @@ export function pluginFiles(repoRoot, pkgRoot) {
     },
     {
       name: 'init.ks',
-      path: join(repoRoot, 'packages/ssplayer-tyrano/plugin/init.ks'),
+      path: join(repoRoot, 'packages/ssplayer-tyranoscript/plugin/init.ks'),
       hint: null,
     },
   ];

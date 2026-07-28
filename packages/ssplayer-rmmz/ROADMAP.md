@@ -17,7 +17,7 @@ PartsColor shader.
 
 The actual implementation instead **delegates all drawing to
 `ssplayer-webgl`'s `SSWebGLRenderer`** (raw GL against MZ's shared context),
-mirroring how `ssplayer-tyrano` rides the webgl package. `SSPlayerRenderer` is a
+mirroring how `ssplayer-tyranoscript` rides the webgl package. `SSPlayerRenderer` is a
 thin `PIXI.ObjectRenderer` that flushes Pixi's batch, calls
 `SSWebGLRenderer.render(...)`, then restores Pixi's cached GL state
 Effekseer-style. Consequence: the spec's §3.1–§3.3 (vertex attributes, fan index

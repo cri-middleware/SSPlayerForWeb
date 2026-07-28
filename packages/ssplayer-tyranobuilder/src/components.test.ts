@@ -1,5 +1,5 @@
 // Guards the seam between the two halves of the integration: the builder writes
-// `[<key> <param>="…"]`, and @spritestudio/ssplayer-tyrano executes it at run
+// `[<key> <param>="…"]`, and @spritestudio/ssplayer-tyranoscript executes it at run
 // time. Nothing else ties the two together, so a renamed attribute on either
 // side would silently produce scenarios that parse but do nothing.
 //
@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { defineSSComponents, type PackChoice } from './components.js';
 
 const here = nodePath.dirname(fileURLToPath(import.meta.url));
-const REGISTER_TAGS = nodePath.resolve(here, '../../ssplayer-tyrano/src/registerTags.ts');
+const REGISTER_TAGS = nodePath.resolve(here, '../../ssplayer-tyranoscript/src/registerTags.ts');
 
 /** Text of the object literal starting at `open` (the index of its `{`). */
 function braceBlock(src: string, open: number): string {
@@ -102,7 +102,7 @@ describe('defineSSComponents', () => {
     }
   });
 
-  it.skipIf(!existsSync(REGISTER_TAGS))('agrees with the tags ssplayer-tyrano registers', () => {
+  it.skipIf(!existsSync(REGISTER_TAGS))('agrees with the tags ssplayer-tyranoscript registers', () => {
     const tags = runtimeTags();
     // A parse that silently found nothing would make this test vacuous.
     expect(tags.size).toBeGreaterThan(10);
@@ -110,12 +110,12 @@ describe('defineSSComponents', () => {
 
     for (const [tag, { component }] of Object.entries(components)) {
       const runtime = tags.get(tag);
-      expect(runtime, `[${tag}] is not registered by ssplayer-tyrano`).toBeDefined();
+      expect(runtime, `[${tag}] is not registered by ssplayer-tyranoscript`).toBeDefined();
 
       for (const key of Object.keys(component.param)) {
         expect(
           runtime!.attrs.has(key),
-          `[${tag} ${key}=] is not read by ssplayer-tyrano's ${tag} tag`,
+          `[${tag} ${key}=] is not read by ssplayer-tyranoscript's ${tag} tag`,
         ).toBe(true);
       }
       // Omitting one of these makes TyranoScript raise at run time.

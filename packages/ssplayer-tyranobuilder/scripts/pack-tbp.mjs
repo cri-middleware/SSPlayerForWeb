@@ -19,7 +19,7 @@
 // install silently looks for `ssplayer-1.2.0/ssplayer-1.2.0.builder.js`, which
 // is not there. The version therefore belongs in the release, not the filename.
 //
-// Run after building this package and ssplayer-tyrano. Requires `zip` on PATH.
+// Run after building this package and ssplayer-tyranoscript. Requires `zip` on PATH.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
