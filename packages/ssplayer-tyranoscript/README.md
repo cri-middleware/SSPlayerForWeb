@@ -13,7 +13,7 @@ visual novel by writing `[ss_*]` tags in your scenario — no coding required.
 > still change before `7.0.0`. The design roadmap lives in the repo
 > ([`ROADMAP.md`](./ROADMAP.md)).
 
-▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** —
+▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 the bundled TyranoScript sample, running in your browser (🚧 live after the first release).
 
 ## Install

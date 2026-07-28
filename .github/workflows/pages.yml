@@ -129,8 +129,8 @@ jobs:
           # runs fine under the /examples/rmmz/ subpath — no base rewrite needed).
           mkdir -p _site/examples/rmmz  && cp -R examples/rmmz-example/SampleProject/. _site/examples/rmmz/
           # tyranoscript-example: copy the static TyranoScript project (engine + data,
-          # relative paths) as-is under /examples/tyrano/.
-          mkdir -p _site/examples/tyrano && cp -R examples/tyranoscript-example/index.html examples/tyranoscript-example/tyrano examples/tyranoscript-example/data _site/examples/tyrano/
+          # relative paths) as-is under /examples/tyranoscript/.
+          mkdir -p _site/examples/tyranoscript && cp -R examples/tyranoscript-example/index.html examples/tyranoscript-example/tyrano examples/tyranoscript-example/data _site/examples/tyranoscript/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

@@ -12,7 +12,7 @@
 > ⚠️ **beta。** シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる
 > 可能性はあります。設計ロードマップはリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
 
-▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** —
+▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 同梱の TyranoScript サンプルをブラウザで動かせます（🚧 初回リリース後に公開）。
 
 ## インストール
