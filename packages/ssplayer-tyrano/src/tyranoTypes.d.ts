@@ -84,6 +84,21 @@ export interface TyranoKag {
   layer: TyranoLayer;
   /** Optional: absent in tests / very old engines, so `[ss_chara]` guards it. */
   chara?: TyranoChara;
+  /**
+   * Engine event bus. Optional: older TyranoScript builds have none, so every
+   * caller guards it.
+   *
+   * `event_names` is space-separated and may carry `.namespace` suffixes.
+   * Of the options, two matter here: `temp` means "delete this listener when a
+   * save is loaded" (so a listener that must survive loads leaves it unset), and
+   * `system` marks a listener as the engine's or a plugin's rather than an
+   * author's.
+   */
+  on?: (
+    event_names: string,
+    callback: (event?: unknown) => void,
+    options?: { once?: boolean; system?: boolean; temp?: boolean; priority?: number },
+  ) => void;
   [key: string]: unknown;
 }
 

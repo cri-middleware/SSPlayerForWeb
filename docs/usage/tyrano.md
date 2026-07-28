@@ -55,17 +55,24 @@ output under `data/others/ssdata/` and point `[ss_new storage=...]` at it.
 
 ## 3. Quick start
 
-A minimal scenario that shows one looping character:
+Load the plugin once, at the top of your game:
 
 ```
 ; first.ks
 [plugin name="ssplayer"]
-[ss_init wasm="others/plugin/ssplayer/ssruntime_bg.wasm"]
+```
+
+Then show a character wherever you want one:
+
+```
+; scene1.ks
 [ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480" loop="true"]
 [ss_play name="chr"]
 ```
 
-- `[ss_init]` loads the animation runtime once — put it near the start of your game.
+- `[plugin]` loads the plugin and starts the animation runtime. It is the only
+  line that belongs in `first.ks`, and the only setup there is: no `[ss_init]`,
+  and nothing to add to `make.ks`.
 - `[ss_new]` creates a named player, loads its `.ssab`, drops it on a layer, and plays.
 - `[ss_play]` plays or switches an animation on an existing player.
 
@@ -75,7 +82,7 @@ A runnable minimal project lives at `examples/tyrano-example`.
 
 | Tag | Role | Key attributes |
 | --- | --- | --- |
-| `[ss_init]` | Initialize the runtime once + audio config | `wasm=` (effectively required), `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
+| `[ss_init]` | **Sound settings.** The runtime is already started by `[plugin name="ssplayer"]`, so this is only for changing audio routing | `audio=`, `sounddir=`, `soundext=`, `sevolume=` (`wasm=` is set by the plugin) |
 | `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
 | `[ss_play]` | Play / switch animation, optionally queueing a follow-up | `name=`(req) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
 | `[ss_show]` | Put a player on screen (reposition / entrance animation / fade) | `name=`(req) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
@@ -93,7 +100,7 @@ A runnable minimal project lives at `examples/tyrano-example`.
 | `[ss_free]` | Release one player | `name=`(req) |
 | `[ss_free_all]` | Release every player (scene transition / layer clear) | — |
 | `[ss_pause_all]` / `[ss_resume_all]` | Pause / resume all (e.g. around a menu) | — |
-| `[ss_restore]` | Rebuild every player from a save (**place in `make.ks`**) | — |
+| `[ss_restore]` | Rebuild every player from a save. **Not needed** — the plugin does this itself on load; use it only to make the load *wait* for the players, or on an engine with no event system | — |
 
 Coordinates use Tyrano's normal top-left pixels (`config.scWidth × scHeight`), the same
 as any other on-screen element. `loop`: `true` → infinite / `false` → once / a number →
@@ -198,9 +205,9 @@ invisible (≈ 0.4%). **Full opacity is `255`.**
 - **Playback keeps running during ordinary text waits** (`[l]` / `[p]`) — that's the
   expected behavior. To freeze animations for a menu or save screen, use
   `[ss_pause_all]` / `[ss_resume_all]`. Off-screen / hidden-tab playback auto-pauses.
-- **Save / load**: players are restored on load. Put `[ss_init]` → `[ss_restore]` in
-  your `make.ks` so they rebuild after a load (they restart from the animation's
-  beginning, not the exact saved frame).
+- **Save / load**: players are restored on load automatically — there is nothing
+  to add to `make.ks`. They restart from the animation's beginning, not the exact
+  saved frame.
 - **Scene changes**: call `[ss_free]` / `[ss_free_all]` on scene transitions or layer
   clears to remove players you no longer need.
 

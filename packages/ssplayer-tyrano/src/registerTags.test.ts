@@ -116,6 +116,10 @@ interface Harness {
   speak(speaker: string): void;
   /** End the current line. */
   endSpeaking(): void;
+  /** Fire an engine event, the way `kag.trigger` does. */
+  fire(event: string): void;
+  /** Options each `kag.on` call was made with, keyed by event name. */
+  listenerOptions: Map<string, Record<string, unknown> | undefined>;
 }
 
 function makeTyrano(): Harness {
@@ -154,6 +158,12 @@ function makeTyrano(): Harness {
     };
   };
 
+  // The engine's event bus (kag.on / kag.trigger). Modelled because the
+  // automatic restore hangs off `load-beforemaking`; an engine without it must
+  // still work, which is what the `on: undefined` case below covers.
+  const listeners = new Map<string, (() => void)[]>();
+  const listenerOptions = new Map<string, Record<string, unknown> | undefined>();
+
   const tyrano: TyranoGlobal = {
     kag: {
       ftag: { master_tag: { text }, nextOrder, startTag: vi.fn() },
@@ -161,6 +171,12 @@ function makeTyrano(): Harness {
       stat: { f: {}, current_speaker: '', charas: {}, jcharas: {} },
       variable: { f: {}, sf: {}, tf: {} },
       layer: { getLayer },
+      on: (names: string, callback: () => void, options?: Record<string, unknown>) => {
+        for (const name of names.split(' ')) {
+          listeners.set(name, [...(listeners.get(name) ?? []), callback]);
+          listenerOptions.set(name, options);
+        }
+      },
     },
   };
 
@@ -188,6 +204,10 @@ function makeTyrano(): Harness {
     endSpeaking() {
       textTag().stopLipSyncWithText();
     },
+    fire(event: string) {
+      for (const callback of listeners.get(event) ?? []) callback();
+    },
+    listenerOptions,
   };
 }
 
@@ -427,6 +447,52 @@ describe('registerSSTags', () => {
     expect(chr.play).toHaveBeenCalled(); // was playing → resume playback
     expect(bg.pause).toHaveBeenCalled(); // was paused → stay paused
     expect(bg.play).not.toHaveBeenCalled();
+  });
+
+  it('restores by itself when the engine loads a save, without make.ks', async () => {
+    const h = await withPlayer();
+    expect(h.listenerOptions.get('load-beforemaking')).toMatchObject({ system: true });
+    // Not `temp`: the engine documents that flag as "delete when a save is
+    // loaded", which would drop the hook after the very first load.
+    expect(h.listenerOptions.get('load-beforemaking')?.temp).toBeFalsy();
+
+    // A load: stat.f survives, the canvases do not.
+    FakeSSCanvasPlayer.instances.length = 0;
+    h.fire('load-beforemaking');
+
+    // Wait on the registry, not on the constructor: the instance exists from
+    // the moment createPlayer starts, but it is only registered once its .ssab
+    // has loaded.
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual(['chr']));
+    expect(FakeSSCanvasPlayer.instances).toHaveLength(1);
+  });
+
+  it('does not rebuild twice when make.ks still calls ss_restore', async () => {
+    const h = await withPlayer();
+
+    FakeSSCanvasPlayer.instances.length = 0;
+    h.fire('load-beforemaking');
+    // make.ks runs immediately after the event, while the restore is in flight.
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    // One rebuild, not two — and [ss_restore] only advanced once it was done,
+    // so a scenario written the old way still blocks until the players are back.
+    expect(FakeSSCanvasPlayer.instances).toHaveLength(1);
+    expect(getRegistry().names()).toEqual(['chr']);
+  });
+
+  it('still restores through ss_restore on an engine with no event bus', async () => {
+    const h = makeTyrano();
+    delete (h.tyrano.kag as { on?: unknown }).on;
+    registerSSTags(h.tyrano);
+    const tags = h.tyrano.kag.ftag.master_tag;
+    h.addLayer('0', 'fore');
+    await runTag(tags.ss_init, { wasm: 'rt.wasm' }, h.nextOrder);
+    await runTag(tags.ss_new, { name: 'chr', storage: 'a.ssab', anime: 'Anime_1' }, h.nextOrder);
+
+    FakeSSCanvasPlayer.instances.length = 0;
+    await runTag(tags.ss_restore, {}, h.nextOrder);
+    expect(FakeSSCanvasPlayer.instances).toHaveLength(1);
   });
 
   it('ss_free_all tears down every player and empties the save slot', async () => {

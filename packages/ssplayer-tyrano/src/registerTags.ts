@@ -56,6 +56,14 @@ interface AdapterState {
   talkHooked: boolean;
   /** Player currently showing its talk animation (`[ss_chara]`), if any. */
   talking: string | null;
+  /** Whether the automatic `load-beforemaking` restore hook is wired. */
+  restoreHooked: boolean;
+  /**
+   * An automatic restore already running for the load in progress. `[ss_restore]`
+   * awaits it instead of doing the work twice, so a `make.ks` written the
+   * old way still blocks the scenario until the players are back.
+   */
+  restorePromise: Promise<void> | null;
 }
 
 const state: AdapterState = {
@@ -64,6 +72,8 @@ const state: AdapterState = {
   layerHidden: false,
   talkHooked: false,
   talking: null,
+  restoreHooked: false,
+  restorePromise: null,
 };
 
 /** Audio routing config (set by `[ss_init]`; see TyranoAudioManager). */
@@ -977,47 +987,90 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
-  // [ss_restore] — rebuild every player from the saved state (§3.3). Place this
-  // in `make.ks` (the .ks TyranoScript `call`s on load), AFTER an [ss_init], so
-  // a loaded save re-creates its SS players. Tears down any stale players first
-  // (module state survives a load; the DOM canvases do not).
+  /** Rebuild every player from the saved state (§3.3). */
+  const restoreSavedPlayers = async (): Promise<void> => {
+    // Tear down stale players first: module state survives a load, the DOM
+    // canvases do not.
+    registry.destroyAll();
+    state.talking = null;
+    // Read the blanket-fade flag BEFORE rebuilding: createPlayer consults it
+    // to decide whether a restored player is shown at all.
+    state.layerHidden = readGlobalState(kag).layerHidden;
+    const saved = readSavedPlayers(kag);
+    let needsTalkHooks = false;
+    for (const s of saved) {
+      const entry = await createPlayer(kag, {
+        name: s.name,
+        storage: s.storage,
+        anime: s.anime,
+        layer: s.layer,
+        page: s.page as LayerPage,
+        x: s.x,
+        y: s.y,
+        scale: s.scale,
+        loop: s.loop,
+        // Saves written before these fields existed default to "shown".
+        visible: s.visible !== false,
+        zindex: s.zindex,
+        next: s.next,
+        chara: s.chara,
+        overrides: s.overrides,
+      });
+      if (s.playing) entry.player.play();
+      else entry.player.pause();
+      // Re-arm the follow-up only for a player that is actually running;
+      // a paused one would sit on a listener that can never fire.
+      if (s.next && s.playing) armChain(entry, persist);
+      if (s.chara) needsTalkHooks = true;
+    }
+    if (needsTalkHooks) ensureTalkHooks();
+    persist();
+  };
+
+  // Restore without the scenario having to ask.
+  //
+  // A TyranoScript save holds variables and a scenario position, not the screen,
+  // so anything built imperatively — including our canvases — has to be
+  // re-created on load. The engine's window for that is `make.ks`, which it
+  // `call`s just before resuming, and which is why the Spine and Live2D plugins
+  // make authors write a `[*_restore]` there by hand.
+  //
+  // It also fires `load-beforemaking` immediately before that call, with the
+  // saved variables already applied — so the plugin can do it itself. The
+  // listener is registered without `temp`, which the engine documents as "delete
+  // when a save is loaded", so it survives every load; `system: true` marks it as
+  // ours rather than an author's.
+  //
+  // `kag.on` is guarded: older TyranoScript builds have no event system, and
+  // there `[ss_restore]` in `make.ks` remains the way to do it.
+  if (!state.restoreHooked && typeof kag.on === 'function') {
+    state.restoreHooked = true;
+    kag.on(
+      'load-beforemaking',
+      () => {
+        // `trigger` does not await, so the scenario resumes while this runs;
+        // a `[ss_restore]` still sitting in make.ks awaits it below.
+        state.restorePromise = restoreSavedPlayers()
+          .catch((err) => {
+            console.error('[ss] automatic restore failed:', (err as Error)?.stack ?? err);
+          })
+          .then(() => undefined);
+      },
+      { system: true },
+    );
+  }
+
+  // [ss_restore] — restore explicitly. No longer required: `[plugin
+  // name="ssplayer"]` wires the automatic hook above. Kept for engines without
+  // an event system, for scenarios that want the load to *block* until the
+  // players are back, and for anyone who already has it in `make.ks`.
   ftag.master_tag['ss_restore'] = {
     start() {
       runThenAdvance('ss_restore', async () => {
-        registry.destroyAll();
-        state.talking = null;
-        // Read the blanket-fade flag BEFORE rebuilding: createPlayer consults it
-        // to decide whether a restored player is shown at all.
-        state.layerHidden = readGlobalState(kag).layerHidden;
-        const saved = readSavedPlayers(kag);
-        let needsTalkHooks = false;
-        for (const s of saved) {
-          const entry = await createPlayer(kag, {
-            name: s.name,
-            storage: s.storage,
-            anime: s.anime,
-            layer: s.layer,
-            page: s.page as LayerPage,
-            x: s.x,
-            y: s.y,
-            scale: s.scale,
-            loop: s.loop,
-            // Saves written before these fields existed default to "shown".
-            visible: s.visible !== false,
-            zindex: s.zindex,
-            next: s.next,
-            chara: s.chara,
-            overrides: s.overrides,
-          });
-          if (s.playing) entry.player.play();
-          else entry.player.pause();
-          // Re-arm the follow-up only for a player that is actually running;
-          // a paused one would sit on a listener that can never fire.
-          if (s.next && s.playing) armChain(entry, persist);
-          if (s.chara) needsTalkHooks = true;
-        }
-        if (needsTalkHooks) ensureTalkHooks();
-        persist();
+        // Never rebuild twice for one load: adopt the automatic pass instead.
+        const running = state.restorePromise;
+        state.restorePromise = null;
+        await (running ?? restoreSavedPlayers());
       });
     },
   };
@@ -1038,4 +1091,6 @@ export function __resetStateForTest(): void {
   state.layerHidden = false;
   state.talkHooked = false;
   state.talking = null;
+  state.restoreHooked = false;
+  state.restorePromise = null;
 }

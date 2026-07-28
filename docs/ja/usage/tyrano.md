@@ -55,15 +55,24 @@ data/others/ssdata/<project>.ssab
 
 ループするキャラを 1 体表示する最小シナリオ:
 
+プラグインの読み込みは、ゲーム冒頭で 1 回だけです:
+
 ```
 ; first.ks
 [plugin name="ssplayer"]
-[ss_init wasm="others/plugin/ssplayer/ssruntime_bg.wasm"]
+```
+
+キャラの表示は、出したい場面で行います:
+
+```
+; scene1.ks
 [ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480" loop="true"]
 [ss_play name="chr"]
 ```
 
-- `[ss_init]` はランタイムを一度だけ読み込みます — ゲーム冒頭付近に置いてください。
+- `[plugin]` はプラグインの読み込みとランタイムの起動をまとめて行います。`first.ks` に
+  書くのはこの 1 行だけで、準備はこれで終わりです（`[ss_init]` も `make.ks` への追記も
+  不要です）。
 - `[ss_new]` は名前付きプレイヤーを生成し、`.ssab` をロードしてレイヤーに置き、再生します。
 - `[ss_play]` は既存プレイヤーで再生／アニメ切替を行います。
 
@@ -73,7 +82,7 @@ data/others/ssdata/<project>.ssab
 
 | タグ | 役割 | 主な属性 |
 | --- | --- | --- |
-| `[ss_init]` | ランタイム初期化（一度）＋音声設定 | `wasm=`（必須相当）, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
+| `[ss_init]` | **音声設定**。ランタイムは `[plugin name="ssplayer"]` が起動済みなので、このタグは音声設定を変える用途だけです | `audio=`, `sounddir=`, `soundext=`, `sevolume=`（`wasm=` はプラグインが指定） |
 | `[ss_new]` | プレイヤー生成 → ssab ロード → レイヤーへ挿入 → 再生 | `name=`(必須) `storage=`(必須) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
 | `[ss_play]` | 再生 / アニメ切替（続けて再生するアニメも指定可） | `name=`(必須) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
 | `[ss_show]` | プレイヤーを表示（位置指定・登場アニメ・フェード） | `name=`(必須) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
@@ -91,7 +100,7 @@ data/others/ssdata/<project>.ssab
 | `[ss_free]` | 1 プレイヤーを解放 | `name=`(必須) |
 | `[ss_free_all]` | 全プレイヤー解放（シーン遷移 / レイヤークリア時） | — |
 | `[ss_pause_all]` / `[ss_resume_all]` | 全プレイヤー一時停止 / 再開（メニュー等で使用） | — |
-| `[ss_restore]` | セーブから全プレイヤーを再構築（**`make.ks` に記述**） | — |
+| `[ss_restore]` | セーブから全プレイヤーを再構築。**通常は不要**（ロード時に自動復元されます）。ロード完了まで待たせたい場合や、イベント機構の無い古いエンジンでのみ使います | — |
 
 座標は他の画面要素と同じく、Tyrano の通常の左上原点ピクセル（`config.scWidth × scHeight`）を
 使います。`loop` は `true`→無限 / `false`→1 回 / 数値→回数です。
@@ -191,8 +200,8 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 - **通常のテキスト待ち（`[l]` / `[p]`）中も再生は継続します** — これが期待挙動です。メニューや
   セーブ画面で止めたい場合は `[ss_pause_all]` / `[ss_resume_all]` を使います。画面外・タブ非表示では
   自動的に一時停止します。
-- **セーブ / ロード**: プレイヤーはロード時に復元されます。`make.ks` に `[ss_init]` → `[ss_restore]`
-  を置くと、ロード後に再構築されます（正確なセーブ frame ではなくアニメ先頭から再開します）。
+- **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。
+  正確なセーブ frame ではなくアニメ先頭から再開します。
 - **シーン切替**: シーン遷移やレイヤークリア時は `[ss_free]` / `[ss_free_all]` を呼び、不要になった
   プレイヤーを除去してください。
 
