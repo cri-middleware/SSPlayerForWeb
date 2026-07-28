@@ -1,16 +1,16 @@
 ;============================================================================
 ; make.ks — TyranoScript がセーブデータの【ロード時】に call する特別なファイル。
-; DOM に無い状態（SS プレイヤーの canvas 等）をここで再構築する（§3.3）。
 ;
-; [ss_restore] は stat.f.__ssplayers（[ss_new] 等が保存した状態）から
-; プレイヤーを再生成し、frame ではなくアニメ先頭から再生を復元する。
-; プラグイン本体（main.js）は first.ks の [plugin name="ssplayer"] で読み込み済み
-; の前提。WASM は再初期化が必要なので [ss_restore] の前に [ss_init] を置く。
+; セーブに含まれるのは変数とシナリオ上の位置だけで、画面の状態は保存されない。
+; 手続き的に作ったもの（SS プレイヤーの canvas 等）はロード時に作り直す必要があり、
+; エンジンは保存位置へ戻る直前にこのファイルを call する。Spine / Live2D
+; プラグインが [*_restore] をここに書かせているのはそのため。
+;
+; ssplayer-tyrano では書く必要がない。エンジンが make.ks を call する直前に発火する
+; load-beforemaking イベントを main.js が購読していて、そこで復元するため。
+; 明示的に呼びたい場合（ロード完了まで待たせたい等）だけ [ss_restore] を置く。
 ;
 ; ※ call として呼ばれるため [return] 必須。このファイルは削除しないこと。
 ;============================================================================
-
-[ss_init wasm="others/plugin/ssplayer/ssruntime_bg.wasm"]
-[ss_restore]
 
 [return]

@@ -16,7 +16,8 @@ name: Release
 #                         first release (and a retry after a half-failed one)
 #                         possible. Everything already published -> no-op.
 #
-#   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyrano) are
+#   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyrano /
+#                         ssplayer-tyranobuilder) are
 #                         never on npm, so GitHub Releases are their only channel.
 #                         changeset does not tag private packages: pack each plugin
 #                         whose current-version Release does not exist yet and cut
@@ -49,7 +50,7 @@ on:
         type: boolean
         default: true
       release_plugins:
-        description: 'Cut GitHub Releases for private plugins (rmmz / tyrano)'
+        description: 'Cut GitHub Releases for private plugins (rmmz / tyrano / tyranobuilder)'
         type: boolean
         default: true
 
@@ -164,7 +165,7 @@ jobs:
             echo "::notice::publish_npm=false — skipping npm version bump & publish."
           fi
 
-          # --- GitHub Releases channel (private plugins rmmz / tyrano) -----------
+          # --- GitHub Releases channel (private plugins) --------------------------
           # Never on npm, so GitHub Releases are their only distribution channel.
           if [ "$RELEASE_PLUGINS" = "true" ]; then
             # Plugins are packed from build outputs; make sure they exist even when
@@ -177,9 +178,12 @@ jobs:
             # changeset does not tag private packages. Cut one Release per plugin
             # whose current-version Release is absent; already released -> skip, so
             # re-runs and deferred plugin releases stay idempotent.
+            # $3 is the artifact path under packages/<dir>/, with %v standing in
+            # for the version. Most plugins carry it in the filename; the
+            # TyranoBuilder one cannot (see below), so the tag is what dates it.
             release_plugin() {
-              local pkg="$1" dir="$2" stem="$3"
-              local version tag zip prerelease
+              local pkg="$1" dir="$2" pattern="$3"
+              local version tag artifact prerelease
               version="$(node -p "require('./packages/${dir}/package.json').version")"
               tag="${pkg}@${version}"
               if gh release view "$tag" >/dev/null 2>&1; then
@@ -187,18 +191,22 @@ jobs:
                 return 0
               fi
               pnpm --filter "$pkg" run pack
-              zip="packages/${dir}/dist/pack/${stem}-${version}.zip"
+              artifact="packages/${dir}/${pattern//%v/$version}"
               prerelease=""
               case "$version" in *-*) prerelease="--prerelease";; esac
-              gh release create "$tag" "$zip" \
+              gh release create "$tag" "$artifact" \
                 --target "$release_sha" \
                 --title "${pkg} ${version}" \
                 --generate-notes \
                 $prerelease
               echo "::notice::Released ${tag}"
             }
-            release_plugin "@spritestudio/ssplayer-rmmz"   ssplayer-rmmz   ssplayer-rmmz-plugin
-            release_plugin "@spritestudio/ssplayer-tyrano" ssplayer-tyrano ssplayer-tyrano-plugin
+            release_plugin "@spritestudio/ssplayer-rmmz"   ssplayer-rmmz   'dist/pack/ssplayer-rmmz-plugin-%v.zip'
+            release_plugin "@spritestudio/ssplayer-tyrano" ssplayer-tyrano 'dist/pack/ssplayer-tyrano-plugin-%v.zip'
+            # ssplayer.tbp keeps that exact name on purpose: TyranoBuilder derives
+            # the plugin id from the filename and then looks for <id>/<id>.builder.js
+            # inside the archive, so `ssplayer-1.2.0.tbp` would install nothing.
+            release_plugin "@spritestudio/ssplayer-tyranobuilder" ssplayer-tyranobuilder 'dist/pack/ssplayer.tbp'
           else
             echo "::notice::release_plugins=false — skipping plugin GitHub Releases."
           fi

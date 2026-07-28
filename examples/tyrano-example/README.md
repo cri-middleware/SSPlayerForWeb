@@ -15,7 +15,7 @@
 ```
 examples/tyrano-example/
   data/
-    scenario/first.ks                     # [ss_init]/[ss_new]/[ss_play] を使うシナリオ
+    scenario/first.ks                     # [plugin]/[ss_new]/[ss_play] を使うシナリオ
     others/
       plugin/ssplayer/init.ks             # [loadjs] でプラグイン main.js を読む
       plugin/ssplayer/main.js             # ← 生成物 (sync:plugin, .gitignore)
@@ -148,7 +148,8 @@ projectID = ssplayer_tyrano_example;
 
 | タグ | 役割 |
 | --- | --- |
-| `[ss_init wasm= audio= sounddir= soundext= sevolume=]` | WASM 初期化 + 音声設定 |
+| `[plugin name="ssplayer"]` | プラグイン読み込み + ランタイム起動（シナリオに書くのはこの 1 行だけ） |
+| `[ss_init audio= sounddir= soundext= sevolume=]` | 音声設定（ランタイムは `[plugin]` が起動済み） |
 | `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ canvas 挿入 → 再生 |
 | `[ss_play name= anime= loop= start=]` | 再生 / アニメ切替 |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` `name=` | 個別の停止 / 一時停止 / 再開 |
@@ -156,17 +157,17 @@ projectID = ssplayer_tyrano_example;
 | `[ss_pos name= x= y= scale=]` / `[ss_move name= x= y= scale= time=]` | 内部 transform で瞬間/補間移動（アンカー基準・絶対） |
 | `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + canvas 除去） |
 | `[ss_pause_all]` / `[ss_resume_all]` | 全体一時停止 / 再開（メニュー等） |
-| `[ss_restore]` | セーブから再構築（`make.ks` に記述） |
+| `[ss_restore]` | セーブから再構築（**通常は不要** — ロード時に自動復元されます） |
 
 ### セーブ / ロード復元（PT2）
 
 `[ss_new]` 等は各プレイヤーの復元情報を `stat.f.__ssplayers`（セーブ対象）へ随時
-ミラーします。ロード時は TyranoScript が **`data/scenario/make.ks`** を call するので、
-そこに `[ss_init]` → `[ss_restore]` を置いてプレイヤーを再構築します（本サンプルは配置済み）。
+ミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、
+シナリオが再開する直前＝TyranoScript が **`data/scenario/make.ks`** を call するのと
+同じ隙間）でプラグインが自動的に再構築します。**`make.ks` への記述は不要**です。
 
 動作確認: 起動 → Ringo 表示中にメニューからセーブ → タイトルへ戻る → ロード。
-`make.ks` の `[ss_restore]` で Ringo が復元されれば成功です（frame ではなくアニメ
-先頭から再生を復元）。
+Ringo が復元されれば成功です（frame ではなくアニメ先頭から再生を復元）。
 
 > ⚠️ **表示テキスト内に `[ss_xxx]` のような角括弧のタグ記法を書かないこと**。
 > TyranoScript はテキスト内の `[...]` もタグとして実行してしまいます（`ss_play` のように

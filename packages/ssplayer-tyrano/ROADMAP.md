@@ -79,64 +79,49 @@ blending — no SS7 runtime equivalent, see the FFI-gated item under "Open quest
 
 ## Remaining work
 
-### PT4 — TyranoBuilder support (`.tbp` / `builder.js`)
+### PT4 / PT4.5 — TyranoBuilder support — **done, in a separate package**
 
-The builder runtime **is** TyranoScript, so the existing `main.js` already resolves
-`[ss_*]` at run time. Builder support is additive metadata in the **same package**.
+Shipped as [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md).
+TyranoBuilder turned out to be a different tool rather than a mode of TyranoScript —
+it has its own plugin format, its own editor API and its own install flow — so it got
+its own package. The two halves ship in one plugin folder: this package's `main.js`
+registers the `[ss_*]` tags at run time, and that package contributes the editor side.
 
-- [ ] `builder/ssplayer.builder.js` — GUI definition (`cmp` / `param`, one entry per `ss_*` tag)
-- [ ] `plugin.ks` wiring — the builder regenerates `first.ks` on preview, so the
-      `[loadjs]` must live in `data/scenario/system/plugin.ks` (before `[return]`);
-      some plugins also need an entry in `make.ks`
-- [ ] **Macro-vs-master_tag reconciliation** — does the builder require a real macro
-      to exist for each `cmp` tag name?
-      - Plan A (preferred): `main.js`'s `master_tag` is the implementation; `builder.js`
-        `cmp` is pure "collect attributes → emit `[ss_new ...]`" metadata. **Verify first.**
-      - Plan B (fallback): a thin same-name `[macro]` in `init.ks` bridges to the JS impl
-        (`__ss_*_impl`), satisfying the builder's "macro = component" convention.
-- [ ] `.tbp` packaging (`pack:tbp`) — zip `plugin/` assets + `builder.js`, rename to `.tbp`
-- [ ] SSAB file-select param — `ImageSelect` is image-only; if no generic file param exists,
-      fall back to a `Text` path field
-- [ ] Timeline preview representation (`component_type: "Image"` + a static thumbnail;
-      real playback only at game run time)
-- [ ] Confirm the builder's **bundled TyranoScript version** (the `.tbp` / `builder.js` API
-      depends on it)
-- [ ] **Needs collaboration**: verification requires the actual (paid) TyranoBuilder GUI.
-      We can implement up to `.tbp` generation; placing/playing/exporting from the GUI must
-      be checked on the maintainer's machine.
+What the earlier plan got wrong, now that the shipped builder (Ver 3.00, Electron 24)
+has been read:
 
-### PT4.5 — `.sspj → .ssab` conversion / auto-importer (author-time)
+- **Macro-vs-master_tag: Plan A was right.** No macro is needed. A component is
+  serialised by `$.tag(key, pm)` → `[<key> attr="value" …]`, so the map key *is* the
+  tag name and the param keys *are* its attributes; `main.js`'s `master_tag` is the
+  implementation, exactly as hoped.
+- **`plugin.ks` wiring is unnecessary.** The builder generates
+  `data/scenario/system/plugin_third.ks` from each plugin's `getPluginTag()`, and its
+  generated `first.ks` calls it. Nothing to place by hand.
+- **Form B was not a mountain.** The builder's `preload.js` publishes `fs-extra` on
+  `window.studio_api`, and plugins are loaded with a dynamic `import()` — so a plugin
+  is an ES module with filesystem access, which is all an importer needs. It converts
+  in-editor and keeps watching while the project is open, which Ren'Py cannot do.
+- **A generic file-select param was not needed.** `Select` fed by a scan of the
+  project's `.ssab` files is better than a path field, and the animation list is read
+  out of the pack itself.
 
-Reference: SSPlayerForRenPy `game/spritestudio/auto_importer.rpy` — in developer mode it
-scans `SpriteStudio_Source/*.sspj` at launch, reconverts changed projects (mtime diff), and
-writes `.ssab` into `game/ss_assets/`. Ren'Py can do this trivially because `init python:`
-runs arbitrary code with fs access every launch. TyranoBuilder has no equivalent author-time
-hook we can rely on — that is the crux.
+Verified on the real editor: `.tbp` install, conversion, the palette, and save/load.
 
-- [ ] **Form A (external tool — recommended / works today).** Convert `.sspj → .ssab` with
-      `ssconverter-core` (the existing Node CLI `packages/ssconverter-web/scripts/cli.js`,
-      already used by `deploy-examples`) into `data/others/ssdata/`.
-      - [ ] `pnpm ss:watch` — mtime-diff watcher (same logic as the Ren'Py importer)
-      - [ ] Lowest friction, **no Node/terminal**: the existing `ssconverter-web` browser UI
-        (File System Access) — pick a folder → convert → write into the project
-      - [ ] Optional: a double-click executable (SEA / pkg)
-- [ ] **Form B (in-builder one-click — the real "embedded" goal, PoC-gated).** Can a
-      `.tbp` / `builder.js` plugin `require('fs')` (write to the project), instantiate WASM,
-      and add a custom UI action? The `.tbp` API is designed for component/param declaration,
-      not arbitrary import pipelines — **this is the mountain**.
-      - [ ] PoC ①: audit the builder.js API and existing importer-style `.tbp`s for fs + WASM + custom UI
-      - [ ] PoC ②: a minimal `.tbp` whose button runs `fs` + `ssconverter.wasm` on a fixed `.sspj`
-      - [ ] If blocked, make Form A the official flow and defer B
-- [ ] Optimize `ssconverter.wasm` (unoptimized ~6.3 MB → `wasm-opt -Oz`); keep `ssab_schema_version` in sync with the runtime
-- [ ] A `.sspj` is a folder (sspj + ssae + ssce + images) — need a directory-select / drag-folder path to pass all files
+Remaining there: GUI components cover 13 of the 23 tags (`[ss_part_*]`, `[ss_chara]`,
+the blanket fades and the bulk pause/resume are still hand-written), the player name
+is a free-text field, and conversion is synchronous. See that package's README.
 
 ### PT5 — examples / docs
+- [x] `examples/tyrano-example` — hand-written TyranoScript
 - [ ] A builder sample project
 - [ ] Docs upkeep; consider submitting to the official plugin library (plugin.tyrano.jp)
 
 ---
 
 ## Open questions / known limitations
+
+- [ ] Optimize `ssconverter.wasm` (`wasm-opt -Oz`); keep `ssab_schema_version` in sync
+      with the runtime.
 
 - [ ] Auto-hook `[cm]` / `[clearfix]` (layer clear) to `destroy()` — currently manual
       (`[ss_free]` / `[ss_free_all]`; `[ss_restore]` also sweeps stale canvases)

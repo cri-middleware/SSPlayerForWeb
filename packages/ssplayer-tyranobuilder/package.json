@@ -1,6 +1,6 @@
 {
   "name": "@spritestudio/ssplayer-tyranobuilder",
-  "version": "0.0.0",
+  "version": "7.0.0-beta.1",
   "description": "TyranoBuilder plugin: auto-imports SpriteStudio projects (.sspj -> .ssab) from inside the editor",
   "type": "module",
   "private": true,

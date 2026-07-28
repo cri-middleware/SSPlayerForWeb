@@ -11,13 +11,11 @@
 ;============================================================================
 
 ; プラグイン (data/others/plugin/ssplayer/init.ks) を読み込む。
-; → main.js が [ss_*] を master_tag に登録する。
+; → main.js が [ss_*] を master_tag に登録し、続けて init.ks が
+;   [ss_init] で WASM ランタイムを起動する。準備はこの 1 行で終わり。
 [plugin name="ssplayer"]
 
 [cm]
-
-; WASM ランタイムを一度だけ初期化。wasm パスは data/ 基準で解決される。
-[ss_init wasm="others/plugin/ssplayer/ssruntime_bg.wasm"]
 
 「ssplayer-tyrano デモ。SpriteStudio アニメを表示します。」[l][r]
 
@@ -34,9 +32,10 @@
 「ss_play タグで再生し直しました。」[l][r]
 
 ; --- セーブ / ロード復元のテスト (PT2 / §3.3) ---
-; メニューからセーブ → タイトルへ戻る → ロードすると、make.ks の ss_restore が
-; stat からプレイヤーを再構築します（テキスト内に角括弧のタグ記法は書かないこと）。
-「ここでメニューからセーブ→ロードすると、Ringo が復元されます（make.ks の ss_restore）。」[l][r]
+; メニューからセーブ → タイトルへ戻る → ロードすると、プラグインが stat から
+; プレイヤーを再構築します。make.ks への記述は不要です
+; （テキスト内に角括弧のタグ記法は書かないこと）。
+「ここでメニューからセーブ→ロードすると、Ringo が自動で復元されます。」[l][r]
 
 ; 一時停止 / 再開の確認。
 [ss_pause name="ringo"]
