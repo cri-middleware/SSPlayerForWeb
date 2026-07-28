@@ -35,7 +35,7 @@ Nothing else to set up — no plugin tag to write, no runtime to initialise.
    folder. Subfolders are fine; the whole tree is searched.
 2. Open the project in TyranoBuilder (or just leave it open). Conversion runs by
    itself, and a message tells you when it has.
-3. Place a **SpriteStudio 表示** component and pick your animation from the
+3. Place a **SpriteStudio: show** component and pick your animation from the
    dropdowns.
 
 Keep the editor open while you work: re-save the `.sspj` in SpriteStudio and it
@@ -43,30 +43,34 @@ is reconverted within a few seconds. Nothing to press.
 
 ## The components
 
-Under **プラグイン** in the palette:
+Under **Plugin** in the palette:
 
 | | |
 | --- | --- |
-| **SpriteStudio 表示** | Load an animation and put it on a layer |
-| **SpriteStudio フェードイン / フェードアウト** | Show or hide one |
-| **SpriteStudio アニメ変更** | Switch to another animation |
-| **SpriteStudio 停止 / 一時停止 / 再開** | Playback control |
-| **SpriteStudio 待機** | Hold the story until the animation finishes |
-| **SpriteStudio 位置変更 / 移動** | Place it, or slide it over time |
-| **SpriteStudio 削除 / 全削除** | Unload one, or all of them |
-| **SpriteStudio 全体フェードアウト / フェードイン** | All of them at once, for a scene change |
-| **SpriteStudio 全体一時停止 / 全体再開** | All of them at once, for a menu screen |
-| **SpriteStudio 音声設定** | Only if you want something other than the defaults |
+| **SpriteStudio: show** | Load an animation and put it on a layer |
+| **SpriteStudio: fade in / fade out** | Show or hide one |
+| **SpriteStudio: change animation** | Switch to another animation |
+| **SpriteStudio: stop / pause / resume** | Playback control |
+| **SpriteStudio: wait** | Hold the story until the animation finishes |
+| **SpriteStudio: place / move** | Place it, or slide it over time |
+| **SpriteStudio: remove / remove all** | Unload one, or all of them |
+| **SpriteStudio: fade out all / fade in all** | All of them at once, for a scene change |
+| **SpriteStudio: pause all / resume all** | All of them at once, for a menu screen |
+| **SpriteStudio: sound settings** | Only if you want something other than the defaults |
+
+The names follow TyranoBuilder's own language, which it takes from
+`<TyranoBuilder>/lang/lang.txt` — a Japanese editor shows 「SpriteStudio 表示」
+and so on.
 
 A few things the fields do that are worth knowing:
 
-- **管理名** is how the other components find the animation. Choose one on
-  「表示」; everywhere else it is a dropdown of the names already in the scene.
-- **アニメデータ** lists every `.ssab` in your project — the converted ones first,
-  but a pack you put somewhere else yourself is offered too.
-- **アニメーション** lists what is actually inside the selected pack.
-- **次に再生** hands over to another animation when this one ends, which needs
-  「ループ再生する」 off — an animation that loops forever never ends.
+- **Player name** is how the other components find the animation. Choose one on
+  *show*; everywhere else it is a dropdown of the names already in the scene.
+- **Animation pack** lists every `.ssab` in your project — the converted ones
+  first, but a pack you put somewhere else yourself is offered too.
+- **Animation** lists what is actually inside the selected pack.
+- **Then play** hands over to another animation when this one ends, which needs
+  *loop forever* off — an animation that loops forever never ends.
 
 Some SpriteStudio features have no component yet: per-part colour and visibility,
 and linking an animation to a speaker. Those are written with TyranoBuilder's own
@@ -94,7 +98,7 @@ there, with the reason when one fails.
 - **The palette has no SpriteStudio components** — the plugin did not load.
   Re-add the `.tbp`, and check you are not over the free version's two-plugin
   limit.
-- **It converted, but nothing shows in the game** — make sure 表示 comes before
+- **It converted, but nothing shows in the game** — make sure *show* comes before
   the components that refer to it, and that the layer is one your game uses.
 
 ## For contributors

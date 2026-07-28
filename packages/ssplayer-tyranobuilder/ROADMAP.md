@@ -37,8 +37,12 @@ conversion, the palette, preview, and save/load.
 - **Windows.** Untested, and `pack-tbp.mjs` shells out to `zip`, so a release
   cannot currently be cut from a Windows machine.
 - **A sample builder project**, and a submission to plugin.tyrano.jp.
-- **`en.json`.** English is the source string, so the fallback already works;
-  an explicit file would just make it editable.
+- **More languages.** The component labels are already localised: the source
+  strings are English and `lang/ja.json` translates them, picked up because the
+  builder loads `<plugin>/<global_lang>.json` before importing a plugin. English
+  needs no file at all — `$.s()` returns the key when there is no translation,
+  and the key *is* the English string. Another language is one more file in
+  `lang/`, which `pack-tbp.mjs` ships automatically.
 - Optimize `ssconverter_bg.wasm` (`wasm-opt -Oz`) — 1.4 MB, shipped in the `.tbp`.
 
 ## Design decisions
