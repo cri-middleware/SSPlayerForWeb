@@ -50,14 +50,20 @@ export interface ComponentContext {
  * labels of one file; a name defined in another `.ks` still reaches the dropdown
  * through {@link withCurrent}.
  */
-function placedPlayerNames(): string[] {
-  const placed = (
-    globalThis as { app?: { tyrano?: { component?: { data?: { tag_name?: string; pm?: Record<string, unknown> } }[] } } }
-  ).app?.tyrano?.component;
-  if (!Array.isArray(placed)) return [];
+interface PlacedComponent {
+  data?: { tag_name?: string; pm?: Record<string, unknown> };
+}
 
+/** The editor's live list of components in the scenario being edited. */
+function placedComponents(): PlacedComponent[] {
+  const placed = (globalThis as { app?: { tyrano?: { component?: PlacedComponent[] } } }).app?.tyrano
+    ?.component;
+  return Array.isArray(placed) ? placed : [];
+}
+
+function placedPlayerNames(): string[] {
   const names = new Set<string>();
-  for (const component of placed) {
+  for (const component of placedComponents()) {
     if (component?.data?.tag_name !== 'ss_new') continue;
     const name = String(component.data.pm?.name ?? '').trim();
     if (name) names.add(name);
@@ -66,17 +72,55 @@ function placedPlayerNames(): string[] {
 }
 
 /**
+ * The pack a player was created from, so a tag that only names the player can
+ * still offer that pack's animations rather than every animation in the project.
+ *
+ * Resolved from the `[ss_new]` that named it. Scenario order matters: a name can
+ * be reused later for a different pack, so the answer is the nearest preceding
+ * `[ss_new]`, and `self` locates "preceding". Falling back to any `[ss_new]` with
+ * that name covers a tag placed above its own `[ss_new]` while the scene is
+ * still being assembled.
+ *
+ * Returns undefined when the player was created in another `.ks` — the editor's
+ * list is per-scenario — and the caller widens the choice again rather than
+ * showing an empty dropdown.
+ */
+function packOfPlayer(name: string, self?: PlacedComponent): string | undefined {
+  const trimmed = name.trim();
+  if (!trimmed) return undefined;
+
+  const placed = placedComponents();
+  const isMatch = (c: PlacedComponent): boolean =>
+    c?.data?.tag_name === 'ss_new' && String(c.data.pm?.name ?? '').trim() === trimmed;
+
+  const selfIndex = self ? placed.indexOf(self) : -1;
+  if (selfIndex > 0) {
+    for (let i = selfIndex - 1; i >= 0; i--) {
+      if (isMatch(placed[i])) return String(placed[i].data?.pm?.storage ?? '') || undefined;
+    }
+  }
+  const anywhere = placed.find(isMatch);
+  return anywhere ? String(anywhere.data?.pm?.storage ?? '') || undefined : undefined;
+}
+
+/**
  * Values of the component being edited. `select_list` is handed the param
  * *view* (`js/app/param/param.js`), which reaches the component through
  * `.get('component')`, while `name()` / `header()` are handed the component
  * itself — so accept either shape.
  */
-function paramsOf(arg: unknown): Record<string, unknown> {
+function componentOf(arg: unknown): (BuilderComponentModel & PlacedComponent) | undefined {
   const view = arg as
     | (Partial<BuilderComponentModel> & { get?: (key: string) => BuilderComponentModel | undefined })
     | undefined;
-  const viaGet = typeof view?.get === 'function' ? view.get('component')?.data?.pm : undefined;
-  return viaGet ?? view?.data?.pm ?? {};
+  const viaGet = typeof view?.get === 'function' ? view.get('component') : undefined;
+  return (viaGet ?? (view?.data ? (view as BuilderComponentModel) : undefined)) as
+    | (BuilderComponentModel & PlacedComponent)
+    | undefined;
+}
+
+function paramsOf(arg: unknown): Record<string, unknown> {
+  return componentOf(arg)?.data?.pm ?? {};
 }
 
 /**
@@ -153,10 +197,23 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
     return [...names].sort();
   };
 
-  const anyAnimeOptions = (leading: string): PackChoice[] => [
-    { name: t(leading), val: '' },
-    ...allAnimations().map((anime) => ({ name: anime, val: anime })),
-  ];
+  /**
+   * Animations a tag that only names a player can offer.
+   *
+   * Narrowed to the pack that player was created from whenever the `[ss_new]`
+   * naming it is in this scenario. Only when it is not — created in another
+   * `.ks`, or not placed yet — does this widen to every animation in the
+   * project, which is the honest answer to "we cannot tell which pack".
+   */
+  const playerAnimeOptions = (leading: string, view: unknown): PackChoice[] => {
+    const component = componentOf(view);
+    const pack = packOfPlayer(String(component?.data?.pm?.name ?? ''), component);
+    const names = pack ? ctx.listAnimations(pack) : allAnimations();
+    return [
+      { name: t(leading), val: '' },
+      ...names.map((anime) => ({ name: anime, val: anime })),
+    ];
+  };
 
   /**
    * Refill `[ss_new]`'s animation dropdown when the pack changes. The host hands
@@ -410,7 +467,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
           help: t('Which animation to switch to. Leave unset to replay the current one.'),
           select_list: (view) =>
             withCurrent(
-              anyAnimeOptions('(replay the current animation)'),
+              playerAnimeOptions('(replay the current animation)', view),
               paramsOf(view).anime,
               (v) => v,
             ),
@@ -426,7 +483,7 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
           name: t('Then play'),
           help: t('Animation to hand over to once this one ends — e.g. an entrance into an idle loop.'),
           select_list: (view) =>
-            withCurrent(anyAnimeOptions('(nothing)'), paramsOf(view).next, (v) => v),
+            withCurrent(playerAnimeOptions('(nothing)', view), paramsOf(view).next, (v) => v),
           default_val: '',
         },
       },

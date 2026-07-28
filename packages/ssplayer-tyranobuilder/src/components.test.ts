@@ -178,9 +178,31 @@ describe('defineSSComponents', () => {
     expect(kept!.name).not.toBe('walk');
   });
 
-  it('offers every animation in the project where the pack is not known yet', () => {
-    // [ss_play] names a player, not a pack — the pack is only known at run time.
-    const list = components.ss_play.component.param.anime.select_list?.(view({})) ?? [];
+  it('narrows the animation list to the pack that player was created from', () => {
+    // A scenario where the same name is reused for a different pack.
+    const first = { data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[0].val } } };
+    const play = { data: { tag_name: 'ss_play', pm: { name: 'chr' } } };
+    const second = { data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[1].val } } };
+    const later = { data: { tag_name: 'ss_play', pm: { name: 'chr' } } };
+    (globalThis as { app?: unknown }).app = {
+      tyrano: { component: [first, play, second, later] },
+    };
+
+    const anime = build().ss_play.component.param.anime;
+    const asView = (c: unknown) => ({ get: () => c });
+
+    // The nearest *preceding* [ss_new] decides, not just any of them.
+    expect(anime.select_list?.(asView(play))?.slice(1).map((o) => o.val)).toEqual(['idle', 'walk']);
+    expect(anime.select_list?.(asView(later))?.slice(1).map((o) => o.val)).toEqual(['blink']);
+
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('offers every animation in the project when the pack cannot be told', () => {
+    // The player was created in another .ks, so nothing here says which pack it
+    // is — better to over-offer than to show an empty dropdown.
+    delete (globalThis as { app?: unknown }).app;
+    const list = components.ss_play.component.param.anime.select_list?.(view({ name: 'chr' })) ?? [];
     expect(list[0].val).toBe('');
     expect(list.slice(1).map((o) => o.val)).toEqual(['blink', 'idle', 'walk']);
   });

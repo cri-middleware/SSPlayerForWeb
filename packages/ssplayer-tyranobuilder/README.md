@@ -195,8 +195,12 @@ and needs no runtime wasm. Changing the pack refills the animation list in place
 (the host hands `onChange` only the new value, so the control is found by class,
 the way the builder's own `storage`/`target` pair does it).
 
-`[ss_play]` names a player rather than a pack, so which pack it will be driving
-is only knowable at run time; its animation list is the union across the project.
+`[ss_play]` names a player rather than a pack, so it works out which pack that is
+by looking back through the scenario for the `[ss_new]` that named the player —
+the nearest preceding one, since a name can be reused later for a different pack.
+Only when no `[ss_new]` in this scenario claims that name (it was created in
+another `.ks`) does the list widen to every animation in the project, which is the
+honest answer to "we cannot tell".
 
 The player name is a dropdown too, everywhere except `[ss_new]` — which is where
 the author chooses it. The names come from `app.tyrano.component`, the editor's
