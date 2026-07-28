@@ -251,10 +251,10 @@ just like any character:
   expected behavior. To freeze animations for a menu or save screen, use
   `[ss_pause_all]` / `[ss_resume_all]`. Off-screen / hidden-tab playback auto-pauses.
 - **Save / load**: players are restored on load automatically — there is nothing
-  to add to `make.ks`. They restart from the animation's beginning, not the exact
-  saved frame.
-- **Scene changes**: call `[ss_free]` / `[ss_free_all]` on scene transitions or layer
-  clears to remove players you no longer need.
+  to add to `make.ks` — and resume on the frame the save was taken on.
+- **Scene changes**: clearing a layer (e.g. `[freeimage]`) releases the players on
+  it automatically, whatever cleared it. `[ss_free]` / `[ss_free_all]` are for
+  letting a player go without touching the layer.
 - Visibility, stacking order, a queued `next=` follow-up and `[ss_chara]` bindings
   all survive a save/load, so `[ss_restore]` puts the scene back as it was.
 

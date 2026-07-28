@@ -123,13 +123,22 @@ is a free-text field, and conversion is synchronous. See that package's README.
 - [ ] Optimize `ssconverter.wasm` (`wasm-opt -Oz`); keep `ssab_schema_version` in sync
       with the runtime.
 
-- [ ] Auto-hook `[cm]` / `[clearfix]` (layer clear) to `destroy()` — currently manual
-      (`[ss_free]` / `[ss_free_all]`; `[ss_restore]` also sweeps stale canvases)
-- [ ] **Frame-precise** save restore (currently restores from the animation start, like Spine)
+- [x] Release players whose canvas the engine removed. Not by hooking `[cm]` /
+      `[clearfix]` as planned — those touch only the message, free and fix layers,
+      never the character layers a player sits on. `[freeimage]` is the one that
+      empties a character layer, and a project can do it by hand, so a
+      MutationObserver on the layer catches a removal whatever caused it.
+- [x] **Frame-precise** save restore. The engine fires `snapsave-start` before it
+      clones `stat`, which is the only moment the current frame can reach the
+      save file; `[ss_restore]` seeks after `play()`, which rewinds.
 - [ ] Respect Tyrano's SE volume slider (currently a fixed howler volume)
 - [ ] Interaction of Tyrano CSS transitions (fades, etc.) with the overlaid `<canvas>`
 - [ ] `devicePixelRatio` / Retina scaling vs `SSCanvasPlayer.resize`'s DPR clamp
-- [ ] Richer asset/wasm path resolution (Tyrano's own storage search) — currently a simple `data/`-prefix
+- [x] Richer asset/wasm path resolution — `storage=` now goes through the engine's
+      own `$.parseStorage(path, 'data')`, so `..`, `.` and doubled slashes resolve
+      the way they do for every other tag. Root-absolute and protocol-relative
+      URLs still bypass it, and an engine without `parseStorage` keeps the old
+      `data/`-prefix.
 - [ ] Out of scope (shared with webgl, gated on SpriteStudio-SDK FFI): Text(5) / Nine-slice(6) /
       label-seek / runtime texture-swap / part-property override / animation blending
 

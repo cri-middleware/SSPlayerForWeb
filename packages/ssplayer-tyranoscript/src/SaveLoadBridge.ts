@@ -34,10 +34,7 @@ export interface SSGlobalState {
 
 /**
  * A single player's reconstruction data. Everything needed to re-run an
- * `[ss_new]`-equivalent, plus whether it was playing. The exact frame is NOT
- * persisted (it changes every tick and `stat` is not a per-frame store) — on
- * restore, playing animations resume from the start, matching the Spine plugin
- * and typical VN expectations. Frame-precise restore is a future enhancement.
+ * `[ss_new]`-equivalent, plus whether it was playing and the frame it was on.
  */
 export interface SavedPlayer {
   name: string;
@@ -50,6 +47,13 @@ export interface SavedPlayer {
   scale: number;
   loop: number;
   playing: boolean;
+  /**
+   * Frame the animation was on. Refreshed when the engine announces a save is
+   * being taken (`snapsave-start`), because that is the only moment the exact
+   * frame matters — mirroring it continuously would mean writing to the save
+   * target on every tick.
+   */
+  frame?: number;
   /** Whether the player was displayed (`[ss_show]` / `[ss_hide]` / `visible=`). */
   visible: boolean;
   /** Stacking order within the layer, when the author set one. */
@@ -102,6 +106,7 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       scale: meta.scale,
       loop: meta.loop,
       playing: player.isPlaying,
+      frame: player.frame,
       visible: meta.visible,
       zindex: meta.zindex,
       next: meta.next,

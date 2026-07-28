@@ -64,6 +64,8 @@ interface AdapterState {
    * old way still blocks the scenario until the players are back.
    */
   restorePromise: Promise<void> | null;
+  /** Watches layers for canvases the engine removed without going through us. */
+  detachObserver: MutationObserver | null;
 }
 
 const state: AdapterState = {
@@ -74,6 +76,7 @@ const state: AdapterState = {
   talking: null,
   restoreHooked: false,
   restorePromise: null,
+  detachObserver: null,
 };
 
 /** Audio routing config (set by `[ss_init]`; see TyranoAudioManager). */
@@ -153,15 +156,27 @@ function priorityMode(value: unknown): SSOverridePriority {
 }
 
 /**
- * Resolve an author path (ssab / wasm) against the Tyrano data root. Absolute
- * URLs and already-rooted paths pass through; a bare relative path is taken as
- * relative to `data/` (where Tyrano keeps `others/…`). Kept deliberately simple
- * for PT1 — richer resolution (Tyrano's own storage search) is a §7 follow-up.
+ * Resolve a `storage=` value the way TyranoScript resolves every other one.
+ *
+ * `$.parseStorage(path, folder)` is the engine's own resolver — the same call
+ * behind `[image]`, `[bg]` and the rest. Passing `data` as the folder keeps the
+ * meaning this adapter has always had (a bare path hangs off `data/`), while
+ * handing the engine the parts that are easy to get subtly wrong: `..` and `.`
+ * segments, doubled slashes, and http(s) pass-through.
+ *
+ * The early exits come first because `parseStorage` would rewrite them: it
+ * treats its result as project-relative, so a root-absolute or protocol-relative
+ * URL must not go through it. Older engines have no `parseStorage`, hence the
+ * fallback.
  */
 function resolveDataPath(p: string): string {
-  if (/^(https?:)?\/\//.test(p) || p.startsWith('/') || p.startsWith('./') || p.startsWith('data/')) {
-    return p;
-  }
+  if (/^(https?:)?\/\//.test(p) || p.startsWith('/')) return p;
+
+  const parse = (globalThis as { $?: { parseStorage?: (s: string, folder?: string) => string } }).$
+    ?.parseStorage;
+  if (typeof parse === 'function') return parse(p, 'data');
+
+  if (p.startsWith('./') || p.startsWith('data/')) return p;
   return `data/${p}`;
 }
 
@@ -565,6 +580,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           visible: bool(pm.visible, true),
           zindex: pm.zindex === undefined || pm.zindex === '' ? undefined : num(pm.zindex, 0),
         });
+        observeLayerOf(entry);
         entry.player.play();
         persist();
       });
@@ -987,6 +1003,56 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
+  /**
+   * Release players whose canvas the engine has taken out of the DOM.
+   *
+   * A scenario can clear a layer without going through `[ss_free]` —
+   * `[freeimage layer=]` empties the layer's children, and a project may do the
+   * same by hand. The canvas disappears, but the player behind it keeps its GL
+   * context and its WASM allocation, and stays in the registry answering to its
+   * name. Left alone, a game that clears layers between scenes leaks one player
+   * per scene.
+   *
+   * Watching the DOM rather than wrapping tags is deliberate. `[cm]` and
+   * `[clearfix]`, the obvious suspects, turn out to touch only the message,
+   * free and fix layers — never the character layers a player sits on — so a
+   * tag-name list would have been both wrong and impossible to keep complete
+   * across engine versions. A removal is a removal whatever caused it.
+   */
+  const watchForDetachedCanvases = (): void => {
+    if (state.detachObserver || typeof MutationObserver !== 'function') return;
+
+    state.detachObserver = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const removed of record.removedNodes) {
+          for (const name of registry.names()) {
+            const entry = registry.get(name);
+            if (!entry) continue;
+            // The canvas itself, or an ancestor that took it with it.
+            if (removed !== entry.canvas && !(removed as Element).contains?.(entry.canvas)) {
+              continue;
+            }
+            // `destroy()` detaches the canvas too, so `[ss_free]` and
+            // `destroyAll()` land here as well — by then the entry is already
+            // gone from the registry and this loop simply does not see it.
+            registry.destroy(name);
+            persist();
+          }
+        }
+      }
+    });
+  };
+
+  /** Start watching the layer a player was just mounted on. */
+  const observeLayerOf = (entry: SSPlayerEntry): void => {
+    watchForDetachedCanvases();
+    const parent = entry.canvas.parentElement;
+    if (!parent) return;
+    // Not `subtree`: a message layer mutates on every character typed out, and
+    // this only ever needs the layer's own child list.
+    state.detachObserver?.observe(parent, { childList: true });
+  };
+
   /** Rebuild every player from the saved state (§3.3). */
   const restoreSavedPlayers = async (): Promise<void> => {
     // Tear down stale players first: module state survives a load, the DOM
@@ -1016,8 +1082,12 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         chara: s.chara,
         overrides: s.overrides,
       });
+      observeLayerOf(entry);
       if (s.playing) entry.player.play();
       else entry.player.pause();
+      // After play/pause: starting playback rewinds, so seeking first would be
+      // undone. A save written before frames were recorded has no frame.
+      if (typeof s.frame === 'number') entry.player.frame = s.frame;
       // Re-arm the follow-up only for a player that is actually running;
       // a paused one would sit on a listener that can never fire.
       if (s.next && s.playing) armChain(entry, persist);
@@ -1045,6 +1115,14 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // there `[ss_restore]` in `make.ks` remains the way to do it.
   if (!state.restoreHooked && typeof kag.on === 'function') {
     state.restoreHooked = true;
+
+    // `snapsave-start` is the first thing the engine does when taking a save,
+    // before it deep-clones `stat` — so this is the one moment where writing
+    // the current frame into the mirror gets it into the save file. Anywhere
+    // later is too late: `storage-save` fires after the write, and the menu
+    // saves a snapshot captured earlier rather than reading `stat` again.
+    kag.on('snapsave-start', () => persist(), { system: true });
+
     kag.on(
       'load-beforemaking',
       () => {
@@ -1093,4 +1171,6 @@ export function __resetStateForTest(): void {
   state.talking = null;
   state.restoreHooked = false;
   state.restorePromise = null;
+  state.detachObserver?.disconnect();
+  state.detachObserver = null;
 }

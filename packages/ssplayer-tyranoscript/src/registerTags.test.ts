@@ -22,6 +22,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _audioListeners = new Set<(e: unknown) => void>();
     audioManager: unknown = null;
     internalPlayer = { setLoop: vi.fn() };
+    frame = 0;
     resize = vi.fn();
     load = vi.fn().mockResolvedValue(undefined);
     setAnimation = vi.fn().mockResolvedValue(undefined);
@@ -493,6 +494,63 @@ describe('registerSSTags', () => {
     FakeSSCanvasPlayer.instances.length = 0;
     await runTag(tags.ss_restore, {}, h.nextOrder);
     expect(FakeSSCanvasPlayer.instances).toHaveLength(1);
+  });
+
+  it('restores the frame the save was taken on', async () => {
+    const h = await withPlayer();
+    const [live] = FakeSSCanvasPlayer.instances;
+    live.frame = 42;
+
+    // The engine announces a save before it clones `stat`; that is when the
+    // frame has to reach the mirror.
+    h.fire('snapsave-start');
+    expect(savedSlot(h).chr.frame).toBe(42);
+
+    FakeSSCanvasPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    const [rebuilt] = FakeSSCanvasPlayer.instances;
+    expect(rebuilt.frame).toBe(42);
+    // Seeking has to happen after play(), which rewinds.
+    expect(rebuilt.play).toHaveBeenCalled();
+  });
+
+  it('releases a player whose canvas the engine removed', async () => {
+    const h = await withPlayer();
+    const [live] = FakeSSCanvasPlayer.instances;
+    expect(getRegistry().names()).toEqual(['chr']);
+
+    // What [freeimage layer=] does: empty the layer, canvas and all. (Reached
+    // through the canvas, because addLayer() would register a fresh element.)
+    live.canvas.parentElement!.replaceChildren();
+
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual([]));
+    expect(live.destroy).toHaveBeenCalled();
+    // The save slot follows, so a load does not resurrect it.
+    expect(Object.keys(savedSlot(h))).toEqual([]);
+  });
+
+  it('resolves storage the way the engine resolves every other tag', async () => {
+    const parseStorage = vi.fn((storage: string, folder: string) => `./${folder}/${storage}`);
+    (globalThis as { $?: unknown }).$ = { parseStorage };
+
+    const h = makeTyrano();
+    registerSSTags(h.tyrano);
+    h.addLayer('0', 'fore');
+    const tags = h.tyrano.kag.ftag.master_tag;
+    await runTag(tags.ss_init, { wasm: 'rt.wasm' }, h.nextOrder);
+    await runTag(
+      tags.ss_new,
+      { name: 'chr', storage: 'others/ssdata/a.ssab', anime: 'Anime_1' },
+      h.nextOrder,
+    );
+
+    // Delegated, with `data` as the folder — which is what this adapter has
+    // always meant by a bare path.
+    expect(parseStorage).toHaveBeenCalledWith('others/ssdata/a.ssab', 'data');
+    expect(FakeSSCanvasPlayer.instances[0].load).toHaveBeenCalledWith('./data/others/ssdata/a.ssab');
+
+    delete (globalThis as { $?: unknown }).$;
   });
 
   it('ss_free_all tears down every player and empties the save slot', async () => {
