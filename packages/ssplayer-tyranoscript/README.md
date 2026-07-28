@@ -2,10 +2,15 @@
 
 # @spritestudio/ssplayer-tyranoscript
 
-Show and play **SpriteStudio 7** animations inside a **TyranoScript / TyranoBuilder**
-visual novel by writing `[ss_*]` tags in your scenario — no coding required.
+Show and play **SpriteStudio 7** animations in a **TyranoScript** visual novel by
+writing `[ss_*]` tags in your scenario — no coding required.
 
-> **Who this is for:** visual-novel scenario writers using TyranoScript / TyranoBuilder — a drop-in plugin that adds `[ss_*]` scenario tags for SpriteStudio animations.
+> **Who this is for:** scenario writers using TyranoScript — a drop-in plugin
+> that adds `[ss_*]` tags for SpriteStudio animations.
+> Using **TyranoBuilder**? Install
+> [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md)
+> instead: it wraps this runtime, adds the animations to the component palette,
+> and converts your `.sspj` files for you.
 > **Status:** beta.
 > **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) — the standalone renderer this plugin is built on.
 
@@ -282,8 +287,7 @@ console (dev tools)**, so check the console first.
 - **The animation won't switch**: check that the `anime=` name exists inside the `.ssab` (empty = first animation).
 - **Characters vanish after loading a save**: restore is automatic, so this should not happen. If it does, the engine is too old to have an event bus — put `[ss_restore]` in `make.ks`.
 
-TyranoBuilder `.tbp` support, `[cm]` / `[clearfix]` auto-hooks, frame-precise
-restore, and Tyrano volume-slider integration are tracked in [`ROADMAP.md`](./ROADMAP.md).
+Known limitations and planned work are tracked in [`ROADMAP.md`](./ROADMAP.md).
 
 ---
 
@@ -291,19 +295,20 @@ restore, and Tyrano volume-slider integration are tracked in [`ROADMAP.md`](./RO
 
 *Consumers can stop here — everything below is for hacking on this package.*
 
-This is a thin adapter for TyranoScript / TyranoBuilder. Rendering is handled by
+This is a thin adapter. Rendering is handled by
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSCanvasPlayer`
 (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies). This package holds **no
 GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a layer
-`div`, coordinate mapping, and playback control. Implemented range is verified in
-real TyranoScript; remaining work (builder support, converter import, …) lives in
+`div`, coordinate mapping, and playback control. Remaining work lives in
 [`ROADMAP.md`](./ROADMAP.md).
 
 ### How it works
 
-- **The runtime is shared across TyranoScript / TyranoBuilder / TyranoStudio.** A
-  single `main.js` (an IIFE bundle that self-registers `[ss_*]` onto `master_tag`)
-  works everywhere.
+- **One runtime for every Tyrano host.** TyranoBuilder and TyranoStudio embed
+  TyranoScript, so the same `main.js` — an IIFE bundle that self-registers
+  `[ss_*]` onto `master_tag` — serves all of them. The builder's *editor* side is
+  a separate package,
+  [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md).
 - Two build artifacts:
   - `dist/index.js` (ESM) — for bundlers / tests. Side-effect free (exposes
     `registerSSTags()`).

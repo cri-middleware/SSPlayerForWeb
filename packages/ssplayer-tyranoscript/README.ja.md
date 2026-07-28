@@ -2,10 +2,11 @@
 
 # @spritestudio/ssplayer-tyranoscript
 
-**TyranoScript / TyranoBuilder** のシナリオに `[ss_*]` タグを書くだけで、
-**SpriteStudio 7** のアニメを表示・再生できます。プログラミングは不要です。
+**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio 7** の
+アニメを表示・再生できます。プログラミングは不要です。
 
-> **対象読者:** TyranoScript / TyranoBuilder を使うヴィジュアルノベルのシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` シナリオタグを追加するドロップイン・プラグインです。
+> **対象読者:** TyranoScript を使うシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` タグを追加するドロップイン・プラグインです。
+> **TyranoBuilder** をお使いの場合は [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) を導入してください。本パッケージのランタイムを内包した上で、コンポーネントパレットからの配置と `.sspj` の自動変換に対応します。
 > **ステータス:** beta。
 > **目的が違う場合:** → [ssplayer-webgl](../ssplayer-webgl/README.ja.md) — このプラグインの土台になっている単体レンダラです。
 
@@ -250,8 +251,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 ファイルは `data/sound/` 前提で、SS のサウンド名 → `data/<dir>/<name>.<ext>` に解決します
 （`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
 
-ティラノビルダー `.tbp` 対応・`[cm]` / `[clearfix]` 自動フック・frame 精密復元・Tyrano 音量
-スライダー連動は [`ROADMAP.md`](./ROADMAP.md) の残課題です。
+既知の制限と残課題は [`ROADMAP.md`](./ROADMAP.md) にまとめています。
 
 ## うまく表示されないとき
 
@@ -276,17 +276,19 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 *利用者はここまで。以下はこのパッケージを開発する人向けです。*
 
-本パッケージは TyranoScript / TyranoBuilder 向けの薄いアダプタです。描画は
+本パッケージは TyranoScript 向けの薄いアダプタです。描画は
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSCanvasPlayer`
 （WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）が担います。このパッケージは **GPU 処理を
 持たず**、レイヤー `div` への `<canvas>` 挿入・座標マッピング・再生制御といった
 **TyranoScript 固有のグルー**に徹します。実装済み範囲は実 TyranoScript で確認済みで、
-残タスク（ビルダー対応、変換取り込み等）は [`ROADMAP.md`](./ROADMAP.md) にあります。
+残タスクは [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ### しくみ
 
-- **ランタイムは TyranoScript／ビルダー／スタジオで共通**。単一の `main.js`
-  （`master_tag` へ `[ss_*]` を自己登録する IIFE バンドル）が全てで動きます。
+- **ランタイムは Tyrano 系ホストで共通**。TyranoBuilder も TyranoStudio も
+  TyranoScript を内包しているので、単一の `main.js`（`master_tag` へ `[ss_*]` を
+  自己登録する IIFE バンドル）が全てで動きます。ビルダーの**エディタ側**は別パッケージ
+  [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) です。
 - ビルド成果物は 2 種類:
   - `dist/index.js`（ESM）— バンドラ／テスト用。副作用なし（`registerSSTags()` を公開します）。
   - `dist/browser/main.js`（IIFE, 自己登録, minify）— `data/others/plugin/ssplayer/main.js`

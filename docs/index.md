@@ -113,7 +113,8 @@ For details on the three paths (`SSConverterGUI` / `ssconverter-web` / `ssconver
 | Package | What it's for |
 |---|---|
 | [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | Renderer / plugin for **RPG Maker MZ**. |
-| `@spritestudio/ssplayer-tyranoscript` | Plugin for **TyranoScript / TyranoBuilder** (visual-novel engine). |
+| `@spritestudio/ssplayer-tyranoscript` | Plugin for **TyranoScript** (visual-novel engine). |
+| `@spritestudio/ssplayer-tyranobuilder` | Plugin for **TyranoBuilder** — the same animations from its component palette, with in-editor conversion. |
 
 ::: tip Coming from an older player?
 Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.

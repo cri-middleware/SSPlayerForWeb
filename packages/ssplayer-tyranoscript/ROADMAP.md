@@ -1,6 +1,6 @@
 # @spritestudio/ssplayer-tyranoscript Roadmap
 
-A thin TyranoScript / TyranoBuilder adapter. Rendering is delegated entirely to
+A thin TyranoScript adapter. Rendering is delegated entirely to
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md) (`SSCanvasPlayer`);
 this package is pure glue — it registers `[ss_*]` KAG custom tags that mount an SS
 canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
@@ -14,8 +14,8 @@ canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 | Dependency | **`ssplayer-webgl` only** (not core) | webgl re-exports core; core is pulled in transitively. Core/`flatbuffers` are still inlined into the IIFE build. |
 | PixiJS | Not used | TyranoScript does not bundle Pixi; we insert our own `<canvas>`. |
 | WebGL version | Ride webgl's WebGL1 baseline + WebGL2 auto-upgrade | Broad device reach (old/mobile webviews, builder native export). |
-| TyranoScript vs TyranoBuilder | **Same runtime** (the builder embeds TyranoScript) | A single self-registering `main.js` works in both; builder support = adding GUI metadata (`.tbp`), not a second package. |
-| Distribution | `private` (no npm). Ship the plugin bundle / `.tbp` via **GitHub Releases** | TyranoScript / builder authors drop files in; they do not `npm install`. |
+| TyranoBuilder | **Shares this runtime**, editor side in [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/ROADMAP.md) | The builder embeds TyranoScript, so one `main.js` serves both; but its editor is a separate application with its own plugin format, which is a package's worth of work. |
+| Distribution | `private` (no npm). Ship the plugin bundle via **GitHub Releases** | Scenario authors drop files in; they do not `npm install`. |
 | Audio | Route SS `onAudio` through TyranoScript's bundled **howler** (`window.Howl`) | A `[playse]` KAG tag would advance the scenario (`nextOrder`); howler cannot. |
 
 ## Implemented (PT0–PT3, verified in real TyranoScript)
@@ -75,6 +75,35 @@ blending — no SS7 runtime equivalent, see the FFI-gated item under "Open quest
 `lip_time` / `lip_sound_level` / `breath` (Live2D parameter-rig specifics);
 `bgimage` (Tyrano's own background layer already does this).
 
+### PT6 — one line to set up, and nothing to clean up
+
+Everything a scenario needed to remember to do, the plugin now does.
+
+- [x] **`[plugin name="ssplayer"]` is the whole setup.** The plugin's own
+      `init.ks` runs `[ss_init]` after `[loadjs]` — which waits for the script to
+      execute, so the tags are registered by then — and the wasm path is fixed
+      relative to the plugin folder. `[ss_init]` survives as the audio-settings
+      tag: it applies those before checking whether the runtime is already up.
+- [x] **Restore needs no `make.ks` entry.** The engine fires `load-beforemaking`
+      with the saved variables already applied, just before it `call`s `make.ks`,
+      so the plugin restores itself. Registered without `temp` — which the engine
+      documents as "delete when a save is loaded" — and guarded on `kag.on`, since
+      older builds have no event bus and there `[ss_restore]` is still the way.
+      `[ss_restore]` adopts an automatic pass already in flight rather than
+      rebuilding twice.
+- [x] **Frame-precise restore.** `snapsave-start` fires before the engine clones
+      `stat`, which is the only moment the current frame can reach the save file.
+      Restore seeks after `play()`, which rewinds. Saves written before this
+      restore from the start, as they always did.
+- [x] **Players are released when their layer is cleared.** Not by hooking `[cm]`
+      / `[clearfix]` as once planned — those touch only the message, free and fix
+      layers, never the character layers a player sits on. `[freeimage]` empties
+      one, and a project can do it by hand, so a MutationObserver on the layer
+      catches the removal whatever caused it.
+- [x] **`storage=` resolves like every other tag**, through the engine's own
+      `$.parseStorage(path, 'data')`. Root-absolute and protocol-relative URLs
+      bypass it; an engine without it keeps the old `data/` prefix.
+
 ---
 
 ## Remaining work
@@ -83,62 +112,27 @@ blending — no SS7 runtime equivalent, see the FFI-gated item under "Open quest
 
 Shipped as [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md).
 TyranoBuilder turned out to be a different tool rather than a mode of TyranoScript —
-it has its own plugin format, its own editor API and its own install flow — so it got
-its own package. The two halves ship in one plugin folder: this package's `main.js`
-registers the `[ss_*]` tags at run time, and that package contributes the editor side.
+its own plugin format, editor API and install flow — so it got its own package. The
+two halves ship in one plugin folder: this package's `main.js` registers the `[ss_*]`
+tags at run time, and that package contributes the editor side.
 
-What the earlier plan got wrong, now that the shipped builder (Ver 3.00, Electron 24)
-has been read:
-
-- **Macro-vs-master_tag: Plan A was right.** No macro is needed. A component is
-  serialised by `$.tag(key, pm)` → `[<key> attr="value" …]`, so the map key *is* the
-  tag name and the param keys *are* its attributes; `main.js`'s `master_tag` is the
-  implementation, exactly as hoped.
-- **`plugin.ks` wiring is unnecessary.** The builder generates
-  `data/scenario/system/plugin_third.ks` from each plugin's `getPluginTag()`, and its
-  generated `first.ks` calls it. Nothing to place by hand.
-- **Form B was not a mountain.** The builder's `preload.js` publishes `fs-extra` on
-  `window.studio_api`, and plugins are loaded with a dynamic `import()` — so a plugin
-  is an ES module with filesystem access, which is all an importer needs. It converts
-  in-editor and keeps watching while the project is open, which Ren'Py cannot do.
-- **A generic file-select param was not needed.** `Select` fed by a scan of the
-  project's `.ssab` files is better than a path field, and the animation list is read
-  out of the pack itself.
-
-Verified on the real editor: `.tbp` install, conversion, the palette, and save/load.
-
-Remaining there: GUI components cover 13 of the 23 tags (`[ss_part_*]`, `[ss_chara]`,
-the blanket fades and the bulk pause/resume are still hand-written), the player name
-is a free-text field, and conversion is synchronous. See that package's README.
+Everything about the builder — what the earlier plan here got wrong, how its plugin
+and component APIs behave, and what is left to build — now lives in
+[that package's ROADMAP](../ssplayer-tyranobuilder/ROADMAP.md).
 
 ### PT5 — examples / docs
 - [x] `examples/tyranoscript-example` — hand-written TyranoScript
-- [ ] A builder sample project
 - [ ] Docs upkeep; consider submitting to the official plugin library (plugin.tyrano.jp)
 
 ---
 
 ## Open questions / known limitations
 
-- [ ] Optimize `ssconverter.wasm` (`wasm-opt -Oz`); keep `ssab_schema_version` in sync
-      with the runtime.
-
-- [x] Release players whose canvas the engine removed. Not by hooking `[cm]` /
-      `[clearfix]` as planned — those touch only the message, free and fix layers,
-      never the character layers a player sits on. `[freeimage]` is the one that
-      empties a character layer, and a project can do it by hand, so a
-      MutationObserver on the layer catches a removal whatever caused it.
-- [x] **Frame-precise** save restore. The engine fires `snapsave-start` before it
-      clones `stat`, which is the only moment the current frame can reach the
-      save file; `[ss_restore]` seeks after `play()`, which rewinds.
 - [ ] Respect Tyrano's SE volume slider (currently a fixed howler volume)
 - [ ] Interaction of Tyrano CSS transitions (fades, etc.) with the overlaid `<canvas>`
 - [ ] `devicePixelRatio` / Retina scaling vs `SSCanvasPlayer.resize`'s DPR clamp
-- [x] Richer asset/wasm path resolution — `storage=` now goes through the engine's
-      own `$.parseStorage(path, 'data')`, so `..`, `.` and doubled slashes resolve
-      the way they do for every other tag. Root-absolute and protocol-relative
-      URLs still bypass it, and an engine without `parseStorage` keeps the old
-      `data/`-prefix.
+- [ ] Optimize `ssconverter.wasm` (`wasm-opt -Oz`) — shared with
+      [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/ROADMAP.md), which ships it
 - [ ] Out of scope (shared with webgl, gated on SpriteStudio-SDK FFI): Text(5) / Nine-slice(6) /
       label-seek / runtime texture-swap / part-property override / animation blending
 
@@ -167,8 +161,5 @@ is a free-text field, and conversion is synchronous. See that package's README.
 | TyranoScript (Ver6, free/commercial) | <https://github.com/ShikemokuMK/tyranoscript> |
 | Plugin authoring (scripting) | <https://tyrano.jp/usage/advance/plugin> — custom tags: <https://kido0617.github.io/tyrano/2018-08-02-make-plugin/> |
 | Layers / tag reference | <https://tyrano.jp/usage/tech/layer> / <https://tyrano.jp/tag/> |
-| **Builder** — `.tbp` / `builder.js` / `cmp` / `param` | <https://tyrano.jp/usage/advance/tbp> |
-| **Builder** — official techniques / tutorials | <https://b.tyrano.jp/tech/page/plugin> / <https://b.tyrano.jp/tutorial/> |
-| **Builder** — using TyranoScript plugins (`plugin.ks`) | <https://note.com/skt_order/n/n0af8dc13bc2a> |
-| **Builder** — English plugin tutorial | <https://tyranobuilder.com/tutorials/more/create-your-own-plugins> |
 | Plugin library | <https://plugin.tyrano.jp/> |
+| TyranoBuilder side | [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/ROADMAP.md) |
