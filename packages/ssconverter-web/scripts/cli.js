@@ -28,7 +28,7 @@ for (let i = 0; i < args.length; i++) {
     } else if (args[i] === '--stem-dir') {
         // Nest the output under <out_dir>/<sspj-stem>/ instead of writing flat
         // into <out_dir>. Useful for hosts that expect one folder per project
-        // (e.g. RPG Maker MZ: img/spritestudio/<project>/<project>.ssab).
+        // (e.g. RPG Maker MZ: spritestudio/<project>/<project>.ssab).
         stemDir = true;
     } else {
         sspjPath = args[i];

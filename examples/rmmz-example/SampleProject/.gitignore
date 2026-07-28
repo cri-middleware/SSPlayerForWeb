@@ -1,5 +1,7 @@
 # --- Generated SS assets (produced by `pnpm deploy-examples`) ---
-/img/spritestudio/
+# Deliberately OUTSIDE img/: deployment's "Exclude unused files" only prunes
+# img/, audio/ and effects/, so SS assets survive it here.
+/spritestudio/
 
 # --- Plugin build artefacts (synced by `pnpm --filter rmmz-example run sync:plugin`) ---
 /js/plugins/ssplayer-rpgmakermz.js

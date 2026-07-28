@@ -73,9 +73,11 @@ host framework's plugin system, so they are **not installable from npm**.
 - **Some screen effects behave differently** from a normal picture: a few PIXI filters can shift
   the animation out of place, and looped sound effects play only once. MZ's own flash / tint
   overlays are unaffected.
-- **Deployment's "Exclude unused files" deletes your animations.** The `.ssab` files and textures
-  under `img/spritestudio/` are loaded dynamically, so MZ treats them as unused. Turn the option
-  off, or copy `img/spritestudio/` into the deployed output afterwards.
+- **Deployment's "Exclude unused files" deletes anything you put under `img/`.** The `.ssab` files
+  and textures are loaded dynamically, so MZ treats them as unused — but the option only prunes
+  `img/`, `audio/` and `effects/`, so keeping SS assets in a project-root `spritestudio/` folder
+  sidesteps it entirely. The cost is that MZ's image encryption, also limited to `img/`, no longer
+  covers them.
 :::
 
 The opacity / tint and projection limitations would both be fixed by a small enhancement to

@@ -45,8 +45,26 @@
 
 `.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生する
 コンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照して
-ください。出力は `img/spritestudio/<project>/` 以下へ置き、「SS表示」のパス
-`img/spritestudio/<project>/<project>.ssab` に合わせます。
+ください。
+
+出力は **プロジェクト直下の `spritestudio/` フォルダー** へ置きます。`img/` の中ではなく、
+`img/` と並ぶ位置です。デプロイ時に未使用ファイルが削除されるのは `img/` の中だけなので
+（[デプロイ](#_4-デプロイ) 参照）、そこから出しておくことが素材を守る唯一のポイントです。
+
+```
+MyGame/
+├── img/                     ← 「未使用ファイルを含まない」で削除される
+├── js/plugins/
+│   ├── ssplayer-rpgmakermz.js
+│   └── ssruntime_bg.wasm
+└── spritestudio/            ← 安全
+    └── Ringo/
+        ├── Ringo.ssab
+        └── Ringo.png        ← テクスチャは .ssab と同じ場所に置く
+```
+
+「SS表示」のパスは `spritestudio/<project>/<project>.ssab` になります。テクスチャは `.ssab`
+からの相対で解決されるため、`.ssab` と同じフォルダーに置いたままにしてください。
 
 ## 3. プラグインコマンド
 
@@ -113,12 +131,36 @@ MZ の **ピクチャ** に載るため、*ピクチャの移動* / 拡大縮小
 `animation` を空にすると先頭が自動選択され、誤った名前を指定するとコンソールに実際の名前一覧が
 表示されます（MZ エディターは `.ssab` を読めないためドロップダウンを作れません）。
 
-## 4. デプロイ時の注意 ⚠️
+## 4. デプロイ
 
-**「未使用ファイルを含めない」設定はアニメーションを削除します。** `img/spritestudio/` 以下の
-`.ssab` やテクスチャは動的に読み込まれるため、MZ のデプロイ機能は未使用とみなして削除します。
-この設定を **オフにする** か、デプロイ後に `img/spritestudio/` を出力へ **コピーして** ください
-（旧 SS6Player プラグインと同じ注意点です）。
+**SS 素材を `img/` の外に置けば、「未使用ファイルを含まない」は ON のままで構いません。**
+公式ヘルプの通り、このオプションが削除対象にするのは次の 3 フォルダーの中だけです。
+
+```
+img/   audio/   effects/
+```
+
+`.ssab` とテクスチャは本プラグインが動的に読み込むため、ツクールからは未使用に見えます。
+`img/` の中に置けば削除されますが、プロジェクト直下の `spritestudio/` はそもそも対象外です。
+プラグイン `.js` と `ssruntime_bg.wasm` が `js/plugins/` で無事なのと同じ理屈で、登録作業も
+追加設定も要りません。
+
+::: warning 既存プロジェクトからの移行
+素材がまだ `img/spritestudio/` にある場合は、フォルダーごと 1 階層上の `spritestudio/` へ
+移動し、各「SS表示」「SSをピクチャに割当」コマンドの `SSABファイル` から先頭の `img/` を
+外してください。
+:::
+
+**トレードオフ — 暗号化。** MZ の *画像ファイルの暗号化* も対象は `img/` と `audio/` だけの
+ため、`img/` の外に置いたテクスチャは暗号化されません。テクスチャを暗号化したい場合は、
+`.ssab` とテクスチャを分けるのではなく、**`spritestudio/` フォルダーごと `img/` の下
+（`img/spritestudio/`）へ戻して**ください。`.ssab` は画像ではないので暗号化されませんが、
+同じフォルダーにあるテクスチャは暗号化され、プラグインが `ImageManager` 経由で読み込むため
+復号は自動です。ただしその場合は **「未使用ファイルを含まない」を OFF にする** か、
+デプロイ後に **`img/spritestudio/` フォルダーを出力先へコピーする** 必要があります。
+
+なおテクスチャが見つからない場合は、読み込み待ちのまま固まるのではなく、該当ファイル名を
+コンソールに出力するようになっています。
 
 ## 既知の制限
 
@@ -141,7 +183,7 @@ pnpm --filter @spritestudio/ssplayer-rmmz pack       # dist/pack/ssplayer-rmmz-p
 
 ```sh
 pnpm --filter rmmz-example run sync:plugin   # ビルド済みプラグイン + 非 SIMD wasm を js/plugins/ へコピー
-pnpm deploy-examples                         # SS-SDK のテストプロジェクトを img/spritestudio/ へ変換
+pnpm deploy-examples                         # SS-SDK のテストプロジェクトを spritestudio/ へ変換
 nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ エディターで開く）
 ```
 
