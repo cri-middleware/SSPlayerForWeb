@@ -224,13 +224,23 @@ translation is missing — so the English source strings are the fallback.
 
 ## Next steps
 
-- Offer the player name as a `Select` of the names already used by `[ss_new]`
-  components in the scenario, instead of a free-text field.
-- A sample builder project, and a submission to plugin.tyrano.jp.
-- `.tbp` packaging — the builder installs a plugin by unzipping it with
-  `adm-zip` into `data/others/plugin/<id>/`, so packaging is a zip with the
-  extension renamed.
-- Move conversion into a Worker.
+- **Components for the remaining tags.** Thirteen of the runtime's twenty-three
+  have one. `[ss_fadeout]` / `[ss_fadein]` / `[ss_pause_all]` / `[ss_resume_all]`
+  take almost no parameters and are nearly free to add; `[ss_chara]` and the four
+  `[ss_part_*]` tags need part and cell names, which `SSRuntimeManager`'s
+  `extractCellMapNames` / `extractCellNames` can supply the same way animation
+  names are read today. (`[ss_restore]` deliberately has none — it is not a
+  timeline step, and restore is automatic now.) Until then those tags are written
+  with the builder's own TyranoScript-code component.
+- **Player name as a `Select`** of the names already used by `[ss_new]`
+  components in the scenario, instead of a free-text field that has to match by
+  hand.
+- **Move conversion into a Worker.** The wasm call is synchronous: 78 ms for one
+  sample, but a first run over a folder of them blocks the editor for as long as
+  it takes.
+- **Windows.** Untested, and `pack-tbp.mjs` shells out to `zip`, so a release
+  cannot currently be cut from a Windows machine.
+- **A sample builder project**, and a submission to plugin.tyrano.jp.
 
 ## Licence
 
