@@ -58,7 +58,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | Your environment | Package | Runnable example |
 |---|---|---|
 | **RPG Maker MZ** (PixiJS v5) | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
-| **TyranoScript / TyranoBuilder** (visual-novel engine) | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyrano-example](./examples/tyrano-example) |
+| **TyranoScript / TyranoBuilder** (visual-novel engine) | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyranoscript-example](./examples/tyranoscript-example) |
 
 ## 🚀 Quick Start
 

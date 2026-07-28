@@ -86,14 +86,14 @@ jobs:
       - name: Sync rmmz-example plugin
         run: pnpm --filter rmmz-example run sync:plugin
 
-      # tyrano-example is a static TyranoScript project. Fetch the (git-ignored)
+      # tyranoscript-example is a static TyranoScript project. Fetch the (git-ignored)
       # engine (index.html + tyrano/ + data/system/) pinned by TYRANO_VERSION.txt,
       # then sync the built plugin + runtime wasm into its plugin folder.
       # (deploy-examples already placed the Ringo .ssab under data/others/ssdata/.)
       - name: Fetch TyranoScript engine
-        run: pnpm --filter tyrano-example run fetch:engine
-      - name: Sync tyrano-example plugin
-        run: pnpm --filter tyrano-example run sync:plugin
+        run: pnpm --filter tyranoscript-example run fetch:engine
+      - name: Sync tyranoscript-example plugin
+        run: pnpm --filter tyranoscript-example run sync:plugin
 
       # Pages base path (a project site is served under /<repo>/).
       - name: Compute site base path
@@ -128,9 +128,9 @@ jobs:
           # rmmz-example: copy the static MZ project as-is (relative paths, so it
           # runs fine under the /examples/rmmz/ subpath — no base rewrite needed).
           mkdir -p _site/examples/rmmz  && cp -R examples/rmmz-example/SampleProject/. _site/examples/rmmz/
-          # tyrano-example: copy the static TyranoScript project (engine + data,
+          # tyranoscript-example: copy the static TyranoScript project (engine + data,
           # relative paths) as-is under /examples/tyrano/.
-          mkdir -p _site/examples/tyrano && cp -R examples/tyrano-example/index.html examples/tyrano-example/tyrano examples/tyrano-example/data _site/examples/tyrano/
+          mkdir -p _site/examples/tyrano && cp -R examples/tyranoscript-example/index.html examples/tyranoscript-example/tyrano examples/tyranoscript-example/data _site/examples/tyrano/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

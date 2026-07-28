@@ -5,7 +5,7 @@
 ; レンダラは @spritestudio/ssplayer-webgl (SSCanvasPlayer)。
 ;
 ; 前提: このプロジェクトに TyranoScript 本体 (index.html + tyrano/) を配置し、
-;       `pnpm --filter tyrano-example run sync:plugin` でプラグイン資産
+;       `pnpm --filter tyranoscript-example run sync:plugin` でプラグイン資産
 ;       (main.js + ssruntime_bg.wasm) を同期済みであること (README 参照)。
 ; 画面解像度は TyranoScript 既定の 1280x720 を想定 (x/y はその論理座標)。
 ;============================================================================

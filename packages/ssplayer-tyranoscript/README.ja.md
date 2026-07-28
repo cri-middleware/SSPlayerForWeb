@@ -73,7 +73,7 @@
 - `[ss_new]` は名前付きプレイヤーを生成し、`.ssab` をロードしてレイヤーに置き、再生します。
 - `[ss_play]` は既存プレイヤーで再生／アニメ切替を行います。
 
-動く最小プロジェクトは [`examples/tyrano-example`](../../examples/tyrano-example/README.md) を参照してください。
+動く最小プロジェクトは [`examples/tyranoscript-example`](../../examples/tyranoscript-example/README.md) を参照してください。
 
 ## レシピ（よくある操作）
 
@@ -100,7 +100,7 @@
 ```
 
 > 登場・移動（`[ss_move]` / `[ss_pos]`）、`[anim]` フェード、複数レイヤー、セーブ/ロード復元などの
-> 実例は、コメント付きの同梱サンプル [`first.ks`](../../examples/tyrano-example/data/scenario/first.ks) を参照してください。
+> 実例は、コメント付きの同梱サンプル [`first.ks`](../../examples/tyranoscript-example/data/scenario/first.ks) を参照してください。
 
 ## 提供タグ
 

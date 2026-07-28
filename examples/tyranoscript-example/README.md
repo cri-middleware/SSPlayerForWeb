@@ -1,4 +1,4 @@
-# tyrano-example — ssplayer-tyranoscript 手書きシナリオ最小確認
+# tyranoscript-example — ssplayer-tyranoscript 手書きシナリオ最小確認
 
 `@spritestudio/ssplayer-tyranoscript` の `[ss_*]` カスタムタグを、実際の **TyranoScript**
 プロジェクト上で表示・再生する最小サンプルです（PT1）。
@@ -13,7 +13,7 @@
 ## このサンプルに含まれるもの
 
 ```
-examples/tyrano-example/
+examples/tyranoscript-example/
   data/
     scenario/first.ks                     # [plugin]/[ss_new]/[ss_play] を使うシナリオ
     others/
@@ -35,8 +35,8 @@ examples/tyrano-example/
 （既定 `master`、タグ例 `v512` も可）。
 
 ```bash
-pnpm --filter tyrano-example run fetch:engine
-# 任意: ref 指定 →  pnpm --filter tyrano-example run fetch:engine v512
+pnpm --filter tyranoscript-example run fetch:engine
+# 任意: ref 指定 →  pnpm --filter tyranoscript-example run fetch:engine v512
 ```
 
 これで `index.html` / `tyrano/` / `data/system/` を配置し（すべて .gitignore 済み）、
@@ -50,13 +50,13 @@ pnpm --filter tyrano-example run fetch:engine
 > 公式リポジトリはブラウザ版で、本スクリプトが `webstorage` を強制するので確実です。
 
 > 必要ツール: `curl` と `tar`（macOS/Linux・Windows 10+ に同梱）。手動配置したい場合は
-> 上記 3 つを `examples/tyrano-example/` 直下に置き、Config.tjs に
+> 上記 3 つを `examples/tyranoscript-example/` 直下に置き、Config.tjs に
 > `configSave = webstorage;` と一意の `projectID` を設定してください。
 
 配置後のイメージ（`index.html` / `tyrano/` / `data/system/` は .gitignore 済み）:
 
 ```
-examples/tyrano-example/
+examples/tyranoscript-example/
   index.html        ← fetch:engine が取得（コミットしない）
   tyrano/           ← 本体エンジン（コミットしない）
   TYRANO_VERSION.txt        ← 取得 ref のピン（コミット）
@@ -79,7 +79,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build
 
 # 2) 生成物（main.js + wasm）を data/others/plugin/ssplayer/ へ同期
 #    ★ パッケージを編集したら毎回これを回すのが基本ループ
-pnpm --filter tyrano-example run sync:plugin
+pnpm --filter tyranoscript-example run sync:plugin
 
 # 3) SS アセット（reference Ringo.ssab + Ringo.png）を data/others/ssdata/Ringo/ へ
 #    ※ リポジトリ直下の deploy-examples が SS-SDK/tests を変換し、各 example へ配布する
@@ -90,7 +90,7 @@ pnpm deploy-examples
 ### 3. 起動して確認する
 
 ```bash
-pnpm --filter tyrano-example run dev
+pnpm --filter tyranoscript-example run dev
 # → http://localhost:5847/ を開く（他 tyrano プロジェクトと origin を分離するため独自ポート）
 ```
 
@@ -103,7 +103,7 @@ pnpm --filter tyrano-example run dev
 ```
 packages/ssplayer-tyranoscript/src/* を編集
   → pnpm --filter @spritestudio/ssplayer-tyranoscript run build
-  → pnpm --filter tyrano-example run sync:plugin
+  → pnpm --filter tyranoscript-example run sync:plugin
   → dev サーバをリロード（サーバ再起動は不要。ブラウザ強制リロードでキャッシュ回避）
 ```
 

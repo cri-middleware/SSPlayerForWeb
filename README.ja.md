@@ -58,7 +58,7 @@
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
 | **RPG ツクール MZ**（PixiJS v5） | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
-| **TyranoScript / TyranoBuilder**（ノベル） | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyrano-example](./examples/tyrano-example) |
+| **TyranoScript / TyranoBuilder**（ノベル） | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyranoscript-example](./examples/tyranoscript-example) |
 
 ## 🚀 クイックスタート
 

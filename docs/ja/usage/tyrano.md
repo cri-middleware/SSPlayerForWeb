@@ -76,7 +76,7 @@ data/others/ssdata/<project>.ssab
 - `[ss_new]` は名前付きプレイヤーを生成し、`.ssab` をロードしてレイヤーに置き、再生します。
 - `[ss_play]` は既存プレイヤーで再生／アニメ切替を行います。
 
-動く最小プロジェクトは `examples/tyrano-example` にあります。
+動く最小プロジェクトは `examples/tyranoscript-example` にあります。
 
 ## 4. 提供タグ
 
@@ -230,7 +230,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplay
 同梱のサンプルで試す場合は次のとおりです。
 
 ```sh
-pnpm --filter tyrano-example run sync:plugin   # ビルド済みプラグイン + wasm をサンプルへコピー
+pnpm --filter tyranoscript-example run sync:plugin   # ビルド済みプラグイン + wasm をサンプルへコピー
 ```
 
 ::: tip TyranoScript 本体は同梱していません

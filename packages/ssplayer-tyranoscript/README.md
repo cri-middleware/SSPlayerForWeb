@@ -78,7 +78,7 @@ Then show a character wherever you want one:
 - `[ss_new]` creates a named player, loads its `.ssab`, drops it on a layer, and plays.
 - `[ss_play]` plays or switches an animation on an existing player.
 
-A runnable minimal project is [`examples/tyrano-example`](../../examples/tyrano-example/README.md).
+A runnable minimal project is [`examples/tyranoscript-example`](../../examples/tyranoscript-example/README.md).
 
 ## Recipes (common patterns)
 
@@ -106,7 +106,7 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 
 > For worked examples of entrances/movement (`[ss_move]` / `[ss_pos]`), `[anim]` fades,
 > multiple layers, and save/load restore, see the commented sample scenario
-> [`first.ks`](../../examples/tyrano-example/data/scenario/first.ks).
+> [`first.ks`](../../examples/tyranoscript-example/data/scenario/first.ks).
 
 ## Tags
 

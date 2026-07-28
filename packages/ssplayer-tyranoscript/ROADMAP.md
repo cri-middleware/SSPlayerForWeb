@@ -41,7 +41,7 @@ canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 - [x] Audio `TyranoAudioManager` (`IAudioManager` via `window.Howl`)
 - [x] Movement/effects also work through Tyrano's own `[anim]` / `[kanim]` (the canvas is tagged with the player-name class)
 - [x] Distribution: `plugin/` template + `pnpm run pack` → `ssplayer-tyranoscript-plugin-<ver>.zip`
-- [x] `examples/tyrano-example` (real TyranoScript; engine fetched via `fetch:engine`, git-ignored)
+- [x] `examples/tyranoscript-example` (real TyranoScript; engine fetched via `fetch:engine`, git-ignored)
 
 ### PT3.5 — parity with the official Spine / Live2D plugins
 
@@ -112,7 +112,7 @@ the blanket fades and the bulk pause/resume are still hand-written), the player 
 is a free-text field, and conversion is synchronous. See that package's README.
 
 ### PT5 — examples / docs
-- [x] `examples/tyrano-example` — hand-written TyranoScript
+- [x] `examples/tyranoscript-example` — hand-written TyranoScript
 - [ ] A builder sample project
 - [ ] Docs upkeep; consider submitting to the official plugin library (plugin.tyrano.jp)
 

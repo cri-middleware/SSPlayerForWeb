@@ -76,7 +76,7 @@ Then show a character wherever you want one:
 - `[ss_new]` creates a named player, loads its `.ssab`, drops it on a layer, and plays.
 - `[ss_play]` plays or switches an animation on an existing player.
 
-A runnable minimal project lives at `examples/tyrano-example`.
+A runnable minimal project lives at `examples/tyranoscript-example`.
 
 ## 4. Tags
 
@@ -236,7 +236,7 @@ Release; users extract `ssplayer/` into `data/others/plugin/`.
 To try it in the bundled example:
 
 ```sh
-pnpm --filter tyrano-example run sync:plugin   # copy the built plugin + wasm into the example
+pnpm --filter tyranoscript-example run sync:plugin   # copy the built plugin + wasm into the example
 ```
 
 ::: tip TyranoScript itself is not bundled

@@ -1,5 +1,5 @@
 {
-  "name": "tyrano-example",
+  "name": "tyranoscript-example",
   "private": true,
   "version": "1.0.0",
   "description": "Hand-written TyranoScript project exercising the ssplayer-tyranoscript [ss_*] tags",
@@ -8,7 +8,7 @@
     "fetch:engine": "node scripts/fetch-tyrano.mjs",
     "sync:plugin": "node scripts/sync-plugin.mjs",
     "dev": "node scripts/serve.mjs",
-    "build": "echo \"tyrano-example is served statically; no build step\"",
+    "build": "echo \"tyranoscript-example is served statically; no build step\"",
     "clean": "rimraf data/others/plugin/ssplayer/main.js data/others/plugin/ssplayer/ssruntime_bg.wasm"
   },
   "dependencies": {

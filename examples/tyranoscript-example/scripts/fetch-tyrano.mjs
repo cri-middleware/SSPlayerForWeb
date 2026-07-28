@@ -123,8 +123,8 @@ function main() {
   }
 
   console.log('[fetch-tyrano] done. Next:');
-  console.log('  pnpm --filter tyrano-example run sync:plugin   # copy built plugin + wasm');
-  console.log('  pnpm --filter tyrano-example run dev           # serve at http://localhost:5847');
+  console.log('  pnpm --filter tyranoscript-example run sync:plugin   # copy built plugin + wasm');
+  console.log('  pnpm --filter tyranoscript-example run dev           # serve at http://localhost:5847');
 }
 
 main();
