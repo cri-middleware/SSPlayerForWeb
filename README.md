@@ -14,7 +14,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — zero-dependency standalone renderer (the `<ss-player>` Web Component). *Supports D&D of `.ssab` files.*
 - ▶️ **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — for PixiJS v8 apps. *Supports D&D of `.ssab` files.*
 - ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (SpriteStudio pictures)
-- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — a visual-novel scene driven by `[ss_*]` tags (experimental)
+- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — a visual-novel scene driven by `[ss_*]` tags (beta)
 
 ## 📚 Documentation
 
@@ -58,7 +58,8 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | Your environment | Package | Runnable example |
 |---|---|---|
 | **RPG Maker MZ** (PixiJS v5) | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
-| **TyranoScript / TyranoBuilder** (visual-novel engine) | [`@spritestudio/ssplayer-tyrano`](./packages/ssplayer-tyrano) | [examples/tyrano-example](./examples/tyrano-example) |
+| **TyranoScript** (visual-novel engine) | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyranoscript-example](./examples/tyranoscript-example) |
+| **TyranoBuilder** (visual-novel editor) | [`@spritestudio/ssplayer-tyranobuilder`](./packages/ssplayer-tyranobuilder) | — |
 
 ## 🚀 Quick Start
 
@@ -106,6 +107,7 @@ flowchart TD
         direction LR
         sspj[".sspj"] --> convcore["ssconverter-core<br/>(WASM)"] --> ssab[".ssab"]
         convweb["ssconverter-web<br/>browser UI + Node CLI"] -. wraps .-> convcore
+        tyranob["ssplayer-tyranobuilder<br/>TyranoBuilder editor (beta)"] -. wraps .-> convcore
     end
 
     subgraph play ["Playback (run-time)"]
@@ -113,17 +115,18 @@ flowchart TD
         webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
         rmmz["ssplayer-rmmz<br/>RPG Maker MZ (experimental)"]
-        tyrano["ssplayer-tyrano<br/>TyranoScript (experimental)"]
+        tyrano["ssplayer-tyranoscript<br/>TyranoScript (beta)"]
         core --> webgl
         core --> pixi
         webgl --> rmmz
         webgl --> tyrano
     end
 
+    tyranob -. ships .-> tyrano
     ssab ==>|feeds| core
 ```
 
-- **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyrano` further build on `ssplayer-webgl`.
+- **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyranoscript` further build on `ssplayer-webgl`, and `ssplayer-tyranobuilder` is author-time tooling that ships the TyranoScript runtime and converts `.sspj` inside the editor.
 - **[`ssconverter-core`](./packages/ssconverter-core)** is a separate WASM core (a build of the Rust `libssconverter`) with the same bytes-in / bytes-out design, so the same converter runs in the browser, Node, a Worker, or an edge runtime — the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) covers the same step outside a build.
 
 Per-package details live in each package's README, linked from the tables above.
@@ -141,7 +144,7 @@ Ready-to-run example apps live under [`examples/`](./examples/) — one per rend
 
 Packages are versioned **independently** with [Changesets](https://github.com/changesets/changesets) and published by the **Release** GitHub Action — a manual, one-shot workflow ([`release.yml`](./.github/workflows/release.yml)) that runs only from `main`.
 
-**Published to npm** (public): `ssplayer-core`, `ssplayer-pixi`, `ssplayer-webgl`, `ssconverter-core`. `ssplayer-rmmz`, `ssplayer-tyrano` and `ssconverter-web` are `private` — distributed via GitHub Releases, not npm.
+**Published to npm** (public): `ssplayer-core`, `ssplayer-pixi`, `ssplayer-webgl`, `ssconverter-core`. `ssplayer-rmmz`, `ssplayer-tyranoscript`, `ssplayer-tyranobuilder` and `ssconverter-web` are `private` — distributed via GitHub Releases, not npm.
 
 ### One-time setup
 

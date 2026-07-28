@@ -182,7 +182,7 @@ pnpm deploy-examples                         # SS-SDK テストプロジェク�
 nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ エディタで開く）
 ```
 
-`sync:plugin` はビルド済みプラグインを同期します（`tyrano-example` と同じ方式です）。
+`sync:plugin` はビルド済みプラグインを同期します（`tyranoscript-example` と同じ方式です）。
 `deploy-examples` はテストアセットの変換・配布を一手に担う単一の入口です。NW.js がなければ、
 `examples/rmmz-harness` のブラウザハーネス（実 `SSPlayer` / `SSPlayerRenderer` を PixiJS v5 上で
 駆動します）を使ってください。

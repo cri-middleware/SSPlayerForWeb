@@ -141,11 +141,11 @@ importers:
         specifier: ^8.1.5
         version: 8.1.5(@types/node@26.1.1)(terser@5.49.0)(yaml@2.9.0)
 
-  examples/tyrano-example:
+  examples/tyranoscript-example:
     dependencies:
-      '@spritestudio/ssplayer-tyrano':
+      '@spritestudio/ssplayer-tyranoscript':
         specifier: workspace:*
-        version: link:../../packages/ssplayer-tyrano
+        version: link:../../packages/ssplayer-tyranoscript
 
   examples/webgl-example:
     dependencies:
@@ -235,7 +235,23 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.1)(jsdom@29.1.1)(vite@8.1.5(@types/node@26.1.1)(terser@5.49.0)(yaml@2.9.0))
 
-  packages/ssplayer-tyrano:
+  packages/ssplayer-tyranobuilder:
+    dependencies:
+      '@spritestudio/ssconverter-core':
+        specifier: workspace:^
+        version: link:../ssconverter-core
+      '@spritestudio/ssplayer-core':
+        specifier: workspace:^
+        version: link:../ssplayer-core
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.1)(jsdom@29.1.1)(vite@8.1.5(@types/node@26.1.1)(terser@5.49.0)(yaml@2.9.0))
+
+  packages/ssplayer-tyranoscript:
     dependencies:
       '@spritestudio/ssplayer-webgl':
         specifier: workspace:^

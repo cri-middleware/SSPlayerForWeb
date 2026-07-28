@@ -193,7 +193,7 @@ pnpm deploy-examples                         # convert the SS-SDK test projects 
 nw examples/rmmz-example/SampleProject       # Test Play (or open the project in the MZ editor)
 ```
 
-`sync:plugin` refreshes the built plugin (mirrors `tyrano-example`); `deploy-examples`
+`sync:plugin` refreshes the built plugin (mirrors `tyranoscript-example`); `deploy-examples`
 is the single point that converts and distributes the SS test assets. No NW.js? Use
 the browser harness at `examples/rmmz-harness` (real `SSPlayer` / `SSPlayerRenderer`
 against PixiJS v5).

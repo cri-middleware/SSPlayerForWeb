@@ -19,7 +19,7 @@ plugin bundles** loaded by the host framework's plugin system — so they are co
 plugins, not installed from npm. Both are currently **experimental (alpha)**:
 
 - **RPG Maker MZ** (`@spritestudio/ssplayer-rmmz`) — see [Using RPG Maker MZ](/usage/rmmz).
-- **TyranoScript / TyranoBuilder** (`@spritestudio/ssplayer-tyrano`) — see [Using TyranoScript / TyranoBuilder](/usage/tyrano).
+- **TyranoScript / TyranoBuilder** (`@spritestudio/ssplayer-tyranoscript`) — see [Using TyranoScript / TyranoBuilder](/usage/tyrano).
 :::
 
 ## Install

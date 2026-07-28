@@ -1,0 +1,37 @@
+{
+  "name": "@spritestudio/ssplayer-tyranoscript",
+  "version": "7.0.0-beta.1",
+  "description": "TyranoScript / TyranoBuilder plugin bindings for SpriteStudio-SDK player",
+  "type": "module",
+  "private": true,
+  "//private": "Not published to npm. TyranoScript / TyranoBuilder authors consume the built plugin bundle (main.js + ssruntime_bg.wasm) or the .tbp, not an npm install. Distribution is via GitHub Releases assets (see scripts/pack-plugin.mjs).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "plugin",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "dependencies": {
+    "@spritestudio/ssplayer-webgl": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "pack": "node scripts/pack-plugin.mjs",
+    "clean": "rimraf dist",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "license": "BSD-3-Clause"
+}

@@ -5,8 +5,8 @@ $PIXI_PUBLIC = Join-Path $ROOT_DIR "examples\pixi-example\public"
 $WEBGL_PUBLIC = Join-Path $ROOT_DIR "examples\webgl-example\public"
 # override-example only ever plays Ringo, so it takes just that project's output.
 $OVERRIDE_PUBLIC = Join-Path $ROOT_DIR "examples\override-example\public"
-# TyranoScript serves assets from data/others/ssdata (see tyrano-example README).
-$TYRANO_SSDATA = Join-Path $ROOT_DIR "examples\tyrano-example\data\others\ssdata"
+# TyranoScript serves assets from data/others/ssdata (see tyranoscript-example README).
+$TYRANO_SSDATA = Join-Path $ROOT_DIR "examples\tyranoscript-example\data\others\ssdata"
 
 if (!(Test-Path -Path $PIXI_PUBLIC)) {
     New-Item -ItemType Directory -Force -Path $PIXI_PUBLIC | Out-Null
@@ -40,7 +40,7 @@ $OVERRIDE_RINGO = Join-Path $OVERRIDE_PUBLIC "Ringo"
 New-Item -ItemType Directory -Force -Path $OVERRIDE_RINGO | Out-Null
 Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\*") -Destination $OVERRIDE_RINGO -Recurse -Force
 
-# tyrano-example uses the REFERENCE Ringo (ssab + sibling PNG), not the embedded
+# tyranoscript-example uses the REFERENCE Ringo (ssab + sibling PNG), not the embedded
 # variant, to exercise real texture-path resolution.
 $TYRANO_RINGO = Join-Path $TYRANO_SSDATA "Ringo"
 New-Item -ItemType Directory -Force -Path $TYRANO_RINGO | Out-Null
@@ -49,7 +49,7 @@ Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PU
 # rmmz-example (RPG Maker MZ): convert the test .sspj into the game's asset
 # folder (nested under img/spritestudio/<project>/). The MZ plugin build
 # artefacts are synced separately by the example itself (examples/rmmz-example:
-# pnpm run sync:plugin), mirroring tyrano-example — deploy-examples only
+# pnpm run sync:plugin), mirroring tyranoscript-example — deploy-examples only
 # publishes converted test assets.
 $RMMZ_SS = Join-Path $ROOT_DIR "examples\rmmz-example\SampleProject\img\spritestudio"
 New-Item -ItemType Directory -Force -Path $RMMZ_SS | Out-Null

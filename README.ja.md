@@ -14,7 +14,7 @@
 - ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — 依存ゼロの単体レンダラー（`<ss-player>` Web コンポーネント）。※`.ssab` のD&D再生に対応
 - ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け。※`.ssab` のD&D再生に対応
 - ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（SpriteStudio ピクチャ）
-- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyrano/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン（実験的）
+- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン（beta）
 
 ## 📚 ドキュメント
 
@@ -58,7 +58,7 @@
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
 | **RPG ツクール MZ**（PixiJS v5） | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
-| **TyranoScript / TyranoBuilder**（ノベル） | [`@spritestudio/ssplayer-tyrano`](./packages/ssplayer-tyrano) | [examples/tyrano-example](./examples/tyrano-example) |
+| **TyranoScript / TyranoBuilder**（ノベル） | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyranoscript-example](./examples/tyranoscript-example) |
 
 ## 🚀 クイックスタート
 
@@ -113,7 +113,7 @@ flowchart TD
         webgl["ssplayer-webgl<br/>単体 WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
         rmmz["ssplayer-rmmz<br/>RPG ツクール MZ（実験的）"]
-        tyrano["ssplayer-tyrano<br/>TyranoScript（実験的）"]
+        tyrano["ssplayer-tyranoscript<br/>TyranoScript（beta）"]
         core --> webgl
         core --> pixi
         webgl --> rmmz
@@ -123,7 +123,7 @@ flowchart TD
     ssab ==>|入力| core
 ```
 
-- **[`ssplayer-core`](./packages/ssplayer-core)** がタイムラインと WASM 処理をすべて担い、各フレームを素の描画データとしてレンダラーへ渡します（DOM・エンジンに非依存）。各レンダラーはその上に載る薄いバインディングなので、新規レンダラーの追加（[ROADMAP](./ROADMAP.md) 参照）はそのパッケージだけで完結します。`ssplayer-rmmz` / `ssplayer-tyrano` はさらに `ssplayer-webgl` を再利用します。
+- **[`ssplayer-core`](./packages/ssplayer-core)** がタイムラインと WASM 処理をすべて担い、各フレームを素の描画データとしてレンダラーへ渡します（DOM・エンジンに非依存）。各レンダラーはその上に載る薄いバインディングなので、新規レンダラーの追加（[ROADMAP](./ROADMAP.md) 参照）はそのパッケージだけで完結します。`ssplayer-rmmz` / `ssplayer-tyranoscript` はさらに `ssplayer-webgl` を再利用します。
 - **[`ssconverter-core`](./packages/ssconverter-core)** は独立した変換用 WASM コア（Rust `libssconverter` のビルド）で、バイト入力・バイト出力の設計は同じ。ブラウザ・Node・Worker・エッジランタイムのいずれでも同じ変換器が動きます。ビルド環境の外では、デスクトップの [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) が同じ工程を担います。
 
 各パッケージの詳細（API・オプション）は上の表からリンクした各 README を参照してください。
@@ -141,7 +141,7 @@ flowchart TD
 
 パッケージは [Changesets](https://github.com/changesets/changesets) で**独立にバージョニング**し、**Release** GitHub Action（`main` からのみ実行する手動ワンショット。[`release.yml`](./.github/workflows/release.yml)）で publish します。
 
-**npm 公開対象**（public）: `ssplayer-core` / `ssplayer-pixi` / `ssplayer-webgl` / `ssconverter-core`。`ssplayer-rmmz` / `ssplayer-tyrano` / `ssconverter-web` は `private` で、npm ではなく GitHub Releases で配布します。
+**npm 公開対象**（public）: `ssplayer-core` / `ssplayer-pixi` / `ssplayer-webgl` / `ssconverter-core`。`ssplayer-rmmz` / `ssplayer-tyranoscript` / `ssconverter-web` は `private` で、npm ではなく GitHub Releases で配布します。
 
 ### 初回のみの準備
 

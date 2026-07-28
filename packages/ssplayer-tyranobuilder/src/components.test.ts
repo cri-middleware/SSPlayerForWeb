@@ -1,0 +1,280 @@
+// Guards the seam between the two halves of the integration: the builder writes
+// `[<key> <param>="…"]`, and @spritestudio/ssplayer-tyranoscript executes it at run
+// time. Nothing else ties the two together, so a renamed attribute on either
+// side would silently produce scenarios that parse but do nothing.
+//
+// The oracle is registerTags.ts itself: for each `ftag.master_tag['x'] = {…}`
+// block, an attribute is real if it appears in `vital`, in the `pm` defaults, or
+// as a `pm.<name>` read. Anything a component emits must be in that set.
+
+import { existsSync, readFileSync } from 'node:fs';
+import * as nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it, vi } from 'vitest';
+
+import { defineSSComponents, type PackChoice } from './components.js';
+
+const here = nodePath.dirname(fileURLToPath(import.meta.url));
+const REGISTER_TAGS = nodePath.resolve(here, '../../ssplayer-tyranoscript/src/registerTags.ts');
+
+/** Text of the object literal starting at `open` (the index of its `{`). */
+function braceBlock(src: string, open: number): string {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) return src.slice(open + 1, i);
+  }
+  return '';
+}
+
+interface RuntimeTag {
+  /** Everything the tag understands: vital + pm defaults + `pm.<name>` reads. */
+  attrs: Set<string>;
+  /** Attributes TyranoScript refuses to run the tag without. */
+  vital: string[];
+}
+
+function runtimeTags(): Map<string, RuntimeTag> {
+  const src = readFileSync(REGISTER_TAGS, 'utf8');
+  const heads = [...src.matchAll(/ftag\.master_tag\['([a-z0-9_]+)'\]\s*=\s*\{/g)];
+  const tags = new Map<string, RuntimeTag>();
+
+  heads.forEach((head, i) => {
+    const block = src.slice(head.index, heads[i + 1]?.index ?? src.length);
+    const attrs = new Set<string>();
+
+    const vitalMatch = block.match(/vital:\s*\[([^\]]*)\]/);
+    const vital = vitalMatch ? [...vitalMatch[1].matchAll(/'([^']+)'/g)].map((m) => m[1]) : [];
+    for (const name of vital) attrs.add(name);
+
+    const pmAt = block.search(/\bpm:\s*\{/);
+    if (pmAt !== -1) {
+      const inner = braceBlock(block, block.indexOf('{', pmAt));
+      for (const [, key] of inner.matchAll(/([a-zA-Z_]\w*)\s*:/g)) attrs.add(key);
+    }
+
+    // Attributes read through a shared helper still show up as `pm.<name>`.
+    for (const [, key] of block.matchAll(/\bpm\.([a-zA-Z_]\w*)/g)) attrs.add(key);
+
+    tags.set(head[1], { attrs, vital });
+  });
+
+  return tags;
+}
+
+const packs: PackChoice[] = [
+  { name: 'others/ssdata/Ringo/Ringo.ssab', val: 'others/ssdata/Ringo/Ringo.ssab' },
+  { name: 'image/hand-made.ssab', val: 'image/hand-made.ssab' },
+];
+const animations: Record<string, string[]> = {
+  'others/ssdata/Ringo/Ringo.ssab': ['idle', 'walk'],
+  'image/hand-made.ssab': ['blink'],
+};
+
+function build(overrides: Partial<Parameters<typeof defineSSComponents>[0]> = {}) {
+  return defineSSComponents({
+    $: undefined as never,
+    listPacks: () => packs,
+    listAnimations: (storage) => animations[String(storage)] ?? [],
+    ...overrides,
+  });
+}
+
+const components = build();
+
+/** The param view the host passes to `select_list`. */
+const view = (pm: Record<string, unknown>) => ({ get: () => ({ data: { pm } }) });
+
+describe('defineSSComponents', () => {
+  it('defines every component the palette needs', () => {
+    expect(Object.keys(components).length).toBeGreaterThan(0);
+    for (const [tag, { info, component }] of Object.entries(components)) {
+      expect(info.name, `${tag} info.name`).toBeTruthy();
+      expect(info.icon, `${tag} info.icon`).toBeTruthy();
+      expect(component.component_type, `${tag} component_type`).toBe('Simple');
+      // The card template renders `class="tb-i-{{:icon}}"`, so a prefixed value
+      // would produce `tb-i-tb-i-…` and show nothing.
+      expect(component.default_view.icon, `${tag} icon`).not.toMatch(/^tb-i-/);
+      for (const [key, param] of Object.entries(component.param)) {
+        expect(param.type, `${tag}.${key} type`).toBeTruthy();
+      }
+    }
+  });
+
+  it.skipIf(!existsSync(REGISTER_TAGS))('agrees with the tags ssplayer-tyranoscript registers', () => {
+    const tags = runtimeTags();
+    // A parse that silently found nothing would make this test vacuous.
+    expect(tags.size).toBeGreaterThan(10);
+    expect(tags.get('ss_new')?.attrs).toContain('storage');
+
+    for (const [tag, { component }] of Object.entries(components)) {
+      const runtime = tags.get(tag);
+      expect(runtime, `[${tag}] is not registered by ssplayer-tyranoscript`).toBeDefined();
+
+      for (const key of Object.keys(component.param)) {
+        expect(
+          runtime!.attrs.has(key),
+          `[${tag} ${key}=] is not read by ssplayer-tyranoscript's ${tag} tag`,
+        ).toBe(true);
+      }
+      // Omitting one of these makes TyranoScript raise at run time.
+      for (const name of runtime!.vital) {
+        expect(
+          Object.keys(component.param),
+          `[${tag}] must expose the vital attribute "${name}"`,
+        ).toContain(name);
+      }
+    }
+  });
+
+  it('offers every pack in the project, and says so when there are none', () => {
+    const storage = components.ss_new.component.param.storage;
+    expect(storage.select_list?.(view({}))).toEqual(packs);
+    expect(storage.default_val).toBeTypeOf('function');
+    expect((storage.default_val as () => string)()).toBe(packs[0].val);
+
+    const empty = build({ listPacks: () => [] });
+    const list = empty.ss_new.component.param.storage.select_list?.(view({})) ?? [];
+    expect(list).toHaveLength(1);
+    expect(list[0].val).toBe('');
+    expect(list[0].name).toMatch(/SpriteStudio_Source/);
+  });
+
+  it('lists the animations of the selected pack, starting on the first', () => {
+    const anime = components.ss_new.component.param.anime;
+    expect(anime.select_list?.(view({ storage: 'others/ssdata/Ringo/Ringo.ssab' }))).toEqual([
+      { name: 'idle', val: 'idle' },
+      { name: 'walk', val: 'walk' },
+    ]);
+    // A freshly placed component is playable without opening either dropdown:
+    // the first pack's first animation.
+    expect((anime.default_val as () => string)()).toBe('idle');
+  });
+
+  it('falls back to anime="" for a pack it cannot read', () => {
+    const anime = components.ss_new.component.param.anime;
+    const list = anime.select_list?.(view({ storage: 'https://example.com/Boss.ssab' })) ?? [];
+    // Empty value = "the pack's first animation" to the runtime, so the
+    // component stays valid even when the list is unknown.
+    expect(list).toHaveLength(1);
+    expect(list[0].val).toBe('');
+  });
+
+  it('never traps a value the scan cannot see', () => {
+    // A pack served from a CDN, or produced outside the project.
+    const remote = 'https://example.com/packs/Boss.ssab';
+    const storage = components.ss_new.component.param.storage;
+    const list = storage.select_list?.(view({ storage: remote })) ?? [];
+    expect(list.map((o) => o.val)).toContain(remote);
+
+    // Likewise an animation name this pack does not contain: keep it selected
+    // and flag it, rather than silently switching to another animation.
+    const anime = components.ss_new.component.param.anime;
+    const options =
+      anime.select_list?.(view({ storage: 'image/hand-made.ssab', anime: 'walk' })) ?? [];
+    const kept = options.find((o) => o.val === 'walk');
+    expect(kept).toBeDefined();
+    expect(kept!.name).not.toBe('walk');
+  });
+
+  it('narrows the animation list to the pack that player was created from', () => {
+    // A scenario where the same name is reused for a different pack.
+    const first = { data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[0].val } } };
+    const play = { data: { tag_name: 'ss_play', pm: { name: 'chr' } } };
+    const second = { data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[1].val } } };
+    const later = { data: { tag_name: 'ss_play', pm: { name: 'chr' } } };
+    (globalThis as { app?: unknown }).app = {
+      tyrano: { component: [first, play, second, later] },
+    };
+
+    const anime = build().ss_play.component.param.anime;
+    const asView = (c: unknown) => ({ get: () => c });
+
+    // The nearest *preceding* [ss_new] decides, not just any of them.
+    expect(anime.select_list?.(asView(play))?.slice(1).map((o) => o.val)).toEqual(['idle', 'walk']);
+    expect(anime.select_list?.(asView(later))?.slice(1).map((o) => o.val)).toEqual(['blink']);
+
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('offers every animation in the project when the pack cannot be told', () => {
+    // The player was created in another .ks, so nothing here says which pack it
+    // is — better to over-offer than to show an empty dropdown.
+    delete (globalThis as { app?: unknown }).app;
+    const list = components.ss_play.component.param.anime.select_list?.(view({ name: 'chr' })) ?? [];
+    expect(list[0].val).toBe('');
+    expect(list.slice(1).map((o) => o.val)).toEqual(['blink', 'idle', 'walk']);
+  });
+
+  it('offers the players already placed in the scenario', () => {
+    // The editor's live component list for the open scenario.
+    (globalThis as { app?: unknown }).app = {
+      tyrano: {
+        component: [
+          { data: { tag_name: 'ss_new', pm: { name: 'akane' } } },
+          { data: { tag_name: 'ss_play', pm: { name: 'ignored' } } },
+          { data: { tag_name: 'ss_new', pm: { name: 'ringo' } } },
+        ],
+      },
+    };
+    const name = build().ss_play.component.param.name;
+    expect(name.type).toBe('Select');
+    expect(name.select_list?.(view({}))?.map((o) => o.val)).toEqual(['akane', 'ringo']);
+
+    // A player created in another .ks is not in the list, and must survive.
+    expect(name.select_list?.(view({ name: 'elsewhere' }))?.map((o) => o.val)).toContain(
+      'elsewhere',
+    );
+
+    // [ss_new] names the player, so it stays free text.
+    expect(build().ss_new.component.param.name.type).toBe('Text');
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('says so when the scenario has no animation yet', () => {
+    delete (globalThis as { app?: unknown }).app;
+    const list = build().ss_stop.component.param.name.select_list?.(view({})) ?? [];
+    expect(list).toHaveLength(1);
+    expect(list[0].val).toBe('');
+  });
+
+  it('offers a follow-up animation only when the loop is off', () => {
+    const next = components.ss_play.component.param.next;
+
+    // Looping forever: the animation never ends, so nothing could follow it.
+    const whileLooping = next.select_list?.(view({ name: 'chr', loop: true })) ?? [];
+    expect(whileLooping).toHaveLength(1);
+    expect(whileLooping[0].val).toBe('');
+    expect(whileLooping[0].name).toMatch(/Loop forever/);
+
+    // Untouched means the checkbox default, which is on.
+    expect(next.select_list?.(view({ name: 'chr' }))).toHaveLength(1);
+
+    // Off: the real choice appears.
+    const whenOnce = next.select_list?.(view({ name: 'chr', loop: false })) ?? [];
+    expect(whenOnce.length).toBeGreaterThan(1);
+    expect(whenOnce.map((o) => o.val)).toContain('idle');
+  });
+
+  it('stores the loop checkbox itself, because the host stops doing it', () => {
+    const changeParam = vi.fn();
+    (globalThis as { app?: unknown }).app = { component: { changeParam } };
+    const component = { data: { pm: {} } };
+    // The host passes `undefined` as the value and the checkbox as the control.
+    const checkbox = { prop: () => false } as unknown as Parameters<
+      NonNullable<typeof components.ss_play.component.param.loop.onChange>
+    >[2];
+
+    components.ss_play.component.param.loop.onChange?.(undefined, component, checkbox);
+
+    expect(changeParam).toHaveBeenCalledWith(component, 'loop', false);
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('labels a placed component with its player name', () => {
+    const model = { data: { pm: { name: 'akane', storage: 'others/ssdata/Ringo/Ringo.ssab' } } };
+    expect(components.ss_new.component.header(model)).toBe('akane — Ringo.ssab');
+    expect(components.ss_stop.component.header(model)).toBe('akane');
+  });
+});
