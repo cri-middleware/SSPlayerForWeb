@@ -59,9 +59,54 @@
 [wait time="800"]
 「anim タグでフェードアウト→フェードインしました（標準タグで演出可能）。」[l][r]
 
+;============================================================================
+; ここから PT3.5 — Spine / Live2D プラグイン相当の機能
+;============================================================================
+
+; --- next= によるアニメ連鎖（シナリオは止まらない） ---
+; ss_wait と違い、テキストを進めながら「1回再生 → 待機ループ」が自動で行われる。
+; next= を指定して loop= を省略すると 1 回再生になる。
+[ss_play name="ringo" anime="jump" next="wait1"]
+「ss_play の next= で jump を1回再生し、自動で wait1 へ戻ります（シナリオは止まりません）。」[l][r]
+
+; atframe= を使うと、終了を待たずにそのフレームで次のアニメへ切り替わる。
+[ss_play name="ringo" anime="attack1" next="wait1" atframe="20"]
+「atframe=20 で attack1 の途中から wait1 へ切り替えました。」[l][r]
+
+; --- 先読み（表示せずロード） → ss_show で登場 ---
+; visible="false" はロードだけ行うので、重い ssab を事前に準備しておける。
+; zindex= は同じレイヤー内での重なり順（未指定だと生成順）。
+[ss_new name="ringo2" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="300" y="480" anime="dance" visible="false" zindex="1"]
+「2体目を visible=false で先読みしました（まだ画面には出ていません）。」[l][r]
+
+[ss_show name="ringo2" time="800"]
+「ss_show でフェードイン。ロード済みなので待たされません。」[l][r]
+
+; ss_hide は破棄しない（ss_free と違いロード状態が残るので ss_show が即時）。
+[ss_hide name="ringo2" time="500"]
+「ss_hide で非表示にしました（解放はされていません）。」[l][r]
+[ss_show name="ringo2" time="500"]
+「ss_show で即座に復帰しました（再ロードなし）。」[l][r]
+
+; --- 話者連動（Live2D プラグインの jname 相当） ---
+; #あかね の台詞が表示されている間だけ talk のアニメを再生し、終わると idle へ戻す。
+[ss_chara name="ringo" jname="あかね" talk="dance" idle="wait1"]
+
+#あかね
+台詞を表示している間だけ dance が再生され、行末で wait1 に戻ります。[p]
+
+#
+[ss_chara name="ringo" talk=""]
+
+; --- 全プレイヤーの一括フェード（シーン切替向け） ---
+[ss_fadeout time="600"]
+「ss_fadeout で全プレイヤーをまとめて隠しました。」[l][r]
+[ss_fadein time="600"]
+「ss_fadein で元に戻ります（フェードアウト前に表示されていたものだけ）。」[l][r]
+
 「クリックで Ringo を解放して終了します。」[l][r]
 
 ; 解放 (canvas 除去 + destroy + レジストリ削除)。
-[ss_free name="ringo"]
+[ss_free_all]
 
 [s]

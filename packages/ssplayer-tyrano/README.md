@@ -85,6 +85,12 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 [ss_play name="akane" anime="wait" loop="true"]     ; back to the idle loop
 ```
 
+**…or the same thing without stopping the scenario** (the text keeps going)
+
+```
+[ss_play name="akane" anime="jump" next="wait"]     ; jump once → wait, on its own
+```
+
 > For worked examples of entrances/movement (`[ss_move]` / `[ss_pos]`), `[anim]` fades,
 > multiple layers, and save/load restore, see the commented sample scenario
 > [`first.ks`](../../examples/tyrano-example/data/scenario/first.ks).
@@ -94,12 +100,16 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 | Tag | Role | Key attributes |
 | --- | --- | --- |
 | `[ss_init]` | Initialize the runtime once + audio config | `wasm=` (effectively required), `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
-| `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` |
-| `[ss_play]` | Play / switch animation | `name=`(req) `anime=` `loop=` `start=` |
+| `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
+| `[ss_play]` | Play / switch animation, optionally queueing a follow-up | `name=`(req) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
+| `[ss_show]` | Put a player on screen (reposition / entrance animation / fade) | `name=`(req) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
+| `[ss_hide]` | Take a player off screen, keeping it loaded | `name=`(req) `time=` `wait=` |
+| `[ss_fadein]` / `[ss_fadeout]` | Fade every player at once (scene changes) | `time=` `wait=` |
+| `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
-| `[ss_pos]` | Instant move/scale (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` |
-| `[ss_move]` | Tweened move/scale (easeOut, non-blocking) | `name=`(req) `x=` `y=` `scale=` `time=` |
+| `[ss_pos]` | Instant move/scale/reorder (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` `zindex=` |
+| `[ss_move]` | Tweened move/scale (easeOut, non-blocking by default) | `name=`(req) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | Tint a part, winning over the animation (Normal parts only) | `name=`(req) `part=`(req) `color=`(req) `blend=` `priority=` |
 | `[ss_part_visible]` | Force-hide a part (or revert it); `cascade=` takes its descendants too | `name=`(req) `part=`(req) `hide=` `cascade=` |
 | `[ss_part_cell]` | Make a part draw another cell (Normal / mask parts only) | `name=`(req) `part=`(req) `cellmap=`(req) `cell=`(req) `priority=` |
@@ -124,7 +134,78 @@ the contributor section.
 - `scale`: scale factor (default `1`).
 - `anime`: an animation name inside the `.ssab`; empty auto-picks the **first** animation.
 - `[ss_play]`'s `start`: start frame (default `-1` = from the current frame).
-- `[ss_init]`'s `base`: base folder for texture lookup; when omitted, textures load from the same folder as the `.ssab` (→ the per-project subfolder layout above).
+- `visible`: `false` loads the player **without showing it** (preload); reveal it later with `[ss_show]`.
+- `zindex`: stacking order *within one layer*. Without it, players on the same layer stack in creation order.
+- `time`: fade duration in ms (`[ss_show]` / `[ss_hide]` default `0` = instant; `[ss_fadein]` / `[ss_fadeout]` default `1000`).
+- `wait`: `true` = hold the scenario until the effect finishes. Default `true` for the fades, `false` for `[ss_move]`.
+- `next` / `nextloop` / `atframe`: see [Chaining animations](#chaining-animations-without-stopping-the-scenario).
+
+## Preload, show, hide
+
+`[ss_new]` shows the player as soon as it has loaded. For a big `.ssab` you usually
+want the loading to happen *earlier* than the entrance, so it does not stall the
+scene — create it hidden, then reveal it when the moment comes:
+
+```
+[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]  ; loads now
+...
+[ss_show name="akane" x="640" y="480" time="800"]   ; appears here, instantly ready
+[ss_hide name="akane" time="500"]                   ; off screen, still loaded
+[ss_show name="akane"]                              ; back, no reloading
+```
+
+`[ss_hide]` is not `[ss_free]`: the animation stays loaded (so `[ss_show]` is
+instant) and, being off screen, it stops consuming GPU time. Use `[ss_free]` when
+you are finished with a character for good.
+
+`[ss_fadeout]` / `[ss_fadein]` fade **every** player at once — the usual scene-change
+move. A blanket fade-out does not forget which players were individually hidden, so
+the following fade-in brings back exactly the ones that were on screen before.
+
+## Chaining animations without stopping the scenario
+
+`[ss_wait]` blocks the scenario until an animation ends. That is right for "wait for
+the punch to land, then continue", but wrong for "enter, then settle into an idle
+loop" — there the text should keep flowing. `next=` queues the follow-up on the
+player itself, so the scenario never stops:
+
+```
+[ss_play name="akane" anime="appear" next="wait"]    ; appear once → wait, looping
+[ss_play name="akane" anime="attack" next="wait" atframe="20"]  ; switch at frame 20
+```
+
+- `next=` with no `loop=` plays the current animation **once** (an infinite loop
+  would never reach its end and the follow-up would never fire).
+- `nextloop=` sets the follow-up's loop count (default: infinite).
+- `atframe=` switches at that frame instead of waiting for the end — useful to
+  overlap the tail of one animation with the start of the next.
+- The queued follow-up is cancelled by the next `[ss_play]` / `[ss_show anime=]`.
+
+## Speaker-linked talk animations
+
+`[ss_chara]` binds a player to a character name, so it plays a talk animation while
+that character's line is being typed out and returns to idle when the line ends —
+no per-line tags:
+
+```
+[chara_new name="akane" jname="あかね" storage="chara/akane/normal.png"]
+[ss_chara name="akane_ss" jname="あかね" talk="talk" idle="wait"]
+
+#あかね
+Nice to meet you.[p]      ; talk plays here, wait resumes at the [p]
+```
+
+- `jname=` accepts the `#name` you write in the scenario **or** the Tyrano chara id;
+  omit it and the player's own name is used.
+- `idle=` is what plays afterwards. Leave it empty to fall back to whatever the
+  scenario last set with `[ss_play]`, so an expression change survives the next line.
+- Talk/idle switching is deliberately **not** saved: a save taken mid-line restores
+  the character in their normal animation, not frozen mid-word.
+- `talk=""` unbinds. In skip / `[nowait]` mode the engine prints the whole line at
+  once and no talk animation flickers past.
+- SpriteStudio is frame-based, so this swaps a whole animation rather than driving a
+  mouth parameter the way Live2D's `lip=` does — author a talking animation in
+  SpriteStudio and name it here.
 
 ## Movement & effects with `[anim]` / `[kanim]`
 
@@ -161,6 +242,8 @@ just like any character:
   beginning, not the exact saved frame).
 - **Scene changes**: call `[ss_free]` / `[ss_free_all]` on scene transitions or layer
   clears to remove players you no longer need.
+- Visibility, stacking order, a queued `next=` follow-up and `[ss_chara]` bindings
+  all survive a save/load, so `[ss_restore]` puts the scene back as it was.
 
 ## Audio
 

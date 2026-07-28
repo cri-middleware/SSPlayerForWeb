@@ -10,9 +10,28 @@ import {
   type SSOverridePriority,
   type SSPartOverride,
 } from '@spritestudio/ssplayer-webgl';
-import { PlayerRegistry, type SSPlayerEntry } from './PlayerRegistry.js';
-import { createLayerCanvas, getLayerElement, toTransform, type LayerPage } from './LayerCanvas.js';
-import { persistPlayers, readSavedPlayers } from './SaveLoadBridge.js';
+import {
+  clearChain,
+  PlayerRegistry,
+  type SSCharaBinding,
+  type SSNextAnime,
+  type SSPlayerEntry,
+} from './PlayerRegistry.js';
+import {
+  createLayerCanvas,
+  getLayerElement,
+  setCanvasVisible,
+  setCanvasZIndex,
+  toTransform,
+  type LayerPage,
+} from './LayerCanvas.js';
+import {
+  persistGlobalState,
+  persistPlayers,
+  readGlobalState,
+  readSavedPlayers,
+} from './SaveLoadBridge.js';
+import { attachTalkHooks, speakerMatches } from './CharaTalkBridge.js';
 import { TyranoAudioManager } from './TyranoAudioManager.js';
 import type { TyranoGlobal, TyranoKag } from './tyranoTypes.js';
 
@@ -28,9 +47,24 @@ interface AdapterState {
   initialized: boolean;
   /** In-flight init promise so a second `[ss_init]` awaits the first. */
   initPromise: Promise<void> | null;
+  /**
+   * `[ss_fadeout]` blanket-hide. Kept apart from each player's own `visible`
+   * flag so `[ss_fadein]` restores exactly the players that were shown before.
+   */
+  layerHidden: boolean;
+  /** Whether the `[ss_chara]` speaker hooks have been wired onto `[text]`. */
+  talkHooked: boolean;
+  /** Player currently showing its talk animation (`[ss_chara]`), if any. */
+  talking: string | null;
 }
 
-const state: AdapterState = { initialized: false, initPromise: null };
+const state: AdapterState = {
+  initialized: false,
+  initPromise: null,
+  layerHidden: false,
+  talkHooked: false,
+  talking: null,
+};
 
 /** Audio routing config (set by `[ss_init]`; see TyranoAudioManager). */
 interface AudioState {
@@ -140,6 +174,14 @@ interface CreateOpts {
   y: number;
   scale: number;
   loop: number;
+  /** Whether to display the canvas right away (`false` = preload only). */
+  visible: boolean;
+  /** Stacking order within the layer, when the author set one. */
+  zindex?: number;
+  /** Follow-up animation to re-arm (restore path). */
+  next?: SSNextAnime;
+  /** Speaker binding to re-bind (restore path). */
+  chara?: SSCharaBinding;
   /** Per-part overrides to re-apply once the animation is set up (restore path). */
   overrides?: SSPartOverride[];
 }
@@ -163,6 +205,10 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio ?? 1;
 
   const { canvas, bufferScale } = createLayerCanvas(layerEl, w, h, dpr, opts.name);
+  setCanvasZIndex(canvas, opts.zindex);
+  // Apply visibility before the (awaited) load so a preloading `[ss_new
+  // visible="false"]` never flashes on screen for a frame.
+  void setCanvasVisible(canvas, opts.visible && !state.layerHidden, 0);
   // Disable the default Web Audio manager; we route SS sounds through
   // TyranoScript's howler instead (attached below, before setAnimation so the
   // core preloads through it). When audio is disabled, nothing is attached.
@@ -202,11 +248,63 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
       y: opts.y,
       scale: opts.scale,
       loop: opts.loop,
+      visible: opts.visible,
+      zindex: opts.zindex,
+      next: opts.next,
+      chara: opts.chara,
       overrides: opts.overrides,
     },
   };
   registry.set(entry);
   return entry;
+}
+
+// ---------------------------------------------------------------------------
+// Follow-up animations (`[ss_play next=]`) — the Spine plugin's `next_motion`.
+// ---------------------------------------------------------------------------
+
+/**
+ * Arm `entry.meta.next` on the live player: when the current animation ends
+ * (or reaches `atframe`), switch to the follow-up and keep playing. Unlike
+ * `[ss_wait]` this never touches the scenario, so the text keeps flowing while
+ * a character finishes its entrance and settles into an idle loop.
+ *
+ * `onFrame` is optional on the player interface only in the sense that a very
+ * old build may not have it; the current renderer always does, so `atframe`
+ * simply falls back to the end-of-animation trigger if it is missing.
+ */
+function armChain(entry: SSPlayerEntry, persist: () => void): void {
+  clearChain(entry);
+  const next = entry.meta.next;
+  if (!next) return;
+
+  const { player, meta } = entry;
+  const fire = (): void => {
+    clearChain(entry);
+    meta.next = undefined;
+    meta.anime = next.anime;
+    meta.loop = next.loop;
+    void player
+      .setAnimation(next.anime)
+      .then(() => {
+        // The author DID ask for this animation change (they wrote `next=`), so
+        // drop the overrides a new setup discards, exactly like [ss_play].
+        meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+        player.internalPlayer.setLoop(next.loop);
+        player.play();
+        persist();
+      })
+      .catch((err) => console.error('[ss] next animation failed:', (err as Error)?.stack ?? err));
+  };
+
+  const chain: Array<() => void> = [];
+  if (next.atframe !== undefined && typeof player.onFrame === 'function') {
+    const target = next.atframe;
+    chain.push(player.onFrame((frame) => { if (frame >= target) fire(); }));
+  } else {
+    chain.push(player.onAnimationEnd(fire));
+  }
+  entry.chain = chain;
 }
 
 // ---------------------------------------------------------------------------
@@ -228,13 +326,31 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   const ftag = kag.ftag;
   const nextOrder = () => ftag.nextOrder();
   /** Mirror the live registry into the save target (§3.3). */
-  const persist = () => persistPlayers(kag, registry);
+  const persist = () => {
+    persistPlayers(kag, registry);
+    persistGlobalState(kag, { layerHidden: state.layerHidden });
+  };
 
   /** Run async tag work, then advance — even on error, so the scenario never stalls. */
   const runThenAdvance = (label: string, work: () => Promise<void>): void => {
     work()
       .catch((err) => console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err))
       .finally(nextOrder);
+  };
+
+  /**
+   * Async tag work whose tail is a visual effect: `wait="true"` advances the
+   * scenario only once the effect has finished (the `[spine_fadein wait=]` /
+   * `[live2d_fadein wait=]` convention), `wait="false"` advances at once and
+   * lets it play out behind the following tags.
+   */
+  const runThenAdvanceOrNot = (label: string, wait: boolean, work: () => Promise<void>): void => {
+    if (wait) {
+      runThenAdvance(label, work);
+      return;
+    }
+    work().catch((err) => console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err));
+    nextOrder();
   };
 
   /** Run synchronous tag work, then advance (errors logged, never stalls). */
@@ -253,6 +369,128 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     const entry = registry.get(name);
     if (!entry) throw new Error(`[${label}] player "${name}" not found (call [ss_new] first).`);
     return entry;
+  };
+
+  /**
+   * Push a player's effective visibility to its canvas. A player is on screen
+   * only when it is itself visible AND no `[ss_fadeout]` is in force.
+   */
+  const applyVisibility = (entry: SSPlayerEntry, timeMs: number): Promise<void> =>
+    setCanvasVisible(entry.canvas, entry.meta.visible && !state.layerHidden, timeMs);
+
+  /** Every live entry, for the bulk tags. */
+  const allEntries = (): SSPlayerEntry[] =>
+    registry.names().map((n) => registry.get(n)).filter((e): e is SSPlayerEntry => !!e);
+
+  /** Attributes shared by `[ss_play]` and `[ss_show]`'s optional entrance animation. */
+  interface PlaybackAttrs {
+    anime?: unknown;
+    loop?: unknown;
+    start?: unknown;
+    next?: unknown;
+    nextloop?: unknown;
+    atframe?: unknown;
+  }
+
+  /**
+   * Switch animation (when asked), arm any `next=` follow-up, and play. Shared
+   * so `[ss_show anime=]` behaves exactly like `[ss_play]` — an entrance
+   * animation that hands over to an idle loop is the common case for both.
+   */
+  const applyPlayback = async (entry: SSPlayerEntry, pm: PlaybackAttrs): Promise<void> => {
+    const { player, meta } = entry;
+    // Whatever follow-up the previous [ss_play] armed is superseded by this one.
+    clearChain(entry);
+
+    const nextAnime = String(pm.next ?? '');
+    const hasAtframe = pm.atframe !== undefined && pm.atframe !== '';
+
+    if (pm.anime) {
+      meta.anime = String(pm.anime);
+      await player.setAnimation(meta.anime);
+      // Setting up an animation makes the runtime drop every override but the
+      // Permanent ones; keep the saved mirror in step so a later [ss_restore]
+      // cannot resurrect what the runtime discarded.
+      meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+    }
+    if (pm.loop !== undefined && pm.loop !== '') {
+      meta.loop = loopCount(pm.loop);
+    } else if (nextAnime && !hasAtframe) {
+      // `next=` means "play this, then that", and the end of an infinite loop
+      // never arrives — so an unstated loop plays once here, matching the
+      // Spine plugin's [spine_anim], whose `loop` also defaults to false.
+      meta.loop = 1;
+    }
+    meta.next = nextAnime
+      ? {
+          anime: nextAnime,
+          loop: pm.nextloop !== undefined && pm.nextloop !== '' ? loopCount(pm.nextloop) : -1,
+          atframe: hasAtframe ? num(pm.atframe, 0) : undefined,
+        }
+      : undefined;
+
+    player.internalPlayer.setLoop(meta.loop);
+    player.play(num(pm.start, -1));
+    armChain(entry, persist);
+  };
+
+  // --- [ss_chara]: speaker-linked talk / idle switching --------------------
+  //
+  // Transient decoration over whatever the scenario last set, so these swaps
+  // deliberately do NOT touch `meta.anime`: a save taken mid-line must not
+  // restore the character frozen in their talk animation.
+
+  const switchAnimation = (entry: SSPlayerEntry, anime: string, loop: number): void => {
+    if (!anime) return;
+    const { player, meta } = entry;
+    void player
+      .setAnimation(anime)
+      .then(() => {
+        // setAnimation drops the non-Permanent overrides; the author never
+        // asked for that here, so put them straight back.
+        applyPartOverrides(player, meta.overrides);
+        player.internalPlayer.setLoop(loop);
+        player.play();
+      })
+      .catch((err) => console.error('[ss_chara] animation switch failed:', (err as Error)?.stack ?? err));
+  };
+
+  /** Return the currently-talking player (if any) to its idle animation. */
+  const stopTalking = (): void => {
+    const name = state.talking;
+    state.talking = null;
+    if (!name) return;
+    const entry = registry.get(name);
+    const chara = entry?.meta.chara;
+    if (!entry || !chara) return;
+    // An explicit idle= loops forever; falling back to the scenario's own
+    // animation restores the loop count the scenario chose for it.
+    switchAnimation(entry, chara.idle || entry.meta.anime, chara.idle ? -1 : entry.meta.loop);
+  };
+
+  /** Wire the engine's text-output bracket to talk/idle switching (once). */
+  const ensureTalkHooks = (): void => {
+    if (state.talkHooked) return;
+    state.talkHooked = true; // set first: on failure we warn exactly once
+    const wired = attachTalkHooks(kag, {
+      onTalkStart: (speaker) => {
+        stopTalking();
+        if (!speaker) return;
+        for (const entry of allEntries()) {
+          const chara = entry.meta.chara;
+          if (!chara || !speakerMatches(kag, chara.jname, speaker)) continue;
+          state.talking = entry.meta.name;
+          switchAnimation(entry, chara.talk, -1);
+          break;
+        }
+      },
+      onTalkStop: stopTalking,
+    });
+    if (!wired) {
+      console.warn(
+        '[ss_chara] this TyranoScript build exposes no text-output hook; speaker linkage is inactive.',
+      );
+    }
   };
 
   // [ss_init wasm=] — initialize the WASM runtime once. Async: advances only
@@ -291,11 +529,17 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
-  // [ss_new name= storage= anime= layer= page= x= y= scale= loop=] — create a
-  // player, load the ssab, mount its canvas on the layer, set animation, play.
+  // [ss_new name= storage= anime= layer= page= x= y= scale= loop= visible= zindex=]
+  // — create a player, load the ssab, mount its canvas on the layer, set
+  // animation, play. `visible="false"` loads WITHOUT displaying (the Spine /
+  // Live2D plugins' `[*_new]` + `[*_show]` split), so a heavy .ssab can be
+  // preloaded during a quiet moment and revealed instantly later with [ss_show].
   ftag.master_tag['ss_new'] = {
     vital: ['name', 'storage'],
-    pm: { anime: '', layer: '0', page: 'fore', x: 0, y: 0, scale: 1, loop: 'true' },
+    pm: {
+      anime: '', layer: '0', page: 'fore', x: 0, y: 0, scale: 1, loop: 'true',
+      visible: 'true', zindex: '',
+    },
     start(pm) {
       runThenAdvance('ss_new', async () => {
         const entry = await createPlayer(kag, {
@@ -308,6 +552,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           y: num(pm.y, 0),
           scale: num(pm.scale, 1),
           loop: loopCount(pm.loop),
+          visible: bool(pm.visible, true),
+          zindex: pm.zindex === undefined || pm.zindex === '' ? undefined : num(pm.zindex, 0),
         });
         entry.player.play();
         persist();
@@ -315,26 +561,123 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
-  // [ss_play name= anime= loop= start=] — (re)play, optionally switching animation.
+  // [ss_play name= anime= loop= start= next= nextloop= atframe=] — (re)play,
+  // optionally switching animation. `next=` queues a follow-up animation that
+  // starts when this one ends (or at `atframe=`) WITHOUT blocking the scenario
+  // — the Spine plugin's `next_motion` / `in_frame_next_motion`. Use it for
+  // "entrance, then idle loop" while the text keeps flowing; use [ss_wait] when
+  // you do want the scenario to hold.
   ftag.master_tag['ss_play'] = {
     vital: ['name'],
-    pm: { anime: '', loop: '', start: '' },
+    pm: { anime: '', loop: '', start: '', next: '', nextloop: '', atframe: '' },
     start(pm) {
       runThenAdvance('ss_play', async () => {
-        const { player, meta } = lookup('ss_play', String(pm.name));
-        if (pm.anime) {
-          meta.anime = String(pm.anime);
-          await player.setAnimation(meta.anime);
-          // Setting up an animation makes the runtime drop every override but
-          // the Permanent ones; keep the saved mirror in step so a later
-          // [ss_restore] cannot resurrect what the runtime discarded.
-          meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+        await applyPlayback(lookup('ss_play', String(pm.name)), pm);
+        persist();
+      });
+    },
+  };
+
+  // [ss_show name= x= y= scale= zindex= anime= loop= next= time= wait=] — reveal
+  // a player created with `visible="false"` (or hidden by [ss_hide]), optionally
+  // repositioning and playing an entrance animation as it appears. Mirrors
+  // [spine_show] / [live2d_show].
+  ftag.master_tag['ss_show'] = {
+    vital: ['name'],
+    pm: {
+      x: '', y: '', scale: '', zindex: '', anime: '', loop: '', start: '',
+      next: '', nextloop: '', atframe: '', time: 0, wait: 'true',
+    },
+    start(pm) {
+      runThenAdvanceOrNot('ss_show', bool(pm.wait, true), async () => {
+        const entry = lookup('ss_show', String(pm.name));
+        const m = entry.meta;
+        // Placement before the fade, so a fade-in never shows the old position.
+        if (pm.zindex !== undefined && pm.zindex !== '') {
+          m.zindex = num(pm.zindex, 0);
+          setCanvasZIndex(entry.canvas, m.zindex);
         }
-        if (pm.loop !== undefined && pm.loop !== '') {
-          meta.loop = loopCount(pm.loop);
+        m.x = num(pm.x, m.x);
+        m.y = num(pm.y, m.y);
+        m.scale = num(pm.scale, m.scale);
+        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale));
+        if (pm.anime) await applyPlayback(entry, pm);
+        m.visible = true;
+        persist();
+        await applyVisibility(entry, num(pm.time, 0));
+      });
+    },
+  };
+
+  // [ss_hide name= time= wait=] — take a player off screen WITHOUT destroying
+  // it ([spine_hide] / [live2d_hide]). The .ssab stays loaded, so [ss_show]
+  // brings it back instantly; the renderer's own off-screen gating stops the
+  // GPU work meanwhile. Use [ss_free] when you are done with it for good.
+  ftag.master_tag['ss_hide'] = {
+    vital: ['name'],
+    pm: { time: 0, wait: 'true' },
+    start(pm) {
+      runThenAdvanceOrNot('ss_hide', bool(pm.wait, true), async () => {
+        const entry = lookup('ss_hide', String(pm.name));
+        entry.meta.visible = false;
+        persist();
+        await applyVisibility(entry, num(pm.time, 0));
+      });
+    },
+  };
+
+  // [ss_fadein] / [ss_fadeout] time= wait= — fade every SS player at once, e.g.
+  // around a scene change ([spine_fadein] / [live2d_fadeout]). The blanket flag
+  // is kept apart from each player's own `visible`, so a fade-in brings back
+  // exactly the players that were on screen before the fade-out.
+  ftag.master_tag['ss_fadeout'] = {
+    pm: { time: 1000, wait: 'true' },
+    start(pm) {
+      runThenAdvanceOrNot('ss_fadeout', bool(pm.wait, true), async () => {
+        state.layerHidden = true;
+        persist();
+        const time = num(pm.time, 1000);
+        await Promise.all(allEntries().map((e) => applyVisibility(e, time)));
+      });
+    },
+  };
+  ftag.master_tag['ss_fadein'] = {
+    pm: { time: 1000, wait: 'true' },
+    start(pm) {
+      runThenAdvanceOrNot('ss_fadein', bool(pm.wait, true), async () => {
+        state.layerHidden = false;
+        persist();
+        const time = num(pm.time, 1000);
+        await Promise.all(allEntries().map((e) => applyVisibility(e, time)));
+      });
+    },
+  };
+
+  // [ss_chara name= jname= talk= idle=] — link a player to a speaker so it
+  // plays `talk` while that character's text is being typed out and returns to
+  // `idle` when the line ends. The Live2D plugin's `jname` + `lip="text"`,
+  // expressed the way SpriteStudio works: a whole animation, not a mouth
+  // parameter. `jname` accepts either the `#name` display name or the Tyrano
+  // chara id, and defaults to the player's own name. `talk=""` unbinds.
+  ftag.master_tag['ss_chara'] = {
+    vital: ['name'],
+    pm: { jname: '', talk: '', idle: '' },
+    start(pm) {
+      runSync('ss_chara', () => {
+        const entry = lookup('ss_chara', String(pm.name));
+        const talk = String(pm.talk ?? '');
+        if (!talk) {
+          if (state.talking === entry.meta.name) state.talking = null;
+          entry.meta.chara = undefined;
+          persist();
+          return;
         }
-        player.internalPlayer.setLoop(meta.loop);
-        player.play(num(pm.start, -1));
+        entry.meta.chara = {
+          jname: String(pm.jname || entry.meta.name),
+          talk,
+          idle: String(pm.idle ?? ''),
+        };
+        ensureTalkHooks();
         persist();
       });
     },
@@ -543,12 +886,13 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
-  // [ss_pos name= x= y= scale=] — instant reposition/scale via the renderer's
-  // internal transform (anchor-accurate absolute placement, unlike a CSS [anim]).
-  // Omitted attributes keep their current value.
+  // [ss_pos name= x= y= scale= zindex=] — instant reposition/scale via the
+  // renderer's internal transform (anchor-accurate absolute placement, unlike a
+  // CSS [anim]). `zindex` reorders players sharing one layer, which creation
+  // order alone cannot do. Omitted attributes keep their current value.
   ftag.master_tag['ss_pos'] = {
     vital: ['name'],
-    pm: { x: '', y: '', scale: '' },
+    pm: { x: '', y: '', scale: '', zindex: '' },
     start(pm) {
       runSync('ss_pos', () => {
         const entry = lookup('ss_pos', String(pm.name));
@@ -560,21 +904,34 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         m.x = num(pm.x, m.x);
         m.y = num(pm.y, m.y);
         m.scale = num(pm.scale, m.scale);
+        if (pm.zindex !== undefined && pm.zindex !== '') {
+          m.zindex = num(pm.zindex, 0);
+          setCanvasZIndex(entry.canvas, m.zindex);
+        }
         entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale));
         persist();
       });
     },
   };
 
-  // [ss_move name= x= y= scale= time=] — tween to a new position/scale over
-  // `time` ms (default 500), easing out. Non-blocking (like Tyrano's [anim]); the
-  // save state is updated to the target immediately so a mid-tween save restores
-  // at the destination. Falls back to an instant set where rAF is unavailable.
+  // [ss_move name= x= y= scale= time= wait=] — tween to a new position/scale
+  // over `time` ms (default 500), easing out. Non-blocking by default (like
+  // Tyrano's [anim]); `wait="true"` holds the scenario until it lands. The save
+  // state is updated to the target immediately so a mid-tween save restores at
+  // the destination. Falls back to an instant set where rAF is unavailable.
   ftag.master_tag['ss_move'] = {
     vital: ['name'],
-    pm: { x: '', y: '', scale: '', time: '500' },
+    pm: { x: '', y: '', scale: '', time: '500', wait: 'false' },
     start(pm) {
-      runSync('ss_move', () => {
+      // `wait` defers the advance to the tween's end. Kept outside runSync (which
+      // always advances) so only the failure path falls back to advancing now.
+      const wait = bool(pm.wait, false);
+      let advanceIn = -1;
+      const finish = (): void => {
+        if (wait && advanceIn > 0) setTimeout(nextOrder, advanceIn);
+        else nextOrder();
+      };
+      try {
         const entry = lookup('ss_move', String(pm.name));
         const m = entry.meta;
         const fromX = m.x;
@@ -598,8 +955,10 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const now = () => (globalThis.performance?.now?.() ?? 0);
         if (time <= 0 || typeof raf !== 'function') {
           entry.player.setTransform(toTransform(toX, toY, toS, entry.bufferScale));
+          finish();
           return;
         }
+        advanceIn = time;
         const start = now();
         const step = (t: number): void => {
           const p = Math.min(1, (t - start) / time);
@@ -610,7 +969,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           entry.tween = p < 1 ? raf(step) : 0;
         };
         entry.tween = raf(step);
-      });
+        finish();
+      } catch (err) {
+        console.error('[ss] ss_move failed:', (err as Error)?.stack ?? err);
+        nextOrder();
+      }
     },
   };
 
@@ -622,7 +985,12 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start() {
       runThenAdvance('ss_restore', async () => {
         registry.destroyAll();
+        state.talking = null;
+        // Read the blanket-fade flag BEFORE rebuilding: createPlayer consults it
+        // to decide whether a restored player is shown at all.
+        state.layerHidden = readGlobalState(kag).layerHidden;
         const saved = readSavedPlayers(kag);
+        let needsTalkHooks = false;
         for (const s of saved) {
           const entry = await createPlayer(kag, {
             name: s.name,
@@ -634,11 +1002,21 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
             y: s.y,
             scale: s.scale,
             loop: s.loop,
+            // Saves written before these fields existed default to "shown".
+            visible: s.visible !== false,
+            zindex: s.zindex,
+            next: s.next,
+            chara: s.chara,
             overrides: s.overrides,
           });
           if (s.playing) entry.player.play();
           else entry.player.pause();
+          // Re-arm the follow-up only for a player that is actually running;
+          // a paused one would sit on a listener that can never fire.
+          if (s.next && s.playing) armChain(entry, persist);
+          if (s.chara) needsTalkHooks = true;
         }
+        if (needsTalkHooks) ensureTalkHooks();
         persist();
       });
     },
@@ -657,4 +1035,7 @@ export function __resetStateForTest(): void {
   registry.destroyAll();
   state.initialized = false;
   state.initPromise = null;
+  state.layerHidden = false;
+  state.talkHooked = false;
+  state.talking = null;
 }

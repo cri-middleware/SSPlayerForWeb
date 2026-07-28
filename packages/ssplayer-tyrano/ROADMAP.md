@@ -43,6 +43,38 @@ canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 - [x] Distribution: `plugin/` template + `pnpm run pack` → `ssplayer-tyrano-plugin-<ver>.zip`
 - [x] `examples/tyrano-example` (real TyranoScript; engine fetched via `fetch:engine`, git-ignored)
 
+### PT3.5 — parity with the official Spine / Live2D plugins
+
+Gaps found by comparing tag-for-tag against the official [Spine](https://tyrano.jp/sample/spine)
+and [Live2D](https://tyrano.jp/sample/live2d_5) plugins. Everything here is save/restore-aware.
+
+- [x] **Load / display split** — `[ss_new visible="false"]` + `[ss_show]` / `[ss_hide]`
+      (`[spine_new]`+`[spine_show]`+`[spine_hide]`, `[live2d_show]`/`[live2d_hide]`).
+      Preloads a heavy `.ssab` off screen; hiding keeps it loaded and lets the
+      renderer's own off-screen gating stop the GPU work, unlike `[ss_free]`.
+- [x] **Blanket fades** — `[ss_fadein]` / `[ss_fadeout]` with `time=` / `wait=`
+      (`[spine_fadein]` / `[live2d_fadeout]`). A `layerHidden` flag kept apart from each
+      player's own `visible`, so a fade-in restores exactly what was on screen.
+- [x] **Non-blocking animation chaining** — `[ss_play next= nextloop= atframe=]`
+      (`[spine_anim next_motion / in_frame_next_motion]`). "Entrance → idle" without
+      `[ss_wait]` stopping the scenario. `next=` with no `loop=` plays once.
+- [x] **Stacking order** — `zindex=` on `[ss_new]` / `[ss_pos]` / `[ss_show]`
+      (`[spine_init zindex=]`). One canvas per player means creation order was
+      previously the only ordering within a layer.
+- [x] **Speaker linkage** — `[ss_chara name= jname= talk= idle=]` (Live2D's `jname` +
+      `lip="text"`). Wraps the engine's own `[text]` lip-sync bracket
+      (`startLipSyncWithText` / `stopLipSyncWithText`, `addChars` / `finishAddingChars`
+      on older builds); see `src/CharaTalkBridge.ts`. SS is frame-based, so this swaps a
+      whole talk animation rather than driving a mouth parameter, and the swap is
+      deliberately excluded from the save.
+- [x] `wait=` on `[ss_move]` (opt-in; the default stays non-blocking).
+
+Deliberately **not** ported: `[spine_mix_anim]` / `[spine_config mixval]` (cross-animation
+blending — no SS7 runtime equivalent, see the FFI-gated item under "Open questions");
+`skin=` and `[live2d_expression]` (already covered, and then some, by `[ss_part_*]`);
+`lip_time` / `lip_sound_level` / `breath` (Live2D parameter-rig specifics);
+`bgimage` (Tyrano's own background layer already does this).
+
 ---
 
 ## Remaining work

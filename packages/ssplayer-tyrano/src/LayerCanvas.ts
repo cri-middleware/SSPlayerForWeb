@@ -88,6 +88,84 @@ export function createLayerCanvas(
 }
 
 /**
+ * Set (or clear, when `zIndex` is undefined) the stacking order of a player's
+ * canvas inside its layer. Tyrano layers stack by layer number; within ONE
+ * layer several SS canvases would otherwise stack in creation order only, with
+ * no way to bring a character to the front later. `z-index` works because the
+ * canvases are absolutely positioned (see createLayerCanvas).
+ */
+export function setCanvasZIndex(canvas: HTMLCanvasElement, zIndex?: number): void {
+  canvas.style.zIndex = zIndex === undefined || !Number.isFinite(zIndex) ? '' : String(zIndex);
+}
+
+/**
+ * Pending fade timers, keyed by canvas. Module-level (not on the entry) so the
+ * fade helpers stay usable on any canvas, and so a second fade on the same
+ * canvas cancels the first instead of racing it to the final style.
+ */
+const fadeTimers = new WeakMap<HTMLCanvasElement, ReturnType<typeof setTimeout>>();
+
+/** Cancel a fade started by {@link setCanvasVisible} (teardown / re-target). */
+export function cancelCanvasFade(canvas: HTMLCanvasElement): void {
+  const pending = fadeTimers.get(canvas);
+  if (pending === undefined) return;
+  clearTimeout(pending);
+  fadeTimers.delete(canvas);
+}
+
+/**
+ * Show or hide a player's canvas, optionally fading over `timeMs`. Resolves
+ * once the fade has finished (immediately when `timeMs <= 0`), so a tag can
+ * either await it (`wait="true"`) or fire and forget.
+ *
+ * Hiding ends at `display:none` rather than `opacity:0` on purpose: an
+ * invisible-but-laid-out canvas keeps its `SSCanvasPlayer` ticker running,
+ * whereas `display:none` trips the renderer's own `pauseWhenHidden`
+ * IntersectionObserver and stops the GPU work while the player stays loaded
+ * (that is the whole point of `[ss_hide]` over `[ss_free]`).
+ *
+ * CSS transitions are used rather than a RAF loop because the canvas is a plain
+ * DOM element here — this is the same axis Tyrano's own `[anim]` animates, so
+ * an author mixing the two gets the browser's normal last-write-wins behaviour.
+ */
+export function setCanvasVisible(
+  canvas: HTMLCanvasElement,
+  visible: boolean,
+  timeMs = 0,
+): Promise<void> {
+  cancelCanvasFade(canvas);
+  const time = Math.max(0, timeMs);
+
+  if (time <= 0) {
+    canvas.style.transition = '';
+    canvas.style.opacity = visible ? '1' : '0';
+    canvas.style.display = visible ? '' : 'none';
+    return Promise.resolve();
+  }
+
+  if (visible) {
+    // Lay the canvas out at zero opacity first: a `display:none` element has no
+    // transition start value, so without this the fade-in would just pop.
+    canvas.style.transition = '';
+    canvas.style.opacity = '0';
+    canvas.style.display = '';
+    void canvas.offsetWidth; // force a reflow so the start value is committed
+  }
+  canvas.style.transition = `opacity ${time}ms linear`;
+  canvas.style.opacity = visible ? '1' : '0';
+
+  return new Promise<void>((resolve) => {
+    const id = setTimeout(() => {
+      fadeTimers.delete(canvas);
+      canvas.style.transition = '';
+      if (!visible) canvas.style.display = 'none';
+      resolve();
+    }, time);
+    fadeTimers.set(canvas, id);
+  });
+}
+
+/**
  * Map an author-facing placement (logical px + author scale) to the
  * `SSCanvasPlayer.setTransform` arguments (buffer px + composed scale). Split
  * out so it can be unit-tested without a GL context.

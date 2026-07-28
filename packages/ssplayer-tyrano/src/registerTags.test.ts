@@ -18,6 +18,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _playing = false;
     _endListeners = new Set<() => void>();
     _loopListeners = new Set<() => void>();
+    _frameListeners = new Set<(frame: number) => void>();
     _audioListeners = new Set<(e: unknown) => void>();
     audioManager: unknown = null;
     internalPlayer = { setLoop: vi.fn() };
@@ -43,8 +44,10 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     get isPlaying() { return this._playing; }
     onAnimationEnd(cb: () => void) { this._endListeners.add(cb); return () => this._endListeners.delete(cb); }
     onAnimationLoop(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
+    onFrame(cb: (frame: number) => void) { this._frameListeners.add(cb); return () => this._frameListeners.delete(cb); }
     onAudio(cb: (e: unknown) => void) { this._audioListeners.add(cb); return () => this._audioListeners.delete(cb); }
     _fireEnd() { for (const cb of [...this._endListeners]) cb(); }
+    _fireFrame(frame: number) { for (const cb of [...this._frameListeners]) cb(frame); }
     _fireAudio(e: unknown) { for (const cb of [...this._audioListeners]) cb(e); }
 
     constructor(
@@ -92,6 +95,7 @@ const FakeSSCanvasPlayer = SSCanvasPlayerMock as unknown as {
     isPlaying: boolean;
     audioManager: unknown;
     _fireEnd(): void;
+    _fireFrame(frame: number): void;
     _fireAudio(e: unknown): void;
   }>;
 };
@@ -103,11 +107,33 @@ interface Harness {
   nextOrder: ReturnType<typeof vi.fn>;
   /** Create a layer div, register it under `layer_page`, and attach to the DOM. */
   addLayer(layer?: string, page?: string): HTMLElement;
+  /** Stand-in for the engine's `[text]` lip-sync bracket, wrapped by [ss_chara]. */
+  text: {
+    startLipSyncWithText: ReturnType<typeof vi.fn>;
+    stopLipSyncWithText: ReturnType<typeof vi.fn>;
+  };
+  /** Say a line as `speaker`: fires the engine bracket [ss_chara] hooks into. */
+  speak(speaker: string): void;
+  /** End the current line. */
+  endSpeaking(): void;
 }
 
 function makeTyrano(): Harness {
   const nextOrder = vi.fn();
   const layerEls = new Map<string, HTMLElement>();
+
+  // TyranoScript's own [text] tag brackets character-by-character output with
+  // this pair (it drives the engine's layered-character mouth frames); the
+  // originals must keep running once [ss_chara] wraps them. Modelled the way
+  // the engine builds master_tag — `object(tyrano.plugin.kag.tag.text)`, i.e.
+  // an instance whose methods live on the prototype — so the test sees the
+  // wrapper shadow the original rather than overwrite it.
+  const textProto = {
+    start: vi.fn(),
+    startLipSyncWithText: vi.fn(),
+    stopLipSyncWithText: vi.fn(),
+  };
+  const text = Object.create(textProto) as typeof textProto;
 
   // Mock TyranoScript's layer manager: getLayer returns a jQuery-like wrapper
   // over the registered layer div (mirrors kag.layer.getLayer(layer, page)).
@@ -130,23 +156,37 @@ function makeTyrano(): Harness {
 
   const tyrano: TyranoGlobal = {
     kag: {
-      ftag: { master_tag: {}, nextOrder, startTag: vi.fn() },
+      ftag: { master_tag: { text }, nextOrder, startTag: vi.fn() },
       config: { scWidth: 1280, scHeight: 720 },
-      stat: { f: {} },
+      stat: { f: {}, current_speaker: '', charas: {}, jcharas: {} },
       variable: { f: {}, sf: {}, tf: {} },
       layer: { getLayer },
     },
   };
 
+  // The wrappers are installed on master_tag.text, so read them back through it.
+  const textTag = () => tyrano.kag.ftag.master_tag.text as unknown as {
+    startLipSyncWithText: () => void;
+    stopLipSyncWithText: () => void;
+  };
+
   return {
     tyrano,
     nextOrder,
+    text: textProto, // the engine's originals, which the wrappers must still call
     addLayer(layer = '0', page = 'fore') {
       const el = document.createElement('div');
       el.className = `${layer}_${page}`;
       document.body.appendChild(el);
       layerEls.set(`${layer}_${page}`, el);
       return el;
+    },
+    speak(speaker: string) {
+      tyrano.kag.stat.current_speaker = speaker;
+      textTag().startLipSyncWithText();
+    },
+    endSpeaking() {
+      textTag().stopLipSyncWithText();
     },
   };
 }
@@ -183,9 +223,14 @@ describe('registerSSTags', () => {
     const { tyrano } = makeTyrano();
     expect(registerSSTags(tyrano)).toBe(true);
     const tags = tyrano.kag.ftag.master_tag;
-    expect(Object.keys(tags).sort()).toEqual([
+    // `text` is the engine's own tag, present in the harness; only ss_* are ours.
+    expect(Object.keys(tags).filter((n) => n.startsWith('ss_')).sort()).toEqual([
+      'ss_chara',
+      'ss_fadein',
+      'ss_fadeout',
       'ss_free',
       'ss_free_all',
+      'ss_hide',
       'ss_init',
       'ss_move',
       'ss_new',
@@ -200,6 +245,7 @@ describe('registerSSTags', () => {
       'ss_restore',
       'ss_resume',
       'ss_resume_all',
+      'ss_show',
       'ss_stop',
       'ss_wait',
     ]);
@@ -555,6 +601,262 @@ describe('registerSSTags', () => {
     expect(savedSlot(h).chr.overrides).toEqual([
       { kind: 'color', part: 'apple', blendOp: 0, rgba: 0xff0000ff, priority: 2 },
     ]);
+  });
+
+  // --- PT3.5: show / hide / fade, z-order, chained animations, speaker link --
+  //
+  // Parity with the official Spine ([spine_new]/[spine_show]/[spine_hide]/
+  // [spine_fadein]/[spine_anim next_motion]) and Live2D ([live2d_new jname=])
+  // plugins. The through-line: a player can exist without being on screen, and
+  // animation follow-ups must not block the scenario the way [ss_wait] does.
+
+  /** True when the canvas is currently laid out and fully opaque. */
+  const shown = (canvas: HTMLCanvasElement): boolean =>
+    canvas.style.display !== 'none' && canvas.style.opacity !== '0';
+
+  it('ss_new visible="false" loads the player without displaying it', async () => {
+    const h = makeTyrano();
+    registerSSTags(h.tyrano);
+    const tags = h.tyrano.kag.ftag.master_tag;
+    h.addLayer('0', 'fore');
+    await runTag(tags.ss_init, { wasm: 'rt.wasm' }, h.nextOrder);
+
+    await runTag(tags.ss_new, { name: 'chr', storage: 'a.ssab', anime: 'Anime_1', visible: 'false' }, h.nextOrder);
+
+    const p = FakeSSCanvasPlayer.instances[0];
+    // Loaded and registered (that is the point of preloading) but off screen.
+    expect(p.load).toHaveBeenCalled();
+    expect(shown(p.canvas)).toBe(false);
+    expect((h.tyrano.kag.stat.f[SAVE_KEY] as Record<string, SavedPlayer>).chr.visible).toBe(false);
+  });
+
+  it('ss_show reveals a preloaded player, repositioning it as it appears', async () => {
+    const h = makeTyrano();
+    registerSSTags(h.tyrano);
+    const tags = h.tyrano.kag.ftag.master_tag;
+    h.addLayer('0', 'fore');
+    await runTag(tags.ss_init, { wasm: 'rt.wasm' }, h.nextOrder);
+    await runTag(tags.ss_new, { name: 'chr', storage: 'a.ssab', anime: 'Anime_1', visible: 'false' }, h.nextOrder);
+    const p = FakeSSCanvasPlayer.instances[0];
+    p.setAnimation.mockClear();
+
+    await runTag(tags.ss_show, { name: 'chr', x: 400, y: 300, scale: 2, anime: 'Anime_2' }, h.nextOrder);
+
+    expect(shown(p.canvas)).toBe(true);
+    expect(p.setTransform).toHaveBeenLastCalledWith({ x: 400, y: 300, scaleX: 2, scaleY: 2 });
+    expect(p.setAnimation).toHaveBeenCalledWith('Anime_2');
+    expect(savedSlot(h).chr).toMatchObject({ visible: true, x: 400, y: 300, anime: 'Anime_2' });
+  });
+
+  it('ss_hide takes the player off screen without destroying it', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    expect(shown(p.canvas)).toBe(true);
+
+    await runTag(h.tags.ss_hide, { name: 'chr' }, h.nextOrder);
+
+    expect(shown(p.canvas)).toBe(false);
+    // Unlike [ss_free]: still loaded, still registered, still in the save.
+    expect(p.destroy).not.toHaveBeenCalled();
+    expect(getRegistry().has('chr')).toBe(true);
+    expect(savedSlot(h).chr.visible).toBe(false);
+
+    await runTag(h.tags.ss_show, { name: 'chr' }, h.nextOrder);
+    expect(shown(p.canvas)).toBe(true);
+  });
+
+  it('ss_fadeout hides every player and ss_fadein brings back only the visible ones', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_new, { name: 'bg', storage: 'b.ssab', anime: 'Anime_1' }, h.nextOrder);
+    const [chr, bg] = FakeSSCanvasPlayer.instances;
+    // 'bg' is individually hidden before the blanket fade.
+    await runTag(h.tags.ss_hide, { name: 'bg' }, h.nextOrder);
+
+    await runTag(h.tags.ss_fadeout, { time: 0 }, h.nextOrder);
+    expect(shown(chr.canvas)).toBe(false);
+    expect(shown(bg.canvas)).toBe(false);
+
+    await runTag(h.tags.ss_fadein, { time: 0 }, h.nextOrder);
+    // 'chr' comes back; 'bg' stays hidden because it was hidden on its own.
+    expect(shown(chr.canvas)).toBe(true);
+    expect(shown(bg.canvas)).toBe(false);
+  });
+
+  it('ss_show cannot override a blanket ss_fadeout', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    await runTag(h.tags.ss_fadeout, { time: 0 }, h.nextOrder);
+
+    await runTag(h.tags.ss_show, { name: 'chr', time: 0 }, h.nextOrder);
+
+    // The player is marked visible, but the layer-wide fade still wins…
+    expect(savedSlot(h).chr.visible).toBe(true);
+    expect(shown(p.canvas)).toBe(false);
+    // …until the fade is lifted.
+    await runTag(h.tags.ss_fadein, { time: 0 }, h.nextOrder);
+    expect(shown(p.canvas)).toBe(true);
+  });
+
+  it('zindex orders players inside one layer, from ss_new and ss_pos alike', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_new, { name: 'bg', storage: 'b.ssab', anime: 'Anime_1', zindex: 5 }, h.nextOrder);
+    const [chr, bg] = FakeSSCanvasPlayer.instances;
+    expect(bg.canvas.style.zIndex).toBe('5');
+    expect(chr.canvas.style.zIndex).toBe('');
+
+    await runTag(h.tags.ss_pos, { name: 'chr', zindex: 10 }, h.nextOrder);
+    expect(chr.canvas.style.zIndex).toBe('10');
+    expect(savedSlot(h).chr.zindex).toBe(10);
+  });
+
+  it('ss_play next= chains to a follow-up animation without blocking the scenario', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    p.setAnimation.mockClear();
+
+    // The tag advances immediately — the whole point versus [ss_wait].
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
+    expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_2');
+    // `next=` with no loop= plays the first animation once (else the end never comes).
+    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(1);
+    expect(savedSlot(h).chr.next).toEqual({ anime: 'Anime_1', loop: -1, atframe: undefined });
+
+    p._fireEnd();
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
+    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(-1); // idle loops
+    await vi.waitFor(() => expect(savedSlot(h).chr).toMatchObject({ anime: 'Anime_1', next: undefined }));
+  });
+
+  it('ss_play atframe= chains early, at the given frame', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    p.setAnimation.mockClear();
+
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1', atframe: 20 }, h.nextOrder);
+
+    p._fireFrame(19);
+    expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_2'); // not yet
+    p._fireFrame(20);
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
+  });
+
+  it('a new ss_play cancels a follow-up that has not fired yet', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_1', loop: 'true' }, h.nextOrder);
+    p.setAnimation.mockClear();
+
+    p._fireEnd(); // the superseded chain must be gone
+    await Promise.resolve();
+    expect(p.setAnimation).not.toHaveBeenCalled();
+    expect(savedSlot(h).chr.next).toBeUndefined();
+  });
+
+  it('ss_chara swaps to the talk animation while its speaker is talking', async () => {
+    const h = await withPlayer(); // 'chr' is showing Anime_1
+    const p = FakeSSCanvasPlayer.instances[0];
+    await runTag(h.tags.ss_chara, { name: 'chr', jname: 'あかね', talk: 'Talk', idle: 'Idle' }, h.nextOrder);
+    p.setAnimation.mockClear();
+
+    h.speak('あかね');
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Talk'));
+    // The engine's own lip-sync still runs — we wrap it, we don't replace it.
+    expect(h.text.startLipSyncWithText).toHaveBeenCalled();
+    // Talk is transient decoration: the save still holds the scenario's animation,
+    // so a save taken mid-line does not restore the character stuck talking.
+    expect(savedSlot(h).chr.anime).toBe('Anime_1');
+
+    h.endSpeaking();
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Idle'));
+    expect(h.text.stopLipSyncWithText).toHaveBeenCalled();
+  });
+
+  it('ss_chara ignores lines spoken by anyone else, and matches ids via jcharas', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    // Tyrano's own name->id map, as [chara_new name="akane" jname="あかね"] builds it.
+    h.tyrano.kag.stat.jcharas = { あかね: 'akane' };
+    await runTag(h.tags.ss_chara, { name: 'chr', jname: 'あかね', talk: 'Talk' }, h.nextOrder);
+    p.setAnimation.mockClear();
+
+    h.speak('someone_else');
+    await Promise.resolve();
+    expect(p.setAnimation).not.toHaveBeenCalled();
+    h.endSpeaking();
+
+    // `#あかね` reaches the engine as the id `akane`; the binding still matches.
+    h.speak('akane');
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Talk'));
+
+    // No idle= → fall back to whatever the scenario last set.
+    h.endSpeaking();
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
+  });
+
+  it('ss_chara talk="" unbinds the speaker link', async () => {
+    const h = await withPlayer();
+    const p = FakeSSCanvasPlayer.instances[0];
+    await runTag(h.tags.ss_chara, { name: 'chr', jname: 'あかね', talk: 'Talk' }, h.nextOrder);
+    await runTag(h.tags.ss_chara, { name: 'chr', talk: '' }, h.nextOrder);
+    p.setAnimation.mockClear();
+
+    h.speak('あかね');
+    await Promise.resolve();
+    expect(p.setAnimation).not.toHaveBeenCalled();
+    expect(savedSlot(h).chr.chara).toBeUndefined();
+  });
+
+  it('ss_move wait="true" holds the scenario until the tween lands', async () => {
+    const h = await withPlayer();
+    const before = h.nextOrder.mock.calls.length;
+
+    h.tags.ss_move.start({ name: 'chr', x: 800, time: 150, wait: 'true' } as Record<string, any>);
+    await Promise.resolve();
+    expect(h.nextOrder.mock.calls.length).toBe(before); // still moving
+
+    await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1));
+  });
+
+  it('ss_restore brings back visibility, z-order, follow-ups and speaker links', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_pos, { name: 'chr', zindex: 7 }, h.nextOrder);
+    await runTag(h.tags.ss_chara, { name: 'chr', jname: 'あかね', talk: 'Talk', idle: 'Idle' }, h.nextOrder);
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
+    await runTag(h.tags.ss_new, { name: 'bg', storage: 'b.ssab', anime: 'Anime_1', visible: 'false' }, h.nextOrder);
+
+    FakeSSCanvasPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    const [chr, bg] = FakeSSCanvasPlayer.instances;
+    expect(chr.canvas.style.zIndex).toBe('7');
+    expect(shown(chr.canvas)).toBe(true);
+    expect(shown(bg.canvas)).toBe(false); // preloaded-but-hidden stays hidden
+
+    // The speaker link is live again on the rebuilt player.
+    chr.setAnimation.mockClear();
+    h.speak('あかね');
+    await vi.waitFor(() => expect(chr.setAnimation).toHaveBeenLastCalledWith('Talk'));
+    h.endSpeaking();
+    await vi.waitFor(() => expect(chr.setAnimation).toHaveBeenLastCalledWith('Idle'));
+
+    // …and so is the pending follow-up.
+    chr.setAnimation.mockClear();
+    chr._fireEnd();
+    await vi.waitFor(() => expect(chr.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
+  });
+
+  it('ss_restore keeps a blanket ss_fadeout in force across the load', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_fadeout, { time: 0 }, h.nextOrder);
+
+    FakeSSCanvasPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    expect(shown(FakeSSCanvasPlayer.instances[0].canvas)).toBe(false);
+    await runTag(h.tags.ss_fadein, { time: 0 }, h.nextOrder);
+    expect(shown(FakeSSCanvasPlayer.instances[0].canvas)).toBe(true);
   });
 
   it('ss_restore re-applies the saved overrides to the rebuilt player', async () => {
