@@ -39,6 +39,7 @@ export interface HostPath {
 export interface HostFsModule {
   readFileSync(path: string, encoding?: string): unknown;
   writeFileSync(path: string, data: unknown, encoding?: string): void;
+  appendFileSync(path: string, data: string, encoding?: string): void;
   existsSync(path: string): boolean;
   readdirSync(path: string): string[];
   statSync(path: string): HostStats;
@@ -165,6 +166,11 @@ export interface TB {
     alert?: (html: string) => void;
     /** Translates via `lang/<lang>.json`, returning the key itself when absent. */
     s?: (key: string) => string;
+    /**
+     * alertify's toast (`alertify.log`): non-modal, auto-dismissing. `type` is
+     * `'success'` / `'error'` or omitted.
+     */
+    inform?: (message: string, type?: string) => void;
   };
   /** Absolute path of the open project, with a trailing slash. */
   getProjectPath(): string;

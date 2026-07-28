@@ -40,7 +40,7 @@ SpriteStudio and the pack is rebuilt a few seconds later — no reopen, no resta
 | Refresh | relaunch the game | none — polls every 3 s while open |
 | Sources | `SpriteStudio_Source/*.sspj` | same |
 | Output | `game/ss_assets/<project>/` | `data/others/ssdata/<project>/` |
-| Skip logic | `.ss_import_ok` marker vs newest source mtime | same marker, same rule |
+| Skip logic | `.ss_import_ok` per output folder, vs newest source mtime | same rule, state in `.ss_import_state.json` at the project root |
 
 The marker discipline is deliberate: output mtimes cannot tell you a run
 succeeded, because a failed conversion still leaves fresh-looking partial files.
@@ -125,6 +125,25 @@ and the sample converted in 78 ms (11 files in, 3 out plus its texture). With th
 editor left open, re-saving the `.sspj` rebuilt the pack 4 s later, unattended.
 The base64 path stays in as insurance for other builds and platforms.
 
+## What ships
+
+Since an export copies `data/` wholesale, anything the plugin leaves there is
+paid for by every player of every game built with it. Author-time files are kept
+out of `data/` for that reason:
+
+| At the project root — never exported | Under `data/` — always exported |
+| --- | --- |
+| `SpriteStudio_Source/` — the `.sspj` projects | `main.js`, `ssruntime_bg.wasm`, `init.ks` — the runtime, 568 kB |
+| `.ss_tools/ssconverter_bg.wasm` — 1.4 MB, editor-only | `ssplayer.builder.js` — 194 kB |
+| `.ss_import_state.json` — what was converted, and from what | `ja.json` — 6 kB |
+| `ss_import_log.txt` | `others/ssdata/` — the packs the game plays |
+
+The converter wasm arrives inside the plugin folder (a `.tbp` can only deliver
+there) and is moved out on first load. The last two rows cannot move: the editor
+looks for `<plugin>/<id>.builder.js` and `<plugin>/<lang>.json` at fixed paths
+under `data/`, so the file has to exist there. Its *size* is what is negotiable,
+which is why the bundle is minified.
+
 ## Constraints found in the host
 
 - **The plugin id is the `.tbp` filename**, not anything inside the archive —
@@ -148,10 +167,10 @@ The base64 path stays in as insurance for other builds and platforms.
 - **No DevTools in the main window** (`removeMenu()`), hence the log file.
 - **No hook for "preview was pressed"** — `map_preview_tag` is declared in
   `plugin.js` but never used. Polling covers it.
-- **Unverified**: whether an export copies anything outside `data/`. The source
-  folder sits at the project root on the assumption that it does not, which
-  would keep source art out of shipped builds automatically (Ren'Py needs an
-  explicit `build.classify` for this). Worth confirming before release.
+- **An export is three unfiltered copies** — `index.html`, `data/`, `tyrano/`.
+  Everything under `data/` ships inside the game and nothing else does, with no
+  exclusion mechanism (Ren'Py needs an explicit `build.classify` for the same
+  effect). See "What ships".
 
 ## The components
 

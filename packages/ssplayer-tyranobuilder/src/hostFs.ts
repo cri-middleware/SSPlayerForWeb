@@ -125,6 +125,10 @@ export class HostFs {
     this.api.fs.writeFileSync(p, text, 'utf8');
   }
 
+  appendText(p: string, text: string): void {
+    this.api.fs.appendFileSync(p, text, 'utf8');
+  }
+
   /** Node-side recursive copy — no bytes cross the bridge. */
   copy(src: string, dest: string): void {
     this.api.fs.copySync(src, dest);

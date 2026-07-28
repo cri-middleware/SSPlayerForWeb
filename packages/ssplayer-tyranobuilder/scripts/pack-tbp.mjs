@@ -30,7 +30,7 @@ import {
   langFiles,
   pluginFiles,
   requireAll,
-  requireSelfContained,
+  verifyBundle,
 } from './pluginFiles.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,7 +44,7 @@ function fail(message) {
 
 const files = [...pluginFiles(repoRoot, pkgRoot), ...langFiles(pkgRoot)];
 requireAll(files, fail);
-requireSelfContained(files[0].path, fail);
+await verifyBundle(files[0].path, fail);
 
 try {
   execFileSync('zip', ['--version'], { stdio: 'ignore' });

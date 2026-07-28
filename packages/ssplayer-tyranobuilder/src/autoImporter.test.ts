@@ -11,6 +11,7 @@
 // Both must produce byte-identical `.ssab` output.
 
 import {
+  appendFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -60,6 +61,9 @@ function makeStudioApi(behaviour: BridgeBehaviour) {
           throw new TypeError('bridge refuses non-string payloads');
         }
         writeFileSync(path, data as Uint8Array);
+      },
+      appendFileSync(path: string, data: string) {
+        appendFileSync(path, data, 'utf8');
       },
       existsSync,
       readdirSync,
@@ -124,7 +128,11 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     const ssab = readdirSync(outDir).filter((f) => f.endsWith('.ssab'));
     expect(ssab.length).toBeGreaterThan(0);
     expect(statSync(nodePath.join(outDir, ssab[0])).size).toBeGreaterThan(0);
-    expect(existsSync(nodePath.join(outDir, '.ss_import_ok'))).toBe(true);
+    // Import bookkeeping lives outside data/, which an export copies wholesale
+    // into the shipped game.
+    expect(existsSync(nodePath.join(outDir, '.ss_import_ok'))).toBe(false);
+    expect(existsSync(nodePath.join(root, '.ss_import_state.json'))).toBe(true);
+    expect(readdirSync(outDir).filter((f) => f.startsWith('.'))).toEqual([]);
     // Non-embedded output ships its textures alongside the pack.
     expect(first.converted[0].stats.copiedAssets).toBeGreaterThan(0);
 
@@ -204,6 +212,43 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     expect(importer.listAnimations('https://example.com/Boss.ssab')).toEqual([]);
     expect(importer.listAnimations('')).toEqual([]);
     expect(importer.listAnimations('others/ssdata/Ringo/Ringo.png')).toEqual([]);
+  });
+
+  it('migrates the old in-output marker out of data/, without reconverting', async () => {
+    const root = makeProject();
+    const fs = withApi('faithful');
+    const importer = importerFor(root, fs, []);
+    await importer.runOnce();
+
+    // Recreate a pre-move project: marker inside the pack folder, no state file.
+    const outDir = nodePath.join(root, 'data/others/ssdata/Ringo');
+    const state = JSON.parse(readFileSync(nodePath.join(root, '.ss_import_state.json'), 'utf8'));
+    writeFileSync(
+      nodePath.join(outDir, '.ss_import_ok'),
+      JSON.stringify(state.packs.Ringo),
+      'utf8',
+    );
+    rmSync(nodePath.join(root, '.ss_import_state.json'));
+
+    const fresh = importerFor(root, fs, []);
+    const run = await fresh.runOnce();
+
+    // The old marker is trusted, so nothing is rebuilt...
+    expect(run.skipped).toEqual(['Ringo']);
+    // ...and it is gone from data/, carried over to the project root.
+    expect(existsSync(nodePath.join(outDir, '.ss_import_ok'))).toBe(false);
+    expect(existsSync(nodePath.join(root, '.ss_import_state.json'))).toBe(true);
+  });
+
+  it('reconverts when the output is deleted but the state survives', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+
+    rmSync(nodePath.join(root, 'data/others/ssdata/Ringo'), { recursive: true, force: true });
+
+    const run = await importer.runOnce();
+    expect(run.converted.map((c) => c.name)).toEqual(['Ringo']);
   });
 
   it('reports an empty run instead of failing when there is no .sspj', async () => {

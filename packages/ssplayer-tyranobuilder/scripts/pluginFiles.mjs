@@ -1,7 +1,8 @@
 // What goes into a `ssplayer` plugin folder, shared by the installer and the
 // `.tbp` packer so the two can never drift.
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 /**
  * Both the folder name inside the archive and the required `.tbp` filename:
@@ -72,23 +73,33 @@ export function requireAll(files, fail) {
 }
 
 /**
+ * Load the bundle the way the host does, and check what it got.
+ *
  * The builder hands `<id>.builder.js` straight to `import()`, which resolves
  * nothing: one surviving bare specifier rejects the import and the plugin never
- * loads — no error in the UI, no log entry, just missing components. Catch it
- * here, where there is somewhere to print it.
+ * loads — no error in the UI, no log entry, just missing components. Importing
+ * it here reproduces that exactly, which grepping for import statements cannot
+ * once the bundle is minified. It also catches a syntax error, or a rename that
+ * loses the export the host constructs.
+ *
+ * Safe to run: the module only defines `plugin_setting`; the editor is what
+ * constructs it, and without `window.studio_api` the constructor stands down.
  */
-export function requireSelfContained(bundlePath, fail) {
-  const source = readFileSync(bundlePath, 'utf8');
-  const bare = [
-    // `import … from "pkg"` / `export … from "pkg"`, and side-effect `import "pkg"`.
-    ...source.matchAll(/^\s*(?:import|export)[^'"]*from\s*['"]([^.'"][^'"]*)['"]/gm),
-    ...source.matchAll(/^\s*import\s*['"]([^.'"][^'"]*)['"]/gm),
-  ].map((m) => m[1]);
+export async function verifyBundle(bundlePath, fail) {
+  let module;
+  try {
+    module = await import(pathToFileURL(bundlePath).href);
+  } catch (error) {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
+      fail(
+        `the bundle imports something that cannot be resolved: ${error.message}\n` +
+          '  TyranoBuilder resolves no bare specifiers — add the package to `deps.alwaysBundle` in tsdown.config.ts.',
+      );
+    }
+    fail(`the bundle does not load: ${error?.message ?? error}`);
+  }
 
-  if (bare.length > 0) {
-    fail(
-      `the bundle still imports ${[...new Set(bare)].join(', ')}.\n` +
-        '  TyranoBuilder cannot resolve bare specifiers — add them to `deps.alwaysBundle` in tsdown.config.ts.',
-    );
+  if (typeof module.plugin_setting !== 'function') {
+    fail('the bundle has no `plugin_setting` export; the builder does `new module.plugin_setting(TB)`.');
   }
 }

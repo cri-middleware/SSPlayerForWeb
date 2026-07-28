@@ -218,24 +218,29 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
     // -----------------------------------------------------------------------
     // Setup
     // -----------------------------------------------------------------------
+    // The runtime is already started by the plugin's own init.ks, which
+    // TyranoScript calls via the [plugin name="ssplayer"] that this package
+    // writes into plugin_third.ks. So nothing here is required to make an
+    // animation play — [ss_init] survives only as the way to reach its audio
+    // settings, which it applies before checking whether the runtime is up.
     ss_init: entry(
-      'game-settings',
-      'SpriteStudio: initialise',
-      'Loads the SpriteStudio runtime. Place this once, before any other SpriteStudio component.',
-      () => 'ssruntime',
+      'sound',
+      'SpriteStudio: sound settings',
+      'Changes how sounds embedded in the animations are played. Only needed if you want something other than the defaults — the animation runtime starts on its own.',
+      (c) => (String(pm(c).audio) === 'false' ? 'off' : 'on'),
       {
-        wasm: {
-          type: 'Text',
-          name: t('Runtime (wasm)'),
-          help: t('Path to ssruntime_bg.wasm, relative to the data folder.'),
-          default_val: 'others/plugin/ssplayer/ssruntime_bg.wasm',
-          validate: { required: true },
-        },
         audio: {
           type: 'Check',
           text: t('Play sounds embedded in the animation'),
           help: t('Routes SpriteStudio audio through TyranoScript.'),
           default_val: true,
+        },
+        sevolume: {
+          type: 'Num',
+          name: t('Volume'),
+          help: t('0 to 1.'),
+          validate: { number: true },
+          default_val: 1,
         },
       },
     ),

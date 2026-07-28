@@ -13,14 +13,42 @@
 //
 // Everything the importer does is written to `<project>/ss_import_log.txt`.
 
-import { AutoImporter, DEFAULT_SOURCE_DIR } from './autoImporter.js';
+import { AutoImporter, DEFAULT_SOURCE_DIR, type ImportRunResult } from './autoImporter.js';
 import type { BuilderComponentEntry, TB } from './builderTypes.js';
 import { defineSSComponents } from './components.js';
 import { HostFs } from './hostFs.js';
 import { ImportLog } from './importLog.js';
 
-/** Filename the install script places next to this module. */
 const WASM_FILENAME = 'ssconverter_bg.wasm';
+
+/**
+ * Where editor-only files are kept, relative to the project root. An export is
+ * three unfiltered copies — `index.html`, `data/`, `tyrano/` — so this folder is
+ * excluded for free, while anything left in the plugin folder ships inside
+ * every built game.
+ */
+const TOOLS_DIR = '.ss_tools';
+
+/**
+ * The converter wasm, moved out of `data/` on sight.
+ *
+ * A `.tbp` can only deliver files into the plugin folder, which lives under
+ * `data/`; but nothing except this plugin ever reads the converter, so it does
+ * not have to stay there. Relocating it keeps 1.4 MB out of every export. The
+ * staged copy reappearing means a reinstall or an update, so it always wins.
+ */
+function relocateConverterWasm(fs: HostFs, projectRoot: string, pluginDir: string): string {
+  const staged = fs.path.join(pluginDir, WASM_FILENAME);
+  const kept = fs.path.join(projectRoot, TOOLS_DIR, WASM_FILENAME);
+
+  if (fs.exists(staged)) {
+    fs.mkdirp(fs.path.join(projectRoot, TOOLS_DIR));
+    fs.copy(staged, kept);
+    fs.remove(staged);
+  }
+  // Fall back to wherever it actually is, so a failed move degrades to working.
+  return fs.exists(kept) ? kept : staged;
+}
 
 /** How often to re-check the source folder while the editor is open. */
 const WATCH_INTERVAL_MS = 3000;
@@ -68,6 +96,27 @@ function listMethods(obj: object): string[] {
   return [...names].sort();
 }
 
+/** Report a run that did something, as a toast rather than a modal. */
+function notifyRun(TB: TB | undefined, run: ImportRunResult): void {
+  const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
+  const inform = TB?.$?.inform;
+  if (typeof inform !== 'function') return;
+
+  if (run.converted.length > 0) {
+    const names = run.converted.map((c) => c.name);
+    // Long lists say nothing useful; the first few plus a count do.
+    const shown =
+      names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3}` : names.join(', ');
+    inform(`SpriteStudio: ${shown} — ${t('Converted')}`, 'success');
+  }
+  if (run.failed.length > 0) {
+    inform(
+      `SpriteStudio: ${run.failed.map((f) => f.name).join(', ')} — ${t('Failed')} (${LOG_FILENAME})`,
+      'error',
+    );
+  }
+}
+
 /** Everything the plugin needs from the editor, resolved once at construction. */
 interface Host {
   fs: HostFs;
@@ -76,6 +125,17 @@ interface Host {
   log: ImportLog;
   importer: AutoImporter;
 }
+
+/**
+ * The importer owned by the most recent `plugin_setting`.
+ *
+ * The editor constructs the plugin more than once per session: opening a
+ * project, installing a `.tbp`, and adding or removing any other plugin each
+ * call `loadPlugins()`, which builds every plugin again. Each build starts a
+ * watcher, so without this the timers would pile up and the same folder would
+ * be polled several times over.
+ */
+let activeImporter: AutoImporter | null = null;
 
 /**
  * Synchronous so `defineComponents()` — which the builder calls immediately
@@ -98,9 +158,17 @@ function createHost(TB: TB | undefined): Host | null {
   const importer = new AutoImporter({
     fs,
     projectRoot,
-    wasmPath: fs.path.join(pluginDir, WASM_FILENAME),
+    wasmPath: relocateConverterWasm(fs, projectRoot, pluginDir),
     log: (line) => log.line(line),
+    // A background reconversion happens while the author is in SpriteStudio,
+    // not in the editor — a modal would steal focus from the app they are
+    // actually using. `$.inform` is alertify's toast: it says the save landed
+    // and then goes away.
+    onChange: (run) => notifyRun(TB, run),
   });
+
+  activeImporter?.stop();
+  activeImporter = importer;
 
   return { fs, pluginDir, projectRoot, log, importer };
 }
@@ -134,7 +202,7 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
       `read-as-buffer=${probe.readAsBuffer} (${probe.detail})`,
   );
 
-  const wasmPath = fs.path.join(pluginDir, WASM_FILENAME);
+  const wasmPath = importer.wasmPath;
   log.line(`converter wasm: ${wasmPath} (${fs.statOf(wasmPath)?.size ?? 0} bytes)`);
 
   // Create the drop folder on first run so there is somewhere obvious to put
@@ -156,15 +224,23 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
   importer.start(WATCH_INTERVAL_MS);
   log.line(`watching for changes every ${WATCH_INTERVAL_MS}ms`);
 
-  // Deferred: the constructor runs mid-boot, and alertify is nicer once the
-  // editor has finished painting.
+  // Deferred either way: the constructor runs mid-boot, and alertify is nicer
+  // once the editor has finished painting.
   setTimeout(() => {
-    const summary = run.empty
-      ? `Drop a SpriteStudio project into<br /><b>${DEFAULT_SOURCE_DIR}/</b><br />and it will be converted automatically.`
-      : `${run.converted.length} converted / ${run.skipped.length} up to date / ${run.failed.length} failed`;
-    TB?.$?.alert?.(
-      `<b>SpriteStudio auto-import</b><br />binary bridge: ${probe.mode}<br />${summary}<br /><br />Details: ${LOG_FILENAME}`,
-    );
+    // "Everything was already up to date" is the normal case on every project
+    // open. Saying so in a modal is just something to dismiss — the log has it.
+    if (run.empty) {
+      // The one case worth a modal: nothing to convert, so tell a first-time
+      // user where projects go.
+      const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
+      TB?.$?.alert?.(
+        `<b>${t('SpriteStudio')}</b><br />` +
+          `${t('Put a SpriteStudio project here, and it is converted for you:')}` +
+          `<br /><b>${DEFAULT_SOURCE_DIR}/</b>`,
+      );
+      return;
+    }
+    notifyRun(TB, run);
   }, 1500);
 }
 
@@ -220,21 +296,14 @@ export class plugin_setting {
 
   /**
    * Called once, straight after a `.tbp` is installed from the plugin dialog.
-   * The constructor's own import pass has already run by then and found nothing
-   * — the source folder was only just created — so the useful thing to do here
-   * is say where to put projects.
+   *
+   * Deliberately quiet: the host already shows its own "installed" dialog, and
+   * the constructor — which ran a moment ago — shows the import result, naming
+   * the source folder when there was nothing to convert. A third dialog here
+   * would just be something else to dismiss.
    */
   triggerInstall(): void {
-    const host = this.host;
-    const t = (text: string): string =>
-      typeof this.TB?.$?.s === 'function' ? this.TB.$.s(text) : text;
-    if (!host) return;
-    host.log.line('installed from a .tbp');
-    setTimeout(() => {
-      this.TB?.$?.alert?.(
-        `${t('Put your SpriteStudio projects here:')}<br /><b>${host.importer.sourceDir}</b>`,
-      );
-    }, 2500);
+    this.host?.log.line('installed from a .tbp');
   }
 
   /**

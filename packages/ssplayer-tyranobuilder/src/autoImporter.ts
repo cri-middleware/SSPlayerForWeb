@@ -21,8 +21,19 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 import { convertProjectAt, ensureConverter, type ConvertStats } from './converter.js';
 import type { HostFs } from './hostFs.js';
 
-/** Same filename Ren'Py uses, for symmetry across the two integrations. */
-const MARKER_NAME = '.ss_import_ok';
+/**
+ * Import bookkeeping, at the project root.
+ *
+ * Ren'Py keeps a `.ss_import_ok` marker inside each output folder and excludes
+ * it from builds with `build.classify`. TyranoBuilder's exporter has no such
+ * filter — it is three `copySync` calls, one of which takes the whole of `data/`
+ * — so anything written under `data/` ships inside the game. The state lives
+ * outside it instead, where an export cannot reach it.
+ */
+const STATE_FILE = '.ss_import_state.json';
+
+/** The old per-output-folder marker. Migrated and deleted when found. */
+const LEGACY_MARKER = '.ss_import_ok';
 
 /** Where authors drop their SpriteStudio projects, relative to the project root. */
 export const DEFAULT_SOURCE_DIR = 'SpriteStudio_Source';
@@ -33,9 +44,15 @@ export const DEFAULT_SOURCE_DIR = 'SpriteStudio_Source';
  */
 export const DEFAULT_OUT_DIR = 'data/others/ssdata';
 
-interface Marker {
+/** What one successful import covered. */
+interface PackState {
   source_mtime: number;
   converter?: string;
+}
+
+interface ImportState {
+  /** Keyed by `.sspj` stem, which is also the output folder's name. */
+  packs: Record<string, PackState>;
 }
 
 export interface ImportRunResult {
@@ -55,11 +72,18 @@ export interface AutoImporterOptions {
   sourceDirName?: string;
   outDirName?: string;
   log: (line: string) => void;
+  /**
+   * Called after a *watch* pass that actually did something. Not called for the
+   * quiet passes, which are almost all of them — this is the hook for telling
+   * the author their save was picked up.
+   */
+  onChange?: (result: ImportRunResult) => void;
 }
 
 export class AutoImporter {
   private readonly fs: HostFs;
   private readonly log: (line: string) => void;
+  private readonly onChange?: (result: ImportRunResult) => void;
   private readonly projectRoot: string;
   /** `<project>/data` — `storage=` attributes are written relative to it. */
   private readonly dataDir: string;
@@ -70,13 +94,14 @@ export class AutoImporter {
   >();
   readonly sourceDir: string;
   readonly outRoot: string;
-  private readonly wasmPath: string;
+  readonly wasmPath: string;
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
 
   constructor(opts: AutoImporterOptions) {
     this.fs = opts.fs;
     this.log = opts.log;
+    this.onChange = opts.onChange;
     this.wasmPath = opts.wasmPath;
     const p = this.fs.path;
     this.projectRoot = opts.projectRoot;
@@ -173,20 +198,62 @@ export class AutoImporter {
     return latest;
   }
 
-  private readMarker(outDir: string): Marker | null {
-    const path = this.fs.path.join(outDir, MARKER_NAME);
-    if (!this.fs.exists(path)) return null;
-    try {
-      const marker = JSON.parse(this.fs.readText(path)) as Marker;
-      return typeof marker?.source_mtime === 'number' ? marker : null;
-    } catch {
-      return null;
+  private state: ImportState | null = null;
+
+  private loadState(): ImportState {
+    if (this.state) return this.state;
+    let state: ImportState = { packs: {} };
+    const path = this.fs.path.join(this.projectRoot, STATE_FILE);
+    if (this.fs.exists(path)) {
+      try {
+        const parsed = JSON.parse(this.fs.readText(path)) as ImportState;
+        if (parsed?.packs && typeof parsed.packs === 'object') state = { packs: parsed.packs };
+      } catch {
+        // Unreadable state costs one reconversion, nothing worse.
+      }
     }
+    this.state = state;
+    return state;
   }
 
-  private stampMarker(outDir: string, sourceMtime: number, converter: string): void {
-    const marker: Marker = { source_mtime: sourceMtime, converter };
-    this.fs.writeText(this.fs.path.join(outDir, MARKER_NAME), JSON.stringify(marker));
+  private saveState(): void {
+    const path = this.fs.path.join(this.projectRoot, STATE_FILE);
+    this.fs.writeText(path, JSON.stringify(this.loadState(), null, 2) + '\n');
+  }
+
+  /**
+   * What the last successful import of `stem` covered, carrying over — and then
+   * removing — the old in-output marker. That marker sat under `data/`, so every
+   * export shipped it inside the game; a project that predates this move gets
+   * cleaned up the first time it is opened.
+   */
+  private readMarker(stem: string, outDir: string): PackState | null {
+    const state = this.loadState();
+    const legacy = this.fs.path.join(outDir, LEGACY_MARKER);
+
+    if (this.fs.exists(legacy)) {
+      if (!state.packs[stem]) {
+        try {
+          const parsed = JSON.parse(this.fs.readText(legacy)) as PackState;
+          if (typeof parsed?.source_mtime === 'number') {
+            state.packs[stem] = parsed;
+            this.saveState();
+          }
+        } catch {
+          // Fall through: an unreadable marker just means one reconversion.
+        }
+      }
+      this.fs.remove(legacy);
+      this.log(`removed ${LEGACY_MARKER} from ${outDir} (import state moved out of data/)`);
+    }
+
+    const entry = state.packs[stem];
+    return entry && typeof entry.source_mtime === 'number' ? entry : null;
+  }
+
+  private stampMarker(stem: string, sourceMtime: number, converter: string): void {
+    this.loadState().packs[stem] = { source_mtime: sourceMtime, converter };
+    this.saveState();
   }
 
   private hasOutput(outDir: string): boolean {
@@ -223,15 +290,17 @@ export class AutoImporter {
       const outDir = this.fs.path.join(this.outRoot, stem);
       const latest = this.latestSourceMtime(sourceProjectDir);
 
-      const marker = this.hasOutput(outDir) ? this.readMarker(outDir) : null;
-      if (marker && marker.source_mtime >= latest) {
+      // Unconditional, so a legacy marker is migrated and deleted even when the
+      // output around it is gone.
+      const previous = this.readMarker(stem, outDir);
+      if (previous && previous.source_mtime >= latest && this.hasOutput(outDir)) {
         result.skipped.push(stem);
         continue;
       }
 
       try {
         const stats = convertProjectAt(this.fs, sspj, outDir, () => performance.now());
-        this.stampMarker(outDir, latest, converterVer);
+        this.stampMarker(stem, latest, converterVer);
         result.converted.push({ name: stem, stats });
         this.log(
           `converted ${stem}: ${stats.inputFiles} in -> ${stats.outputFiles} out ` +
@@ -257,6 +326,11 @@ export class AutoImporter {
       if (this.running) return;
       this.running = true;
       void this.runOnce()
+        .then((result) => {
+          if (result.converted.length > 0 || result.failed.length > 0) {
+            this.onChange?.(result);
+          }
+        })
         .catch((e) => this.log(`watch error: ${(e as Error).message}`))
         .finally(() => {
           this.running = false;

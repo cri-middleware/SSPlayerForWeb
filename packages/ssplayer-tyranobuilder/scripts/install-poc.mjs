@@ -22,7 +22,7 @@ import {
   langFiles,
   pluginFiles,
   requireAll,
-  requireSelfContained,
+  verifyBundle,
 } from './pluginFiles.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -94,7 +94,7 @@ const project = resolveProject(opts);
 
 const files = [...pluginFiles(repoRoot, pkgRoot), ...langFiles(pkgRoot)];
 requireAll(files, fail);
-requireSelfContained(files[0].path, fail);
+await verifyBundle(files[0].path, fail);
 
 const pluginDir = join(project, 'data', 'others', 'plugin', PLUGIN_ID);
 mkdirSync(pluginDir, { recursive: true });

@@ -17,13 +17,16 @@ import { defineConfig } from 'tsdown';
 // a `LinkError` at instantiation) — `scripts/install-poc.mjs` always copies the
 // two together for that reason.
 //
-// Not minified: the plugin is read (and debugged) from inside a user's project
-// folder, where a readable stack trace is worth far more than bytes.
+// Minified, reluctantly. This file has to sit in the plugin folder for the
+// editor to find it, which is under `data/`, which an export copies wholesale
+// into the shipped game — so its size is paid by every player of every game
+// built with it. 345 kB → 194 kB. Diagnostics do not depend on reading it: the
+// plugin writes `<project>/ss_import_log.txt`, and the sources are in this repo.
 export default defineConfig({
   entry: ['src/plugin.builder.ts'],
   format: 'esm',
   dts: false,
-  minify: false,
+  minify: true,
   outputOptions: {
     entryFileNames: 'ssplayer.builder.js',
     chunkFileNames: '[name].js',
