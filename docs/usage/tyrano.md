@@ -76,13 +76,17 @@ A runnable minimal project lives at `examples/tyrano-example`.
 
 | Tag | Role | Key attributes |
 | --- | --- | --- |
-| `[ss_init]` | Initialize the runtime once + audio config | `wasm=` (effectively required), `base=`, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
-| `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` |
-| `[ss_play]` | Play / switch animation | `name=`(req) `anime=` `loop=` `start=` |
+| `[ss_init]` | Initialize the runtime once + audio config | `wasm=` (effectively required), `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
+| `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
+| `[ss_play]` | Play / switch animation, optionally queueing a follow-up | `name=`(req) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
+| `[ss_show]` | Put a player on screen (reposition / entrance animation / fade) | `name=`(req) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
+| `[ss_hide]` | Take a player off screen, keeping it loaded | `name=`(req) `time=` `wait=` |
+| `[ss_fadein]` / `[ss_fadeout]` | Fade every player at once (scene changes) | `time=` `wait=` |
+| `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
-| `[ss_pos]` | Instant move / scale (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` |
-| `[ss_move]` | Tweened move / scale (easeOut, non-blocking) | `name=`(req) `x=` `y=` `scale=` `time=` |
+| `[ss_pos]` | Instant move / scale / reorder (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` `zindex=` |
+| `[ss_move]` | Tweened move / scale (easeOut, non-blocking by default) | `name=`(req) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | Tint a part, winning over the animation (Normal parts only) | `name=`(req) `part=`(req) `color=`(req) `blend=` `priority=` |
 | `[ss_part_visible]` | Force-hide a part (or revert it) | `name=`(req) `part=`(req) `hide=` `cascade=` |
 | `[ss_part_cell]` | Make a part draw another cell (Normal / mask parts only) | `name=`(req) `part=`(req) `cellmap=`(req) `cell=`(req) `priority=` |
@@ -95,6 +99,53 @@ A runnable minimal project lives at `examples/tyrano-example`.
 Coordinates use Tyrano's normal top-left pixels (`config.scWidth × scHeight`), the same
 as any other on-screen element. `loop`: `true` → infinite / `false` → once / a number →
 that many loops.
+
+### Preload, show, hide
+
+`[ss_new visible="false"]` loads a player **without displaying it**, so a heavy `.ssab`
+can be prepared ahead of the scene that needs it and revealed instantly:
+
+```
+[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]
+[ss_show name="akane" x="640" y="480" time="800"]   ; appears, already loaded
+[ss_hide name="akane" time="500"]                   ; off screen, still loaded
+```
+
+`[ss_hide]` keeps the animation loaded (so `[ss_show]` is instant) and stops its GPU
+work while off screen; `[ss_free]` is what actually releases it. `[ss_fadeout]` /
+`[ss_fadein]` fade every player at once for scene changes, and a fade-in brings back
+exactly the players that were on screen before the fade-out.
+
+### Chaining animations
+
+`next=` queues a follow-up animation on the player, so "enter, then idle" needs no
+`[ss_wait]` and never stops the scenario:
+
+```
+[ss_play name="akane" anime="appear" next="wait"]                ; once → idle loop
+[ss_play name="akane" anime="attack" next="wait" atframe="20"]   ; switch at frame 20
+```
+
+`next=` with no `loop=` plays the current animation once (an infinite loop would never
+reach its end). `nextloop=` sets the follow-up's loop count; the next `[ss_play]`
+cancels a queued follow-up.
+
+### Speaker-linked talk animations
+
+`[ss_chara]` plays a talk animation while the bound character's line is being typed
+out, and returns to idle when it ends — the Live2D plugin's `jname` idea, expressed as
+whole SpriteStudio animations rather than a mouth parameter:
+
+```
+[ss_chara name="akane_ss" jname="あかね" talk="talk" idle="wait"]
+
+#あかね
+Nice to meet you.[p]
+```
+
+`jname=` matches the `#name` in your scenario or the Tyrano chara id. An empty `idle=`
+returns to whatever `[ss_play]` last set. The talk/idle swap is not saved, so a save
+taken mid-line restores the character in their normal animation. `talk=""` unbinds.
 
 ### Part overrides
 

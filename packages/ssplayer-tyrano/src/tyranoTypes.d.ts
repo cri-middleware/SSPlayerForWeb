@@ -36,6 +36,22 @@ export interface TyranoConfig {
 /** Saved game variables (`f`), persisted by Tyrano's save/load. */
 export interface TyranoStat {
   f: Record<string, any>;
+  /** Id of the character currently speaking (`#name`), `""` when nobody is. */
+  current_speaker?: string;
+  /** Tyrano's chara definitions, keyed by id (each carries a `jname`). */
+  charas?: Record<string, { jname?: string; [key: string]: unknown }>;
+  /** Tyrano's reverse map: Japanese display name -> chara id. */
+  jcharas?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+/**
+ * TyranoScript's character manager. Only the speaker lookup `[ss_chara]` needs
+ * is modelled; everything else on the real object is left untyped.
+ */
+export interface TyranoChara {
+  /** Current speaker; `convertToId` maps a display name to the chara id. */
+  getCharaName?(convertToId?: boolean): string;
   [key: string]: unknown;
 }
 
@@ -66,6 +82,8 @@ export interface TyranoKag {
   stat: TyranoStat;
   variable: TyranoVariable;
   layer: TyranoLayer;
+  /** Optional: absent in tests / very old engines, so `[ss_chara]` guards it. */
+  chara?: TyranoChara;
   [key: string]: unknown;
 }
 

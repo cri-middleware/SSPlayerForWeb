@@ -1,5 +1,5 @@
 import type { SSPartOverride } from '@spritestudio/ssplayer-webgl';
-import type { PlayerRegistry } from './PlayerRegistry.js';
+import type { PlayerRegistry, SSCharaBinding, SSNextAnime } from './PlayerRegistry.js';
 import type { TyranoKag } from './tyranoTypes.js';
 
 // Save/load bridge. SS players live in the DOM + WASM, neither of which
@@ -14,6 +14,23 @@ import type { TyranoKag } from './tyranoTypes.js';
 
 /** Key under `TYRANO.kag.stat.f` holding the serialized player map. */
 export const SAVE_KEY = '__ssplayers';
+
+/**
+ * Key under `TYRANO.kag.stat.f` holding adapter-wide (not per-player) state.
+ * Kept in its own slot so {@link SAVE_KEY} stays a plain `name -> player` map.
+ */
+export const SAVE_STATE_KEY = '__ssplayer_state';
+
+/** Adapter-wide state that has to survive a save/load. */
+export interface SSGlobalState {
+  /**
+   * Whether `[ss_fadeout]` has hidden every player. Separate from each player's
+   * own `visible` flag so `[ss_fadein]` can bring back exactly the players that
+   * were visible before the blanket fade — effective visibility is
+   * `player.visible && !layerHidden`.
+   */
+  layerHidden: boolean;
+}
 
 /**
  * A single player's reconstruction data. Everything needed to re-run an
@@ -33,6 +50,14 @@ export interface SavedPlayer {
   scale: number;
   loop: number;
   playing: boolean;
+  /** Whether the player was displayed (`[ss_show]` / `[ss_hide]` / `visible=`). */
+  visible: boolean;
+  /** Stacking order within the layer, when the author set one. */
+  zindex?: number;
+  /** Follow-up animation armed by `[ss_play next=]`, re-armed on restore. */
+  next?: SSNextAnime;
+  /** Speaker binding from `[ss_chara]`, re-bound on restore. */
+  chara?: SSCharaBinding;
   /**
    * Per-part overrides (colour / cell / visibility) set by `[ss_part_*]`. Plain
    * data, so it round-trips through the save; `[ss_restore]` re-applies it to
@@ -77,6 +102,10 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       scale: meta.scale,
       loop: meta.loop,
       playing: player.isPlaying,
+      visible: meta.visible,
+      zindex: meta.zindex,
+      next: meta.next,
+      chara: meta.chara,
       overrides: meta.overrides,
     };
   }
@@ -88,4 +117,18 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
 /** Read the persisted player map restored by TyranoScript's load (empty if none). */
 export function readSavedPlayers(kag: TyranoKag): SavedPlayer[] {
   return Object.values(saveSlot(kag));
+}
+
+/** Mirror the adapter-wide state into the save target (see {@link SAVE_STATE_KEY}). */
+export function persistGlobalState(kag: TyranoKag, state: SSGlobalState): void {
+  const stat = kag.stat as { f?: Record<string, unknown> };
+  if (!stat.f) stat.f = {};
+  stat.f[SAVE_STATE_KEY] = { layerHidden: state.layerHidden };
+}
+
+/** Read the adapter-wide state a load restored (defaults when absent). */
+export function readGlobalState(kag: TyranoKag): SSGlobalState {
+  const stat = kag.stat as { f?: Record<string, unknown> };
+  const saved = stat.f?.[SAVE_STATE_KEY] as Partial<SSGlobalState> | undefined;
+  return { layerHidden: saved?.layerHidden === true };
 }

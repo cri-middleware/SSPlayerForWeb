@@ -73,13 +73,17 @@ data/others/ssdata/<project>.ssab
 
 | タグ | 役割 | 主な属性 |
 | --- | --- | --- |
-| `[ss_init]` | ランタイム初期化（一度）＋音声設定 | `wasm=`（必須相当）, `base=`, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
-| `[ss_new]` | プレイヤー生成 → ssab ロード → レイヤーへ挿入 → 再生 | `name=`(必須) `storage=`(必須) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` |
-| `[ss_play]` | 再生 / アニメ切替 | `name=`(必須) `anime=` `loop=` `start=` |
+| `[ss_init]` | ランタイム初期化（一度）＋音声設定 | `wasm=`（必須相当）, `audio=`, `sounddir=`, `soundext=`, `sevolume=` |
+| `[ss_new]` | プレイヤー生成 → ssab ロード → レイヤーへ挿入 → 再生 | `name=`(必須) `storage=`(必須) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
+| `[ss_play]` | 再生 / アニメ切替（続けて再生するアニメも指定可） | `name=`(必須) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
+| `[ss_show]` | プレイヤーを表示（位置指定・登場アニメ・フェード） | `name=`(必須) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
+| `[ss_hide]` | 破棄せずに非表示にする（ロード状態は維持） | `name=`(必須) `time=` `wait=` |
+| `[ss_fadein]` / `[ss_fadeout]` | 全プレイヤーを一括フェード（シーン切替向け） | `time=` `wait=` |
+| `[ss_chara]` | 話者と連動し、発話中はトークアニメを再生 | `name=`(必須) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | 個別プレイヤーの停止 / 一時停止 / 再開 | `name=`(必須) |
 | `[ss_wait]` | アニメ終了（ループ時は 1 周）までシナリオを待つ | `name=`(必須) |
-| `[ss_pos]` | 瞬間移動 / スケール（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` |
-| `[ss_move]` | 補間移動 / スケール（easeOut・非ブロッキング） | `name=`(必須) `x=` `y=` `scale=` `time=` |
+| `[ss_pos]` | 瞬間移動 / スケール / 重なり順（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` `zindex=` |
+| `[ss_move]` | 補間移動 / スケール（easeOut・既定は非ブロッキング） | `name=`(必須) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | パーツの色をアニメより優先して上書き（通常パーツのみ） | `name=`(必須) `part=`(必須) `color=`(必須) `blend=` `priority=` |
 | `[ss_part_visible]` | パーツを強制的に非表示 / 解除 | `name=`(必須) `part=`(必須) `hide=` `cascade=` |
 | `[ss_part_cell]` | パーツが描くセルを差し替え（通常 / マスクパーツのみ） | `name=`(必須) `part=`(必須) `cellmap=`(必須) `cell=`(必須) `priority=` |
@@ -91,6 +95,51 @@ data/others/ssdata/<project>.ssab
 
 座標は他の画面要素と同じく、Tyrano の通常の左上原点ピクセル（`config.scWidth × scHeight`）を
 使います。`loop` は `true`→無限 / `false`→1 回 / 数値→回数です。
+
+### 先読み・表示・非表示
+
+`[ss_new visible="false"]` は**表示せずにロードだけ**行います。サイズの大きい `.ssab` を
+必要な場面より前に準備しておき、その瞬間に即座に出せます:
+
+```
+[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]
+[ss_show name="akane" x="640" y="480" time="800"]   ; ロード済みなので待たされない
+[ss_hide name="akane" time="500"]                   ; 画面から消す（ロードは維持）
+```
+
+`[ss_hide]` はアニメをロードしたまま（＝ `[ss_show]` が即時）画面外にし、GPU 消費も止めます。
+実際に解放するのは `[ss_free]` です。`[ss_fadeout]` / `[ss_fadein]` はシーン切替向けに全
+プレイヤーを一括でフェードし、フェードイン時には**元々表示されていたものだけ**が戻ります。
+
+### アニメの連鎖
+
+`next=` は連鎖をプレイヤー側に予約するので、「登場 → 待機ループ」に `[ss_wait]` は不要で、
+シナリオも止まりません:
+
+```
+[ss_play name="akane" anime="appear" next="wait"]                ; 1回再生 → 待機ループ
+[ss_play name="akane" anime="attack" next="wait" atframe="20"]   ; 20フレーム目で切替
+```
+
+`next=` を指定して `loop=` を省略すると 1 回再生になります（無限ループには終わりが来ないため）。
+`nextloop=` は連鎖先のループ回数です。予約された連鎖は次の `[ss_play]` で取り消されます。
+
+### 話者と連動したトークアニメ
+
+`[ss_chara]` は紐づけたキャラの台詞が表示されている間だけトークアニメを再生し、終わると待機へ
+戻します。Live2D プラグインの `jname` と同じ発想を、口のパラメータではなく
+SpriteStudio のアニメ単位で行うものです:
+
+```
+[ss_chara name="akane_ss" jname="あかね" talk="talk" idle="wait"]
+
+#あかね
+はじめまして。[p]
+```
+
+`jname=` はシナリオの `#名前` でも Tyrano のキャラ ID でも一致します。`idle=` を空にすると
+`[ss_play]` で最後に指定したアニメへ戻ります。トーク／待機の切替はセーブに含まれないため、
+台詞の途中でセーブしても通常のアニメで復元されます。`talk=""` で解除できます。
 
 ### パーツ上書きについて
 
