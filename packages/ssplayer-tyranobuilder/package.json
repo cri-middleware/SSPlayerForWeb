@@ -17,10 +17,10 @@
   },
   "scripts": {
     "build": "tsdown",
-    "install:poc": "node scripts/install-poc.mjs",
     "clean": "rimraf dist",
     "test": "vitest run",
-    "pack": "node scripts/pack-tbp.mjs"
+    "pack": "node scripts/pack-tbp.mjs",
+    "install:dev": "node scripts/install.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

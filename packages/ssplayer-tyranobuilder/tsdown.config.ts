@@ -10,11 +10,11 @@ import { defineConfig } from 'tsdown';
 // There is no module resolution for bare specifiers though: a surviving
 // `import … from "@spritestudio/…"` makes the whole `import()` reject, and the
 // plugin silently never loads. Every workspace dependency is therefore inlined,
-// and `scripts/install-poc.mjs` refuses to deploy a bundle that still has one.
+// and `scripts/install.mjs` refuses to deploy a bundle that still has one.
 //
 // Only `ssconverter_bg.wasm` stays external. Inlining the glue means this
 // bundle is pinned to the exact wasm binary it was built against (a mismatch is
-// a `LinkError` at instantiation) — `scripts/install-poc.mjs` always copies the
+// a `LinkError` at instantiation) — `scripts/install.mjs` always copies the
 // two together for that reason.
 //
 // Minified, reluctantly. This file has to sit in the plugin folder for the

@@ -11,7 +11,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import * as nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { defineSSComponents, type PackChoice } from './components.js';
 
@@ -237,6 +237,39 @@ describe('defineSSComponents', () => {
     const list = build().ss_stop.component.param.name.select_list?.(view({})) ?? [];
     expect(list).toHaveLength(1);
     expect(list[0].val).toBe('');
+  });
+
+  it('offers a follow-up animation only when the loop is off', () => {
+    const next = components.ss_play.component.param.next;
+
+    // Looping forever: the animation never ends, so nothing could follow it.
+    const whileLooping = next.select_list?.(view({ name: 'chr', loop: true })) ?? [];
+    expect(whileLooping).toHaveLength(1);
+    expect(whileLooping[0].val).toBe('');
+    expect(whileLooping[0].name).toMatch(/Loop forever/);
+
+    // Untouched means the checkbox default, which is on.
+    expect(next.select_list?.(view({ name: 'chr' }))).toHaveLength(1);
+
+    // Off: the real choice appears.
+    const whenOnce = next.select_list?.(view({ name: 'chr', loop: false })) ?? [];
+    expect(whenOnce.length).toBeGreaterThan(1);
+    expect(whenOnce.map((o) => o.val)).toContain('idle');
+  });
+
+  it('stores the loop checkbox itself, because the host stops doing it', () => {
+    const changeParam = vi.fn();
+    (globalThis as { app?: unknown }).app = { component: { changeParam } };
+    const component = { data: { pm: {} } };
+    // The host passes `undefined` as the value and the checkbox as the control.
+    const checkbox = { prop: () => false } as unknown as Parameters<
+      NonNullable<typeof components.ss_play.component.param.loop.onChange>
+    >[2];
+
+    components.ss_play.component.param.loop.onChange?.(undefined, component, checkbox);
+
+    expect(changeParam).toHaveBeenCalledWith(component, 'loop', false);
+    delete (globalThis as { app?: unknown }).app;
   });
 
   it('labels a placed component with its player name', () => {

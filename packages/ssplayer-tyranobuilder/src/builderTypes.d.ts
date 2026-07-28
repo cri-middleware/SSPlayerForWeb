@@ -87,6 +87,7 @@ export interface JQueryLike {
   val(): string;
   val(value: string): JQueryLike;
   change(): JQueryLike;
+  prop(name: string): unknown;
 }
 
 /** A placed component, as handed to `name()` / `header()` / `select_list()`. */
@@ -115,8 +116,17 @@ export interface BuilderParam {
   select_list?: (view?: unknown) => { name: string; val: string }[];
   /** Extra CSS class on the rendered control, so another param can find it. */
   className?: string;
-  /** Called with the new value after the control changes. */
-  onChange?: (value: unknown) => void;
+  /**
+   * Called when the control changes.
+   *
+   * The contract differs by type. `Select` stores the value first and then calls
+   * `onChange(value)`. `Check` calls `onChange(value, component, $checkbox)`
+   * *instead of* storing it — and `value` is always `undefined`, because the
+   * host reads it into a variable declared in the branch it did not take. A
+   * checkbox handler must therefore read `$checkbox.prop('checked')` and store
+   * it itself, or the field silently stops saving.
+   */
+  onChange?: (value: unknown, component?: unknown, control?: JQueryLike) => void;
   /** jQuery-validate rules, e.g. `{ number: true }`. */
   validate?: Record<string, unknown>;
   default_val?: unknown;

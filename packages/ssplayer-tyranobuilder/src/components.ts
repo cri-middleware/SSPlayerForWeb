@@ -140,6 +140,22 @@ function withCurrent(
   return [...options, { name: label(value), val: value }];
 }
 
+/**
+ * Store a parameter value the way the host does.
+ *
+ * Needed because a `Check` that declares `onChange` no longer gets stored for
+ * you — the host calls the handler *instead of* `changeParam` (see
+ * `BuilderParam.onChange`).
+ */
+function storeParam(component: unknown, name: string, value: unknown): void {
+  const api = (
+    globalThis as {
+      app?: { component?: { changeParam?: (c: unknown, n: string, v: unknown) => void } };
+    }
+  ).app?.component;
+  api?.changeParam?.(component, name, value);
+}
+
 /** Screen centre, so a freshly placed animation lands somewhere visible. */
 function screenCentre(): { x: number; y: number } {
   const config = (globalThis as { app?: { tyrano?: { config?: Record<string, unknown> } } }).app
@@ -213,6 +229,45 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       { name: t(leading), val: '' },
       ...names.map((anime) => ({ name: anime, val: anime })),
     ];
+  };
+
+  /**
+   * Is the loop checkbox on? Absent means yes, matching its `default_val` — the
+   * host does not write a default into the component until it is touched.
+   */
+  const isLooping = (value: unknown): boolean =>
+    value === undefined || value === null || value === '' ? true : String(value) !== 'false';
+
+  /** Marks `[ss_play]`'s follow-up dropdown so the loop checkbox can refill it. */
+  const NEXT_CLASS = 'select_param_ss_next';
+  const LOOP_BLOCKS_NEXT = '(only when "Loop forever" is off)';
+
+  /** Replace a dropdown's options in place, and store the resulting value. */
+  const refillSelect = (selector: string, options: PackChoice[]): void => {
+    const $ = ctx.$;
+    if (typeof $ !== 'function') return;
+    const select = $('.tb-parameter').find(selector);
+    if (!select || select.length === 0) return;
+
+    const previous = select.val();
+    select.empty();
+    for (const option of options) select.append($('<option>').html(option.name).val(option.val));
+    // change() rather than a bare val(): it runs the host's own handler, so the
+    // component stores whatever the list settled on.
+    select.val(options.some((o) => o.val === previous) ? previous : (options[0]?.val ?? '')).change();
+  };
+
+  /**
+   * Keep the follow-up dropdown honest when the loop checkbox moves. Turning
+   * looping back on clears a follow-up that could no longer fire, rather than
+   * leaving a value in the scenario that does nothing.
+   */
+  const refillNext = (component: unknown, looping: boolean): void => {
+    if (looping) {
+      refillSelect(`.${NEXT_CLASS}`, [{ name: t(LOOP_BLOCKS_NEXT), val: '' }]);
+      return;
+    }
+    refillSelect(`.${NEXT_CLASS}`, playerAnimeOptions('(nothing)', { get: () => component }));
   };
 
   /**
@@ -476,14 +531,28 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
         loop: {
           type: 'Check',
           text: t('Loop forever'),
+          help: t('Off plays the animation once. "Then play" needs this off.'),
           default_val: true,
+          // `Check` hands the whole job to onChange — including storing the
+          // value, which the host would otherwise have done itself.
+          onChange: (_value, component, checkbox) => {
+            const looping = !!checkbox?.prop?.('checked');
+            storeParam(component, 'loop', looping);
+            refillNext(component, looping);
+          },
         },
         next: {
           type: 'Select',
+          className: NEXT_CLASS,
           name: t('Then play'),
           help: t('Animation to hand over to once this one ends — e.g. an entrance into an idle loop.'),
-          select_list: (view) =>
-            withCurrent(playerAnimeOptions('(nothing)', view), paramsOf(view).next, (v) => v),
+          select_list: (view) => {
+            // An animation that loops forever never reaches its end, so nothing
+            // here could ever play. Say that instead of offering a choice that
+            // silently does nothing.
+            if (isLooping(paramsOf(view).loop)) return [{ name: t(LOOP_BLOCKS_NEXT), val: '' }];
+            return withCurrent(playerAnimeOptions('(nothing)', view), paramsOf(view).next, (v) => v);
+          },
           default_val: '',
         },
       },

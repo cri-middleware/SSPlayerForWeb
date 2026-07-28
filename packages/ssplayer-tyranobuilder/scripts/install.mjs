@@ -1,20 +1,18 @@
-// Install the built plugin into a TyranoBuilder project so it can be tried in
-// the real editor.
+// Install the built plugin into a TyranoBuilder project.
 //
-//   node scripts/install-poc.mjs --project <path-to-project> [--sample [name]]
-//   node scripts/install-poc.mjs --builder ~/TyranoBuilder --sample
+//   node scripts/install.mjs                     # the only project, or list them
+//   node scripts/install.mjs mygame              # by name, under <builder>/myproject
+//   node scripts/install.mjs ../elsewhere/proj   # by path
+//   node scripts/install.mjs mygame --sample     # …and seed a project to convert
 //
-// With no --project, the single project under <builder>/myproject is used.
-// `--sample` also copies a SpriteStudio project out of the SpriteStudio-SDK
-// submodule into <project>/SpriteStudio_Source/, so there is something to
-// convert on the first run.
+// Options: --builder <dir> (default ~/TyranoBuilder), --sample [name].
 //
 // This copies the same files `pack-tbp.mjs` archives, straight into a project —
 // the shortcut for developing on the plugin, where going through the editor's
-// install dialog every build would be tedious.
+// install dialog on every build would be tedious. Authors install the `.tbp`.
 import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -40,15 +38,20 @@ function parseArgs(argv) {
     else if (arg === '--sample') {
       const next = argv[i + 1];
       opts.sample = next && !next.startsWith('--') ? argv[++i] : DEFAULT_SAMPLE;
+    } else if (arg.startsWith('-')) {
+      fail(`unknown option: ${arg}`);
+    } else if (!opts.project) {
+      // Positional: a project name or a path, whichever is easier to type.
+      opts.project = arg;
     } else {
-      fail(`unknown argument: ${arg}`);
+      fail(`unexpected argument: ${arg}`);
     }
   }
   return opts;
 }
 
 function fail(message) {
-  console.error(`[install-poc] ${message}`);
+  console.error(`[install] ${message}`);
   process.exit(1);
 }
 
@@ -57,36 +60,47 @@ function isProject(dir) {
   return existsSync(join(dir, 'data', 'scenario'));
 }
 
+/** Every project under the builder's own projects folder. */
+function listProjects(builder) {
+  const projectsDir = join(builder, 'myproject');
+  if (!existsSync(projectsDir)) return [];
+  return readdirSync(projectsDir)
+    .map((name) => join(projectsDir, name))
+    .filter((dir) => statSync(dir).isDirectory() && isProject(dir));
+}
+
 function resolveProject(opts) {
+  const known = listProjects(opts.builder);
+
   if (opts.project) {
-    const dir = resolve(opts.project);
+    // A bare name means one of the builder's own projects; anything with a
+    // separator, or a name that matches nothing, is treated as a path.
+    const byName = known.find((dir) => basename(dir) === opts.project);
+    const dir = byName ?? resolve(opts.project);
     if (!isProject(dir)) {
-      fail(`not a TyranoBuilder project (no data/scenario): ${dir}`);
+      fail(
+        `not a TyranoBuilder project (no data/scenario): ${dir}` +
+          (known.length ? `\n  Projects under ${join(opts.builder, 'myproject')}:\n` +
+            known.map((c) => `    ${basename(c)}`).join('\n') : ''),
+      );
     }
     return dir;
   }
 
-  const projectsDir = join(opts.builder, 'myproject');
-  if (!existsSync(projectsDir)) {
-    fail(`no projects directory at ${projectsDir} — pass --project <path> instead.`);
-  }
-  const candidates = readdirSync(projectsDir)
-    .map((name) => join(projectsDir, name))
-    .filter((dir) => statSync(dir).isDirectory() && isProject(dir));
-
-  if (candidates.length === 0) {
+  if (known.length === 0) {
     fail(
-      `no projects found under ${projectsDir}.\n` +
-        '  Create one in TyranoBuilder first (it is the folder holding data/scenario).',
+      `no projects found under ${join(opts.builder, 'myproject')}.\n` +
+        '  Create one in TyranoBuilder first (it is the folder holding data/scenario),\n' +
+        '  or pass a path: node scripts/install.mjs <path-to-project>',
     );
   }
-  if (candidates.length > 1) {
+  if (known.length > 1) {
     fail(
-      `found ${candidates.length} projects under ${projectsDir}; pass --project <path>:\n` +
-        candidates.map((c) => `    ${c}`).join('\n'),
+      `${known.length} projects found — name the one you want:\n` +
+        known.map((c) => `    node scripts/install.mjs ${basename(c)}`).join('\n'),
     );
   }
-  return candidates[0];
+  return known[0];
 }
 
 const opts = parseArgs(process.argv.slice(2));
@@ -100,8 +114,8 @@ const pluginDir = join(project, 'data', 'others', 'plugin', PLUGIN_ID);
 mkdirSync(pluginDir, { recursive: true });
 for (const { name, path } of files) copyFileSync(path, join(pluginDir, name));
 
-console.log(`[install-poc] project: ${project}`);
-console.log(`[install-poc] plugin -> ${pluginDir}`);
+console.log(`[install] project: ${project}`);
+console.log(`[install] plugin -> ${pluginDir}`);
 for (const { name } of files) console.log(`             ${name}`);
 
 if (opts.sample) {
@@ -115,7 +129,7 @@ if (opts.sample) {
   const dest = join(project, 'SpriteStudio_Source', opts.sample);
   mkdirSync(dirname(dest), { recursive: true });
   cpSync(src, dest, { recursive: true });
-  console.log(`[install-poc] sample project -> ${dest}`);
+  console.log(`[install] sample project -> ${dest}`);
 }
 
 console.log('');

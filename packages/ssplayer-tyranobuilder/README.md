@@ -82,16 +82,17 @@ finished archive rather than trusting the staging step.
 
 ### While developing
 
-Going through the dialog on every build gets old, so `install-poc.mjs` copies
+Going through the dialog on every build gets old, so `install.mjs` copies
 the same files straight into a project:
 
 ```sh
-node packages/ssplayer-tyranobuilder/scripts/install-poc.mjs --sample
+node packages/ssplayer-tyranobuilder/scripts/install.mjs mygame --sample
 ```
 
-It finds the project under `~/TyranoBuilder/myproject` (or takes
-`--project <path>`), and with `--sample` seeds `SpriteStudio_Source/Ringo/` from
-the SDK submodule.
+Name a project under `~/TyranoBuilder/myproject`, or give a path to one
+anywhere. With no name it takes the only project there, or lists them. `--sample`
+seeds `SpriteStudio_Source/Ringo/` from the SDK submodule so the first run has
+something to convert.
 
 Either way, open (or reopen) the project afterwards. A dialog reports the result;
 the details land in `<project>/ss_import_log.txt`, which records the host
@@ -162,7 +163,7 @@ which is why the bundle is minified.
 - **No module resolution.** The builder hands the file straight to `import()`,
   so one surviving bare specifier rejects the import and the plugin never loads
   — with no error in the UI and nothing in the log, just missing components.
-  Every dependency is inlined, and `install-poc.mjs` refuses to deploy a bundle
+  Every dependency is inlined, and `install.mjs` refuses to deploy a bundle
   that still has one.
 - **No DevTools in the main window** (`removeMenu()`), hence the log file.
 - **No hook for "preview was pressed"** — `map_preview_tag` is declared in
@@ -194,6 +195,10 @@ with `SSRuntimeManager.extractAnimationNames`, which is a pure FlatBuffers walk
 and needs no runtime wasm. Changing the pack refills the animation list in place
 (the host hands `onChange` only the new value, so the control is found by class,
 the way the builder's own `storage`/`target` pair does it).
+
+A follow-up animation (`[ss_play next=]`) is offered only while "loop forever" is
+off. An animation that loops forever never reaches its end, so a follow-up could
+never fire — the field used to accept one anyway and quietly do nothing.
 
 `[ss_play]` names a player rather than a pack, so it works out which pack that is
 by looking back through the scenario for the `[ss_new]` that named the player —

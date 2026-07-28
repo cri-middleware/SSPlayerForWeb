@@ -74,5 +74,7 @@
   "SpriteStudio: pause all": "SpriteStudio 全体一時停止",
   "Freezes every animation — for a menu or save screen. Ordinary text waits do not stop playback, so this is how you get it to stop.": "すべてのアニメを停止します。メニューやセーブ画面用です。通常のテキスト待ちでは再生が止まらないため、止めたい場合はこれを使います。",
   "SpriteStudio: resume all": "SpriteStudio 全体再開",
-  "Resumes every animation paused by \"pause all\".": "「全体一時停止」で止めたアニメをまとめて再開します。"
+  "Resumes every animation paused by \"pause all\".": "「全体一時停止」で止めたアニメをまとめて再開します。",
+  "Off plays the animation once. \"Then play\" needs this off.": "オフにすると1回だけ再生します。「次に再生」はオフのときだけ使えます。",
+  "(only when \"Loop forever\" is off)": "（「ループ再生する」をオフにすると選べます）"
 }
