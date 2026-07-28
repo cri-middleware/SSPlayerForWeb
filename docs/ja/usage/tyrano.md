@@ -214,9 +214,13 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 ## 既知の制限
 
-ティラノビルダー `.tbp` 対応・`[cm]` / `[clearfix]` 自動フック・frame 精密復元・Tyrano 音量スライダー
-連動は今後の対応予定です。進捗は
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
+`[cm]` / `[clearfix]` 自動フック・frame 精密復元・Tyrano 音量スライダー連動は今後の対応予定です。
+進捗は [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を
+参照してください。
+
+ティラノビルダーについては専用プラグイン `@spritestudio/ssplayer-tyranobuilder` があり、`.tbp` として
+配布され、コンポーネントパレットに SpriteStudio 用のコンポーネントを追加します。未対応の範囲は
+[制約と適用範囲](/ja/limitations#tyranoscript-ティラノビルダー) を参照してください。
 
 ## ソースからビルドする
 

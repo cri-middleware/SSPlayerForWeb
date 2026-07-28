@@ -219,9 +219,13 @@ are expected under `data/sound/`; an SS sound name resolves to `data/<dir>/<name
 
 ## Known limitations
 
-TyranoBuilder `.tbp` support, `[cm]` / `[clearfix]` auto-hooks, frame-precise restore, and
-Tyrano volume-slider integration are still on the roadmap. Track progress in
+`[cm]` / `[clearfix]` auto-hooks, frame-precise restore, and Tyrano volume-slider integration are
+still on the roadmap. Track progress in
 [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
+
+TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships as
+a `.tbp` and adds SpriteStudio components to the palette. See
+[Limitations & Scope](/limitations#tyranoscript-tyranobuilder) for what it does not cover yet.
 
 ## Building from source
 
