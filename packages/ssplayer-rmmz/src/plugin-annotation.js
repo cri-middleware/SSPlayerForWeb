@@ -13,7 +13,9 @@
  *      folder) and enable the plugin. The WASM loads automatically from beside
  *      this .js — no path parameter to set.
  *   2. Convert your .sspj to .ssab with the SpriteStudio converter tooling
- *      (ssconverter-web) and place the output under img/spritestudio/<project>/.
+ *      (ssconverter-web) and place the output under a "spritestudio" folder at
+ *      your PROJECT ROOT — beside img/, not inside it (see DEPLOYMENT below):
+ *        MyGame/spritestudio/<project>/<project>.ssab (+ its .png textures)
  *   3. Use the "Show SS" plugin command to attach an animation to a picture id.
  *
  * The animation is attached as a CHILD of the picture, so Move Picture / scale
@@ -28,11 +30,23 @@
  *   flags are required. If the runtime fails to load for any other reason, SS
  *   animations are disabled but the game still runs.
  *
- * ■ DEPLOYMENT — IMPORTANT
- *   SS animations under img/spritestudio/ are loaded dynamically, so RPG Maker
- *   MZ's "Exclude unused files" deployment option WILL DELETE them. Either turn
- *   that option OFF, or copy your img/spritestudio/ folder into the deployed
- *   output afterward.
+ * ■ DEPLOYMENT — KEEP SS ASSETS OUT OF img/
+ *   Deployment's "Exclude unused files" option only ever removes files from
+ *   these three folders (per the official MZ help):
+ *     img/  audio/  effects/
+ *   SS assets are loaded dynamically by this plugin, so MZ cannot see that they
+ *   are used — anything you put under img/ is deleted. Keep them in their own
+ *   project-root folder (spritestudio/) and the option leaves them alone, the
+ *   same way it leaves js/plugins/ alone. No extra setup, nothing to register.
+ *
+ *   Trade-off: MZ's "Encrypt Image Files" option is also limited to img/ and
+ *   audio/, so SS textures outside img/ ship unencrypted. If you want them
+ *   encrypted, move the WHOLE spritestudio folder back under img/
+ *   (img/spritestudio/) — never split the .ssab from its textures. The .ssab
+ *   isn't an image so it stays plain, while the textures beside it get
+ *   encrypted and this plugin decrypts them automatically via ImageManager. In
+ *   exchange you must turn "Exclude unused files" OFF, or copy
+ *   img/spritestudio/ into the deployed output afterward.
  *
  * @command showSS
  * @text Show SS
@@ -47,7 +61,7 @@
  *
  * @arg ssab
  * @text SSAB File
- * @desc Path to the .ssab (relative to the game root), e.g. img/spritestudio/Ringo/Ringo.ssab
+ * @desc Path to the .ssab (relative to the game root), e.g. spritestudio/Ringo/Ringo.ssab
  * @type string
  * @default
  *
@@ -109,7 +123,7 @@
  *
  * @arg ssab
  * @text SSAB File
- * @desc Path to the .ssab (relative to the game root), e.g. img/spritestudio/Ringo/Ringo.ssab
+ * @desc Path to the .ssab (relative to the game root), e.g. spritestudio/Ringo/Ringo.ssab
  * @type string
  * @default
  *
@@ -425,7 +439,9 @@
  *   1. 本ファイルと "ssruntime_bg.wasm" を js/plugins/ に一緒に（同じフォルダに）置き、
  *      プラグインを有効化。WASM はこの .js と同じ場所から自動で読み込まれます（パス設定不要）。
  *   2. .sspj を SpriteStudio コンバータ（ssconverter-web）で .ssab に変換し、出力を
- *      img/spritestudio/<プロジェクト名>/ に配置します。
+ *      【プロジェクト直下】の spritestudio フォルダに配置します。img/ の中では
+ *      なく、img/ と並ぶ位置です（後述の「デプロイメント」参照）。
+ *        ゲームフォルダ/spritestudio/<プロジェクト名>/<プロジェクト名>.ssab（＋ .png）
  *   3. プラグインコマンド「SS表示」でピクチャ番号にアニメを割り当てます。
  *
  * アニメはピクチャの子として追加されるため、ピクチャの移動・拡大がそのまま適用
@@ -440,11 +456,23 @@
  *   SIMD フラグの追加は不要です。何らかの理由でランタイムの読み込みに失敗した場合は、
  *   SS アニメは無効化されますが、ゲーム自体は動作します。
  *
- * ■ デプロイメント時の重要な注意
- *   img/spritestudio/ の SS アニメは動的にロードされるため、RPG Maker MZ の
- *   「未使用ファイルを削除」オプションで【削除されてしまいます】。同オプションを
- *   OFF にするか、デプロイメント後に img/spritestudio/ フォルダを出力先へコピー
- *   してください。
+ * ■ デプロイメント — SS 素材は img/ の外に置いてください
+ *   デプロイメントの「未使用ファイルを含まない」で除外されるのは、公式ヘルプに
+ *   ある通り以下の 3 フォルダの中だけです。
+ *     img/  audio/  effects/
+ *   SS 素材は本プラグインが動的に読み込むためツクールからは未使用に見えます。
+ *   img/ の中に置くと削除されますが、プロジェクト直下の spritestudio/ に置けば
+ *   js/plugins/ と同じく対象外となり、そのまま出力されます。登録作業も追加設定も
+ *   不要です。
+ *
+ *   トレードオフ：暗号化（画像ファイル）も img/・audio/ だけが対象のため、img/ の
+ *   外に置いたテクスチャは暗号化されません。テクスチャを暗号化したい場合は、.ssab と
+ *   テクスチャを分けるのではなく、spritestudio フォルダごと img/ の下
+ *   （img/spritestudio/）へ戻してください。.ssab は画像ではないので暗号化されません
+ *   が、同じフォルダにあるテクスチャは暗号化され、本プラグインが ImageManager 経由で
+ *   読み込むため復号は自動です。ただしその際は「未使用ファイルを含まない」を OFF に
+ *   するか、デプロイメント後に img/spritestudio/ フォルダを出力先へコピーする必要が
+ *   あります。
  *
  * @command showSS
  * @text SS表示
@@ -459,7 +487,7 @@
  *
  * @arg ssab
  * @text SSABファイル
- * @desc .ssab のパス（ゲームルートからの相対）。例: img/spritestudio/Ringo/Ringo.ssab
+ * @desc .ssab のパス（ゲームルートからの相対）。例: spritestudio/Ringo/Ringo.ssab
  * @type string
  * @default
  *
@@ -521,7 +549,7 @@
  *
  * @arg ssab
  * @text SSABファイル
- * @desc .ssab のパス（ゲームルートからの相対）。例: img/spritestudio/Ringo/Ringo.ssab
+ * @desc .ssab のパス（ゲームルートからの相対）。例: spritestudio/Ringo/Ringo.ssab
  * @type string
  * @default
  *

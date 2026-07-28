@@ -82,7 +82,7 @@ jobs:
 
       # rmmz-example is a static RPG Maker MZ project (no bundler). Sync the built
       # plugin + no-SIMD runtime wasm into its js/plugins/ (deploy-examples already
-      # produced the .ssab under SampleProject/img/spritestudio/).
+      # produced the .ssab under SampleProject/spritestudio/).
       - name: Sync rmmz-example plugin
         run: pnpm --filter rmmz-example run sync:plugin
 

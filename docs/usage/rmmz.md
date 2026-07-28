@@ -47,9 +47,27 @@ correct Z-order with characters and pictures.
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. See [Preparing assets](/usage/assets) for how to convert. Put the
-output under `img/spritestudio/<project>/` so it matches the `Show SS` path
-`img/spritestudio/<project>/<project>.ssab`.
+plugin actually plays. See [Preparing assets](/usage/assets) for how to convert.
+
+Put the output under a **`spritestudio/` folder at your project root** — beside `img/`,
+not inside it. Deployment deletes unused files from `img/` (see
+[Deployment](#_4-deployment) below), so keeping SS assets out of it is what makes them
+survive:
+
+```
+MyGame/
+├── img/                     ← pruned by "Exclude unused files"
+├── js/plugins/
+│   ├── ssplayer-rpgmakermz.js
+│   └── ssruntime_bg.wasm
+└── spritestudio/            ← safe
+    └── Ringo/
+        ├── Ringo.ssab
+        └── Ringo.png        ← textures sit beside their .ssab
+```
+
+The `Show SS` path is then `spritestudio/<project>/<project>.ssab`. Keep each `.ssab` and
+its textures in the same folder — the plugin resolves textures relative to the `.ssab`.
 
 ## 3. Plugin commands
 
@@ -118,12 +136,36 @@ Making a display object of your own follow a part has **no plugin command**. Get
 Leaving `animation` empty auto-picks the first; a wrong name warns in the console and
 lists the real names (the MZ editor can't read a `.ssab` to build a dropdown).
 
-## 4. Deployment ⚠️
+## 4. Deployment
 
-**"Exclude unused files" deletes your animations.** The `.ssab` files and textures under
-`img/spritestudio/` are loaded dynamically, so MZ's deployment option treats them as
-unused and removes them. Either **turn that option off**, or **copy `img/spritestudio/`
-into the deployed output** afterward (the same caveat the old SS6Player plugin had).
+**Keep SS assets out of `img/` and "Exclude unused files" can stay on.** Per the official
+MZ help, that option only ever prunes these three folders:
+
+```
+img/   audio/   effects/
+```
+
+This plugin loads `.ssab` files and their textures dynamically, so MZ can't tell they are
+in use and deletes anything it finds under `img/`. A project-root `spritestudio/` folder
+is outside its reach — exactly like `js/plugins/`, which is why the plugin `.js` and
+`ssruntime_bg.wasm` already survive. Nothing to register, no extra setup.
+
+::: warning Migrating an existing project
+If your assets are still under `img/spritestudio/`, move the whole folder up one level to
+`spritestudio/` and update the `SSAB File` argument of each `Show SS` / `Set SS As
+Picture` command (drop the leading `img/`).
+:::
+
+**Trade-off — encryption.** MZ's *Encrypt Image Files* option is likewise limited to
+`img/` and `audio/`, so SS textures outside `img/` ship unencrypted. If you want them
+encrypted, move the **whole `spritestudio/` folder back under `img/`**
+(`img/spritestudio/`) — don't separate the `.ssab` from its textures. The `.ssab` isn't an
+image so it stays plain, while the textures beside it get encrypted and the plugin decrypts
+them automatically via `ImageManager`. In exchange you must **turn "Exclude unused files"
+off**, or **copy `img/spritestudio/` into the deployed output** afterward.
+
+If a texture does go missing, the plugin now reports it by name in the console instead of
+leaving the animation stuck loading.
 
 ## Known limitations
 
@@ -148,7 +190,7 @@ To try it in the bundled MZ example:
 
 ```sh
 pnpm --filter rmmz-example run sync:plugin   # copy the built plugin + no-SIMD wasm into js/plugins/
-pnpm deploy-examples                         # convert the SS-SDK test projects into img/spritestudio/
+pnpm deploy-examples                         # convert the SS-SDK test projects into spritestudio/
 nw examples/rmmz-example/SampleProject       # Test Play (or open the project in the MZ editor)
 ```
 

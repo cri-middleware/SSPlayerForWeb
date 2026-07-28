@@ -10,11 +10,16 @@ export interface RMMZBitmap {
   readonly height: number;
   readonly canvas: HTMLCanvasElement;
   isReady(): boolean;
+  isError(): boolean;
   addLoadListener(cb: (bitmap: RMMZBitmap) => void): void;
 }
 
 export interface RMMZImageManager {
   loadBitmap(folder: string, filename: string): RMMZBitmap;
+}
+
+export interface RMMZUtils {
+  hasEncryptedImages(): boolean;
 }
 
 export interface PixiV5Renderer {
@@ -43,6 +48,7 @@ export interface RMMZGraphics {
 const g = globalThis as unknown as {
   Graphics?: RMMZGraphics;
   ImageManager?: RMMZImageManager;
+  Utils?: RMMZUtils;
   PIXI?: any;
 };
 
@@ -72,6 +78,15 @@ export function getMZGl(): GL {
 
 export function getImageManager(): RMMZImageManager | null {
   return g.ImageManager ?? null;
+}
+
+/**
+ * True when the game was deployed with image encryption on. MZ encrypts (and
+ * appends "_" to) images under img/ and audio under audio/ only, but the flag
+ * is global — every Bitmap load goes through the decrypt path once it is set.
+ */
+export function hasEncryptedImages(): boolean {
+  return !!g.Utils?.hasEncryptedImages?.();
 }
 
 export function getPIXI(): any {

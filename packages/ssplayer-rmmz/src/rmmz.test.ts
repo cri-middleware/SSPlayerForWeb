@@ -10,7 +10,7 @@ vi.mock('@spritestudio/ssplayer-webgl', () => ({
 }));
 
 import { getSelfScriptDir, isMZ } from './rmmzGlobals.js';
-import { splitBitmapUrl } from './rmmz/RMMZResourceManager.js';
+import { isDecryptable, splitBitmapUrl } from './rmmz/RMMZResourceManager.js';
 
 describe('rmmzGlobals', () => {
   afterEach(() => {
@@ -39,23 +39,43 @@ describe('rmmzGlobals', () => {
 
 describe('splitBitmapUrl', () => {
   it('splits folder + extension-less filename for ImageManager', () => {
-    expect(splitBitmapUrl('img/spritestudio/Ringo/Ringo.png')).toEqual({
-      folder: 'img/spritestudio/Ringo/',
+    expect(splitBitmapUrl('spritestudio/Ringo/Ringo.png')).toEqual({
+      folder: 'spritestudio/Ringo/',
       filename: 'Ringo',
     });
   });
 
   it('decodes percent-encoded filenames', () => {
-    expect(splitBitmapUrl('img/spritestudio/A%20B/cell%20map.png')).toEqual({
-      folder: 'img/spritestudio/A%20B/',
+    expect(splitBitmapUrl('spritestudio/A%20B/cell%20map.png')).toEqual({
+      folder: 'spritestudio/A%20B/',
       filename: 'cell map',
     });
   });
 
   it('falls back to a default folder when the url has no slash', () => {
     expect(splitBitmapUrl('cellmap.png')).toEqual({
-      folder: 'img/spritestudio/',
+      folder: 'spritestudio/',
       filename: 'cellmap',
     });
+  });
+});
+
+describe('isDecryptable', () => {
+  afterEach(() => {
+    delete (globalThis as any).Utils;
+  });
+
+  it('is true for every url when the deployment is not encrypted', () => {
+    expect(isDecryptable('spritestudio/Ringo/Ringo.png')).toBe(true);
+    expect(isDecryptable('img/spritestudio/Ringo/Ringo.png')).toBe(true);
+  });
+
+  it('is false outside img/ once images are encrypted', () => {
+    (globalThis as any).Utils = { hasEncryptedImages: () => true };
+    // MZ only encrypts img/ and audio/, so ImageManager's "url + _" decrypt
+    // path would 404 on a texture that lives anywhere else.
+    expect(isDecryptable('spritestudio/Ringo/Ringo.png')).toBe(false);
+    expect(isDecryptable('img/spritestudio/Ringo/Ringo.png')).toBe(true);
+    expect(isDecryptable('https://example.com/game/img/ss/Ringo.png')).toBe(true);
   });
 });

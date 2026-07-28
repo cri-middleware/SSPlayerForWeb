@@ -47,11 +47,12 @@ New-Item -ItemType Directory -Force -Path $TYRANO_RINGO | Out-Null
 Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo\Ringo.png") -Destination $TYRANO_RINGO -Force
 
 # rmmz-example (RPG Maker MZ): convert the test .sspj into the game's asset
-# folder (nested under img/spritestudio/<project>/). The MZ plugin build
-# artefacts are synced separately by the example itself (examples/rmmz-example:
-# pnpm run sync:plugin), mirroring tyranoscript-example — deploy-examples only
-# publishes converted test assets.
-$RMMZ_SS = Join-Path $ROOT_DIR "examples\rmmz-example\SampleProject\img\spritestudio"
+# folder (nested under spritestudio\<project>\ at the PROJECT ROOT — outside
+# img\, whose contents deployment's "Exclude unused files" prunes). The MZ
+# plugin build artefacts are synced separately by the example itself
+# (examples/rmmz-example: pnpm run sync:plugin), mirroring tyranoscript-example
+# — deploy-examples only publishes converted test assets.
+$RMMZ_SS = Join-Path $ROOT_DIR "examples\rmmz-example\SampleProject\spritestudio"
 New-Item -ItemType Directory -Force -Path $RMMZ_SS | Out-Null
 node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$RMMZ_SS" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 

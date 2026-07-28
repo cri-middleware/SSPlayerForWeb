@@ -41,12 +41,13 @@ mkdir -p "$TYRANO_SSDATA/Ringo"
 cp "$PIXI_PUBLIC/Ringo/Ringo.ssab" "$PIXI_PUBLIC/Ringo/Ringo.png" "$TYRANO_SSDATA/Ringo/"
 
 # rmmz-example (RPG Maker MZ): convert the test .sspj into the game's asset
-# folder (nested under img/spritestudio/<project>/). The MZ plugin build
-# artefacts are synced separately by the example itself (examples/rmmz-example:
-# pnpm run sync:plugin), mirroring tyranoscript-example — deploy-examples only
-# publishes converted test assets.
-RMMZ_SS="$ROOT_DIR/examples/rmmz-example/SampleProject/img/spritestudio"
+# folder (nested under spritestudio/<project>/ at the PROJECT ROOT — outside
+# img/, whose contents deployment's "Exclude unused files" prunes). The MZ
+# plugin build artefacts are synced separately by the example itself
+# (examples/rmmz-example: pnpm run sync:plugin), mirroring tyranoscript-example
+# — deploy-examples only publishes converted test assets.
+RMMZ_SS="$ROOT_DIR/examples/rmmz-example/SampleProject/spritestudio"
 mkdir -p "$RMMZ_SS"
 node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$RMMZ_SS" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
-echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata and examples/rmmz-example/SampleProject/img/spritestudio."
+echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata and examples/rmmz-example/SampleProject/spritestudio."
