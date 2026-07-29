@@ -111,12 +111,14 @@ graph LR
 | [`ssconverter-web`](/ja/usage/assets) | `.sspj` → `.ssab` 変換ツール（ブラウザツール + Node CLI）です。 |
 | [`@spritestudio/ssconverter-core`](/ja/usage/assets) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合）です。 |
 
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（**実験的・alpha**、非公開、npm 未公開）:
+**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（非公開・npm 未公開。
+プラグインとして導入します）:
 
-| パッケージ | 用途 |
-|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 |
-| `@spritestudio/ssplayer-tyranoscript` | **TyranoScript / TyranoBuilder**（ノベルエンジン）向けプラグインです。 |
+| パッケージ | 用途 | 状態 |
+|---|---|---|
+| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 | 実験的（alpha） |
+| [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) | **TyranoScript**（ノベルエンジン）向けプラグインです。 | beta |
+| [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder) | **ティラノビルダー** 向けプラグインです。同じアニメをコンポーネントパレットから配置でき、変換もエディタ内で行えます。 | beta |
 
 ::: tip 旧プレイヤーからの移行をお探しの方へ
 旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。

@@ -22,7 +22,10 @@ pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
 
 For minimal code see [Quick Start](/setup/quickstart); for playback control see
 [Basic playback](/usage/basic). To make a display object of your own (a weapon, effect or
-hitbox) follow a part every frame, see [Part tracking](/customize/part-following).
+hitbox) follow a part every frame, see [Part tracking](/customize/part-following). To recolour,
+hide or re-cell a single part at run time, see
+[Part control](/customize/part-overrides) — `SSPlayer` carries the same override methods as the
+WebGL player, and re-renders the current frame when one is set while playback is stopped.
 
 ## Blend modes and background
 

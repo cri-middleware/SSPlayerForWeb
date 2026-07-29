@@ -59,7 +59,7 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssconverter-core` | npm | beta |
 | `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) | **experimental (alpha)** |
 | `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](/usage/tyrano#building-from-source) | beta |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings | beta |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](/usage/tyranobuilder#building-from-source) | beta |
 | `ssconverter-web` | not published — run it from a local build | — |
 
 ## RPG Maker MZ (experimental)
@@ -87,7 +87,8 @@ follow-up.
 ## TyranoScript / TyranoBuilder
 
 Both integrations are **beta**: the authoring surface is complete, but names and behavior may
-still change before `7.0.0`. See [Using TyranoScript / TyranoBuilder](/usage/tyrano).
+still change before `7.0.0`. See [Using TyranoScript](/usage/tyrano) and
+[Using TyranoBuilder](/usage/tyranobuilder).
 
 ::: warning TyranoScript
 `[cm]` / `[clearfix]` auto-hooks, frame-precise restore, and Tyrano volume-slider integration are

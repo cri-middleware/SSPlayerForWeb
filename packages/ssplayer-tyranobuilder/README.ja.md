@@ -25,6 +25,13 @@ SpriteStudio のプロジェクトをフォルダに置いておくと、保存�
 
 これ以外の準備は不要です。プラグイン読み込みのタグも、ランタイムの初期化も要りません。
 
+**必要なのはこのファイルだけです。** `.tbp` にはランタイム側 — つまり
+[`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.ja.md) の
+`[ss_*]` タグ — も入っているため、そちらのプラグイン ZIP を重ねて入れる必要は
+ありません。あの ZIP は TyranoScript 用で、展開先はこのファイルと同じ
+`data/others/plugin/ssplayer/` です。両方入れるとエディタ側とランタイム側で
+バージョンがずれます。
+
 > TyranoBuilder の無料版はプラグインを 2 つまでしか読み込みません（本プラグインで 1 つです）。
 
 ## アニメを追加する

@@ -34,4 +34,12 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # 配布 zip を�
 ロード時の復元には `data/scenario/make.ks` に `[ss_init]`→`[ss_restore]` を記述します
 （詳細はパッケージ README / `examples/tyranoscript-example` を参照）。
 
-ティラノビルダー向けの `.tbp` 配布は PT4 で対応予定です。
+## ティラノビルダー（TyranoBuilder）を使う場合
+
+この zip は **TyranoScript 用**です。ティラノビルダーには別配布の `.tbp`
+（[`@spritestudio/ssplayer-tyranobuilder`](../../ssplayer-tyranobuilder/README.ja.md)）があり、
+そちらは init.ks / main.js / ssruntime_bg.wasm — つまりこの zip の中身をそのまま — 内包した上で
+エディタ側（コンポーネントと自動変換）を追加したものです。
+
+**どちらか一方だけを入れてください。** 展開先はどちらも `data/others/plugin/ssplayer/` で、
+重ねて入れるとエディタ側とランタイム側でバージョンがずれます。

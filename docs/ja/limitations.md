@@ -59,7 +59,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssconverter-core` | npm | beta |
 | `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#ソースからビルドする) | **実験的（alpha）** |
 | `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#ソースからビルドする) | beta |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加 | beta |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#ソースからビルドする) | beta |
 | `ssconverter-web` | 未公開 — ローカルビルドで実行 | — |
 
 ## RPG ツクール MZ（実験的）
@@ -86,8 +86,8 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 ## TyranoScript / ティラノビルダー
 
 どちらも **beta** です。オーサリング用のタグ体系は揃っていますが、`7.0.0` までに名称や挙動が
-変更される可能性があります。[TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照して
-ください。
+変更される可能性があります。[TyranoScript で使う](/ja/usage/tyrano) および
+[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
 ::: warning TyranoScript
 `[cm]` / `[clearfix]` の自動フック、frame 精密復元、Tyrano 音量スライダー連動は今後の対応予定です。

@@ -99,25 +99,63 @@ player.onAnimationEnd(() => { /* 終了時 */ });
 off(); // 解除
 ```
 
-## 5. ⚠️ 現在は制限付きの機能
+## 5. パーツ単位の制御（表示 / セル / 色）
 
-以下は SS6Player にありましたが、本バージョンでは **`SpriteStudio-SDK`（Rust コア）側の API 実装待ち**のため、現時点では利用できません。進捗は [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
+SS6Player のパーツ単位のセッターは、Override Layer API として**利用できます**。形は 2 点
+異なります。
 
-| SS6Player | 状態 | 依存 |
+- **`…ByIndex` 版はありません。** `part` 引数はすべて**パーツ名またはインデックス**
+  （`number | string`）を受け取るため、1 つのメソッドで SS6Player の両形式をカバーします。
+- **上書きには寿命があります。** 色とセルの上書きは `priority` を取り、どこまで維持するかを
+  指定します（そのアトリビュートが次のキーフレームで更新されるまで / 次のアニメーションまで
+  ＝既定 / 恒久）。寿命はランタイムが管理するため、SS6Player と違ってアニメーション切り替え後に
+  再適用する必要はありません。
+
+| SS6Player | 本バージョン | 備考 |
 |---|---|---|
-| `SetPartVisible` / `SetPartVisibleByIndex` | **未対応（実装予定）** | Override Layer API（SDK Phase 2） |
-| `SetPartCell` / `SetPartCellByIndex` | **未対応（実装予定）** | Override Layer API（SDK Phase 2） |
-| `SetPartTint` / `SetPartTintByIndex` | **未対応（実装予定）** | Override Layer API（SDK Phase 2） |
-| `ChangeInstanceAnime`（インスタンスの動的差し替え） | **未対応（実装予定）** | Instance Lifecycle API（SDK Phase 3） |
+| `SetPartVisible` / `SetPartVisibleByIndex` | `setPartVisibilityOverride(part, hide, cascade?)` | `hide = false` でアニメーション側に戻ります。`cascade` で子孫も非表示 |
+| `SetPartCell` / `SetPartCellByIndex` | `setPartCellOverride(part, cellmapName, cellName, priority?)` | 設定時に解決するため、存在しないセルマップ名 / セル名はその場で失敗します |
+| `SetPartTint` / `SetPartTintByIndex` | `setPartColorOverride(part, blendOp, rgba, priority?)` | 色は `0xRRGGBBAA` にパックした数値。グラデーションは `setPartColorOverrideCorners()` |
+| （新規） | `clearPartColorOverride` / `clearPartCellOverride` / `clearPartVisibilityOverride` / `clearAllPartOverrides` | 個別、またはそのプレイヤーの全上書きを解除 |
+| （新規） | `getCellMapNames()` / `getCellNames(cellmapName)` | セル上書きで指定できる名前の一覧 |
 
-現時点で使えるパーツ照会 API は次の 2 つです。詳細は [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください。
+```ts
+import { SSBlendOp } from '@spritestudio/ssplayer-pixi';
+
+// SS6Player:
+//   player.SetPartTintByIndex(index, ...);
+//   player.SetPartVisible('body', false);
+
+// 本バージョン: 名前でもインデックスでも指定でき、拒否された場合は false が返ります
+player.setPartColorOverride('body', SSBlendOp.Mul, 0xff0000ff);
+player.setPartVisibilityOverride('body', true);
+```
+
+パーツ照会 API は従来どおりです。
 
 ```ts
 player.getPartsCount();               // パーツ数
 player.getPartIndexFromName('body');  // パーツ名 → インデックス
 ```
 
-## 6. その他の仕様差分
+`findPartIndex('body')` はランタイム側で同じ解決を行うもので、`part` 引数の内部処理でも使われます。
+上書きを頻繁に行う場合は、これでインデックスを取得して使い回してください。
+
+同じメソッドは `SSPlayer`（PixiJS）と `SSCanvasPlayer`（WebGL）の両方にあります。ブレンド方法・
+priority・色のパック方法・注意点は [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を
+参照してください。コードを書かずに扱えるオーサリング手段は
+[RPG ツクール MZ で使う](/ja/usage/rmmz)・[TyranoScript で使う](/ja/usage/tyrano)・
+[ティラノビルダーで使う](/ja/usage/tyranobuilder) にあります。
+
+## 6. ⚠️ 現在は制限付きの機能
+
+以下は SS6Player にありましたが、本バージョンでは **`SpriteStudio-SDK`（Rust コア）側の API 実装待ち**のため、現時点では利用できません。進捗は [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
+
+| SS6Player | 状態 | 依存 |
+|---|---|---|
+| `ChangeInstanceAnime`（インスタンスの動的差し替え） | **未対応（実装予定）** | Instance Lifecycle API（SDK Phase 3） |
+
+## 7. その他の仕様差分
 
 - **エフェクトパーツ**: SS6Player は**未対応**でしたが、本バージョンは**対応済み**です（パーティクルを WASM 側で計算しインラインに描画）。
 - **マスク / クリッピング**: SS6Player はメッシュ化のみで**実際のマスクは非対応**でしたが、本バージョンは**カバレッジ前処理による本格的なマスク**に対応します（`player.maskEnabled` で切り替え）。

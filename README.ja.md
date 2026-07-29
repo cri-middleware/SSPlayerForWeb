@@ -53,12 +53,13 @@
 | **`.sspj` → `.ssab` を変換する** | [`ssconverter-web`](./packages/ssconverter-web)（Web ツール + Node CLI） | — |
 | **変換機能を自作アプリ/サービスに組み込む** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです。いずれも **実験的**（`alpha`、npm 未公開）です:
+**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです。npm ではなくプラグインとして導入します。RPG ツクール MZ は **実験的**（`alpha`）、Tyrano 系の 2 つは **beta** です:
 
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
 | **RPG ツクール MZ**（PixiJS v5） | [`@spritestudio/ssplayer-rmmz`](./packages/ssplayer-rmmz) | [examples/rmmz-example](./examples/rmmz-example) |
-| **TyranoScript / TyranoBuilder**（ノベル） | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyranoscript-example](./examples/tyranoscript-example) |
+| **TyranoScript**（ノベルエンジン） | [`@spritestudio/ssplayer-tyranoscript`](./packages/ssplayer-tyranoscript) | [examples/tyranoscript-example](./examples/tyranoscript-example) |
+| **ティラノビルダー**（ノベル制作エディタ） | [`@spritestudio/ssplayer-tyranobuilder`](./packages/ssplayer-tyranobuilder) | — |
 
 ## 🚀 クイックスタート
 

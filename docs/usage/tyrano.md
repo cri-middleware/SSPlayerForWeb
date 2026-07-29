@@ -1,4 +1,4 @@
-# TyranoScript / TyranoBuilder
+# TyranoScript
 
 ::: warning Beta
 `@spritestudio/ssplayer-tyranoscript` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
@@ -10,10 +10,16 @@ distributed on **GitHub Releases** — but for now the only way to obtain it is 
 [build from source](#building-from-source).
 :::
 
-Show and play **SpriteStudio 7** (`.ssab`) animations inside a **TyranoScript /
-TyranoBuilder** visual novel by writing `[ss_*]` tags in your scenario — no coding
-required. Each animation is a real `<canvas>` mounted on a Tyrano layer, so it sits
-in the normal layer stack alongside characters, backgrounds, and messages.
+Show and play **SpriteStudio 7** (`.ssab`) animations inside a **TyranoScript** visual novel by
+writing `[ss_*]` tags in your scenario — no coding required. Each animation is a real
+`<canvas>` mounted on a Tyrano layer, so it sits in the normal layer stack alongside
+characters, backgrounds, and messages.
+
+::: tip Building in TyranoBuilder?
+See [TyranoBuilder](/usage/tyranobuilder) instead. It is the same runtime, reached from the
+component palette rather than by writing tags, and it converts your `.sspj` for you. The tag
+reference on this page still applies — the components write these tags.
+:::
 
 ## How it works
 
@@ -30,6 +36,15 @@ TyranoBuilder, and TyranoStudio.
   core JS are inlined into `main.js`.
 
 ## 1. Install
+
+::: tip Which download do I need?
+The plugin ZIP described here is **for TyranoScript**. If you author in **TyranoBuilder**,
+install `ssplayer.tbp` instead — it already contains this ZIP's three files plus the editor
+half (components and auto-conversion), so it is the only download you need.
+**Install one or the other, never both:** they unpack to the same
+`data/others/plugin/ssplayer/`, so stacking them leaves the editor and runtime halves on
+different versions.
+:::
 
 There is **no released build yet**, so for now you [build from source](#building-from-source).
 Once the first release ships, download the plugin ZIP from **GitHub Releases** and:
@@ -223,9 +238,10 @@ are expected under `data/sound/`; an SS sound name resolves to `data/<dir>/<name
 still on the roadmap. Track progress in
 [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
 
-TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships as
-a `.tbp` and adds SpriteStudio components to the palette. See
-[Limitations & Scope](/limitations#tyranoscript-tyranobuilder) for what it does not cover yet.
+TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships
+as a `.tbp`, adds SpriteStudio components to the palette, and converts your `.sspj` from inside
+the editor — see [TyranoBuilder](/usage/tyranobuilder). What neither integration covers yet is
+listed in [Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
 
 ## Building from source
 

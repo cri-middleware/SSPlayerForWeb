@@ -32,6 +32,14 @@
 `ssruntime_bg.wasm`（アニメーションランタイム）。`.ssab` アニメファイルは
 `data/others/ssdata/` に置きます。
 
+> **この ZIP は TyranoScript 用です。** ティラノビルダーで制作する場合は
+> [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) の
+> `ssplayer.tbp` だけを入れてください。`.tbp` はこの 3 ファイルをそのまま内包した上で、
+> エディタ側を追加したものです。
+> **どちらか一方だけを入れてください。** 展開先はどちらも同じ
+> `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側で
+> バージョンがずれます。
+
 ## アニメを変換する（.sspj → .ssab）
 
 `.sspj` は SpriteStudio で編集するプロジェクトファイル、`.ssab` はプラグインが実際に再生する
