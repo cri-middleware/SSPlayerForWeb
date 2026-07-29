@@ -1,7 +1,7 @@
 # RPG ツクール MZ で使う
 
-::: warning 実験的 / アルファ版
-`@spritestudio/ssplayer-rmmz` は **実験的なアルファ版**（`7.0.0-alpha.1`）です。パッケージは
+::: warning アルファ版
+`@spritestudio/ssplayer-rmmz` は **アルファ版**（`7.0.0-alpha.1`）です。パッケージは
 **private で、npm には公開されていません**。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
 `SSWebGLRenderer` を土台にしています。
 

@@ -38,7 +38,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — convert `.sspj` → `.ssab` in the browser (start here)
 - ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — the `<ss-player>` Web Component
 - ▶️ **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — for PixiJS v8 apps
-- ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (experimental)
+- ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (alpha)
 - ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — a visual-novel scene (beta)
 
 ## How to read these docs
@@ -113,7 +113,7 @@ For details on the three paths (`SSConverterGUI` / `ssconverter-web` / `ssconver
 
 | Package | What it's for | Status |
 |---|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | Renderer / plugin for **RPG Maker MZ**. | experimental (alpha) |
+| [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | Renderer / plugin for **RPG Maker MZ**. | alpha |
 | [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) | Plugin for **TyranoScript** (visual-novel engine). | beta |
 | [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) | Plugin for **TyranoBuilder** — the same animations from its component palette, with in-editor conversion. | beta |
 

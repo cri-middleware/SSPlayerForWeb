@@ -57,12 +57,12 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-webgl` | npm | beta |
 | `@spritestudio/ssplayer-pixi` | npm | beta |
 | `@spritestudio/ssconverter-core` | npm | beta |
-| `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#ソースからビルドする) | **実験的（alpha）** |
+| `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#ソースからビルドする) | **alpha** |
 | `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#ソースからビルドする) | beta |
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#ソースからビルドする) | beta |
 | `ssconverter-web` | 未公開 — ローカルビルドで実行 | — |
 
-## RPG ツクール MZ（実験的）
+## RPG ツクール MZ（alpha）
 
 `@spritestudio/ssplayer-rmmz` は **alpha** です。タグ体系と挙動は変更される可能性があります。
 [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。

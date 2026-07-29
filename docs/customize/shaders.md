@@ -1,22 +1,69 @@
 # Shaders and blend modes
 
+Both renderers implement the same feature set with the same results — `ssplayer-webgl` in raw GLSL,
+`ssplayer-pixi` in Pixi shaders (GLSL and WGSL, so it works on the WebGPU backend too).
+
 ## Blend modes
 
-SpriteStudio's "read the background" blend modes (**Screen / Exclusion / Invert**,
-etc.) are implemented as **fixed-function GPU blending** that reads the actual
-framebuffer. The background being composited against is the PixiJS `Application`'s
-`backgroundColor`. If you want the look to match the editor, first check that the
-background color matches your authoring environment.
+Blend modes are **fixed-function GPU blending**, not a post-process. The modes that read the
+background (**Screen / Exclusion / Invert**, and additive) composite against whatever is already in
+the framebuffer. Shader output is premultiplied, and alpha always blends as premultiplied coverage.
 
-(Implemented in `ssplayer-pixi`'s `SSBlendModes.ts`.)
+| SpriteStudio mode | How it is drawn |
+|---|---|
+| Mix, Add, Sub, Mul | Exact fixed-function equivalents |
+| Screen, Exclusion, Invert | Exact; these read the backdrop |
+| Mulalpha, Mul2 | Approximated as **Mul** |
+| Screen2 | Approximated as **Screen** |
+| Div2, Overlay2 | Approximated as **Mix** |
 
-## SS integrated shaders
+The last three rows have no GPU-native equivalent, so they are the modes most likely to differ from
+the editor. Everything else should match.
 
-SpriteStudio's integrated shaders (`ss-*`) are ported and applied per part with
-pooling. Cell rectangles are computed from the UV corners.
+### The backdrop has to be right
 
-(Implemented in `ssplayer-pixi`'s `SSShaderLib.ts` / `PartsColorShader.ts` /
-`EffectShader.ts`, and others.)
+A backdrop-reading mode is only correct when there is a real backdrop to read. Getting this wrong
+is the usual cause of "the blend looks nothing like the editor".
+
+**PixiJS** — the backdrop is the `Application`'s `backgroundColor`. Match it to your authoring
+environment.
+
+**WebGL** — pass `backgroundColor` when the animation uses additive or backdrop-reading modes:
+
+```ts
+const player = new SSCanvasPlayer(canvas, { backgroundColor: 0x000000 });
+```
+
+```html
+<ss-player src="/assets/Effect.ssab" animation="fire" background="#000000"></ss-player>
+```
+
+::: warning Transparent canvas + additive
+With `backgroundColor` omitted, the canvas is cleared **fully transparent** so it can sit as an
+overlay. An additive sprite then has nothing to add onto: a glow whose texture was baked on opaque
+black renders that black as a solid block. This is inherent to premultiplied-alpha compositing —
+`ssplayer-pixi` avoids it the same way, by drawing on an opaque `backgroundColor`.
+:::
+
+## SS integration shaders
+
+SpriteStudio's integration shaders (the `SHDR` attribute, `ss-*`) are ported to both renderers. Cell
+rectangles are computed from the UV corners, so effects that sample around the cell stay inside it.
+
+The thirteen built-ins are supported: `ss-sepia`, `ss-hsb`, `ss-step`, `ss-pix`, `ss-noise`,
+`ss-bmask`, `ss-outline`, `ss-blur`, `ss-wave`, `ss-move`, `ss-scatter`, `ss-circle`, `ss-spot`.
+A shader id that is not one of these falls back to plain drawing.
+
+Programs are compiled on first use and cached per shader id, and a frame with no shader parts skips
+the whole path — so shader-free animations pay nothing for this feature being present.
+
+::: warning A masked part loses its shader
+When a part is both a mask target and carries an `ss-*` shader, it draws through the masking path
+with the plain program and the shader is dropped. This is the current behavior in both renderers.
+If a part needs both, split it into two parts at authoring time.
+:::
+
+Shader parts also break batching — see [Performance tuning](/customize/performance#what-breaks-batching).
 
 ::: tip Validating the look
 Prioritize **matching the look in the SpriteStudio editor** over the spec values.

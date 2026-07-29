@@ -53,7 +53,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | **Converting `.sspj` → `.ssab`** | [`ssconverter-web`](./packages/ssconverter-web) (Web tool + Node CLI) | — |
 | **Embedding conversion in your own app/service** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, installed as plugin bundles rather than from npm. RPG Maker MZ is **experimental** (`alpha`); the two Tyrano integrations are **beta**:
+**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, installed as plugin bundles rather than from npm. RPG Maker MZ is **alpha**; the two Tyrano integrations are **beta**:
 
 | Your environment | Package | Runnable example |
 |---|---|---|
@@ -114,7 +114,7 @@ flowchart TD
         core["ssplayer-core<br/>(WASM, engine-agnostic)"]
         webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
-        rmmz["ssplayer-rmmz<br/>RPG Maker MZ (experimental)"]
+        rmmz["ssplayer-rmmz<br/>RPG Maker MZ (alpha)"]
         tyrano["ssplayer-tyranoscript<br/>TyranoScript (beta)"]
         core --> webgl
         core --> pixi

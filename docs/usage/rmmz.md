@@ -1,7 +1,7 @@
 # RPG Maker MZ
 
-::: warning Experimental / alpha
-`@spritestudio/ssplayer-rmmz` is an **experimental alpha** (`7.0.0-alpha.1`). The
+::: warning Alpha
+`@spritestudio/ssplayer-rmmz` is an **alpha** (`7.0.0-alpha.1`). The
 package is **private and not published on npm**. Its rendering is built on
 [`ssplayer-webgl`](/usage/webgl)'s `SSWebGLRenderer`.
 
