@@ -3,14 +3,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // The resource manager extends ssplayer-webgl's SSWebGLResourceManager, which
 // pulls the WASM glue. We only test the pure URL-splitting helper, so stub the
 // base class to avoid needing a GL context / built package.
+const ssRender = vi.fn();
 vi.mock('@spritestudio/ssplayer-webgl', () => ({
   SSWebGLResourceManager: class {
+    constructor(_gl: unknown) {}
+  },
+  SSWebGLRenderer: class {
+    render = ssRender;
+    destroy = vi.fn();
     constructor(_gl: unknown) {}
   },
 }));
 
 import { getSelfScriptDir, isMZ } from './rmmzGlobals.js';
 import { isDecryptable, splitBitmapUrl } from './rmmz/RMMZResourceManager.js';
+import { SSPlayerRenderer } from './SSPlayerRenderer.js';
 
 describe('rmmzGlobals', () => {
   afterEach(() => {
@@ -77,5 +84,59 @@ describe('isDecryptable', () => {
     expect(isDecryptable('spritestudio/Ringo/Ringo.png')).toBe(false);
     expect(isDecryptable('img/spritestudio/Ringo/Ringo.png')).toBe(true);
     expect(isDecryptable('https://example.com/game/img/ss/Ringo.png')).toBe(true);
+  });
+});
+
+describe('SSPlayerRenderer', () => {
+  // Minimal stand-in for the bits of PIXI.Renderer the draw path touches.
+  const makePixiRenderer = () => ({
+    gl: {} as any,
+    resolution: 1,
+    batch: { flush: vi.fn() },
+    geometry: { reset: vi.fn() },
+    texture: { reset: vi.fn() },
+    state: { reset: vi.fn() },
+    shader: { reset: vi.fn() },
+    framebuffer: { reset: vi.fn() },
+  });
+
+  const makePlayer = (worldAlpha: number) => ({
+    internalPlayer: { animationName: 'Anime_1' },
+    resourceManager: {},
+    worldTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+    worldAlpha,
+  });
+
+  afterEach(() => ssRender.mockClear());
+
+  // Pixi applies worldAlpha inside its own batch shader, which the raw GL draw
+  // bypasses — so without feeding it in by hand, [Change Picture Opacity] left SS
+  // animations fully opaque while the rest of the scene faded.
+  it('feeds MZ opacity to the SS renderer as a premultiplied world tint', () => {
+    const r = new SSPlayerRenderer(makePixiRenderer() as any);
+    r.render(makePlayer(0.25) as any);
+
+    const tint = ssRender.mock.calls[0][4];
+    // (rgb * a, a): uColor multiplies an already-premultiplied fragment, so alpha
+    // has to scale RGB too or the animation stays bright while fading out.
+    expect(Array.from(tint as Float32Array)).toEqual([0.25, 0.25, 0.25, 0.25]);
+  });
+
+  it('draws at full opacity when the host has no alpha', () => {
+    const r = new SSPlayerRenderer(makePixiRenderer() as any);
+    const player = makePlayer(1) as any;
+    delete player.worldAlpha;
+    r.render(player);
+
+    expect(Array.from(ssRender.mock.calls[0][4] as Float32Array)).toEqual([1, 1, 1, 1]);
+  });
+
+  it('skips a player with no animation set', () => {
+    const r = new SSPlayerRenderer(makePixiRenderer() as any);
+    const player = makePlayer(1) as any;
+    player.internalPlayer.animationName = '';
+    r.render(player);
+
+    expect(ssRender).not.toHaveBeenCalled();
   });
 });
