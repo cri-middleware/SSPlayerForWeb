@@ -194,12 +194,16 @@ jobs:
               artifact="packages/${dir}/${pattern//%v/$version}"
               prerelease=""
               case "$version" in *-*) prerelease="--prerelease";; esac
+              # --draft: 添付物と自動生成ノートが揃った状態を人間が確認してから
+              # GitHub UI で公開する。draft は `gh release view` から見えるので、
+              # 上の重複チェックは draft のままでも効き、再実行しても二重に作らない。
               gh release create "$tag" "$artifact" \
                 --target "$release_sha" \
                 --title "${pkg} ${version}" \
                 --generate-notes \
+                --draft \
                 $prerelease
-              echo "::notice::Released ${tag}"
+              echo "::notice::Drafted ${tag} — publish it from the Releases page."
             }
             release_plugin "@spritestudio/ssplayer-rmmz"   ssplayer-rmmz   'dist/pack/ssplayer-rmmz-plugin-%v.zip'
             release_plugin "@spritestudio/ssplayer-tyranoscript" ssplayer-tyranoscript 'dist/pack/ssplayer-tyranoscript-plugin-%v.zip'
