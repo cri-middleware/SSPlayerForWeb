@@ -99,25 +99,63 @@ player.onAnimationEnd(() => { /* on end */ });
 off(); // detach
 ```
 
-## 5. ⚠️ Currently limited features
+## 5. Per-part control (visibility / cell / color)
 
-The following existed in SS6Player but are **not yet available**, pending API work in the **`SpriteStudio-SDK`** (Rust core). Track progress in [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
+SS6Player's per-part setters are **available**, as the Override Layer API. Two things about
+the shape differ:
 
-| SS6Player | Status | Dependency |
+- **No `…ByIndex` twin.** Every `part` argument takes a **name or an index**
+  (`number | string`), so one method covers both SS6Player forms.
+- **An override has a lifetime.** Colour and cell overrides take a `priority` that says how
+  long they survive — until the next keyframe touches that attribute, until the next animation
+  (the default), or permanently. The runtime owns that lifecycle, so unlike SS6Player you never
+  re-apply an override after an animation change.
+
+| SS6Player | This version | Notes |
 |---|---|---|
-| `SetPartVisible` / `SetPartVisibleByIndex` | **Not yet (planned)** | Override Layer API (SDK Phase 2) |
-| `SetPartCell` / `SetPartCellByIndex` | **Not yet (planned)** | Override Layer API (SDK Phase 2) |
-| `SetPartTint` / `SetPartTintByIndex` | **Not yet (planned)** | Override Layer API (SDK Phase 2) |
-| `ChangeInstanceAnime` (dynamic instance swap) | **Not yet (planned)** | Instance Lifecycle API (SDK Phase 3) |
+| `SetPartVisible` / `SetPartVisibleByIndex` | `setPartVisibilityOverride(part, hide, cascade?)` | `hide = false` reverts to the animation; `cascade` hides descendants too |
+| `SetPartCell` / `SetPartCellByIndex` | `setPartCellOverride(part, cellmapName, cellName, priority?)` | Resolved when set, so an unknown cell-map / cell name fails immediately |
+| `SetPartTint` / `SetPartTintByIndex` | `setPartColorOverride(part, blendOp, rgba, priority?)` | Colour is a packed `0xRRGGBBAA` number; `setPartColorOverrideCorners()` sets a gradient |
+| (new) | `clearPartColorOverride` / `clearPartCellOverride` / `clearPartVisibilityOverride` / `clearAllPartOverrides` | Clear one override, or every override on the player |
+| (new) | `getCellMapNames()` / `getCellNames(cellmapName)` | List what a cell override can target |
 
-The two part-query APIs available today are below. See [Part control (visibility / cell / color)](/customize/part-overrides) for details.
+```ts
+import { SSBlendOp } from '@spritestudio/ssplayer-pixi';
+
+// SS6Player:
+//   player.SetPartTintByIndex(index, ...);
+//   player.SetPartVisible('body', false);
+
+// This version: name or index, and each call returns false if it was rejected
+player.setPartColorOverride('body', SSBlendOp.Mul, 0xff0000ff);
+player.setPartVisibilityOverride('body', true);
+```
+
+The part-query APIs are unchanged:
 
 ```ts
 player.getPartsCount();               // number of parts
 player.getPartIndexFromName('body');  // part name → index
 ```
 
-## 6. Other differences
+`findPartIndex('body')` does the same lookup through the runtime, and is what a `part` argument
+resolves to internally — use it when you set overrides often enough to want the index cached.
+
+The same methods are on `SSPlayer` (PixiJS) and `SSCanvasPlayer` (WebGL). See
+[Part control (visibility / cell / color)](/customize/part-overrides) for blend operations,
+priority modes, colour packing and the caveats — and for the authoring surfaces in
+[RPG Maker MZ](/usage/rmmz), [TyranoScript](/usage/tyrano) and
+[TyranoBuilder](/usage/tyranobuilder), where this is driven without writing code.
+
+## 6. ⚠️ Currently limited features
+
+The following existed in SS6Player and is **not yet available**, pending API work in the **`SpriteStudio-SDK`** (Rust core). Track progress in [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
+
+| SS6Player | Status | Dependency |
+|---|---|---|
+| `ChangeInstanceAnime` (dynamic instance swap) | **Not yet (planned)** | Instance Lifecycle API (SDK Phase 3) |
+
+## 7. Other differences
 
 - **Effect parts**: unsupported in SS6Player, **supported here** (particles simulated in WASM and drawn inline).
 - **Mask / clipping**: SS6Player only meshed mask parts (no real masking); this version does **full masking** via a coverage pre-pass (toggle with `player.maskEnabled`).
