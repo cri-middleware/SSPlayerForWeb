@@ -26,6 +26,13 @@ in TyranoBuilder: **plugin settings → add → pick that file**.
 
 Nothing else to set up — no plugin tag to write, no runtime to initialise.
 
+**This file is all you need.** The `.tbp` already contains the runtime half — the
+`[ss_*]` tags from
+[`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.md) — so do
+**not** also install that package's plugin ZIP. That ZIP is for TyranoScript; it
+unpacks to the same `data/others/plugin/ssplayer/` this file installs to, and
+stacking the two leaves the editor and runtime halves on different versions.
+
 > TyranoBuilder's free version loads at most two plugins, and this counts as one.
 
 ## Add an animation

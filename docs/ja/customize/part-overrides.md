@@ -120,7 +120,8 @@ player.setPartColorOverrideCorners('body', SSBlendOp.Mix, [
 
 - **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、オーバーライドは `el.player`（下層の `SSCanvasPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
 - **RPG ツクール MZ** — イベントの**プラグインコマンド**（SSパーツ色変更 / SSパーツ表示切替 / SSパーツセル差替 / SSパーツ上書き解除）から操作できます。設定内容はピクチャに保存され、**セーブ・ロードをまたいでも復元されます**。詳しくは [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
-- **TyranoScript / TyranoBuilder** — シナリオに `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` タグを書いて操作できます。設定内容はセーブに含まれ、`[ss_restore]` で復元されます。詳しくは [TyranoScript / TyranoBuilder で使う](/ja/usage/tyrano) を参照してください。
+- **TyranoScript** — シナリオに `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` タグを書いて操作できます。設定内容はセーブに含まれ、`[ss_restore]` で復元されます。詳しくは [TyranoScript で使う](/ja/usage/tyrano) を参照してください。
+- **ティラノビルダー** — 同じ 4 つのタグを、エディタの「ティラノスクリプト」コンポーネントから記述します（専用のパレット項目はまだありません）。詳しくは [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
 ## この機能で扱わないもの
 

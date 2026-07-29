@@ -1,0 +1,296 @@
+# TyranoBuilder
+
+::: warning Beta
+`@spritestudio/ssplayer-tyranobuilder` is in **beta** (`7.0.0-beta.1`). The component set and
+the folder layout may still change before `7.0.0`. Verified on **TyranoBuilder Ver 3.00**
+(Electron 24.8.8) on macOS; Windows is untested.
+
+**There are no releases yet.** Once the first release ships, `ssplayer.tbp` will be
+distributed on **GitHub Releases** — for now, [build it from source](#building-from-source).
+:::
+
+Place **SpriteStudio 7** animations from TyranoBuilder's component palette, with no scenario
+code to write. Drop a SpriteStudio project into a folder in your game and the editor converts
+it for you — on every save, while you keep working.
+
+Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
+animations as `[ss_*]` tags.
+
+## One plugin, two halves
+
+`ssplayer.tbp` installs a single plugin folder holding both sides of the integration:
+
+| | File | What it does |
+| --- | --- | --- |
+| **Editor half** | `ssplayer.builder.js` | The [auto importer](#the-auto-importer) and the SpriteStudio [components](#the-components) in the palette |
+| **Runtime half** | `main.js` + `ssruntime_bg.wasm` | Registers the `[ss_*]` tags the components write, and renders the animations |
+
+The runtime half is [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) — the same bundle
+hand-written scenarios use. Shipping both in one folder keeps this to **one plugin**, which
+matters because TyranoBuilder's free version loads at most two.
+
+The editor half runs when a project is opened: the builder finds
+`<id>/<id>.builder.js` in the project and constructs it. That is the hook the importer and the
+palette entries hang off. It also contributes `[plugin name="ssplayer"]` to
+`data/scenario/system/plugin_third.ks` (which the builder regenerates on every load), so your
+game boots the runtime with nothing for you to write.
+
+## 1. Install
+
+::: tip Which download do I need?
+`ssplayer.tbp` is the only one. It already contains the TyranoScript plugin ZIP's contents plus
+the editor half, so **do not also install that ZIP** — both unpack to
+`data/others/plugin/ssplayer/`, and stacking them leaves the two halves on different versions.
+:::
+
+1. Download `ssplayer.tbp` from
+   [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases).
+2. In TyranoBuilder: **plugin settings → add → pick that file**.
+
+**Do not rename the file.** TyranoBuilder derives the plugin's id from the filename and then
+looks for `<id>/<id>.builder.js` inside the archive, so `ssplayer-1.2.0.tbp` would install
+nothing. The version lives in the release, not in the filename.
+
+Nothing else to set up — no plugin tag to write, no runtime to initialise.
+
+## The auto importer
+
+`.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the game
+actually plays. Every integration needs that conversion to happen somewhere — the
+[standalone tools](/usage/assets) do it by hand, and this plugin does it inside the editor, for
+you, whenever the sources change.
+
+```mermaid
+graph LR
+    SS[".sspj / images"]
+
+    subgraph Author ["① Authoring (convert, repeatedly)"]
+        AUTO[["Auto importer<br/>(inside TyranoBuilder)"]]
+        TOOLS[["ssconverter-web / GUI / CLI"]]
+    end
+
+    MANUAL(("copy in by hand"))
+
+    subgraph Game ["② Inside the TyranoBuilder project"]
+        BIN[".ssab + textures<br/>data/others/ssdata/"]
+        COMP["[ss_*] components"]
+        RT("main.js + ssruntime")
+    end
+
+    SS -->|"put in SpriteStudio_Source/"| AUTO
+    SS -->|"drag & drop / CLI"| TOOLS
+    AUTO -. "on open, then every 3 s" .-> BIN
+    TOOLS --> MANUAL --> BIN
+    BIN -->|"picked from a dropdown"| COMP
+    COMP -. "plays" .-> RT
+
+    classDef generated stroke-dasharray: 5 5;
+    class BIN generated;
+```
+
+The imported route and the manual route land in the same place, and the component dropdowns
+list both — see [Bringing in a pack you converted yourself](#bringing-in-a-pack-you-converted-yourself).
+
+### Basic use
+
+1. Put your SpriteStudio project — the `.sspj` **and the rest of its folder**, since an
+   animation is several files — into **`SpriteStudio_Source/`** in your project folder. The
+   plugin creates that folder on first run, so it is already there waiting.
+2. Open the project in TyranoBuilder.
+3. A toast tells you what was converted. The animation is now in the **SpriteStudio: show**
+   component's dropdowns.
+
+Each `.sspj` becomes a folder named after it, under `data/others/ssdata/`:
+
+```
+SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
+                                                                 (+ its textures)
+```
+
+Subfolders are searched too, so you can group sources however you like — the whole tree is
+walked for `.sspj` files, and only the folder name of the `.sspj` itself decides the output
+name.
+
+### Live iteration, without touching the editor
+
+The importer does not stop after the first pass. **While the project is open it re-checks the
+source folder every 3 seconds**, so the loop is:
+
+1. Leave TyranoBuilder open.
+2. Edit the animation in SpriteStudio and save.
+3. A few seconds later a toast appears in TyranoBuilder — the `.ssab` has already been rebuilt.
+4. Preview the scene.
+
+Nothing to press, and no reopening. This is the part that differs from
+[SpriteStudio Player for Ren'Py](https://github.com/cri-middleware/SSPlayerForRenPy), whose
+importer runs at startup and needs a reload (`Shift + R`) to pick a change up: Ren'Py runs the
+game and exits, while the builder is a long-lived editor process the plugin can keep polling
+from.
+
+::: tip Where the notifications come from
+A background reconversion happens while you are in SpriteStudio, not in the editor, so it is
+reported as a **toast** rather than a modal — nothing steals focus from the app you are
+actually using. The one modal is on a project whose `SpriteStudio_Source/` holds no `.sspj` at
+all, which tells a first-time author where projects go.
+:::
+
+### What counts as a change
+
+Each pass compares, per project, the **newest modification time anywhere in that project's
+folder** (`.sspj`, `.ssae`, `.ssce`, textures — all of it) against what the last **successful**
+import covered. Newer sources mean a reconversion; otherwise the project is skipped and costs a
+few `stat` calls.
+
+That record is a small JSON file, `.ss_import_state.json`, at the project root:
+
+```json
+{
+  "packs": {
+    "Ringo": { "source_mtime": 1753142400000, "converter": "…" }
+  }
+}
+```
+
+Two details are worth knowing, because they decide when a reconversion happens:
+
+- **The state file, not the output timestamps, is the source of truth.** A conversion that
+  fails partway still leaves fresh-looking files behind, so output mtimes cannot tell you a run
+  succeeded. Only a record written *after* a successful run lets the next one skip.
+- **A missing output forces a reconversion** even when the state says the pack is current. If
+  you delete `data/others/ssdata/Ringo/`, the next pass rebuilds it.
+
+So if you ever want to force everything to be rebuilt, delete `.ss_import_state.json` (or just
+the output folder) and reopen the project.
+
+### Bringing in a pack you converted yourself
+
+The importer owns `SpriteStudio_Source/` → `data/others/ssdata/`, but it does not own the
+**Animation pack** dropdown. That dropdown lists **every `.ssab` anywhere under `data/`**, with
+the imported ones first and the rest alphabetically.
+
+A pack you converted with [`ssconverter-web`, `SSConverterGUI` or `ssconverter-cli`](/usage/assets)
+and copied in by hand shows up like any other — put it wherever suits your project (next to a
+scene's images, for instance). The **Animation** dropdown is read out of the `.ssab` itself, so
+it is accurate for those packs too.
+
+Only what lives under `SpriteStudio_Source/` is kept in sync automatically; a hand-copied pack
+is yours to update.
+
+### Where the importer puts things
+
+| Path | What it is | In an exported game? |
+| --- | --- | --- |
+| `SpriteStudio_Source/` | Your `.sspj` projects — the input | No |
+| `data/others/ssdata/<name>/` | The converted `.ssab` + textures | **Yes** — this is what the game plays |
+| `.ss_import_state.json` | What the last successful import covered | No |
+| `ss_import_log.txt` | Everything the importer did, and why anything failed | No |
+| `.ss_tools/ssconverter_bg.wasm` | The converter itself, moved out of the plugin folder | No |
+
+TyranoBuilder's export is three unfiltered copies — `index.html`, `data/`, `tyrano/` — so
+**anything left under `data/` ships inside every built game.** That is the whole reason the
+author-time files above sit outside it, and why the 1.4 MB converter is relocated to
+`.ss_tools/` the first time the plugin runs: a `.tbp` can only deliver files into the plugin
+folder, which is under `data/`, but nothing except the editor half ever reads the converter.
+
+### Reading the log
+
+TyranoBuilder's main window is built with no menu bar and no DevTools shortcut, so
+`console.log` is invisible to an author. Every line the importer writes therefore also lands in
+**`ss_import_log.txt`** at your project root, flushed as it happens and appended across
+sessions (it is started over once it passes 256 KB):
+
+```
+2026-07-29T04:15:02.118Z  --- session start ---
+2026-07-29T04:15:02.140Z  watching: /Users/you/TyranoBuilder/mygame/SpriteStudio_Source
+2026-07-29T04:15:02.141Z  output:   /Users/you/TyranoBuilder/mygame/data/others/ssdata
+2026-07-29T04:15:02.219Z  converted Ringo: 14 in -> 2 out (+1 textures) in 78ms -> …/ssdata/Ringo
+2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed
+2026-07-29T04:15:02.221Z  watching for changes every 3000ms
+```
+
+It also records the host environment it found at startup, which is the first thing to look at
+if the plugin does not seem to be doing anything.
+
+### Current limits
+
+- **Conversion blocks the editor while it runs.** The wasm call is synchronous — around 78 ms
+  for one sample project, but a first pass over a folder of them freezes the UI for as long as
+  the whole batch takes. Subsequent passes only touch what changed, so this is a startup cost.
+- **The folders are fixed.** `SpriteStudio_Source/` and `data/others/ssdata/` are not
+  configurable yet (Ren'Py's importer takes an override; this one does not).
+- **Textures are copied, not embedded.** Each pack ships its images as sibling files next to
+  the `.ssab`. Keep them together if you move a pack by hand.
+- **Only `.sspj` files are picked up.** Anything else in `SpriteStudio_Source/` is ignored
+  (it is still read as part of a project's folder when deciding whether that project changed).
+
+## The components
+
+Under **Plugin** in the palette:
+
+| | |
+| --- | --- |
+| **SpriteStudio: show** | Load an animation and put it on a layer |
+| **SpriteStudio: fade in / fade out** | Show or hide one |
+| **SpriteStudio: change animation** | Switch to another animation in the same pack |
+| **SpriteStudio: stop / pause / resume** | Playback control |
+| **SpriteStudio: wait** | Hold the story until the animation finishes |
+| **SpriteStudio: place / move** | Place it, or slide it over time |
+| **SpriteStudio: remove / remove all** | Unload one, or all of them |
+| **SpriteStudio: fade out all / fade in all** | All of them at once, for a scene change |
+| **SpriteStudio: pause all / resume all** | All of them at once, for a menu screen |
+| **SpriteStudio: sound settings** | Only if you want something other than the defaults |
+
+The names follow TyranoBuilder's own language setting, so a Japanese editor shows
+「SpriteStudio 表示」and so on.
+
+A few things the fields do that are worth knowing:
+
+- **Player name** is how the other components find the animation. You choose one on *show*;
+  everywhere else it is a dropdown of the names already placed in the scene.
+- **Animation pack** lists every `.ssab` in the project, converted or hand-copied.
+- **Animation** lists what is actually inside the selected pack, read from the `.ssab`.
+- **Then play** hands over to another animation when this one ends — an entrance into an idle
+  loop, say. It needs *loop forever* off, because an animation that loops forever never ends.
+
+Each component writes the matching `[ss_*]` tag verbatim, so the
+[tag reference](/usage/tyrano#_4-tags) describes exactly what they do.
+
+::: warning Not every tag has a component yet
+Per-part colour and visibility (`[ss_part_*]`) and linking an animation to a speaker
+(`[ss_chara]`) have no palette entry. Write those with TyranoBuilder's own TyranoScript-code
+component, using the [`[ss_*]` tags](/usage/tyrano#_4-tags).
+:::
+
+## Troubleshooting
+
+Start with `ss_import_log.txt` in your project folder — every conversion is recorded there,
+with the reason when one fails.
+
+- **The animation is not in the dropdown** — check the `.sspj` is inside `SpriteStudio_Source/`
+  together with the rest of its folder, and look for a `FAILED` line in the log.
+- **The palette has no SpriteStudio components** — the plugin did not load. Re-add the `.tbp`,
+  and check you are not over the free version's two-plugin limit.
+- **It converted, but nothing shows in the game** — make sure *show* comes before the
+  components that refer to it, and that the layer is one your game uses.
+- **A change in SpriteStudio was not picked up** — the pass runs every 3 seconds, so give it a
+  moment; if it never arrives, delete `.ss_import_state.json` and reopen the project.
+
+## Building from source
+
+```sh
+pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # the runtime half
+pnpm --filter @spritestudio/ssplayer-tyranobuilder run build
+pnpm --filter @spritestudio/ssplayer-tyranobuilder run pack    # → dist/pack/ssplayer.tbp
+```
+
+Going through the install dialog on every build gets old, so install straight into a project
+instead:
+
+```sh
+node packages/ssplayer-tyranobuilder/scripts/install.mjs mygame --sample
+```
+
+Name a project under `~/TyranoBuilder/myproject`, or give a path to one anywhere. With no name
+it takes the only project there, or lists them. `--sample` seeds `SpriteStudio_Source/Ringo/`
+from the SDK submodule so the first run has something to convert. Then open (or reopen) the
+project.

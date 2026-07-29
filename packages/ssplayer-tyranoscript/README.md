@@ -43,6 +43,14 @@ The folder holds three files: `init.ks` (the loader), `main.js` (the plugin
 itself), and `ssruntime_bg.wasm` (the animation runtime). Your `.ssab` animation
 files go under `data/others/ssdata/`.
 
+> **This ZIP is for TyranoScript.** Building in TyranoBuilder instead? Install
+> `ssplayer.tbp` from
+> [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md) and
+> nothing else — it already contains these three files, plus the editor half.
+> **Install one or the other, never both:** they unpack to the same
+> `data/others/plugin/ssplayer/`, so stacking them leaves the editor and runtime
+> halves on different versions.
+
 ## Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact, pre-built

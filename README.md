@@ -53,7 +53,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | **Converting `.sspj` → `.ssab`** | [`ssconverter-web`](./packages/ssconverter-web) (Web tool + Node CLI) | — |
 | **Embedding conversion in your own app/service** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`. Both are **experimental** (`alpha`, not yet published to npm):
+**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, installed as plugin bundles rather than from npm. RPG Maker MZ is **experimental** (`alpha`); the two Tyrano integrations are **beta**:
 
 | Your environment | Package | Runnable example |
 |---|---|---|
