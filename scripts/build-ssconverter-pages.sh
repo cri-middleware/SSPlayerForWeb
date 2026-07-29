@@ -27,7 +27,11 @@ OUT="${1:?usage: build-ssconverter-pages.sh <out-dir>}"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd -P)"
 MANIFEST="$ROOT_DIR/packages/ssconverter-web/versions.json"
 REPO="cri-middleware/SpriteStudio-SDK"
-CONVERTER_ASSET="spritestudio-sdk-converter-web.zip"
+# The SDK publishes ONE combined web archive holding runtime-web/,
+# runtime-web-nosimd/ and converter-web/ as subdirectories — the same asset
+# `download-sdk.sh` consumes. There is no per-package zip; keep this name and the
+# extraction below in step with that script.
+WEB_ASSET="spritestudio-sdk-web-libs.zip"
 
 command -v jq >/dev/null || { echo "jq is required"; exit 1; }
 
@@ -42,27 +46,31 @@ fetch_wasm() {
   local tmp base expected actual
   tmp="$(mktemp -d)"
   base="https://github.com/$REPO/releases/download/$sdk"
-  echo "   downloading $base/$CONVERTER_ASSET"
-  curl -fL -o "$tmp/converter.zip" "$base/$CONVERTER_ASSET"
+  echo "   downloading $base/$WEB_ASSET"
+  curl -fL -o "$tmp/web-libs.zip" "$base/$WEB_ASSET"
   curl -fL -o "$tmp/SHA256SUMS" "$base/SHA256SUMS"
-  expected="$(awk -v n="$CONVERTER_ASSET" '$2 == n {print $1}' "$tmp/SHA256SUMS")"
+  expected="$(awk -v n="$WEB_ASSET" '$2 == n {print $1}' "$tmp/SHA256SUMS")"
   if [ -z "$expected" ]; then
-    echo "ERROR: no checksum entry for $CONVERTER_ASSET in SHA256SUMS" >&2
+    echo "ERROR: no checksum entry for $WEB_ASSET in SHA256SUMS" >&2
     rm -rf "$tmp"; exit 1
   fi
   if command -v sha256sum >/dev/null 2>&1; then
-    actual="$(sha256sum "$tmp/converter.zip" | awk '{print $1}')"
+    actual="$(sha256sum "$tmp/web-libs.zip" | awk '{print $1}')"
   else
-    actual="$(shasum -a 256 "$tmp/converter.zip" | awk '{print $1}')"
+    actual="$(shasum -a 256 "$tmp/web-libs.zip" | awk '{print $1}')"
   fi
   if [ "$expected" != "$actual" ]; then
-    echo "ERROR: checksum mismatch for $CONVERTER_ASSET (expected $expected, got $actual)" >&2
+    echo "ERROR: checksum mismatch for $WEB_ASSET (expected $expected, got $actual)" >&2
     rm -rf "$tmp"; exit 1
   fi
-  echo "   checksum OK: $CONVERTER_ASSET"
+  echo "   checksum OK: $WEB_ASSET"
   rm -rf "$wasm_dir"
   mkdir -p "$wasm_dir"
-  unzip -q -o "$tmp/converter.zip" -d "$wasm_dir"
+  # -j strips the converter-web/ prefix so the files land flat, as
+  # @spritestudio/ssconverter-core expects (mirrors download-sdk.sh). unzip exits
+  # non-zero when the pattern matches nothing, so a renamed/restructured archive
+  # aborts the build instead of leaving an empty wasm dir behind.
+  unzip -q -o -j "$tmp/web-libs.zip" 'converter-web/*' -d "$wasm_dir"
   rm -rf "$tmp"
 }
 
