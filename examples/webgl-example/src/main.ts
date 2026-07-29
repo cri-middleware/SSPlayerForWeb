@@ -5,11 +5,17 @@ import { collectDroppedFiles, fileToDataUrl, resolveRelativePath, sortByPath, ty
 
 // Bundled sample ssabs served from public/. The deploy nests each project under
 // public/<project>/ (ssconverter --stem-dir): the `overall` test project in
-// /overall/, Ringo in /Ringo/. Their <option> value is the URL. (The live
+// overall/, Ringo in Ringo/. Their <option> value is the URL. (The live
 // dropdown is defined in index.html; this list documents the bundled set.)
+//
+// The URLs are RELATIVE — no leading slash. The demo is served from a subpath
+// on GitHub Pages (/SSPlayerForWeb/examples/webgl/), where a root-absolute
+// '/overall/…' resolves to the site root and 404s. Textures follow the ssab:
+// the player derives their base from the ssab URL, so a relative ssab keeps its
+// sibling PNGs relative too.
 const BUNDLED_SSABS = [
-  '/overall/Basic.ssab', '/overall/Shape.ssab', '/overall/PartsColor.ssab', '/overall/Mesh.ssab', '/Ringo/Ringo.ssab',
-  '/overall/Effect.ssab', '/overall/Mask.ssab', '/overall/Instance.ssab', '/overall/BlendMode.ssab',
+  'overall/Basic.ssab', 'overall/Shape.ssab', 'overall/PartsColor.ssab', 'overall/Mesh.ssab', 'Ringo/Ringo.ssab',
+  'overall/Effect.ssab', 'overall/Mask.ssab', 'overall/Instance.ssab', 'overall/BlendMode.ssab',
 ];
 
 async function main() {

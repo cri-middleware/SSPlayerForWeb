@@ -54,7 +54,7 @@
     advancing right now: <b id="active">0</b><br>
     WebGL contexts: <b>1</b><br>
     <span class="warn" id="wouldbe"></span><br>
-    <a href="/index.html">&larr; main demo</a>
+    <a href="index.html">&larr; main demo</a>
   </div>
 
   <article>
@@ -66,7 +66,7 @@
     </p>
 
     <figure>
-      <ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player>
+      <ss-player src="Ringo/Ringo.ssab" autoplay></ss-player>
       <figcaption>A block-level element. The animation is centred in its box.</figcaption>
     </figure>
 
@@ -81,7 +81,7 @@
       Instead a single <code>SSOverlay</code> holds one transparent, full-viewport canvas
       behind the article. Each element registers with it and gets an
       <code>SSPlayer</code>; every frame the overlay reads the element rects and writes
-      them into the players' boxes <ss-player class="inline" src="/overall/Basic.ssab" autoplay></ss-player>
+      them into the players' boxes <ss-player class="inline" src="overall/Basic.ssab" autoplay></ss-player>
       so each animation is drawn where its element is. Elements stay plain boxes, and
       they can sit inline in a sentence like that one.
     </p>
@@ -106,8 +106,8 @@
     </p>
 
     <div class="pair">
-      <ss-player src="/overall/Shape.ssab" autoplay></ss-player>
-      <ss-player src="/overall/Mesh.ssab" autoplay></ss-player>
+      <ss-player src="overall/Shape.ssab" autoplay></ss-player>
+      <ss-player src="overall/Mesh.ssab" autoplay></ss-player>
     </div>
 
     <h2>What you give up</h2>
@@ -124,7 +124,7 @@
     </p>
 
     <figure>
-      <ss-player src="/overall/PartsColor.ssab" autoplay></ss-player>
+      <ss-player src="overall/PartsColor.ssab" autoplay></ss-player>
       <figcaption>Still the same context as everything above.</figcaption>
     </figure>
 
@@ -134,14 +134,14 @@
       count climbs, the context count does not.
     </p>
 
-    <figure><ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player></figure>
-    <figure><ss-player src="/overall/Basic.ssab" autoplay></ss-player></figure>
-    <figure><ss-player src="/overall/Shape.ssab" autoplay></ss-player></figure>
-    <figure><ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player></figure>
-    <figure><ss-player src="/overall/Mesh.ssab" autoplay></ss-player></figure>
-    <figure><ss-player src="/overall/PartsColor.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="Ringo/Ringo.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="overall/Basic.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="overall/Shape.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="Ringo/Ringo.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="overall/Mesh.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="overall/PartsColor.ssab" autoplay></ss-player></figure>
     <figure>
-      <ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player>
+      <ss-player src="Ringo/Ringo.ssab" autoplay></ss-player>
       <figcaption>
         One canvas has been drawing every animation on this page the whole way down.
       </figcaption>

@@ -12,7 +12,7 @@
 //
 // Usage:
 //   node scripts/fetch-tyrano.mjs [ref]
-//     ref: a git tag (e.g. v512) or branch (master). Resolution order:
+//     ref: a git tag (e.g. v514) or branch (master). Resolution order:
 //          arg > $TYRANO_REF > TYRANO_VERSION.txt > "master".
 //
 // Requires `curl` and `tar` on PATH (present on macOS/Linux and Windows 10+).

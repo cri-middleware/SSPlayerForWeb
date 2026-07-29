@@ -32,11 +32,12 @@ examples/tyranoscript-example/
 
 公式リポジトリ [ShikemokuMK/tyranoscript](https://github.com/ShikemokuMK/tyranoscript)
 （**ブラウザ対応版**）を自動取得します。取得先の ref は `TYRANO_VERSION.txt`
-（既定 `master`、タグ例 `v512` も可）。
+（既定 `master`、タグ例 `v514` も可）。なお上流はタグ運用を停止しており、
+最新タグ `v514` は master より大幅に古いため、既定の `master` を推奨します。
 
 ```bash
 pnpm --filter tyranoscript-example run fetch:engine
-# 任意: ref 指定 →  pnpm --filter tyranoscript-example run fetch:engine v512
+# 任意: ref 指定 →  pnpm --filter tyranoscript-example run fetch:engine v514
 ```
 
 これで `index.html` / `tyrano/` / `data/system/` を配置し（すべて .gitignore 済み）、
