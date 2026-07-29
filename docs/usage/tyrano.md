@@ -35,6 +35,18 @@ TyranoBuilder, and TyranoStudio.
 - Only the **WASM binary** (`ssruntime_bg.wasm`) stays external; the renderer and
   core JS are inlined into `main.js`.
 
+## Requirements
+
+| | |
+| --- | --- |
+| TyranoScript | Verified on **V520** (the `master` build the example fetches). Only automatic save restore needs **V515 or later** |
+| Rendering | **WebGL1** required (auto-upgrades to WebGL2 when available) |
+
+Restoring players from a save uses TyranoScript's `load-beforemaking` and `snapsave-start`
+events, which were **added in V515**. On **V514 and earlier** there is no event system, so the
+automatic restore does not run and you must write `[ss_restore]` into `data/scenario/make.ks`
+(see "6. Save / load & lifecycle"). No other tag is affected.
+
 ## 1. Install
 
 ::: tip Which download do I need?

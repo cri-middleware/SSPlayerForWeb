@@ -9,7 +9,13 @@ data/others/plugin/ssplayer/
   init.ks              # [loadjs] で main.js を読む（本ファイル群に同梱）
   main.js              # ← ビルド成果物（自己登録 IIFE）
   ssruntime_bg.wasm    # ← WASM ランタイム
+  readme.txt           # 利用者向け readme（本ファイル群に同梱、pack 時に版を埋める）
 ```
+
+`readme.txt` は利用者の手元に残る唯一の説明書で、TyranoScript のプラグイン作法と
+[ティラノプラグインライブラリ](https://plugin.tyrano.jp/) の掲載を想定した項目立て
+（タイトル / 作成時バージョン / 概略 / 使い方 / 作成者）にしてあります。`{{VERSION}}`
+は `pack` が package.json の版に置換するので、テンプレート側に版を直書きしないでください。
 
 `main.js` / `ssruntime_bg.wasm` はビルド生成物なのでこのフォルダにはコミットされて
 いません。配布用 zip は次で生成します（`dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip`）:
@@ -23,15 +29,21 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # 配布 zip を�
 
 1. 配布 zip を展開し、`ssplayer/` を `data/others/plugin/` に置く。
 2. SS アセット（reference `.ssab` + テクスチャ）を `data/others/ssdata/` に置く。
-3. `first.ks` で読み込み → 各シーンで `[ss_init]`/`[ss_new]`/… を使う:
+3. `first.ks` で 1 回読み込む → 各シーンで `[ss_new]`/`[ss_play]`/… を使う:
 
 ```
+; first.ks
 [plugin name="ssplayer"]
-[ss_init wasm="others/plugin/ssplayer/ssruntime_bg.wasm"]
+
+; scene1.ks
 [ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480"]
 ```
 
-ロード時の復元には `data/scenario/make.ks` に `[ss_init]`→`[ss_restore]` を記述します
+`[plugin]` が展開する `init.ks` が `[ss_init wasm=...]` まで済ませるので、シナリオ側で
+`[ss_init]` を書く必要はありません（音声設定を変えたいときだけ明示的に呼びます）。
+ロード時の復元も `load-beforemaking` イベントで自動的に行うため、`make.ks` への
+`[ss_restore]` の追記も不要です。イベント機構の無い TyranoScript V514 以前でのみ、
+`data/scenario/make.ks` に `[ss_restore]` を書いてください
 （詳細はパッケージ README / `examples/tyranoscript-example` を参照）。
 
 ## ティラノビルダー（TyranoBuilder）を使う場合
