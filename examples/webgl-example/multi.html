@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Many players, one WebGL context</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #222; color: #eee; display: flex; height: 100vh; }
+    #stage { flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; }
+    /* ONE canvas. Every animation on this page is drawn into it. */
+    canvas { max-width: 100%; max-height: 100%; background: #1a1a2e; border: 1px solid #444; }
+    #panel { width: 300px; padding: 16px; background: #2b2b2b; box-sizing: border-box; overflow: auto; }
+    #panel h3 { margin: 0 0 4px; }
+    #panel p.lede { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: #aaa; }
+    label { display: block; margin-top: 10px; font-size: 12px; color: #aaa; }
+    select, button, input { width: 100%; margin: 4px 0; padding: 6px; box-sizing: border-box; }
+    .row { display: flex; gap: 6px; }
+    .row button { flex: 1; }
+    #counts { font-size: 12px; line-height: 1.7; background: #111; padding: 8px; border-radius: 4px; }
+    #counts b { color: #7ee787; font-size: 15px; }
+    #counts .warn { color: #ffa657; }
+    #snippet { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5; white-space: pre; overflow-x: auto; background: #111; color: #d6e9ff; padding: 8px; border-radius: 4px; margin: 4px 0; }
+    #status { font-size: 11px; color: #aaa; min-height: 2.4em; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <nav style="position: fixed; top: 10px; right: 14px; z-index: 20; font-size: 13px;"><a href="/index.html" style="color: #d6e9ff;">&larr; main demo</a></nav>
+  <div id="stage">
+    <canvas id="surface" width="1280" height="960"></canvas>
+  </div>
+  <div id="panel">
+    <h3>One surface, many players</h3>
+    <p class="lede">
+      Every animation here is an <code>SSPlayer</code> on a single
+      <code>SSSurface</code> — so the whole page costs <b>one</b> WebGL context,
+      no matter how many you add. Browsers only allow about 8–16 at once.
+    </p>
+
+    <div id="counts"></div>
+
+    <div class="row">
+      <button id="add">add player</button>
+      <button id="remove">remove</button>
+    </div>
+
+    <label for="ssab">Add which animation</label>
+    <select id="ssab"></select>
+
+    <label for="alpha">Fade the newest player <span id="alphaVal">1.00</span></label>
+    <input id="alpha" type="range" min="0" max="1" step="0.01" value="1" />
+
+    <label for="tint">Tint the newest player</label>
+    <input id="tint" type="color" value="#ffffff" />
+
+    <div class="row">
+      <button id="front">newest to front</button>
+      <button id="back">newest to back</button>
+    </div>
+
+    <label>What the page is doing</label>
+    <pre id="snippet"></pre>
+
+    <div id="status"></div>
+  </div>
+  <script type="module" src="/src/multi-demo.ts"></script>
+</body>
+</html>
