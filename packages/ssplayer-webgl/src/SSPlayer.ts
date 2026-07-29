@@ -143,6 +143,7 @@ export class SSPlayer {
   private _tintRgb = 0xffffff;
   // Premultiplied (rgb * a, a) — the form uColor must receive; see SSWebGLRenderer._tint.
   private readonly _tintVec = new Float32Array([1, 1, 1, 1]);
+  private readonly _opaqueTintVec = new Float32Array([1, 1, 1, 1]);
 
   /** Clip drawing to {@link box} with a scissor rect. Off by default: it breaks the batch. */
   public clip = false;
@@ -248,6 +249,23 @@ export class SSPlayer {
 
   /** @internal The premultiplied `uColor` value for this player. */
   public get tintVector(): Float32Array { return this._tintVec; }
+
+  /**
+   * @internal The same tint at full opacity.
+   *
+   * Used for the offscreen half of a group-alpha fade: the player is drawn opaque
+   * so overlapping parts resolve at full coverage, and the alpha is applied once
+   * when that image is composited (see SSGroupAlpha).
+   */
+  public get opaqueTintVector(): Float32Array {
+    const c = this._tintRgb;
+    const v = this._opaqueTintVec;
+    v[0] = ((c >> 16) & 0xff) / 255;
+    v[1] = ((c >> 8) & 0xff) / 255;
+    v[2] = (c & 0xff) / 255;
+    v[3] = 1;
+    return v;
+  }
 
   /** Whether this player contributes anything to the frame. */
   public get isVisible(): boolean {

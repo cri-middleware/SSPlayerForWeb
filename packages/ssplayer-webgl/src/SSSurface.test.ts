@@ -15,6 +15,20 @@ vi.mock('./SSWebGLRenderer.js', () => ({
   },
 }));
 
+vi.mock('./SSGroupAlpha.js', () => ({
+  SSGroupAlpha: class {
+    // Constructed lazily by the surface, so counting instances is how a test
+    // checks that an all-opaque surface never allocates a framebuffer.
+    static instances: unknown[] = [];
+    begin = vi.fn();
+    end = vi.fn();
+    destroy = vi.fn();
+    constructor(public gl: unknown) {
+      (this.constructor as { instances: unknown[] }).instances.push(this);
+    }
+  },
+}));
+
 vi.mock('./SSWebGLResourceManager.js', () => ({
   SSWebGLResourceManager: class {
     loadTexture = vi.fn().mockResolvedValue(undefined);
@@ -183,17 +197,47 @@ describe('SSSurface', () => {
       expect(rendered[0][0]).toBe(shown.internalPlayer);
     });
 
-    it('passes the player tint through to the renderer, premultiplied', () => {
+    it('passes an opaque player tint through premultiplied', () => {
+      const surface = new SSSurface(makeCanvas());
+      const player = surface.createPlayer();
+      player.tint = 0x808080;
+
+      surface.draw();
+
+      const tint = (surface.renderer.render as ReturnType<typeof vi.fn>).mock.calls[0][4];
+      // uColor multiplies an already-premultiplied fragment, so RGB has to be
+      // scaled by alpha too (§6.10) — at alpha 1 that is the tint unchanged.
+      expect(Array.from(tint).map((v) => Math.round(v * 255))).toEqual([128, 128, 128, 255]);
+    });
+
+    it('draws a fading player opaque and applies its alpha on composite', () => {
       const surface = new SSSurface(makeCanvas());
       const player = surface.createPlayer();
       player.alpha = 0.5;
 
       surface.draw();
 
+      // Fading by tint would be per-part: overlapping parts each composite at 0.5
+      // and the seams darken. The player is drawn opaque instead and faded once,
+      // as a whole image.
       const tint = (surface.renderer.render as ReturnType<typeof vi.fn>).mock.calls[0][4];
-      // uColor multiplies an already-premultiplied fragment, so alpha has to scale
-      // RGB too or a fade washes out instead of dimming (§6.10).
-      expect(Array.from(tint)).toEqual([0.5, 0.5, 0.5, 0.5]);
+      expect(Array.from(tint)).toEqual([1, 1, 1, 1]);
+    });
+
+    it('does not build an offscreen target for fully opaque players', async () => {
+      const { SSGroupAlpha } = await import('./SSGroupAlpha.js');
+      const spy = SSGroupAlpha as unknown as { instances: unknown[] };
+      spy.instances.length = 0;
+
+      const surface = new SSSurface(makeCanvas());
+      surface.createPlayer();
+      surface.draw();
+      expect(spy.instances).toHaveLength(0);
+
+      // …and is built as soon as one needs fading.
+      surface.children[0].alpha = 0.5;
+      surface.draw();
+      expect(spy.instances).toHaveLength(1);
     });
 
     it('does not clear a borrowed context — that would erase the host frame', () => {

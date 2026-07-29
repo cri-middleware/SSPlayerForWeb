@@ -1,6 +1,7 @@
 import { initializeWasm } from '@spritestudio/ssplayer-core';
 import { SSWebGLRenderer } from './SSWebGLRenderer.js';
 import { SSPlayer, type SSPlayerOptions } from './SSPlayer.js';
+import { SSGroupAlpha } from './SSGroupAlpha.js';
 
 export interface SSSurfaceOptions {
   premultipliedAlpha?: boolean;
@@ -111,6 +112,11 @@ export class SSSurface {
   // Warn once per surface, not once per frame, when a player draws
   // framebuffer-reading blend modes with no backdrop anywhere (see checkBackdrop).
   private _warnedNoBackdrop = false;
+
+  // Offscreen pass for fading a player as one image instead of part by part.
+  // Built on first use, so a surface whose players are all opaque never allocates
+  // a framebuffer (see SSGroupAlpha).
+  private _groupAlpha: SSGroupAlpha | null = null;
 
   constructor(
     target: HTMLCanvasElement | WebGLRenderingContext | WebGL2RenderingContext,
@@ -274,13 +280,31 @@ export class SSSurface {
       }
 
       this.checkBackdrop(player);
+
+      // A partly transparent player is drawn opaque into an offscreen texture and
+      // composited once, so overlapping parts inside it do not accumulate
+      // coverage and darken the seams. Fully opaque players skip all of it.
+      const fading = player.alpha < 1;
+      if (fading) {
+        this._groupAlpha ??= new SSGroupAlpha(gl);
+        this._groupAlpha.begin(this.canvas.width, this.canvas.height);
+      }
+
       this.renderer.render(
         player.internalPlayer,
         player.resourceManager,
         player.renderTransform(),
         flipY,
-        player.tintVector,
+        // Opaque for the offscreen pass: the alpha is applied once, on composite.
+        fading ? player.opaqueTintVector : player.tintVector,
       );
+
+      if (fading) {
+        this._groupAlpha!.end(player.alpha);
+        // No state to restore: render() re-binds its program and forces a blend
+        // re-apply on entry, and it leaves no VAO bound for the composite to
+        // disturb.
+      }
 
       if (clipped) gl.disable(gl.SCISSOR_TEST);
     }
@@ -432,6 +456,10 @@ export class SSSurface {
    * loss blanks every player until it completes.
    */
   public async restoreContext(): Promise<void> {
+    // The offscreen target died with the context; drop it and let the next fade
+    // rebuild it rather than carrying dangling GL names around.
+    this._groupAlpha?.destroy();
+    this._groupAlpha = null;
     this.renderer.restoreContext();
     await Promise.all(this.players.map(async (player) => {
       try {
@@ -482,6 +510,8 @@ export class SSSurface {
     for (const player of [...this.players]) player.destroy();
     this.players.length = 0;
 
+    this._groupAlpha?.destroy();
+    this._groupAlpha = null;
     this.renderer.destroy();
   }
 }
