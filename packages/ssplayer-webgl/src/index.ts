@@ -1,12 +1,14 @@
 export * from '@spritestudio/ssplayer-core';
+export { SSSurface, type SSSurfaceOptions } from './SSSurface.js';
 export {
-  SSCanvasPlayer,
-  type SSCanvasPlayerOptions,
+  SSPlayer,
+  type SSPlayerOptions,
+  type SSPlayerBox,
   type SSUserDataEvent,
   type SSSignalEvent,
   type SSAudioEvent,
   type Unsubscribe,
-} from './SSCanvasPlayer.js';
+} from './SSPlayer.js';
 export { SSWebGLRenderer } from './SSWebGLRenderer.js';
 export { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 // Optional Web Audio adapter (tree-shakeable; not pulled in unless imported).

@@ -1,4 +1,4 @@
-import { SSCanvasPlayer, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
+import { SSSurface, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 import { UIManager, showToast } from './ui/UIManager.js';
 import { ViewControls } from './view/ViewControls.js';
 import { collectDroppedFiles, fileToDataUrl, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
@@ -22,14 +22,15 @@ async function main() {
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
 
-  await SSCanvasPlayer.initialize();
+  await SSSurface.initialize();
 
   // Opaque backdrop (matches the page's dark canvas frame). Additive /
   // backdrop-reading blend modes (Add, Screen, …) only composite correctly against
   // a real opaque backdrop — on a transparent canvas an additive glow baked on a
   // black background renders that black as an opaque block. Omit backgroundColor
   // for a transparent overlay (accepting that limitation for such blends).
-  const player = new SSCanvasPlayer(canvas, { autoStart: true, backgroundColor: 0x1a1a2e });
+  const surface = new SSSurface(canvas, { autoStart: true, backgroundColor: 0x1a1a2e });
+  const player = surface.createPlayer();
 
   // Pan (drag) / zoom (wheel) of the animation. Owns the view transform: every
   // newly-shown animation is re-centred and unscaled via view.reset(), which

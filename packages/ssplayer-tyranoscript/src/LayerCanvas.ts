@@ -1,7 +1,7 @@
 import type { TyranoKag } from './tyranoTypes.js';
 
 /**
- * DOM glue between a TyranoScript layer `div` and an `SSCanvasPlayer`'s canvas
+ * DOM glue between a TyranoScript layer `div` and an `SSPlayer`'s canvas
  * (§3.2). TyranoScript renders by stacking absolutely-positioned layer divs
  * (`<number>_<fore|back>`, e.g. `.0_fore`, with `base` for the background). We
  * overlay one `<canvas>` per player on the requested layer, reaching the layer
@@ -12,7 +12,7 @@ import type { TyranoKag } from './tyranoTypes.js';
  * Coordinate model (§3.2):
  *  - Tyrano places things in **logical top-left pixels** at the game resolution
  *    (`config.scWidth × scHeight`).
- *  - `SSCanvasPlayer` uses a **Y-down** system (it calls `set_coordinate_system(1)`
+ *  - `SSPlayer` uses a **Y-down** system (it calls `set_coordinate_system(1)`
  *    on load) whose `setTransform({x,y})` places the SS origin at a **drawing-
  *    buffer pixel**. The buffer is `logical × dpr`, so a logical coordinate must
  *    be multiplied by the buffer scale to land where the author expects, and the
@@ -52,7 +52,7 @@ export function getLayerElement(
  * coordinate origin.
  *
  * `dpr` is clamped to `maxDPR` to bound fill-rate on HiDPI (mirrors
- * `SSCanvasPlayer.resize`; memory: webgl-perf-fillrate).
+ * `SSSurface.resize`; memory: webgl-perf-fillrate).
  */
 export function createLayerCanvas(
   layerEl: HTMLElement,
@@ -119,7 +119,7 @@ export function cancelCanvasFade(canvas: HTMLCanvasElement): void {
  * either await it (`wait="true"`) or fire and forget.
  *
  * Hiding ends at `display:none` rather than `opacity:0` on purpose: an
- * invisible-but-laid-out canvas keeps its `SSCanvasPlayer` ticker running,
+ * invisible-but-laid-out canvas keeps its `SSSurface` ticker running,
  * whereas `display:none` trips the renderer's own `pauseWhenHidden`
  * IntersectionObserver and stops the GPU work while the player stays loaded
  * (that is the whole point of `[ss_hide]` over `[ss_free]`).
@@ -167,7 +167,7 @@ export function setCanvasVisible(
 
 /**
  * Map an author-facing placement (logical px + author scale) to the
- * `SSCanvasPlayer.setTransform` arguments (buffer px + composed scale). Split
+ * `SSPlayer.setTransform` arguments (buffer px + composed scale). Split
  * out so it can be unit-tested without a GL context.
  */
 export function toTransform(
@@ -175,11 +175,21 @@ export function toTransform(
   y: number,
   scale: number,
   bufferScale: number,
+  origin: { x: number; y: number } = { x: 0, y: 0 },
 ): { x: number; y: number; scaleX: number; scaleY: number } {
   return {
-    x: x * bufferScale,
-    y: y * bufferScale,
+    // TyranoScript addresses the screen from its top-left; `SSPlayer.setTransform`
+    // is relative to the player's box centre (SURFACE_PLAYER_SPEC.md §3.0), so
+    // subtract the box centre here. `[ss_new]` with no position then lands on
+    // {0,0} — dead centre — which is what it always drew, now said plainly.
+    x: x * bufferScale - origin.x,
+    y: y * bufferScale - origin.y,
     scaleX: scale * bufferScale,
     scaleY: scale * bufferScale,
   };
+}
+
+/** The box centre to hand {@link toTransform}, for a canvas-sized player box. */
+export function boxOrigin(canvas: HTMLCanvasElement): { x: number; y: number } {
+  return { x: canvas.width / 2, y: canvas.height / 2 };
 }

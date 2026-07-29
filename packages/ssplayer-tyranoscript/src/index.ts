@@ -1,7 +1,7 @@
 // @spritestudio/ssplayer-tyranoscript
 //
 // A thin TyranoScript / TyranoBuilder adapter over `@spritestudio/ssplayer-webgl`
-// (`SSCanvasPlayer`). All GPU/WebGL work lives in the webgl package; this layer
+// (`SSPlayer`). All GPU/WebGL work lives in the webgl package; this layer
 // is pure glue: it registers `[ss_*]` KAG custom tags that mount an SS canvas
 // onto a Tyrano layer and drive playback (see README.md / ROADMAP.md).
 //

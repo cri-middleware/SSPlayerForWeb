@@ -1,8 +1,10 @@
-import { SSCanvasPlayer, type SSCanvasPlayerOptions } from './SSCanvasPlayer.js';
+import { SSSurface, type SSSurfaceOptions } from './SSSurface.js';
+import type { SSPlayer } from './SSPlayer.js';
 import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 
 /**
- * Optional `<ss-player>` Custom Element wrapper around {@link SSCanvasPlayer}.
+ * Optional `<ss-player>` Custom Element: one {@link SSSurface} carrying one
+ * {@link SSPlayer}.
  *
  * Native Custom Elements only — no framework dependency.
  * Lives behind the `@spritestudio/ssplayer-webgl/element` subpath and is NOT
@@ -11,7 +13,7 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
  * element pay nothing.
  *
  * The element is a thin, declarative skin over the already-complete player facade;
- * all rendering/loading logic stays in `SSCanvasPlayer`. It targets the WebGL
+ * all rendering/loading logic stays in `SSSurface` / `SSPlayer`. It targets the WebGL
  * player specifically — the future wgpu/WebGPU player is a separate product (two
  * independent renderers), so this element does no WebGPU capability detection.
  *
@@ -39,7 +41,10 @@ export class SSPlayerElement extends HTMLElement {
     return ['src', 'animation', 'speed'];
   }
 
-  private _player: SSCanvasPlayer | null = null;
+  // One surface, one player: the element is the 1:1 case of the 1:N model. Sharing
+  // one surface across many elements is overlay mode, a separate feature.
+  private _surface: SSSurface | null = null;
+  private _player: SSPlayer | null = null;
   private _canvas: HTMLCanvasElement | null = null;
   private _resizeObserver: ResizeObserver | null = null;
 
@@ -69,9 +74,14 @@ export class SSPlayerElement extends HTMLElement {
     return this._readyPromise;
   }
 
-  /** The underlying facade, or null before connect / after disconnect. */
-  public get player(): SSCanvasPlayer | null {
+  /** The underlying player, or null before connect / after disconnect. */
+  public get player(): SSPlayer | null {
     return this._player;
+  }
+
+  /** The surface this element owns, or null before connect / after disconnect. */
+  public get surface(): SSSurface | null {
+    return this._surface;
   }
 
   async connectedCallback(): Promise<void> {
@@ -105,7 +115,7 @@ export class SSPlayerElement extends HTMLElement {
       this.applyResize();
 
       // Keep the drawing buffer matched to the element's box (DPR clamp
-      // lives in SSCanvasPlayer.resize) and re-centre on every size change.
+      // lives in SSSurface.resize); the player re-centres itself with it.
       this._resizeObserver = new ResizeObserver(() => this.applyResize());
       this._resizeObserver.observe(this);
 
@@ -127,10 +137,12 @@ export class SSPlayerElement extends HTMLElement {
     this._resizeObserver = null;
     for (const off of this._unsubscribe) off();
     this._unsubscribe = [];
-    // destroy() stops the ticker and frees GL resources + wasm handles. The canvas
-    // (and its GL context) is kept so a re-connect can reuse it; a fresh renderer is
-    // built on reconnect. Playback state is not preserved across a disconnect.
-    this._player?.destroy();
+    // destroy() stops the ticker and frees GL resources + wasm handles (including
+    // every player on the surface, which here is just ours). The canvas (and its GL
+    // context) is kept so a re-connect can reuse it; a fresh surface is built on
+    // reconnect. Playback state is not preserved across a disconnect.
+    this._surface?.destroy();
+    this._surface = null;
     this._player = null;
   }
 
@@ -198,18 +210,19 @@ export class SSPlayerElement extends HTMLElement {
   }
 
   private createPlayer(): void {
-    const options: SSCanvasPlayerOptions = {
+    const options: SSSurfaceOptions = {
       autoStart: true, // ticker drives draw immediately (a no-op until an animation loads); play() gates advancing
       maxDPR: this.numAttr('max-dpr'),
       powerPreference: this.powerAttr(),
       antialias: this.hasAttribute('antialias'),
-      // Tri-state: the facade default is ON, so an absent attribute must pass
+      // Tri-state: the surface default is ON, so an absent attribute must pass
       // `undefined` (inherit) rather than a `false` that would switch the
       // gating off — opt out explicitly with pause-when-hidden="false".
       pauseWhenHidden: this.boolAttr('pause-when-hidden'),
       backgroundColor: this.colorAttr('background'),
     };
-    this._player = new SSCanvasPlayer(this._canvas!, options);
+    this._surface = new SSSurface(this._canvas!, options);
+    this._player = this._surface.createPlayer();
     const speed = this.numAttr('speed');
     if (speed !== undefined) this._player.speedScale = speed;
     this.wireEvents();
@@ -259,16 +272,16 @@ export class SSPlayerElement extends HTMLElement {
   }
 
   private applyResize(): void {
-    const player = this._player;
-    const canvas = this._canvas;
-    if (!player || !canvas) return;
+    const surface = this._surface;
+    if (!surface) return;
     const rect = this.getBoundingClientRect();
     const w = Math.max(1, Math.round(rect.width));
     const h = Math.max(1, Math.round(rect.height));
-    player.resize(w, h);
-    // SS origin and the renderer's projection origin are both centre; translate by
-    // half the (post-DPR) drawing-buffer size to centre the animation in the canvas.
-    player.setTransform({ x: canvas.width / 2, y: canvas.height / 2 });
+    // Drawing buffer only — the shadow stylesheet already sizes the canvas element
+    // (`canvas{width:100%;height:100%}`), so nothing writes inline CSS over it.
+    surface.resize(w, h);
+    // No centring maths here: the player's box tracks the whole surface and its
+    // transform is relative to the box centre, so it re-centres on every resize.
   }
 
   private emit(type: string, detail?: unknown): void {
@@ -293,7 +306,7 @@ export class SSPlayerElement extends HTMLElement {
     return Number.isFinite(n) ? n : undefined;
   }
 
-  private powerAttr(): SSCanvasPlayerOptions['powerPreference'] {
+  private powerAttr(): SSSurfaceOptions['powerPreference'] {
     const v = this.getAttribute('power-preference');
     return v === 'high-performance' || v === 'low-power' || v === 'default' ? v : undefined;
   }
@@ -316,7 +329,7 @@ function ensureWasm(wasm?: string): Promise<void> {
     // Cache the success only: a failed init (bad URL, offline) must stay
     // retryable, or the next element to connect would inherit the same
     // rejection forever. Matches initializeWasm() in the core.
-    _wasmInit = SSCanvasPlayer.initialize(wasm).catch((e) => {
+    _wasmInit = SSSurface.initialize(wasm).catch((e) => {
       _wasmInit = null;
       // Also log it. This failure is page-wide and fatal — nothing will ever
       // render — but the only channels for it are the element's `error` event

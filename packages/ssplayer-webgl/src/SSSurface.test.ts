@@ -1,0 +1,316 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// --- Mock everything that needs a GPU or the WASM runtime. ------------------
+// What is left is the layering this package exists to get right: which object
+// owns the context, what order players draw in, how a player's box maps to a
+// transform, and who frees what. None of that needs to rasterise a pixel, so
+// none of it should need a browser to test.
+
+vi.mock('./SSWebGLRenderer.js', () => ({
+  SSWebGLRenderer: class {
+    render = vi.fn();
+    restoreContext = vi.fn();
+    destroy = vi.fn();
+    constructor(public gl: unknown) {}
+  },
+}));
+
+vi.mock('./SSWebGLResourceManager.js', () => ({
+  SSWebGLResourceManager: class {
+    loadTexture = vi.fn().mockResolvedValue(undefined);
+    loadTextureFromBytes = vi.fn().mockResolvedValue(undefined);
+    bindTextureSource = vi.fn();
+    getTexture = vi.fn();
+    restoreContext = vi.fn().mockResolvedValue(undefined);
+    destroy = vi.fn();
+    constructor(public gl: unknown) {}
+  },
+}));
+
+vi.mock('@spritestudio/ssplayer-core', () => ({
+  initializeWasm: vi.fn().mockResolvedValue(undefined),
+  DirectInternalPlayer: class {
+    animationName = 'Anime_1';
+    isPausing = false;
+    audioManager: unknown = null;
+    subFrameEnabled = false;
+    runtimeManager = {
+      context: { set_render_mode: vi.fn(), set_coordinate_system: vi.fn() },
+      getSounds: () => [],
+    };
+    update = vi.fn();
+    destroy = vi.fn();
+    play = vi.fn();
+    pause = vi.fn();
+    resume = vi.fn();
+    stop = vi.fn();
+    setSpeed = vi.fn();
+    getFrameNo = vi.fn(() => 0);
+    pollPlaybackEvents = vi.fn(() => ({ looped: false, finished: false }));
+    constructor(public rm: unknown) {}
+  },
+  ssFormat: {},
+  SSBlendOp: {},
+  SSOverridePriority: { HoldUntilNextAnimation: 1 },
+}));
+
+const { SSSurface } = await import('./SSSurface.js');
+
+/**
+ * jsdom has no WebGL. The surface only needs the handful of state calls it makes
+ * around each player (clear, viewport, scissor); everything that would actually
+ * rasterise lives in the mocked renderer.
+ */
+function fakeGl(canvas: HTMLCanvasElement) {
+  return {
+    canvas,
+    clear: vi.fn(),
+    clearColor: vi.fn(),
+    viewport: vi.fn(),
+    enable: vi.fn(),
+    disable: vi.fn(),
+    scissor: vi.fn(),
+    isContextLost: () => false,
+    COLOR_BUFFER_BIT: 1,
+    STENCIL_BUFFER_BIT: 2,
+    SCISSOR_TEST: 4,
+  };
+}
+
+function makeCanvas(width = 800, height = 600): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const gl = fakeGl(canvas);
+  canvas.getContext = vi.fn(() => gl) as unknown as HTMLCanvasElement['getContext'];
+  return canvas;
+}
+
+describe('SSSurface', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('owns the context when built from a canvas, and borrows one when built from a gl', () => {
+    expect(new SSSurface(makeCanvas()).owned).toBe(true);
+
+    const canvas = makeCanvas();
+    const gl = { canvas } as unknown as WebGLRenderingContext;
+    const borrowed = new SSSurface(gl);
+    expect(borrowed.owned).toBe(false);
+    expect(borrowed.canvas).toBe(canvas);
+  });
+
+  it('resizes the drawing buffer without touching CSS', () => {
+    const canvas = makeCanvas();
+    canvas.style.width = '123px';
+    const surface = new SSSurface(canvas, { maxDPR: 2 });
+
+    surface.resize(400, 300, 3); // dpr clamped to maxDPR
+
+    expect(canvas.width).toBe(800);
+    expect(canvas.height).toBe(600);
+    // The host owns layout. A library that writes inline styles fights whatever
+    // the page already set — see SURFACE_PLAYER_SPEC.md §6.7.
+    expect(canvas.style.width).toBe('123px');
+  });
+
+  it('never lets a resize collapse the buffer to zero', () => {
+    const canvas = makeCanvas();
+    const surface = new SSSurface(canvas);
+    surface.resize(0, 0, 1);
+    expect(canvas.width).toBe(1);
+    expect(canvas.height).toBe(1);
+  });
+
+  describe('players', () => {
+    it('registers a player on construction and drops it on destroy', () => {
+      const surface = new SSSurface(makeCanvas());
+      const player = surface.createPlayer();
+      expect(surface.children).toContain(player);
+
+      player.destroy();
+      expect(surface.children).not.toContain(player);
+    });
+
+    it('add is idempotent, so a player cannot be drawn twice', () => {
+      const surface = new SSSurface(makeCanvas());
+      const player = surface.createPlayer();
+      surface.add(player);
+      expect(surface.children).toHaveLength(1);
+    });
+
+    it('draws in `order`, keeping insertion order for ties', () => {
+      const surface = new SSSurface(makeCanvas());
+      const a = surface.createPlayer();
+      const b = surface.createPlayer();
+      const c = surface.createPlayer();
+
+      c.order = -1;
+      surface.invalidateOrder();
+      expect(surface.children).toEqual([c, a, b]);
+
+      // a and b are still tied at 0 and must not swap.
+      a.order = 0; b.order = 0; c.order = 0;
+      surface.invalidateOrder();
+      expect(surface.children).toEqual([c, a, b]);
+    });
+
+    it('destroying the surface destroys every player it carries', () => {
+      const surface = new SSSurface(makeCanvas());
+      const a = surface.createPlayer();
+      const b = surface.createPlayer();
+
+      surface.destroy();
+
+      // The surface owns the GL-scoped resources; each player only frees its own.
+      expect(a.internalPlayer.destroy).toHaveBeenCalled();
+      expect(b.internalPlayer.destroy).toHaveBeenCalled();
+      expect(surface.renderer.destroy).toHaveBeenCalled();
+      expect(surface.children).toHaveLength(0);
+    });
+  });
+
+  describe('drawing', () => {
+    it('renders visible players in order and skips fully transparent ones', () => {
+      const surface = new SSSurface(makeCanvas());
+      const shown = surface.createPlayer();
+      const hidden = surface.createPlayer();
+      hidden.alpha = 0;
+
+      surface.draw();
+
+      const rendered = (surface.renderer.render as ReturnType<typeof vi.fn>).mock.calls;
+      expect(rendered).toHaveLength(1);
+      expect(rendered[0][0]).toBe(shown.internalPlayer);
+    });
+
+    it('passes the player tint through to the renderer, premultiplied', () => {
+      const surface = new SSSurface(makeCanvas());
+      const player = surface.createPlayer();
+      player.alpha = 0.5;
+
+      surface.draw();
+
+      const tint = (surface.renderer.render as ReturnType<typeof vi.fn>).mock.calls[0][4];
+      // uColor multiplies an already-premultiplied fragment, so alpha has to scale
+      // RGB too or a fade washes out instead of dimming (§6.10).
+      expect(Array.from(tint)).toEqual([0.5, 0.5, 0.5, 0.5]);
+    });
+
+    it('does not clear a borrowed context — that would erase the host frame', () => {
+      const canvas = makeCanvas();
+      const gl = fakeGl(canvas);
+      const surface = new SSSurface(gl as unknown as WebGLRenderingContext);
+      surface.createPlayer();
+      surface.draw();
+
+      expect(gl.clear).not.toHaveBeenCalled();
+      // …but it still draws the player onto the host's framebuffer.
+      expect(surface.renderer.render).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('SSPlayer box', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('defaults to the whole surface and follows its resizes', () => {
+    const canvas = makeCanvas(800, 600);
+    const surface = new SSSurface(canvas);
+    const player = surface.createPlayer();
+
+    expect(player.box).toEqual({ x: 0, y: 0, w: 800, h: 600 });
+
+    surface.resize(200, 100, 1);
+    expect(player.box).toEqual({ x: 0, y: 0, w: 200, h: 100 });
+  });
+
+  it('places an untransformed player at the box centre', () => {
+    const surface = new SSSurface(makeCanvas(800, 600));
+    const player = surface.createPlayer();
+
+    const m = player.renderTransform();
+    // [m00, m01, m10, m11, tx, ty] — centred means tx/ty are the box centre, which
+    // is what removed the manual half-canvas maths every host used to carry (§6.9).
+    expect(m[4]).toBe(400);
+    expect(m[5]).toBe(300);
+  });
+
+  it('treats setTransform as an offset from the box centre', () => {
+    const surface = new SSSurface(makeCanvas(800, 600));
+    const player = surface.createPlayer();
+
+    player.setTransform({ x: 10, y: -20 });
+    const m = player.renderTransform();
+    expect(m[4]).toBe(410);
+    expect(m[5]).toBe(280);
+  });
+
+  it('centres on an explicit box, not on the surface', () => {
+    const surface = new SSSurface(makeCanvas(800, 600));
+    const player = surface.createPlayer();
+
+    // What overlay mode writes from getBoundingClientRect().
+    player.box = { x: 100, y: 50, w: 200, h: 100 };
+    const m = player.renderTransform();
+    expect(m[4]).toBe(200);
+    expect(m[5]).toBe(100);
+
+    player.resetBox();
+    expect(player.renderTransform()[4]).toBe(400);
+  });
+
+  it('recomposes after the box moves under a transform set earlier', () => {
+    const surface = new SSSurface(makeCanvas(800, 600));
+    const player = surface.createPlayer();
+    player.setTransform({ x: 5, y: 5 });
+
+    surface.resize(400, 400, 1);
+
+    // The matrix is built at draw time precisely so this stays correct.
+    const m = player.renderTransform();
+    expect(m[4]).toBe(205);
+    expect(m[5]).toBe(205);
+  });
+
+  it('scales and rotates about the box centre', () => {
+    const surface = new SSSurface(makeCanvas(800, 600));
+    const player = surface.createPlayer();
+
+    player.setTransform({ scaleX: 2, scaleY: 3 });
+    const m = player.renderTransform();
+    expect(m[0]).toBe(2);
+    expect(m[3]).toBe(3);
+    expect(m[4]).toBe(400);
+  });
+});
+
+describe('SSPlayer tint', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('clamps alpha and premultiplies the tint colour', () => {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+
+    expect(Array.from(player.tintVector)).toEqual([1, 1, 1, 1]);
+
+    player.alpha = 5;
+    expect(player.alpha).toBe(1);
+    player.alpha = -1;
+    expect(player.alpha).toBe(0);
+
+    player.alpha = 1;
+    player.tint = 0xff0000;
+    expect(Array.from(player.tintVector)).toEqual([1, 0, 0, 1]);
+
+    player.alpha = 0.5;
+    expect(Array.from(player.tintVector)).toEqual([0.5, 0, 0, 0.5]);
+  });
+
+  it('counts a zero-alpha player as invisible', () => {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+    expect(player.isVisible).toBe(true);
+    player.alpha = 0;
+    expect(player.isVisible).toBe(false);
+  });
+});

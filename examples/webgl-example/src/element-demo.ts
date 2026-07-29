@@ -80,7 +80,7 @@ async function populateAnimations(url: string): Promise<void> {
 }
 
 // Element CustomEvents. `load`/`error` fire today; `ended`/`loop`/`userdata`/`signal`
-// are wired but inert until the SSCanvasPlayer P0 event work lands.
+// are wired but inert until the SSPlayer P0 event work lands.
 for (const type of ['load', 'ended', 'loop', 'userdata', 'signal', 'error']) {
   player.addEventListener(type, (e: Event) => {
     const detail = (e as CustomEvent).detail;

@@ -1,4 +1,4 @@
-import type { SSCanvasPlayer, SSPartOverride } from '@spritestudio/ssplayer-webgl';
+import type { SSPlayer, SSSurface, SSPartOverride } from '@spritestudio/ssplayer-webgl';
 import { cancelCanvasFade } from './LayerCanvas.js';
 
 /**
@@ -36,7 +36,13 @@ export interface SSCharaBinding {
  * the player internals.
  */
 export interface SSPlayerEntry {
-  player: SSCanvasPlayer;
+  player: SSPlayer;
+  /**
+   * The surface backing this player. One surface per player today, i.e. one GL
+   * context per `[ss_new]` — the consolidation to one surface per `(layer, page)`
+   * is a separate change (SURFACE_PLAYER_SPEC.md §10).
+   */
+  surface: SSSurface;
   canvas: HTMLCanvasElement;
   /**
    * `drawingBuffer px / logical px` used to build this player's transform.
@@ -93,7 +99,7 @@ export function clearChain(entry: SSPlayerEntry): void {
 }
 
 /**
- * `name -> SSCanvasPlayer` map held in module scope, mirroring how TyranoScript
+ * `name -> SSPlayer` map held in module scope, mirroring how TyranoScript
  * tracks `[chara]` actors. Every `[ss_*]` tag looks the target up here by
  * `name`; `[ss_free]` (PT2) removes it. Kept as a class (not a bare Map) so the
  * save/load bridge and teardown can share one clear ownership point.
@@ -133,7 +139,9 @@ export class PlayerRegistry {
     if (entry.tween) cancelAnimationFrame(entry.tween);
     clearChain(entry);
     cancelCanvasFade(entry.canvas);
-    entry.player.destroy();
+    // Destroying the surface destroys its players too, and it is the surface that
+    // owns the GL context — so this is what actually releases the context.
+    entry.surface.destroy();
     entry.canvas.remove();
     this.entries.delete(name);
   }

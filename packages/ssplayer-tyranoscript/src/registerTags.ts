@@ -4,7 +4,7 @@ import {
   parsePartOverrideColor,
   prunePartOverridesForNewAnimation,
   removePartOverrides,
-  SSCanvasPlayer,
+  SSSurface,
   SSRuntimeManager,
   type SSBlendOp,
   type SSOverridePriority,
@@ -18,6 +18,7 @@ import {
   type SSPlayerEntry,
 } from './PlayerRegistry.js';
 import {
+  boxOrigin,
   createLayerCanvas,
   getLayerElement,
   setCanvasVisible,
@@ -43,7 +44,7 @@ import type { TyranoGlobal, TyranoKag } from './tyranoTypes.js';
 const registry = new PlayerRegistry();
 
 interface AdapterState {
-  /** Whether `[ss_init]` has run `SSCanvasPlayer.initialize` (WASM ready). */
+  /** Whether `[ss_init]` has run `SSSurface.initialize` (WASM ready). */
   initialized: boolean;
   /** In-flight init promise so a second `[ss_init]` awaits the first. */
   initPromise: Promise<void> | null;
@@ -237,8 +238,9 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   // Disable the default Web Audio manager; we route SS sounds through
   // TyranoScript's howler instead (attached below, before setAnimation so the
   // core preloads through it). When audio is disabled, nothing is attached.
-  const player = new SSCanvasPlayer(canvas, { autoStart: true, autoAudio: false });
-  player.resize(w, h, dpr);
+  const surface = new SSSurface(canvas, { autoStart: true });
+  surface.resize(w, h, dpr);
+  const player = surface.createPlayer({ autoAudio: false });
   ensureAudioManager()?.bindToPlayer(player);
 
   await player.load(storageUrl);
@@ -252,7 +254,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
   await player.setAnimation(anime);
 
-  player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale));
+  player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale, boxOrigin(canvas)));
   player.internalPlayer.setLoop(opts.loop);
   // A fresh player means a fresh WASM context, whose override table starts
   // empty — so a restore has to put the saved overrides back. Must run after
@@ -261,6 +263,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 
   const entry: SSPlayerEntry = {
     player,
+    surface,
     canvas,
     bufferScale,
     meta: {
@@ -546,7 +549,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
             );
           }
           const wasm = pm.wasm ? resolveDataPath(String(pm.wasm)) : undefined;
-          state.initPromise = SSCanvasPlayer.initialize(wasm);
+          state.initPromise = SSSurface.initialize(wasm);
         }
         await state.initPromise;
         state.initialized = true;
@@ -626,7 +629,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         m.x = num(pm.x, m.x);
         m.y = num(pm.y, m.y);
         m.scale = num(pm.scale, m.scale);
-        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale));
+        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale, boxOrigin(entry.canvas)));
         if (pm.anime) await applyPlayback(entry, pm);
         m.visible = true;
         persist();
@@ -934,7 +937,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           m.zindex = num(pm.zindex, 0);
           setCanvasZIndex(entry.canvas, m.zindex);
         }
-        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale));
+        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale, boxOrigin(entry.canvas)));
         persist();
       });
     },
@@ -980,7 +983,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const raf = (globalThis as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
         const now = () => (globalThis.performance?.now?.() ?? 0);
         if (time <= 0 || typeof raf !== 'function') {
-          entry.player.setTransform(toTransform(toX, toY, toS, entry.bufferScale));
+          entry.player.setTransform(toTransform(toX, toY, toS, entry.bufferScale, boxOrigin(entry.canvas)));
           finish();
           return;
         }
@@ -990,7 +993,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           const p = Math.min(1, (t - start) / time);
           const e = 1 - (1 - p) * (1 - p); // easeOutQuad
           entry.player.setTransform(
-            toTransform(fromX + (toX - fromX) * e, fromY + (toY - fromY) * e, fromS + (toS - fromS) * e, entry.bufferScale),
+            toTransform(fromX + (toX - fromX) * e, fromY + (toY - fromY) * e, fromS + (toS - fromS) * e, entry.bufferScale, boxOrigin(entry.canvas)),
           );
           entry.tween = p < 1 ? raf(step) : 0;
         };

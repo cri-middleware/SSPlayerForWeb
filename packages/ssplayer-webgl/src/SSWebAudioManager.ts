@@ -1,19 +1,20 @@
 import type { IAudioManager, SoundAsset } from '@spritestudio/ssplayer-core';
-import type { SSCanvasPlayer, SSAudioEvent } from './SSCanvasPlayer.js';
+import type { SSPlayer, SSAudioEvent } from './SSPlayer.js';
 
 /**
  * Optional Web Audio API adapter implementing {@link IAudioManager}.
  *
  * The player core never plays audio itself; it only surfaces sound references
  * (via `onAudio`) and preloads them when an audio manager is attached. This
- * adapter is a **separate, tree-shakeable module**: it is NOT imported by
- * `SSCanvasPlayer`, so playable-ad builds that don't use sound pay nothing for
- * it (audio is injection-only, not in the default bundle).
+ * adapter is a **separate, tree-shakeable module**: it is NOT imported statically
+ * by `SSPlayer`, so playable-ad builds that don't use sound pay nothing for it
+ * (audio is injection-only, not in the default bundle).
  *
  * Usage:
  * ```ts
- * import { SSCanvasPlayer, SSWebAudioManager } from '@spritestudio/ssplayer-webgl';
- * const player = new SSCanvasPlayer(canvas, { autoStart: true });
+ * import { SSSurface, SSWebAudioManager } from '@spritestudio/ssplayer-webgl';
+ * const surface = new SSSurface(canvas, { autoStart: true });
+ * const player = surface.createPlayer();
  * new SSWebAudioManager().bindToPlayer(player); // preload + play wired in one call
  * await player.load('chara.ssab');
  * await player.setAnimation('idle'); // sounds preload here (audioManager is set)
@@ -97,7 +98,7 @@ export class SSWebAudioManager implements IAudioManager {
      * subscribes to `onAudio` so referenced sounds play automatically.
      * Returns an unsubscribe function for the `onAudio` binding.
      */
-    public bindToPlayer(player: SSCanvasPlayer): () => void {
+    public bindToPlayer(player: SSPlayer): () => void {
         player.audioManager = this;
         return player.onAudio((e: SSAudioEvent) => {
             if (e.soundName) {

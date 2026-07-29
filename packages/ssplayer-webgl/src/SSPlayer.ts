@@ -1,6 +1,6 @@
-import { DirectInternalPlayer, IAudioManager, initializeWasm, ssFormat, SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-core';
-import { SSWebGLRenderer } from './SSWebGLRenderer.js';
+import { DirectInternalPlayer, IAudioManager, ssFormat, SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
+import type { SSSurface } from './SSSurface.js';
 
 // --- Animation event payloads (06_playback_control.ja.md) ---
 // Event extraction lives here in the renderer package (not core): it reads the
@@ -15,14 +15,14 @@ import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
  * authored (an authored integer of `0` is still present, distinct from absent).
  */
 export interface SSUserDataEvent {
-    partIndex: number;
-    partName: string | null;
-    integer?: number;
-    str?: string;
-    /** User-data rectangle as authored (left/top/right/bottom). */
-    rect?: { x1: number; y1: number; x2: number; y2: number };
-    /** User-data point as authored. */
-    point?: { x: number; y: number };
+  partIndex: number;
+  partName: string | null;
+  integer?: number;
+  str?: string;
+  /** User-data rectangle as authored (left/top/right/bottom). */
+  rect?: { x1: number; y1: number; x2: number; y2: number };
+  /** User-data point as authored. */
+  point?: { x: number; y: number };
 }
 
 /**
@@ -31,11 +31,11 @@ export interface SSUserDataEvent {
  * dispatched (mirroring the Godot / Unity players and the porting guide).
  */
 export interface SSSignalEvent {
-    partIndex: number;
-    partName: string | null;
-    active: boolean;
-    commandId: string | null;
-    params: Record<string, boolean | number | string>;
+  partIndex: number;
+  partName: string | null;
+  active: boolean;
+  commandId: string | null;
+  params: Record<string, boolean | number | string>;
 }
 
 /**
@@ -45,106 +45,127 @@ export interface SSSignalEvent {
  * Attach an {@link IAudioManager} (e.g. `SSWebAudioManager`) to actually play it.
  */
 export interface SSAudioEvent {
-    partIndex: number;
-    partName: string | null;
-    soundListNameHash: number;
-    soundNameHash: number;
-    soundName: string | null;
-    loopNum: number;
+  partIndex: number;
+  partName: string | null;
+  soundListNameHash: number;
+  soundNameHash: number;
+  soundName: string | null;
+  loopNum: number;
 }
 
 /** Unsubscribe handle returned by the `onX` event-registration methods. */
 export type Unsubscribe = () => void;
 
-export interface SSCanvasPlayerOptions {
-  premultipliedAlpha?: boolean;
-  stencil?: boolean;
-  antialias?: boolean;
-  maxDPR?: number;
-  powerPreference?: 'low-power' | 'high-performance' | 'default';
-  pauseWhenHidden?: boolean;
-  autoStart?: boolean;
+/** A player's destination rectangle, in the surface's drawing-buffer pixels. */
+export interface SSPlayerBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface SSPlayerOptions {
   /**
    * Automatically play the animation's sounds (default `true`).
    *
    * When the loaded SSAB references sounds and no `audioManager` has been set, the
-   * player lazily creates a default {@link SSWebAudioManager} on `setAnimation`
-   * and wires it up — so sound "just works" with zero consumer code, like
-   * ssplayer-pixi. The audio adapter is loaded via a **dynamic import**, so it is
-   * a separate chunk that is fetched only when a sound-bearing animation is set:
-   * animations without sound (and the `./lite` build) never pull in any audio
-   * code, keeping the default bundle within the size budget.
+   * player lazily creates a default `SSWebAudioManager` on `setAnimation` and wires
+   * it up — so sound "just works" with zero consumer code, like ssplayer-pixi. The
+   * audio adapter is loaded via a **dynamic import**, so it is a separate chunk
+   * fetched only when a sound-bearing animation is set: animations without sound
+   * (and the `./lite` build) never pull in any audio code, keeping the default
+   * bundle within the size budget.
    *
    * Set to `false` for full manual control (attach your own `IAudioManager`, or
    * none) — nothing audio-related is then loaded automatically.
    */
   autoAudio?: boolean;
   /**
-   * Opaque backdrop colour (0xRRGGBB) to clear each frame to. When omitted the
-   * canvas is cleared TRANSPARENT (0,0,0,0) for overlay use.
+   * Supply the player's texture manager instead of letting it build a plain
+   * {@link SSWebGLResourceManager} on the surface's context.
    *
-   * Set this when the animation uses additive / backdrop-reading blend modes
-   * (Add, Screen, Mul, …): those composite against the framebuffer, so they are
-   * only correct when a real opaque backdrop is present. On a transparent canvas
-   * an additive sprite whose texture is a glow baked on an opaque black
-   * background renders that black as an opaque block (it has nothing to add
-   * onto). This is inherent to premultiplied-alpha compositing — ssplayer-pixi
-   * avoids it the same way, by rendering on an opaque `backgroundColor`.
+   * This is the hook for hosts that resolve textures through their own engine:
+   * `ssplayer-rmmz` subclasses it to load through RPG Maker MZ's `ImageManager`
+   * so SS atlases go through the same cache (and the same encryption) as every
+   * other game asset. Must belong to the same GL context as the surface.
    */
-  backgroundColor?: number;
+  resourceManager?: SSWebGLResourceManager;
 }
 
-export class SSCanvasPlayer {
-  static async initialize(wasm?: string | URL | ArrayBuffer | Uint8Array): Promise<void> {
-    // WASM SIMD support is validated inside initializeWasm (core), so the same clear
-    // error surfaces here on unsupported engines — callers can catch it to fall back.
-    // Omit `wasm` to use wasm-bindgen's default resolution (the bundler serves the
-    // runtime shipped with ssplayer-core); pass a URL/ArrayBuffer for inline/custom loads.
-    if (wasm instanceof ArrayBuffer || wasm instanceof Uint8Array) {
-      const module = await WebAssembly.compile(wasm as BufferSource);
-      await initializeWasm(module);
-    } else {
-      await initializeWasm(wasm);
-    }
-  }
+/**
+ * One SpriteStudio animation drawn onto an {@link SSSurface}.
+ *
+ * A Player owns everything that belongs to *an animation*: the runtime handle, the
+ * timeline, its transform, its events. It owns nothing GL-scoped — the context, the
+ * renderer, the ticker and the per-frame clear all belong to the Surface, which is
+ * why one Surface can carry any number of Players on a single WebGL context.
+ *
+ * ```ts
+ * const surface = new SSSurface(canvas, { autoStart: true });
+ * const player = surface.createPlayer();
+ * await player.load('chara.ssab');
+ * await player.setAnimation('idle');
+ * player.play();
+ * ```
+ */
+export class SSPlayer {
+  public internalPlayer: DirectInternalPlayer;
+  /**
+   * This player's textures. One manager per player (per player *tree* — instance
+   * children inherit it, see InternalPlayerBase.createChildPlayer), so the same
+   * atlas is uploaded once per player. Sharing uploads across a Surface is a
+   * follow-up; see SURFACE_PLAYER_SPEC.md §6.3.
+   */
+  public resourceManager: SSWebGLResourceManager;
 
-  public internalPlayer!: DirectInternalPlayer;
-  public renderer!: SSWebGLRenderer;
-  public resourceManager!: SSWebGLResourceManager;
+  /** The surface this player draws onto. */
+  public readonly surface: SSSurface;
 
-  private canvas: HTMLCanvasElement;
-  private gl: WebGLRenderingContext | WebGL2RenderingContext;
-  // Active requestAnimationFrame handle (0 = not scheduled). The internal ticker
-  // runs only while `_wantTicker` (user intent) AND the canvas is visible AND the
-  // context is not lost — see _syncTicker / _shouldRun.
-  private _rafId: number = 0;
-  private lastTime: number = 0;
-  private _wantTicker: boolean = false;
-  private _isPlaying: boolean = false;
-  // Whether the player is live at all — set by play()/resume(), cleared by
-  // stop(). A PAUSED player stays live (`_isPlaying` false, `_isLive` true) so
-  // update() keeps being forwarded: the core advances `independent` effect /
-  // instance slots on the real delta while the timeline is frozen. Gating
-  // update() on `_isPlaying` alone would freeze those too.
-  private _isLive: boolean = false;
+  // --- Box (SURFACE_PLAYER_SPEC.md §3.0) ---
+  // Null means "track the whole surface", so a player follows surface resizes
+  // without the host re-setting anything. An explicit box pins it — that is what
+  // overlay mode writes every frame from getBoundingClientRect().
+  private _box: SSPlayerBox | null = null;
 
-  // --- Visibility gating (pauseWhenHidden) ---
-  // Whether the canvas currently intersects the viewport. Starts true so hosts
-  // without IntersectionObserver (or with pauseWhenHidden:false) always run.
-  private _intersecting: boolean = true;
-  private _io: IntersectionObserver | null = null;
-  private _onVisibilityChange: (() => void) | null = null;
+  // --- Transform, composed lazily ---
+  // Stored as authored parameters rather than a baked matrix because the box may
+  // move or resize (surface resize, overlay scroll) after setTransform() ran; the
+  // final matrix is built at draw time in renderTransform().
+  private _x = 0;
+  private _y = 0;
+  private _scaleX = 1;
+  private _scaleY = 1;
+  private _rotation = 0;
+  private readonly _matrix = new Float32Array(6); // [m00, m01, m10, m11, tx, ty]
 
-  // --- Context loss recovery ---
-  private _contextLost: boolean = false;
-  private _onContextLost: ((e: Event) => void) | null = null;
-  private _onContextRestored: (() => void) | null = null;
-  private transformMatrix = new Float32Array([1, 0, 0, 1, 0, 0]); // [a, b, c, d, tx, ty]
-  // Per-frame clear colour. Transparent by default; an opaque backdrop when
-  // options.backgroundColor is set (see SSCanvasPlayerOptions.backgroundColor).
-  private _clearColor: [number, number, number, number] = [0, 0, 0, 0];
+  // --- Colour ---
+  private _alpha = 1;
+  private _tintRgb = 0xffffff;
+  // Premultiplied (rgb * a, a) — the form uColor must receive; see SSWebGLRenderer._tint.
+  private readonly _tintVec = new Float32Array([1, 1, 1, 1]);
 
-  // --- Animation event listeners (06_playback_control.ja.md) ---
+  /** Clip drawing to {@link box} with a scissor rect. Off by default: it breaks the batch. */
+  public clip = false;
+
+  /**
+   * Clear {@link box} to this opaque `0xRRGGBB` before drawing, so framebuffer-reading
+   * blend modes (Add / Screen / Mul) have a real backdrop. Null = draw straight onto
+   * whatever the surface already holds. Costs a batch break when set; see
+   * SURFACE_PLAYER_SPEC.md §6.2.
+   */
+  public backdrop: number | null = null;
+
+  /** Draw order within the surface; lower draws first. Ties keep insertion order. */
+  public order = 0;
+
+  private _isPlaying = false;
+  // Whether the player is live at all — set by play()/resume(), cleared by stop().
+  // A PAUSED player stays live (`_isPlaying` false, `_isLive` true) so update()
+  // keeps being forwarded: the core advances `independent` effect / instance slots
+  // on the real delta while the timeline is frozen. Gating update() on `_isPlaying`
+  // alone would freeze those too.
+  private _isLive = false;
+
   private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
   private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
   private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
@@ -154,100 +175,85 @@ export class SSCanvasPlayer {
   // Guards the one-time default-audio auto-wire (see ensureAutoAudio).
   private _audioAutoWired = false;
 
-  constructor(
-    target: HTMLCanvasElement | WebGLRenderingContext | WebGL2RenderingContext,
-    public options: SSCanvasPlayerOptions = {}
-  ) {
-    if (target instanceof HTMLCanvasElement) {
-      this.canvas = target;
-      const glAttrs = {
-        alpha: true,
-        premultipliedAlpha: options.premultipliedAlpha ?? true,
-        stencil: options.stencil ?? true,
-        antialias: options.antialias ?? false,
-        powerPreference: options.powerPreference ?? 'low-power',
-        // Ad-friendly context attrs: keep the drawing buffer disposable (we clear + redraw
-        // every frame), never fail on a "slow GPU" caveat (widen device reach),
-        // and hint desynchronized presentation for lower-latency low-power draw.
-        preserveDrawingBuffer: false,
-        failIfMajorPerformanceCaveat: false,
-        desynchronized: true,
-      };
-      this.gl = (this.canvas.getContext('webgl2', glAttrs) || this.canvas.getContext('webgl', glAttrs)) as any;
-    } else {
-      this.gl = target;
-      this.canvas = this.gl.canvas as HTMLCanvasElement;
-    }
-
-    this.renderer = new SSWebGLRenderer(this.gl);
-    this.resourceManager = new SSWebGLResourceManager(this.gl);
+  /**
+   * Prefer {@link SSSurface.createPlayer}. Constructing directly is equivalent —
+   * the player registers itself with `surface` either way, so there is only one
+   * lifecycle to reason about.
+   */
+  constructor(surface: SSSurface, public options: SSPlayerOptions = {}) {
+    this.surface = surface;
+    this.resourceManager = options.resourceManager ?? new SSWebGLResourceManager(surface.gl);
     this.internalPlayer = new DirectInternalPlayer(this.resourceManager);
-
-    if (options.backgroundColor !== undefined) {
-      const c = options.backgroundColor;
-      this._clearColor = [((c >> 16) & 0xff) / 255, ((c >> 8) & 0xff) / 255, (c & 0xff) / 255, 1];
-    }
-
-    this.registerContextLossHandlers();
-
-    if (options.autoStart) {
-      this.startTicker();
-    }
+    surface.add(this);
   }
+
+  // --- Box ------------------------------------------------------------------
 
   /**
-   * Subscribe to `webglcontextlost` / `webglcontextrestored`.
-   * Mobile webviews drop the GL context aggressively; without this the canvas
-   * goes blank permanently. On loss we must `preventDefault()` (otherwise the
-   * browser never fires a restore) and stop drawing; on restore we rebuild every
-   * GL object and re-upload textures, then resume.
+   * Destination rectangle in the surface's drawing-buffer pixels. Defaults to the
+   * whole surface and follows its resizes until set explicitly.
+   *
+   * {@link setTransform} is relative to this box's **centre**, matching SS's own
+   * centre origin — so a player is centred in its box with no host maths.
    */
-  private registerContextLossHandlers(): void {
-    this._onContextLost = (e: Event) => {
-      e.preventDefault();
-      this._contextLost = true;
-      this._syncTicker(); // halt the RAF while the context is gone
-    };
-    this._onContextRestored = () => { void this.restoreContext(); };
-    this.canvas.addEventListener('webglcontextlost', this._onContextLost as EventListener, false);
-    this.canvas.addEventListener('webglcontextrestored', this._onContextRestored, false);
+  public get box(): SSPlayerBox {
+    if (this._box) return this._box;
+    const { width, height } = this.surface.drawingBufferSize;
+    return { x: 0, y: 0, w: width, h: height };
   }
 
-  /**
-   * Rebuild GPU state after the context is restored: renderer GL objects
-   * (programs / buffers / VAO) synchronously, then textures asynchronously from
-   * their retained sources. Only after textures are back do we clear the lost
-   * flag and resume — so we never draw a frame with missing textures.
-   */
-  private async restoreContext(): Promise<void> {
-    this.renderer.restoreContext();
-    try {
-      await this.resourceManager.restoreContext();
-    } catch (e) {
-      console.warn('[SSCanvasPlayer] Texture restore after context loss failed; some parts may render blank.', e);
-    }
-    this._contextLost = false;
-    this._syncTicker();
-    // For manually-driven hosts (no ticker frame coming) repaint the current
-    // frame now — but not while gated off-screen (an on-screen manual host keeps
-    // _intersecting true because it never wired the observer).
-    if (!this._rafId && this._intersecting) this.draw();
+  public set box(v: SSPlayerBox) {
+    this._box = { x: v.x, y: v.y, w: v.w, h: v.h };
   }
 
-  /** Direct render mode + Y-down coordinate system, matching the WebGL projection. */
-  private configureContext(): void {
-    const ctx = this.internalPlayer.runtimeManager.context;
-    ctx.set_render_mode(0); // Direct
-    ctx.set_coordinate_system(1); // YDown
+  /** Revert to tracking the whole surface. */
+  public resetBox(): void {
+    this._box = null;
   }
+
+  // --- Colour ---------------------------------------------------------------
+
+  /** 0..1 opacity for the whole player. Multiplies the animation's own part alphas. */
+  public get alpha(): number { return this._alpha; }
+  public set alpha(v: number) {
+    this._alpha = v < 0 ? 0 : v > 1 ? 1 : v;
+    this.syncTint();
+  }
+
+  /** `0xRRGGBB` multiplied into every part. White (default) leaves colours untouched. */
+  public get tint(): number { return this._tintRgb; }
+  public set tint(v: number) {
+    this._tintRgb = v & 0xffffff;
+    this.syncTint();
+  }
+
+  private syncTint(): void {
+    const a = this._alpha;
+    const c = this._tintRgb;
+    // Premultiplied: uColor multiplies component-wise against an already
+    // premultiplied fragment, so RGB must be scaled by alpha too.
+    this._tintVec[0] = (((c >> 16) & 0xff) / 255) * a;
+    this._tintVec[1] = (((c >> 8) & 0xff) / 255) * a;
+    this._tintVec[2] = ((c & 0xff) / 255) * a;
+    this._tintVec[3] = a;
+  }
+
+  /** @internal The premultiplied `uColor` value for this player. */
+  public get tintVector(): Float32Array { return this._tintVec; }
+
+  /** Whether this player contributes anything to the frame. */
+  public get isVisible(): boolean {
+    return this._alpha > 0 && !!this.internalPlayer.animationName;
+  }
+
+  // --- Loading --------------------------------------------------------------
 
   public async loadBuffer(
     ssab: ArrayBuffer | Uint8Array,
-    textures: Map<number, TexImageSource | ArrayBuffer | string>
+    textures: Map<number, TexImageSource | ArrayBuffer | string>,
   ): Promise<void> {
     this.internalPlayer.bindResource(new Uint8Array(ssab));
     this.configureContext();
-    // Load textures into resourceManager
     for (const [hash, src] of textures.entries()) {
       if (typeof src === 'string') {
         await this.resourceManager.loadTexture(src, hash);
@@ -271,17 +277,24 @@ export class SSCanvasPlayer {
     await this.internalPlayer.setAnimation(name);
   }
 
+  /** Direct render mode + Y-down coordinate system, matching the WebGL projection. */
+  private configureContext(): void {
+    const ctx = this.internalPlayer.runtimeManager.context;
+    ctx.set_render_mode(0); // Direct
+    ctx.set_coordinate_system(1); // YDown
+  }
+
   /**
-   * Lazily create + wire a default {@link SSWebAudioManager} so sound plays with
-   * zero consumer code (mirrors ssplayer-pixi's auto-behaviour). No-op when:
+   * Lazily create + wire a default `SSWebAudioManager` so sound plays with zero
+   * consumer code (mirrors ssplayer-pixi's auto-behaviour). No-op when:
    * `options.autoAudio === false`, an `audioManager` is already set (consumer
    * supplied one), already attempted, or the current SSAB has no sounds.
    *
    * The adapter is pulled in via a **dynamic import**, so it lands in a separate
    * chunk fetched only here, only when sounds exist — the base player and the
-   * `./lite` build stay audio-free (size budget). Failures (e.g. an
-   * environment without dynamic import) are swallowed so the animation still
-   * plays silently; opt out with `autoAudio: false` + your own `IAudioManager`.
+   * `./lite` build stay audio-free (size budget). Failures (e.g. an environment
+   * without dynamic import) are swallowed so the animation still plays silently;
+   * opt out with `autoAudio: false` + your own `IAudioManager`.
    */
   private async ensureAutoAudio(): Promise<void> {
     if (this.options.autoAudio === false) return;
@@ -293,9 +306,11 @@ export class SSCanvasPlayer {
       // bindToPlayer sets `this.audioManager` and subscribes onAudio → play.
       new SSWebAudioManager().bindToPlayer(this);
     } catch (e) {
-      console.warn('[SSCanvasPlayer] Failed to auto-load the audio adapter; sound disabled. Attach an IAudioManager manually if needed.', e);
+      console.warn('[SSPlayer] Failed to auto-load the audio adapter; sound disabled. Attach an IAudioManager manually if needed.', e);
     }
   }
+
+  // --- Playback -------------------------------------------------------------
 
   public play(startFrame?: number): void {
     this.internalPlayer.play(startFrame);
@@ -329,6 +344,68 @@ export class SSCanvasPlayer {
   public get subFrameEnabled(): boolean { return this.internalPlayer.subFrameEnabled; }
   public set subFrameEnabled(v: boolean) { this.internalPlayer.subFrameEnabled = v; }
 
+  // --- Transform ------------------------------------------------------------
+
+  /**
+   * Position / scale / rotate this player **relative to its {@link box} centre**.
+   * `{}` centres it in the box.
+   */
+  public setTransform(t: {
+    x?: number; y?: number; scaleX?: number; scaleY?: number; rotation?: number;
+  }): void {
+    this._x = t.x ?? 0;
+    this._y = t.y ?? 0;
+    this._scaleX = t.scaleX ?? 1;
+    this._scaleY = t.scaleY ?? 1;
+    this._rotation = t.rotation ?? 0;
+  }
+
+  /**
+   * @internal The affine the renderer wants, in drawing-buffer pixels:
+   * `[m00, m01, m10, m11, tx, ty]` = translate(boxCentre + xy) × rotate × scale,
+   * matching GeometryBuilder.composeAffine. Rebuilt per frame because the box can
+   * move underneath a transform that was set once.
+   */
+  public renderTransform(): Float32Array {
+    const cos = Math.cos(this._rotation);
+    const sin = Math.sin(this._rotation);
+    const box = this.box;
+    const m = this._matrix;
+    m[0] = cos * this._scaleX;   // m00
+    m[1] = -sin * this._scaleY;  // m01
+    m[2] = sin * this._scaleX;   // m10
+    m[3] = cos * this._scaleY;   // m11
+    m[4] = box.x + box.w / 2 + this._x; // tx
+    m[5] = box.y + box.h / 2 + this._y; // ty
+    return m;
+  }
+
+  // --- Per-frame ------------------------------------------------------------
+
+  /** @internal Advance the timeline and drain its events. Driven by the Surface. */
+  public update(deltaMs: number): void {
+    if (!this._isLive) return;
+    // While paused, internalPlayer.update() still advances `independent` slots but
+    // does NOT move the timeline, so no events are passed and no frame is reached —
+    // skip polling and the per-frame listeners then.
+    const pausing = this.internalPlayer.isPausing;
+    this.internalPlayer.update(deltaMs);
+    if (pausing) return;
+
+    // Drain the events accumulated by this update (user-data / signal / audio +
+    // animation end/loop) right away, while the runtime's passed-event buffer is
+    // still valid. Must run on the same tick that advanced — including the tick a
+    // non-looping animation finishes on.
+    this.pollEvents();
+
+    // World matrices are final for this frame: notify per-frame listeners (the
+    // point getPartTransform is valid for the new frame).
+    if (this._frameListeners.size > 0) {
+      const f = this.internalPlayer.getFrameNo();
+      this._frameListeners.forEach(cb => cb(f));
+    }
+  }
+
   // --- Part overrides (65_override_layer) ---
   //
   // Thin pass-throughs to the core player, which owns the contract (see
@@ -337,9 +414,9 @@ export class SSCanvasPlayer {
   // itself — nothing is re-applied per frame here.
   //
   // An override changes the output without changing the frame number. That is
-  // invisible to this player because draw() is unconditional: the RAF ticker
-  // paints every frame even while stopped, and a host driving frames by hand
-  // already calls draw() itself. Nothing needs invalidating here.
+  // invisible here because the Surface draws unconditionally: its ticker paints
+  // every frame even while stopped, and a host driving frames by hand already
+  // calls draw() itself. Nothing needs invalidating.
 
   /** Resolve a part name to its index, or -1 if the part is not in the current animation. */
   public findPartIndex(partName: string): number {
@@ -412,15 +489,12 @@ export class SSCanvasPlayer {
   }
 
   // --- Part following: transform read-out ---
-  // This player draws to a canvas with no scene graph, so there is no managed
-  // attach; read a part's transform here and drive your own DOM/canvas element
-  // (compose the affine with this player's own screen transform). Pair with
-  // onFrame to update every frame.
 
   /**
    * The part's current-frame transform as a 2D affine `[m00, m01, m10, m11, tx,
    * ty]` in animation-local (Y-down) space, or null if the part is unknown. Read
    * after a frame advanced (e.g. from onFrame). Pass `out` to avoid allocation.
+   * Compose it with {@link renderTransform} to reach drawing-buffer pixels.
    */
   public getPartTransform(part: number | string, out?: Float32Array): Float32Array | null {
     return this.internalPlayer.getPartTransform(part, out);
@@ -429,141 +503,6 @@ export class SSCanvasPlayer {
   /** Whether the part is hidden on the current frame (animation `hide`), or null if unknown. */
   public isPartHidden(part: number | string): boolean | null {
     return this.internalPlayer.isPartHidden(part);
-  }
-
-  public startTicker(): void {
-    this._wantTicker = true;
-    this.ensureVisibilityWatch();
-    this._syncTicker();
-  }
-
-  public stopTicker(): void {
-    this._wantTicker = false;
-    this._syncTicker();
-  }
-
-  /**
-   * Whether the internal RAF loop should currently run: the user asked for it
-   * (`startTicker`), the context is alive, and — when `pauseWhenHidden` is on —
-   * the canvas is on-screen and the tab is foregrounded.
-   */
-  private get _shouldRun(): boolean {
-    const docHidden = typeof document !== 'undefined' && document.hidden;
-    return this._wantTicker && !this._contextLost && this._intersecting && !docHidden;
-  }
-
-  /** Start or stop the RAF loop to match `_shouldRun` (idempotent). */
-  private _syncTicker(): void {
-    if (this._shouldRun && !this._rafId) {
-      // Reset the clock so the first frame after a pause/restore uses a normal
-      // delta instead of the whole idle gap.
-      this.lastTime = performance.now();
-      const tick = (now: number) => {
-        const deltaMs = now - this.lastTime;
-        this.lastTime = now;
-        this.update(deltaMs);
-        this.draw();
-        this._rafId = this._shouldRun ? requestAnimationFrame(tick) : 0;
-      };
-      this._rafId = requestAnimationFrame(tick);
-    } else if (!this._shouldRun && this._rafId) {
-      cancelAnimationFrame(this._rafId);
-      this._rafId = 0;
-    }
-  }
-
-  /**
-   * Lazily wire the visibility gating used by `pauseWhenHidden` (default on):
-   * an IntersectionObserver pauses the ticker when the canvas scrolls off-screen
-   * and `visibilitychange` pauses it when the tab is backgrounded (saves
-   * battery and satisfies ad viewability). No-op when pauseWhenHidden is
-   * false or the APIs are unavailable (then the ticker simply always runs).
-   */
-  private ensureVisibilityWatch(): void {
-    if (this.options.pauseWhenHidden === false) return;
-    if (this._io || this._onVisibilityChange) return; // already set up
-
-    if (typeof IntersectionObserver !== 'undefined') {
-      // Until the observer's first callback we don't know if we're on-screen;
-      // assume hidden so an off-screen canvas never paints an initial frame.
-      this._intersecting = false;
-      this._io = new IntersectionObserver((entries) => {
-        this._intersecting = entries[entries.length - 1].isIntersecting;
-        this._syncTicker();
-      });
-      this._io.observe(this.canvas);
-    }
-    if (typeof document !== 'undefined') {
-      this._onVisibilityChange = () => this._syncTicker();
-      document.addEventListener('visibilitychange', this._onVisibilityChange);
-    }
-  }
-
-  public update(deltaMs: number): void {
-    if (!this._isLive) return;
-    // While paused, internalPlayer.update() still advances `independent` slots but
-    // does NOT move the timeline, so no events are passed and no frame is reached —
-    // skip polling and the per-frame listeners then.
-    const pausing = this.internalPlayer.isPausing;
-    this.internalPlayer.update(deltaMs);
-    if (pausing) return;
-
-    // Drain the events accumulated by this update (user-data / signal / audio +
-    // animation end/loop) right away, while the runtime's passed-event buffer is
-    // still valid. Must run on the same tick that advanced — including the tick a
-    // non-looping animation finishes on.
-    this.pollEvents();
-
-    // World matrices are final for this frame: notify per-frame listeners (the
-    // point getPartTransform is valid for the new frame).
-    if (this._frameListeners.size > 0) {
-      const f = this.internalPlayer.getFrameNo();
-      this._frameListeners.forEach(cb => cb(f));
-    }
-  }
-
-  public draw(): void {
-    // Drawing on a lost context is a no-op at best; skip until it is restored
-    // (isContextLost() also catches a loss that fired before our handler ran).
-    if (this._contextLost || this.gl.isContextLost()) return;
-    const gl = this.gl;
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    const [r, g, b, a] = this._clearColor;
-    gl.clearColor(r, g, b, a);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-
-    // Projection and all other program/blend state is set up in renderer.render().
-    this.renderer.render(this.internalPlayer, this.resourceManager, this.transformMatrix);
-  }
-
-  public setTransform(t: {
-    x?: number; y?: number; scaleX?: number; scaleY?: number;
-    rotation?: number; anchorX?: number; anchorY?: number;
-  }): void {
-    const x = t.x ?? 0;
-    const y = t.y ?? 0;
-    const sx = t.scaleX ?? 1;
-    const sy = t.scaleY ?? 1;
-    const rot = t.rotation ?? 0;
-    const cos = Math.cos(rot);
-    const sin = Math.sin(rot);
-    // Full 2D affine [m00,m01,m10,m11,tx,ty] = translate * rotate * scale, matching
-    // GeometryBuilder.composeAffine. (anchorX/anchorY are not yet applied.)
-    const m = this.transformMatrix;
-    m[0] = cos * sx;  // m00
-    m[1] = -sin * sy; // m01
-    m[2] = sin * sx;  // m10
-    m[3] = cos * sy;  // m11
-    m[4] = x;         // tx
-    m[5] = y;         // ty
-  }
-
-  public resize(cssW: number, cssH: number, dpr?: number): void {
-    const r = Math.min(dpr ?? window.devicePixelRatio, this.options.maxDPR ?? 2);
-    this.canvas.width = cssW * r;
-    this.canvas.height = cssH * r;
-    this.canvas.style.width = cssW + 'px';
-    this.canvas.style.height = cssH + 'px';
   }
 
   // --- Animation events (06_playback_control.ja.md) ---
@@ -606,9 +545,7 @@ export class SSCanvasPlayer {
   /**
    * Fires once per advanced frame from update(), after the timeline advanced and
    * its world matrices are final — the point at which {@link getPartTransform} is
-   * valid for the new frame. This player has no scene graph, so follow a part by
-   * reading getPartTransform here and positioning your own element (compose it
-   * with this player's own screen transform). Returns an unsubscribe function.
+   * valid for the new frame. Returns an unsubscribe function.
    */
   public onFrame(listener: (frame: number) => void): Unsubscribe {
     this._frameListeners.add(listener);
@@ -619,9 +556,8 @@ export class SSCanvasPlayer {
    * Drain and dispatch the events accumulated by the last runtime update:
    * user-data / signal / audio, plus animation end (edge) and loop (pulse).
    * Called from update() right after `internalPlayer.update()`, while the
-   * runtime's passed-event buffer is still valid. Reads event payloads from the
-   * current animation's SSAB events table via the runtime manager's
-   * introspection accessors. Safe with no listeners / no animation.
+   * runtime's passed-event buffer is still valid. Safe with no listeners / no
+   * animation.
    */
   private pollEvents(): void {
     const ctx = this.internalPlayer.runtimeManager.context;
@@ -681,22 +617,20 @@ export class SSCanvasPlayer {
   private dispatchSignals(events: ssFormat.EventsPerFrame): void {
     const mgr = this.internalPlayer.runtimeManager;
     const n = events.signalsLength();
-    for (let j = 0; j < n; j++) {
-      const sig = events.signals(j);
+    for (let i = 0; i < n; i++) {
+      const sig = events.signals(i);
       const val = sig?.value();
       if (!sig || !val) continue;
-      // Skip inactive signals (Godot / Unity / porting-guide behaviour).
+      // Only active signals are dispatched (mirrors the Godot / Unity players).
       if (!val.active()) continue;
 
       const params: Record<string, boolean | number | string> = {};
-      const pn = val.paramsLength();
-      for (let k = 0; k < pn; k++) {
-        const param = val.params(k);
+      const paramCount = val.paramsLength();
+      for (let p = 0; p < paramCount; p++) {
+        const param = val.params(p);
         if (!param) continue;
         const paramId = param.paramId();
         if (paramId === null) continue;
-
-        // Resolve the param's union value (Bool/Index/Integer/Floating/Text).
         let boxed: boolean | number | string | undefined;
         switch (param.valueType()) {
           case ssFormat.SignalCommandParamValue.Bool:
@@ -754,32 +688,17 @@ export class SSCanvasPlayer {
     this.internalPlayer.audioManager = v;
   }
 
+  /**
+   * Remove this player from its surface and free **its own** resources: the core
+   * player's WASM allocation (SSAB resource, runtime context, instance/effect slot
+   * handles) and its textures.
+   *
+   * It does not touch anything the Surface owns — the renderer's GL objects and the
+   * context outlive it, so tearing one player down never blanks its siblings.
+   */
   public destroy(): void {
-    this.stopTicker();
-
-    // Tear down visibility gating (pauseWhenHidden).
-    if (this._io) { this._io.disconnect(); this._io = null; }
-    if (this._onVisibilityChange && typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', this._onVisibilityChange);
-    }
-    this._onVisibilityChange = null;
-
-    // Tear down context-loss handlers.
-    if (this._onContextLost) {
-      this.canvas.removeEventListener('webglcontextlost', this._onContextLost as EventListener);
-      this._onContextLost = null;
-    }
-    if (this._onContextRestored) {
-      this.canvas.removeEventListener('webglcontextrestored', this._onContextRestored);
-      this._onContextRestored = null;
-    }
-
-    // Free the core player's WASM allocation (SSAB resource, runtime context,
-    // instance/effect slot handles). Mirrors ssplayer-pixi's SSPlayer.destroy();
-    // without this the entire DirectInternalPlayer leaks on every teardown.
+    this.surface.remove(this);
     this.internalPlayer?.destroy();
-
-    this.renderer.destroy();
     this.resourceManager.destroy();
   }
 }
