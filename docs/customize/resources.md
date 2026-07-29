@@ -9,7 +9,7 @@ before putting many players on one page, or when teardown leaks or blanks someth
 |---|---|---|
 | WASM module & memory | **One per page** | `initialize()` is a module-level singleton, so calling it more than once is harmless. |
 | Textures (PixiJS) | **Shared across every `SSPlayer`** | Registered in Pixi's global `Assets` cache under the cell-map hash, so two players using the same atlas reuse one GPU texture. |
-| Textures (WebGL) | **Per player** | A `WebGLTexture` belongs to the context that created it, and each `SSCanvasPlayer` owns its own canvas and context — so the same atlas is uploaded once per player. |
+| Textures (WebGL) | **Per player** | A `WebGLTexture` belongs to the context that created it, and each `SSSurface` owns a canvas and context — so the same atlas is uploaded once per player. |
 | Embedded textures (`--embedded`) | **Per player** | Decoded from the `.ssab`'s own bytes, deliberately kept out of any shared cache, and freed in `destroy()`. |
 | Parsed `.ssab` (WASM) | **Per player** | Each `load()` builds its own `SSABResource`. The HTTP fetch may be served from the browser cache, but the parsed WASM-side copy is not shared between players. |
 | Instance packs | **Per player tree** | Packs referenced by Instance parts are deduped by pack hash and shared with that player's instance children. |
@@ -19,14 +19,27 @@ WebGL, N texture uploads as well.
 
 ## Many instances of the same animation
 
-Reach for `ssplayer-pixi`. It batches draws and shares textures through the `Assets` cache, so a
-crowd of characters stays on a handful of draw calls in a single context.
+**Put them all on one surface.** An `SSSurface` carries any number of `SSPlayer`s on a single
+WebGL context, so a crowd of characters costs one context, not one each:
 
-`ssplayer-webgl` is the better fit for a small number of independent players. Each
-`SSCanvasPlayer` (and each `<ss-player>` element) creates its own WebGL context, and browsers cap
-how many contexts can be live at once — on the order of 8–16 depending on the browser. Past the
-cap the browser drops the oldest context, which surfaces as a canvas that goes blank. If you need
-dozens of animations on screen at once, use one PixiJS scene rather than dozens of elements.
+```ts
+const surface = new SSSurface(canvas, { autoStart: true });
+const a = surface.createPlayer();
+const b = surface.createPlayer();
+```
+
+This matters because browsers cap how many WebGL contexts can be live at once — on the order of
+8–16 depending on the browser. Past the cap the browser drops the oldest context, which shows up
+as a canvas that goes blank. **The cap applies per surface, not per player**, so it is only a
+concern if you create many surfaces.
+
+Where you *do* end up with one surface per animation is when each lives in its own `<canvas>` —
+notably one `<ss-player>` element per animation, since each element owns a surface. Keep that to
+a handful.
+
+`ssplayer-pixi` remains the better fit when the animations share a scene with other PixiJS
+content, since it batches draws with the rest of that scene and shares textures through the
+`Assets` cache.
 
 ## Tearing down
 
@@ -55,7 +68,7 @@ teardown strategy — call `destroy()`.
 
 ## WebGL context loss
 
-`SSCanvasPlayer` handles this for you: it listens for `webglcontextlost` / `webglcontextrestored`,
+`SSSurface` handles this for you: it listens for `webglcontextlost` / `webglcontextrestored`,
 halts drawing while the context is gone, and on restore rebuilds its GL objects and re-uploads
 every texture before resuming — so no frame is drawn with missing textures. This matters most on
 mobile webviews, which drop the context aggressively; without it the canvas would stay blank

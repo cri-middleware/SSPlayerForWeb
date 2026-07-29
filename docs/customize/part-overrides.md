@@ -2,7 +2,7 @@
 
 Per-part runtime overrides let a script say "make this part this colour / this cell / hidden **now**". An override wins over both the keyframes and the animation blending, so it never fights the animation.
 
-The same method names are available on `SSPlayer` (PixiJS) and `SSCanvasPlayer` (WebGL).
+The same method names are available on `SSPlayer` (both the PixiJS and WebGL backends).
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — cycles through the colour, visibility and cell overrides (source in `examples/override-example`)
 
@@ -111,14 +111,14 @@ An override changes the output **without changing the frame number**, so an impl
 | Player | Behaviour |
 |---|---|
 | `SSPlayer` (PixiJS) | Its ticker early-returns while stopped, so a successful override automatically re-renders the current frame |
-| `SSCanvasPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself do you need to call `draw()` |
+| `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself do you need to call `draw()` |
 | RPG Maker MZ | MZ redraws every game frame, so it just shows |
 
 ## Using it from each host
 
 Hosts whose authors don't write code get an authoring surface in their own idiom.
 
-- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so overrides are reached through `el.player` (the `SSCanvasPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
+- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so overrides are reached through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
 - **RPG Maker MZ** — drive it from an event's **plugin commands** (Set SS Part Color / Visibility / Cell, Clear SS Part Overrides). The settings are stored on the picture, so they **survive save/load**. See [RPG Maker MZ](/usage/rmmz).
 - **TyranoScript** — write `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` in a scenario. The settings are part of the save and are restored by `[ss_restore]`. See [TyranoScript](/usage/tyrano).
 - **TyranoBuilder** — the same four tags, written with the editor's own TyranoScript-code component; they have no palette entry yet. See [TyranoBuilder](/usage/tyranobuilder).

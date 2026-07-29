@@ -10,7 +10,7 @@
 
 | 環境 | クラス | パッケージ |
 |---|---|---|
-| フレームワーク非依存 / ドロップイン | [`SSCanvasPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSCanvasPlayer.md) | `ssplayer-webgl` |
+| フレームワーク非依存 / ドロップイン | [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
 | HTML だけで済ませたい | `<ss-player>`（[WebGL・Web Components で使う](/ja/usage/webgl)） | `ssplayer-webgl` |
 | PixiJS v8 アプリ | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
 | レンダラーを自作する | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
@@ -19,7 +19,7 @@ WASM ランタイムはモジュールレベルのシングルトンなので、
 インスタンスを作る前に一度だけ初期化が必要です。
 
 ```ts
-await SSCanvasPlayer.initialize();  // または SSPlayer.initialize()
+await SSSurface.initialize();  // または SSPlayer.initialize()
 ```
 
 ::: tip 同じシンボルが 3 回出てくる理由
@@ -35,7 +35,7 @@ import** してください。コアの型を使いたいだけの理由で、�
 スタックトレースや補完候補で見慣れないところに出たときの手がかりです。
 
 ```
-SSCanvasPlayer / SSPlayer          ← 呼び出すファサード（再生・イベント・オーバーライド）
+SSPlayer / SSPlayer          ← 呼び出すファサード（再生・イベント・オーバーライド）
   └─ DirectInternalPlayer          ← InternalPlayerBase を継承。ロードと描画プランを保持
        └─ SSRuntimeManager         ← WASM 境界。フレームデータを zero-copy な型付き配列ビューで公開
             └─ SSRuntimeContext    ← wasm-bindgen のハンドル（生成物。直接触る必要はありません）
@@ -70,7 +70,7 @@ PixiJS ではさらに
 [`WebPlaybackStyle`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackStyle.md) です。
 
 **構築オプション**（WebGL のみ）—
-[`SSCanvasPlayerOptions`](/api/@spritestudio/ssplayer-webgl/interfaces/SSCanvasPlayerOptions.md)。
+[`SSSurfaceOptions`](/api/@spritestudio/ssplayer-webgl/interfaces/SSSurfaceOptions.md)。
 `backgroundColor` / `maxDPR` / `antialias` / `pauseWhenHidden` などが含まれます。
 [パフォーマンスチューニング](/ja/customize/performance)を参照してください。
 

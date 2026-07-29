@@ -8,7 +8,7 @@ What is offered differs per renderer: a **pull API shared by every player**, wit
 |---|---|
 | `SSPlayer` (PixiJS) | Managed following via `attachToPart()` + the pull API |
 | `SSPlayer` (RPG Maker MZ) | Managed following via `attachToPart()` + the pull API |
-| `SSCanvasPlayer` (WebGL) | **Pull API only** (`getPartTransform()` + `onFrame()`) — this player has no scene graph |
+| `SSPlayer` (WebGL) | **Pull API only** (`getPartTransform()` + `onFrame()`) — this player has no scene graph |
 
 ## Basic usage
 
@@ -71,7 +71,7 @@ Following is driven after that frame's world matrices are final, so the target u
 |---|---|
 | `SSPlayer` (PixiJS) | At the end of `renderFrame()`, **after** the frame's meshes are placed, so targets draw above the animation |
 | `SSPlayer` (MZ) | In `update()`, after the events are dispatched |
-| `SSCanvasPlayer` (WebGL) | No managed following (`onFrame` fires once the world matrices are final) |
+| `SSPlayer` (WebGL) | No managed following (`onFrame` fires once the world matrices are final) |
 
 `getPartTransform()` returns an affine transformation matrix in **animation-local, Y-down** space — the space the parts themselves are drawn in. How exactly the target matches depends on where you place it.
 
@@ -84,11 +84,11 @@ Following is driven after that frame's world matrices are final, so the target u
 Following rides on the playback drive.
 
 - **Stopped (`stop()`)** — `SSPlayer` (PixiJS / MZ) early-returns out of `update()`, so **both the following and `onFrame` stop**. Seeking with `player.frame` while stopped does not update the following either.
-- **Paused (`pause()`)** — `SSPlayer` (PixiJS / MZ) keeps both the following and `onFrame` running. `SSCanvasPlayer` (WebGL) does not fire `onFrame`.
+- **Paused (`pause()`)** — `SSPlayer` (PixiJS / MZ) keeps both the following and `onFrame` running. `SSPlayer` (WebGL) does not fire `onFrame`.
 
 ## Following by hand (the pull API)
 
-On `SSCanvasPlayer` (WebGL), which has no scene graph, and whenever the follower is not a display object (a DOM overlay, hit-detection coordinates, …), drive it yourself by combining `onFrame()` with `getPartTransform()`.
+On `SSPlayer` (WebGL), which has no scene graph, and whenever the follower is not a display object (a DOM overlay, hit-detection coordinates, …), drive it yourself by combining `onFrame()` with `getPartTransform()`.
 
 ```ts
 const affine = new Float32Array(6);   // reuse it to avoid allocating
@@ -134,7 +134,7 @@ const { x, y, rotation, scaleX, scaleY } = decomposePartAffine(m);
 
 ## Using it from each host
 
-- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so reach the pull API through `el.player` (the `SSCanvasPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
+- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so reach the pull API through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
 - **RPG Maker MZ** — there are no plugin commands for part tracking. Get the `SSPlayer` instance from a script and call `attachToPart()`. See [RPG Maker MZ](/usage/rmmz).
 - **TyranoScript / TyranoBuilder** — no tags are provided at this time.
 

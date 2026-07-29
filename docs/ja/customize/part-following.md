@@ -8,7 +8,7 @@
 |---|---|
 | `SSPlayer`（PixiJS） | `attachToPart()` による自動追従 ＋ プル API |
 | `SSPlayer`（RPG ツクール MZ） | `attachToPart()` による自動追従 ＋ プル API |
-| `SSCanvasPlayer`（WebGL） | シーングラフを持たないため**プル API のみ**（`getPartTransform()` ＋ `onFrame()`） |
+| `SSPlayer`（WebGL） | シーングラフを持たないため**プル API のみ**（`getPartTransform()` ＋ `onFrame()`） |
 
 ## 基本的な使い方
 
@@ -71,7 +71,7 @@ player.detachFromPart(sword);
 |---|---|
 | `SSPlayer`（PixiJS） | `renderFrame()` の末尾。そのフレームのメッシュを配置した**後**なので、ターゲットはアニメーションより手前に描画されます |
 | `SSPlayer`（MZ） | `update()` 内、イベント配信の後 |
-| `SSCanvasPlayer`（WebGL） | 自動追従はありません（`onFrame` がワールド行列の確定後に発火します） |
+| `SSPlayer`（WebGL） | 自動追従はありません（`onFrame` がワールド行列の確定後に発火します） |
 
 `getPartTransform()` が返すのは**アニメーションローカル・Y-down**（パーツが描画される空間そのもの）のアフィン変換行列です。ターゲットをどこに置くかで、一致の度合いが変わります。
 
@@ -84,11 +84,11 @@ player.detachFromPart(sword);
 追従は再生の駆動に乗って動きます。
 
 - **停止中（`stop()`）** — `SSPlayer`（PixiJS / MZ）は `update()` が早期 return するため、**追従も `onFrame` も止まります**。停止したまま `player.frame` でシークしても追従は更新されません。
-- **一時停止中（`pause()`）** — `SSPlayer`（PixiJS / MZ）は追従・`onFrame` とも継続します。`SSCanvasPlayer`（WebGL）は `onFrame` を発火しません。
+- **一時停止中（`pause()`）** — `SSPlayer`（PixiJS / MZ）は追従・`onFrame` とも継続します。`SSPlayer`（WebGL）は `onFrame` を発火しません。
 
 ## 手動で追従する（プル API）
 
-シーングラフを持たない `SSCanvasPlayer`（WebGL）や、追従先が表示オブジェクトでない場合（DOM オーバーレイ、当たり判定の座標など）は、`onFrame()` と `getPartTransform()` を組み合わせて自前で駆動します。
+シーングラフを持たない `SSPlayer`（WebGL）や、追従先が表示オブジェクトでない場合（DOM オーバーレイ、当たり判定の座標など）は、`onFrame()` と `getPartTransform()` を組み合わせて自前で駆動します。
 
 ```ts
 const affine = new Float32Array(6);   // 使い回してアロケーションを避ける
@@ -134,7 +134,7 @@ const { x, y, rotation, scaleX, scaleY } = decomposePartAffine(m);
 
 ## 各ホストからの使い方
 
-- **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、`el.player`（下層の `SSCanvasPlayer`）経由でプル API を呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
+- **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、`el.player`（下層の `SSPlayer`）経由でプル API を呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
 - **RPG ツクール MZ** — パーツトラッキングに対応するプラグインコマンドはありません。スクリプトから `SSPlayer` のインスタンスを取得して `attachToPart()` を呼んでください。詳しくは [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
 - **TyranoScript / TyranoBuilder** — 現時点ではタグを用意していません。
 

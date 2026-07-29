@@ -10,7 +10,7 @@ installed. Everything else hangs off it.
 
 | Your setup | Class | Package |
 |---|---|---|
-| Frameworkless / drop-in | [`SSCanvasPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSCanvasPlayer.md) | `ssplayer-webgl` |
+| Frameworkless / drop-in | [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
 | Plain HTML, no JS wiring | `<ss-player>` (see [WebGL & Web Components](/usage/webgl)) | `ssplayer-webgl` |
 | PixiJS v8 app | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
 | Your own renderer | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
@@ -19,7 +19,7 @@ Both player classes must be initialized once before any instance is constructed,
 runtime is a module-level singleton:
 
 ```ts
-await SSCanvasPlayer.initialize();  // or SSPlayer.initialize()
+await SSSurface.initialize();  // or SSPlayer.initialize()
 ```
 
 ::: tip The same symbol appears three times
@@ -34,7 +34,7 @@ a renderer just to reach a core type.
 Useful when a stack trace or an autocomplete list drops you somewhere unfamiliar:
 
 ```
-SSCanvasPlayer / SSPlayer          ← the facade you call (playback, events, overrides)
+SSPlayer / SSPlayer          ← the facade you call (playback, events, overrides)
   └─ DirectInternalPlayer          ← extends InternalPlayerBase; owns loading + the draw plan
        └─ SSRuntimeManager         ← the WASM boundary; frame data as zero-copy typed-array views
             └─ SSRuntimeContext    ← wasm-bindgen handle (generated; you should not need it)
@@ -68,7 +68,7 @@ on PixiJS also [`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/interfaces/
 arguments to `setPlaybackDirection`.
 
 **Construction options** (WebGL only) —
-[`SSCanvasPlayerOptions`](/api/@spritestudio/ssplayer-webgl/interfaces/SSCanvasPlayerOptions.md)
+[`SSSurfaceOptions`](/api/@spritestudio/ssplayer-webgl/interfaces/SSSurfaceOptions.md)
 covers `backgroundColor`, `maxDPR`, `antialias`, `pauseWhenHidden` and the rest. See
 [Performance tuning](/customize/performance).
 

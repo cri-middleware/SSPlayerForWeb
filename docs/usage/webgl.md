@@ -19,7 +19,7 @@ pnpm add @spritestudio/ssplayer-webgl@beta
   Three.js.
 - **Web Components**: ships a Custom Element, so you can add `<ss-player>` to your HTML
   and play an animation without writing any JavaScript.
-- Provides `SSCanvasPlayer`, which draws and updates automatically, and
+- Provides `SSSurface` + `SSPlayer`, which draw and update automatically, and
   `SSWebGLRenderer`, which you can wire into your own rendering loop.
 
 ## Using the Web Component (`<ss-player>`)
@@ -47,7 +47,7 @@ To control it from JavaScript, grab the DOM element and call `play()` or `stop()
 [Basic playback](/usage/basic) for the full API.
 
 The element deliberately carries only the playback verbs; everything else — including the
-per-part overrides — is reached through `el.player`, the `SSCanvasPlayer` underneath:
+per-part overrides — is reached through `el.player`, the `SSPlayer` underneath:
 
 ```js
 const el = document.querySelector('ss-player');
@@ -59,16 +59,16 @@ The part-transform read-out is reached the same way. This player has no scene gr
 following a part means reading `el.player.getPartTransform()` from `onFrame()` and placing
 your own element — see [Part tracking](/customize/part-following).
 
-## Using SSCanvasPlayer directly
+## Using SSSurface and SSPlayer directly
 
 You can also initialize a player against a canvas directly from TypeScript /
 JavaScript.
 
 ```ts
-import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import { SSSurface } from '@spritestudio/ssplayer-webgl';
 
 async function main() {
-  await SSCanvasPlayer.initialize();
+  await SSSurface.initialize();
 
   const canvas = document.createElement('canvas');
   canvas.width = 640;
@@ -76,7 +76,8 @@ async function main() {
   document.body.appendChild(canvas);
 
   // Options let you enable autoplay or configure the WebGL context
-  const player = new SSCanvasPlayer(canvas, { autoStart: true });
+  const surface = new SSSurface(canvas, { autoStart: true });
+  const player = surface.createPlayer();
   await player.load('/assets/Ringo.ssab');
   await player.setAnimation('run');
   player.play();

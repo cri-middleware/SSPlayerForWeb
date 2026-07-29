@@ -6,7 +6,7 @@
 
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
 
-> **対象読者:** フレームワークを使わない Web 開発者 — SpriteStudio プレイヤーを任意のページに、`<ss-player>` という HTML タグ 1 つ、または `SSCanvasPlayer` の JS API で、ランタイム依存ゼロで組み込めます。
+> **対象読者:** フレームワークを使わない Web 開発者 — SpriteStudio プレイヤーを任意のページに、`<ss-player>` という HTML タグ 1 つ、または `SSPlayer` の JS API で、ランタイム依存ゼロで組み込めます。
 > **インストール:** `npm install @spritestudio/ssplayer-webgl@beta`
 > **目的が違う場合:** → [パッケージ表](../../README.ja.md#-どのパッケージを使うか) — すでに PixiJS や RPG ツクール MZ を使っていますか? それ専用のレンダラーがあります。
 
@@ -17,7 +17,7 @@
 - **HTML タグ 1 つでドロップイン。** 組み込みの **`<ss-player>` カスタム要素** は
   `.ssab` を宣言的に再生します — `<ss-player src="chara.ssab"
   animation="idle" autoplay>` — ビルドステップも JavaScript も不要で、どんな
-  フレームワークでも素の HTML でも動作します。コードを書きたい場合は、`SSCanvasPlayer`
+  フレームワークでも素の HTML でも動作します。コードを書きたい場合は、`SSPlayer`
   クラスが同じレンダラーに対する完全な命令的コントロールを提供します。
 - **キャラクターだけでなく、シーン全体を。** SpriteStudio はキャラクター、背景、
   エフェクト、UI を単一のタイムライン上に合成するため、1 つの `.ssab` が完結した
@@ -51,7 +51,7 @@ HTML タグ、そしてバイト予算に収まる `./lite` ビルド — これ
 
 ### ドロップイン — `<ss-player>` Web Component(JS ほぼ不要)
 
-ページに載せる最速の方法: `SSCanvasPlayer` をラップした宣言的なカスタム要素です。
+ページに載せる最速の方法: `SSPlayer` をラップした宣言的なカスタム要素です。
 タグを一度登録すれば、あとは HTML のどこでも使えます。
 
 ```ts
@@ -83,24 +83,25 @@ el.play();
 > というツリーシェイク契約が保たれます([エントリーポイント](#エントリーポイント)参照)。
 > 一度呼べばタグが登録され、インポートしなければバンドルから取り除かれます。
 
-### コード駆動 — `SSCanvasPlayer`(JS API)
+### コード駆動 — `SSPlayer`(JS API)
 
-完全な命令的コントロールが必要ですか? `SSCanvasPlayer` クラスを `<canvas>` に対して直接使用してください。
+完全な命令的コントロールが必要ですか? `SSPlayer` クラスを `<canvas>` に対して直接使用してください。
 
 ```ts
-import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import { SSSurface } from '@spritestudio/ssplayer-webgl';
 
 // 1. Load the WASM runtime once for the whole app.
-await SSCanvasPlayer.initialize();
+await SSSurface.initialize();
 
 // 2. Create a player on a canvas, load a .ssab, and pick an animation.
 const canvas = document.querySelector('canvas')!;
-const player = new SSCanvasPlayer(canvas, {
+const surface = new SSSurface(canvas, {
   maxDPR: 2,                 // cap devicePixelRatio for fill-rate control
   powerPreference: 'low-power',
   pauseWhenHidden: true,     // pause when the tab/element is not visible
   backgroundColor: 0x1a1a2e, // opaque backdrop; omit for a transparent canvas
 });
+const player = surface.createPlayer();
 
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 await player.setAnimation('run');
@@ -108,7 +109,7 @@ await player.setAnimation('run');
 player.play();                       // drives itself via requestAnimationFrame
 ```
 
-`SSCanvasPlayer` はターゲットとして `HTMLCanvasElement` または既存の `WebGL(2)RenderingContext` のいずれかを受け付けるため、独自のレンダラーとコンテキストを共有できます。
+`SSPlayer` はターゲットとして `HTMLCanvasElement` または既存の `WebGL(2)RenderingContext` のいずれかを受け付けるため、独自のレンダラーとコンテキストを共有できます。
 
 > **参照 ssab と 埋め込み(embedded) ssab の両方が動作します。** `load()`(および
 > 要素の `src`)はどちらのバリアントも受け付けます。`--embedded` ssab はインライン化
@@ -121,7 +122,7 @@ player.play();                       // drives itself via requestAnimationFrame
 本パッケージはゼロ依存のブラウザ直読み用ビルドを同梱しており、CDN からそのまま読み込め
 ます。**手動でやることは1つだけ — WASM バイナリの場所を明示する**ことです。ランタイムは
 別ファイルの `.wasm` で、バンドラの外（クラシックな `<script>` や CDN 経由）ではバンドラが
-行う自動パス解決が効きません。そのため URL を `SSCanvasPlayer.initialize(wasm)` に渡して
+行う自動パス解決が効きません。そのため URL を `SSSurface.initialize(wasm)` に渡して
 ください。
 
 > **URL のペアは下記スニペットからそのままコピーし、手で組み立てないでください。**
@@ -166,22 +167,23 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
 
 ### クラシック `<script>` — グローバル `SSWebGLPlayer`
 
-先に読み込むピア依存はありません。プレイヤークラスは `SSWebGLPlayer.SSCanvasPlayer` です。
+先に読み込むピア依存はありません。プレイヤークラスは `SSWebGLPlayer.SSSurface` です。
 
 ```html
 <canvas id="stage" width="1280" height="960"></canvas>
 <script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ssplayer-webgl.browser.min.js"></script>
 <script>
-  const { SSCanvasPlayer } = SSWebGLPlayer;
+  const { SSSurface } = SSWebGLPlayer;
   const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
 
   (async () => {
     // WASM の URL を明示的に渡す（バンドラが無いので自動解決されない）。
-    await SSCanvasPlayer.initialize(WASM_URL);
+    await SSSurface.initialize(WASM_URL);
 
-    const player = new SSCanvasPlayer(document.getElementById('stage'), {
+    const surface = new SSSurface(document.getElementById('stage'), {
       backgroundColor: 0x1a1a2e,
     });
+    const player = surface.createPlayer();
     await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
     await player.setAnimation('run');
     player.play();
@@ -197,11 +199,12 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
 ```html
 <canvas id="stage" width="1280" height="960"></canvas>
 <script type="module">
-  import { SSCanvasPlayer } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1';
+  import { SSSurface } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1';
 
-  await SSCanvasPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
+  await SSSurface.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
 
-  const player = new SSCanvasPlayer(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
+  const surface = new SSSurface(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
+  const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
   await player.setAnimation('run');
   player.play();
@@ -222,7 +225,7 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
 
 ## 再生とイベント
 
-タイムラインイベントは上記の **両方** の使い方に適用されます。`SSCanvasPlayer` は他のレンダラーと同じファサードを公開します:
+タイムラインイベントは上記の **両方** の使い方に適用されます。`SSPlayer` は他のレンダラーと同じファサードを公開します:
 
 ```ts
 player.play(startFrame?);  player.pause();  player.resume();  player.stop();

@@ -32,7 +32,8 @@
 **WebGL** — 加算や背景読み取り系のモードを使うアニメーションでは `backgroundColor` を渡します。
 
 ```ts
-const player = new SSCanvasPlayer(canvas, { backgroundColor: 0x000000 });
+const surface = new SSSurface(canvas, { backgroundColor: 0x000000 });
+const player = surface.createPlayer();
 ```
 
 ```html

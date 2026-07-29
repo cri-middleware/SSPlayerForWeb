@@ -3,7 +3,7 @@
 ::: warning Beta
 `@spritestudio/ssplayer-tyranoscript` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
 tags are complete, but names and behavior may still change before `7.0.0`. Rendering is
-built on [`ssplayer-webgl`](/usage/webgl)'s `SSCanvasPlayer`.
+built on [`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
 
 **There are no releases yet.** Once the first release ships, a plugin ZIP will be
 distributed on **GitHub Releases** — but for now the only way to obtain it is to
@@ -29,7 +29,7 @@ TyranoBuilder, and TyranoStudio.
 
 - Each `[ss_new]` creates a named player: it loads the `.ssab`, mounts a `<canvas>`
   on the target layer, and drives it with [`ssplayer-webgl`](/usage/webgl)'s
-  `SSCanvasPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies).
+  `SSPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies).
 - The canvas is tagged with **your player name** as its identifier, so Tyrano's own
   `[anim]` / `[kanim]` tags drive it directly — just like any character.
 - Only the **WASM binary** (`ssruntime_bg.wasm`) stays external; the renderer and

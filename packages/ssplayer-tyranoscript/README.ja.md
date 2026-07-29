@@ -285,7 +285,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 *利用者はここまで。以下はこのパッケージを開発する人向けです。*
 
 本パッケージは TyranoScript 向けの薄いアダプタです。描画は
-[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSCanvasPlayer`
+[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSPlayer`
 （WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）が担います。このパッケージは **GPU 処理を
 持たず**、レイヤー `div` への `<canvas>` 挿入・座標マッピング・再生制御といった
 **TyranoScript 固有のグルー**に徹します。実装済み範囲は実 TyranoScript で確認済みで、
@@ -306,7 +306,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 ### 内部仕様（座標・ライフサイクル）
 
 - **座標**: Tyrano の左上原点・論理ピクセル（`config.scWidth × scHeight`）を、
-  `SSCanvasPlayer`（Y-down）の描画バッファ座標へマップします。HiDPI は `devicePixelRatio`
+  `SSPlayer`（Y-down）の描画バッファ座標へマップします。HiDPI は `devicePixelRatio`
   をバッファ倍率に反映し、`maxDPR` で上限を設けます。
 - **`[anim]` 用の命名**: 生成時に canvas へプレイヤー名を CSS クラスとして付与します
   （`$.setName`＝`addClass(name)`。TyranoScript のキャラ識別と同じ仕組み）。`ss-player`

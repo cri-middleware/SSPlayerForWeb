@@ -24,21 +24,22 @@ JavaScript.
 </ss-player>
 ```
 
-To supply your own canvas and drive playback yourself, use `SSCanvasPlayer`.
+To supply your own canvas and drive playback yourself, use `SSPlayer`.
 
 ```ts
-import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import { SSSurface } from '@spritestudio/ssplayer-webgl';
 
 async function main() {
   // Initialize the WASM runtime once for the whole app
-  await SSCanvasPlayer.initialize();
+  await SSSurface.initialize();
 
   const canvas = document.createElement('canvas');
   canvas.width = 640;
   canvas.height = 480;
   document.body.appendChild(canvas);
 
-  const player = new SSCanvasPlayer(canvas, { autoStart: true });
+  const surface = new SSSurface(canvas, { autoStart: true });
+  const player = surface.createPlayer();
   await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
   await player.setAnimation('run');    // loop defaults to -1 (infinite)
   player.play();
@@ -83,7 +84,7 @@ main().catch(console.error);
 ## Common pitfalls
 
 - **Call `initialize()` only once**: initializing the WASM runtime once at app startup
-  is enough (`SSCanvasPlayer.initialize()` / `SSPlayer.initialize()`).
+  is enough (`SSSurface.initialize()` / `SSPlayer.initialize()`).
 - **Don't call `update()` with Pixi**: `SSPlayer` is registered with `Ticker.shared`
   automatically.
 - **No `.ssab`**: see [Preparing assets](/usage/assets) for converting from `.sspj`.

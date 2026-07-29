@@ -304,7 +304,7 @@ Known limitations and planned work are tracked in [`ROADMAP.md`](./ROADMAP.md).
 *Consumers can stop here — everything below is for hacking on this package.*
 
 This is a thin adapter. Rendering is handled by
-[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSCanvasPlayer`
+[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSPlayer`
 (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies). This package holds **no
 GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a layer
 `div`, coordinate mapping, and playback control. Remaining work lives in
@@ -328,7 +328,7 @@ GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a l
 ### Internals (coordinates, lifecycle)
 
 - **Coordinates**: Tyrano's top-left logical pixels (`config.scWidth × scHeight`) map
-  to `SSCanvasPlayer`'s (Y-down) drawing-buffer space; HiDPI folds `devicePixelRatio`
+  to `SSPlayer`'s (Y-down) drawing-buffer space; HiDPI folds `devicePixelRatio`
   into the buffer scale, clamped by `maxDPR`.
 - **Naming for `[anim]`**: on creation the canvas is tagged with the player name as a
   CSS class (`$.setName` is `addClass(name)`, the same way TyranoScript identifies a

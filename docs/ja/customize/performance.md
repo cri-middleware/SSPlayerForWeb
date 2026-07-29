@@ -14,7 +14,8 @@ SpriteStudio のコンテンツはたいてい CPU ではなく **フィルレ�
 **WebGL** — デバイスピクセル比に上限をかけます。既定でも `2` が上限です。
 
 ```ts
-const player = new SSCanvasPlayer(canvas, { maxDPR: 1.5 });
+const surface = new SSSurface(canvas, { maxDPR: 1.5 });
+const player = surface.createPlayer();
 player.resize(cssWidth, cssHeight);       // 上限を反映してバッファを再計算します
 ```
 

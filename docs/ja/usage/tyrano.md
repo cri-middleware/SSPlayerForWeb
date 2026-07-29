@@ -3,7 +3,7 @@
 ::: warning ベータ版
 `@spritestudio/ssplayer-tyranoscript` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは
 揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
-[`ssplayer-webgl`](/ja/usage/webgl) の `SSCanvasPlayer` を土台にしています。
+[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
 
 **リリースはまだ 1 つもありません。** 正式リリース後はプラグイン ZIP が **GitHub Releases** で
 配布される予定ですが、現時点で入手する唯一の方法は [ソースからのビルド](#ソースからビルドする)です。
@@ -26,7 +26,7 @@
 動作します。
 
 - `[ss_new]` ごとに名前付きプレイヤーを生成し、`.ssab` をロードして対象レイヤーへ `<canvas>` を
-  マウントし、[`ssplayer-webgl`](/ja/usage/webgl) の `SSCanvasPlayer`（WebGL1 必須 + WebGL2 自動
+  マウントし、[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer`（WebGL1 必須 + WebGL2 自動
   昇格 / 依存ゼロ）で駆動します。
 - canvas には **プレイヤー名**が識別子として付与されるため、他のキャラと同じように Tyrano 標準の
   `[anim]` / `[kanim]` でそのまま動かせます。

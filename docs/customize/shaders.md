@@ -31,7 +31,8 @@ environment.
 **WebGL** — pass `backgroundColor` when the animation uses additive or backdrop-reading modes:
 
 ```ts
-const player = new SSCanvasPlayer(canvas, { backgroundColor: 0x000000 });
+const surface = new SSSurface(canvas, { backgroundColor: 0x000000 });
+const player = surface.createPlayer();
 ```
 
 ```html
