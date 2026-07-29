@@ -112,9 +112,12 @@ export class SSPlayer {
   public internalPlayer: DirectInternalPlayer;
   /**
    * This player's textures. One manager per player (per player *tree* — instance
-   * children inherit it, see InternalPlayerBase.createChildPlayer), so the same
-   * atlas is uploaded once per player. Sharing uploads across a Surface is a
-   * follow-up; see SURFACE_PLAYER_SPEC.md §6.3.
+   * children inherit it, see InternalPlayerBase.createChildPlayer), keyed by the
+   * cell-map hash, which is only unique within one `.ssab`.
+   *
+   * URL-loaded atlases are delegated to the surface's shared cache, so several
+   * players showing the same character upload it once. Embedded and
+   * caller-supplied textures stay private to this player.
    */
   public resourceManager: SSWebGLResourceManager;
 
@@ -191,7 +194,8 @@ export class SSPlayer {
    */
   constructor(surface: SSSurface, public options: SSPlayerOptions = {}) {
     this.surface = surface;
-    this.resourceManager = options.resourceManager ?? new SSWebGLResourceManager(surface.gl);
+    this.resourceManager = options.resourceManager
+      ?? new SSWebGLResourceManager(surface.gl, surface.textureCache);
     this.internalPlayer = new DirectInternalPlayer(this.resourceManager);
     surface.add(this);
   }

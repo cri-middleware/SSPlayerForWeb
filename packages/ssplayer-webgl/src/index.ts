@@ -12,5 +12,6 @@ export {
 } from './SSPlayer.js';
 export { SSWebGLRenderer } from './SSWebGLRenderer.js';
 export { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
+export { SSWebGLTextureCache, type SSTextureEntry } from './SSWebGLTextureCache.js';
 // Optional Web Audio adapter (tree-shakeable; not pulled in unless imported).
 export { SSWebAudioManager } from './SSWebAudioManager.js';

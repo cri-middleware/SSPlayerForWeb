@@ -2,6 +2,7 @@ import { initializeWasm } from '@spritestudio/ssplayer-core';
 import { SSWebGLRenderer } from './SSWebGLRenderer.js';
 import { SSPlayer, type SSPlayerOptions } from './SSPlayer.js';
 import { SSGroupAlpha } from './SSGroupAlpha.js';
+import { SSWebGLTextureCache } from './SSWebGLTextureCache.js';
 
 export interface SSSurfaceOptions {
   premultipliedAlpha?: boolean;
@@ -81,6 +82,12 @@ export class SSSurface {
   public readonly gl: WebGLRenderingContext | WebGL2RenderingContext;
   public readonly canvas: HTMLCanvasElement;
   public readonly renderer: SSWebGLRenderer;
+  /**
+   * One GPU upload per texture URL across every player here. A `WebGLTexture`
+   * belongs to its context, so this is exactly the right scope — and it is why a
+   * cast of the same character costs one atlas rather than one each.
+   */
+  public readonly textureCache: SSWebGLTextureCache;
   /** False for a borrowed context: the host owns the frame, the clear and the canvas. */
   public readonly owned: boolean;
 
@@ -158,6 +165,7 @@ export class SSSurface {
     }
 
     this.renderer = new SSWebGLRenderer(this.gl);
+    this.textureCache = new SSWebGLTextureCache(this.gl);
 
     if (options.backgroundColor !== undefined) {
       const c = options.backgroundColor;
@@ -460,6 +468,9 @@ export class SSSurface {
     // rebuild it rather than carrying dangling GL names around.
     this._groupAlpha?.destroy();
     this._groupAlpha = null;
+    // Forget the shared textures BEFORE the players restore, so the first one to
+    // ask for a URL re-uploads it and the rest pick up that copy.
+    this.textureCache.invalidate();
     this.renderer.restoreContext();
     await Promise.all(this.players.map(async (player) => {
       try {
@@ -512,6 +523,9 @@ export class SSSurface {
 
     this._groupAlpha?.destroy();
     this._groupAlpha = null;
+    // The surface owns the shared textures, so it is the only thing that may
+    // delete them — a player teardown never can.
+    this.textureCache.destroy();
     this.renderer.destroy();
   }
 }
