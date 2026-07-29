@@ -5,6 +5,19 @@ export interface SSOverlayOptions extends Omit<SSSurfaceOptions, 'autoStart' | '
   /** Stacking order of the overlay canvas. Default 0 — behind positioned UI. */
   zIndex?: number;
   /**
+   * Also read each host element's computed `opacity` into its player's alpha
+   * (default off).
+   *
+   * Off, an element is only a position. On, it is a position *and* a fade — which
+   * is what lets a host engine keep animating these elements with its own tooling
+   * and have the animation follow. `ssplayer-tyranoscript` turns it on so
+   * TyranoScript's `[anim opacity=]` / `[kanim]` still fade an SS character after
+   * the character stopped being a canvas.
+   *
+   * Costs a `getComputedStyle` per tracked element per frame, so it is opt-in.
+   */
+  followOpacity?: boolean;
+  /**
    * Where to mount the overlay canvas. Defaults to `document.body`, which makes
    * it viewport-sized. Pass a positioned element to scope an overlay to a
    * scroll container instead — note that costs another WebGL context.
@@ -159,6 +172,7 @@ export class SSOverlay {
       // what turns a scrolling page into layout thrash.
       const origin = this.canvas.getBoundingClientRect();
       const dpr = this.canvas.width / Math.max(1, origin.width);
+      const followOpacity = this.options.followOpacity ?? false;
       for (const [player, el] of this.entries) {
         if (!player.visible) continue;
         const r = el.getBoundingClientRect();
@@ -168,6 +182,14 @@ export class SSOverlay {
           w: r.width * dpr,
           h: r.height * dpr,
         };
+        if (followOpacity) {
+          // Computed, not inline: this has to see the value a CSS transition or a
+          // host engine's own animation is currently on, not the one an author
+          // typed. Reading it here keeps the animation fading in step with the
+          // element rather than a frame behind it.
+          const opacity = Number.parseFloat(getComputedStyle(el).opacity);
+          player.alpha = Number.isFinite(opacity) ? opacity : 1;
+        }
       }
 
       for (const player of this.entries.keys()) {
