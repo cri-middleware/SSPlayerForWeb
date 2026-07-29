@@ -33,9 +33,14 @@ This matters because browsers cap how many WebGL contexts can be live at once �
 as a canvas that goes blank. **The cap applies per surface, not per player**, so it is only a
 concern if you create many surfaces.
 
-Where you *do* end up with one surface per animation is when each lives in its own `<canvas>` —
-notably one `<ss-player>` element per animation, since each element owns a surface. Keep that to
-a handful.
+The integrations already work this way, so you rarely have to think about it:
+
+| | contexts |
+|---|---|
+| `<ss-player>` elements | **one per page.** They share an overlay canvas by default, however many you place. `standalone` opts an element out into its own context — use it only when that element needs CSS effects on the animation, its own opaque backdrop, or a place in the normal stacking order. |
+| `ssplayer-tyranoscript` | **one per layer in use** (typically one or two), not one per character. |
+| `ssplayer-rmmz` | **none of its own** — it draws on RPG Maker MZ's context. |
+| `ssplayer-pixi` | **none of its own** — it draws on your PixiJS application's. |
 
 `ssplayer-pixi` remains the better fit when the animations share a scene with other PixiJS
 content, since it batches draws with the rest of that scene and shares textures through the

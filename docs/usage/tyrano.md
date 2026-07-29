@@ -192,7 +192,9 @@ keyframes** (the SS6 PartsColorChange / CellChangeParts / HideSet equivalents).
 ## 5. Movement & effects with `[anim]` / `[kanim]`
 
 Each SS player is a real element on the layer, tagged with your player name, so Tyrano's
-own `[anim]` / `[kanim]` tags drive it directly — just like any character:
+own `[anim]` / `[kanim]` tags drive it directly — just like any character. The element is a
+positioning box: the drawing happens on the layer's shared canvas, which follows the element
+every frame (see [Resources & lifecycle](/customize/resources)):
 
 ```
 [ss_new name="ringo" storage="others/ssdata/ringo.ssab" layer="0" x="640" y="480"]
@@ -207,13 +209,22 @@ TyranoScript's `[anim]` **`opacity` is 0–255** (not 0–1): `opacity="1"` is n
 invisible (≈ 0.4%). **Full opacity is `255`.**
 :::
 
+::: warning `scale` and `rotate` do not reach the animation
+`[anim]` / `[kanim]` `scale` and `rotate` transform the character's **element**, and every
+SS character on a layer is drawn on that layer's shared canvas rather than inside its own
+element. A CSS transform therefore moves and resizes where the character sits without
+scaling or rotating what is drawn there.
+
+Use **`[ss_pos]`** (instant) or **`[ss_move]`** (tween), which scale the animation itself
+and about its own anchor. `[anim]`'s `scale` / `rotate` pivoted on the screen centre rather
+than the anchor, so they were never accurate for this anyway.
+:::
+
 **When to use which:**
 
-- **Fades (opacity) / simple slides / shakes** → `[anim]` / `[kanim]` is ideal.
-- For **absolute, anchor-accurate** position or scale, use **`[ss_pos]`** (instant) or
-  **`[ss_move]`** (tween) instead. With `[anim]`, `left`/`top` move *relative* to the
-  starting position and `scale`/`rotate` pivot on the screen center rather than the
-  animation's anchor.
+- **Fades (opacity) / slides / shakes / keyframes** → `[anim]` / `[kanim]`.
+- **Position or scale that has to be exact** → `[ss_pos]` (instant) or `[ss_move]` (tween).
+  With `[anim]`, `left`/`top` move *relative* to the starting position.
 
 ## 6. Save / load & lifecycle
 
