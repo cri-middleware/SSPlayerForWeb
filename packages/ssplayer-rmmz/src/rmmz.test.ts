@@ -97,7 +97,7 @@ describe('SSPlayerRenderer', () => {
     texture: { reset: vi.fn() },
     state: { reset: vi.fn() },
     shader: { reset: vi.fn() },
-    framebuffer: { reset: vi.fn() },
+    framebuffer: { reset: vi.fn(), current: null as unknown },
   });
 
   const makePlayer = (worldAlpha: number) => ({
@@ -129,6 +129,23 @@ describe('SSPlayerRenderer', () => {
     r.render(player);
 
     expect(Array.from(ssRender.mock.calls[0][4] as Float32Array)).toEqual([1, 1, 1, 1]);
+  });
+
+  // SSWebGLRenderer builds its own projection, so it has to be told which way up
+  // the destination runs. Pixi flips its own projection only when drawing into an
+  // FBO (filters / masks); on the plain path it does not.
+  it('does not flip Y when Pixi is drawing to the default framebuffer', () => {
+    const r = new SSPlayerRenderer(makePixiRenderer() as any);
+    r.render(makePlayer(1) as any);
+    expect(ssRender.mock.calls[0][3]).toBe(false);
+  });
+
+  it('flips Y when Pixi is drawing into a framebuffer', () => {
+    const pixi = makePixiRenderer();
+    pixi.framebuffer.current = {}; // a filter or mask is active
+    const r = new SSPlayerRenderer(pixi as any);
+    r.render(makePlayer(1) as any);
+    expect(ssRender.mock.calls[0][3]).toBe(true);
   });
 
   it('skips a player with no animation set', () => {

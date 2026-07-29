@@ -94,9 +94,16 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
     const tint = this._tint;
     tint[0] = alpha; tint[1] = alpha; tint[2] = alpha; tint[3] = alpha;
 
-    // flipY: MZ's shared framebuffer has the opposite Y convention to a standalone
-    // canvas's default framebuffer, so SS otherwise renders upside-down here.
-    this.ssRenderer.render(ip, player.resourceManager, t, true, tint);
+    // flipY: SSWebGLRenderer builds its own projection, so it has to be told which
+    // way up the destination runs. Pixi draws the scene straight to the default
+    // framebuffer most of the time, but into an FBO whenever a filter or mask is
+    // in play — and it flips its projection for the FBO case so the result samples
+    // upright. Read which one we are in rather than assuming: this was hardcoded
+    // to `true`, which drew upside-down on the plain path.
+    const intoFramebuffer = !!(renderer as unknown as { framebuffer?: { current?: unknown } })
+      .framebuffer?.current;
+
+    this.ssRenderer.render(ip, player.resourceManager, t, intoFramebuffer, tint);
 
     // --- MZ Effekseer-style: restore Pixi's cached GL state ---
     renderer.texture.reset();
