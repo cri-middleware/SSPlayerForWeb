@@ -57,12 +57,12 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssplayer-webgl` | npm | beta |
 | `@spritestudio/ssplayer-pixi` | npm | beta |
 | `@spritestudio/ssconverter-core` | npm | beta |
-| `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) | **experimental (alpha)** |
+| `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) | **alpha** |
 | `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](/usage/tyrano#building-from-source) | beta |
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](/usage/tyranobuilder#building-from-source) | beta |
 | `ssconverter-web` | not published — run it from a local build | — |
 
-## RPG Maker MZ (experimental)
+## RPG Maker MZ (alpha)
 
 `@spritestudio/ssplayer-rmmz` is an **alpha**: the tag set and behavior may still change. See
 [Using RPG Maker MZ](/usage/rmmz).

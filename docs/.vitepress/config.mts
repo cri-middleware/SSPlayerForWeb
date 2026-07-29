@@ -45,7 +45,7 @@ export default withMermaid({
           { text: 'Setup', link: '/setup/install' },
           { text: 'Usage', link: '/usage/basic' },
           { text: 'Customize', link: '/customize/events' },
-          { text: 'API', link: '/api/' },
+          { text: 'API', link: '/api-guide' },
           { text: 'ROADMAP', link: `${GITHUB}/blob/main/ROADMAP.md` },
         ],
         sidebar: [
@@ -63,7 +63,7 @@ export default withMermaid({
               { text: 'Preparing assets (.sspj → .ssab)', link: '/usage/assets' },
               { text: 'WebGL & Web Components', link: '/usage/webgl' },
               { text: 'PixiJS', link: '/usage/pixi' },
-              { text: 'RPG Maker MZ (experimental)', link: '/usage/rmmz' },
+              { text: 'RPG Maker MZ (alpha)', link: '/usage/rmmz' },
               { text: 'TyranoScript', link: '/usage/tyrano' },
               { text: 'TyranoBuilder', link: '/usage/tyranobuilder' },
               { text: 'Migrating from SS6Player', link: '/migration_from_ss6' },
@@ -71,7 +71,10 @@ export default withMermaid({
           },
           {
             text: 'API Reference',
-            items: [{ text: 'Overview', link: '/api/' }],
+            items: [
+              { text: 'Where to start', link: '/api-guide' },
+              { text: 'Generated reference', link: '/api/' },
+            ],
           },
           {
             text: 'Customize',
@@ -80,6 +83,7 @@ export default withMermaid({
               { text: 'Part control (visibility / cell / color)', link: '/customize/part-overrides' },
               { text: 'Part tracking (following a part)', link: '/customize/part-following' },
               { text: 'Shaders & blend modes', link: '/customize/shaders' },
+              { text: 'Resources & lifecycle', link: '/customize/resources' },
               { text: 'Performance tuning', link: '/customize/performance' },
             ],
           },
@@ -114,7 +118,7 @@ export default withMermaid({
           { text: 'はじめに', link: '/ja/setup/install' },
           { text: '使い方', link: '/ja/usage/basic' },
           { text: 'カスタマイズ', link: '/ja/customize/events' },
-          { text: 'API', link: '/api/' },
+          { text: 'API', link: '/ja/api-guide' },
           { text: 'ROADMAP', link: `${GITHUB}/blob/main/ROADMAP.md` },
         ],
         sidebar: [
@@ -132,7 +136,7 @@ export default withMermaid({
               { text: 'アセットの準備（.sspj → .ssab）', link: '/ja/usage/assets' },
               { text: 'WebGL・Web Components で使う', link: '/ja/usage/webgl' },
               { text: 'PixiJS で使う', link: '/ja/usage/pixi' },
-              { text: 'RPG ツクール MZ で使う（実験的）', link: '/ja/usage/rmmz' },
+              { text: 'RPG ツクール MZ で使う（alpha）', link: '/ja/usage/rmmz' },
               { text: 'TyranoScript で使う', link: '/ja/usage/tyrano' },
               { text: 'ティラノビルダーで使う', link: '/ja/usage/tyranobuilder' },
               { text: 'SS6Player からの移行', link: '/ja/migration_from_ss6' },
@@ -140,7 +144,10 @@ export default withMermaid({
           },
           {
             text: 'API リファレンス',
-            items: [{ text: '概要', link: '/api/' }],
+            items: [
+              { text: 'どこから見るか', link: '/ja/api-guide' },
+              { text: '生成リファレンス', link: '/api/' },
+            ],
           },
           {
             text: 'カスタマイズ',
@@ -149,6 +156,7 @@ export default withMermaid({
               { text: 'パーツ制御（表示 / セル / 色）', link: '/ja/customize/part-overrides' },
               { text: 'パーツトラッキング（指定パーツへの追従）', link: '/ja/customize/part-following' },
               { text: 'シェーダーとブレンドモード', link: '/ja/customize/shaders' },
+              { text: 'リソースとライフサイクル', link: '/ja/customize/resources' },
               { text: 'パフォーマンスチューニング', link: '/ja/customize/performance' },
             ],
           },

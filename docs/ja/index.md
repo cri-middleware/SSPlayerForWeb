@@ -38,7 +38,7 @@ features:
 - 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
 - ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — `<ss-player>` Web コンポーネント
 - ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け
-- ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（実験的）
+- ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（alpha）
 - ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — ヴィジュアルノベルのシーン（beta）
 
 ## このドキュメントの読み方
@@ -116,7 +116,7 @@ graph LR
 
 | パッケージ | 用途 | 状態 |
 |---|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 | 実験的（alpha） |
+| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 | alpha |
 | [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) | **TyranoScript**（ノベルエンジン）向けプラグインです。 | beta |
 | [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder) | **ティラノビルダー** 向けプラグインです。同じアニメをコンポーネントパレットから配置でき、変換もエディタ内で行えます。 | beta |
 

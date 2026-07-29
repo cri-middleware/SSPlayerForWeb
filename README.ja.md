@@ -53,7 +53,7 @@
 | **`.sspj` → `.ssab` を変換する** | [`ssconverter-web`](./packages/ssconverter-web)（Web ツール + Node CLI） | — |
 | **変換機能を自作アプリ/サービスに組み込む** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです。npm ではなくプラグインとして導入します。RPG ツクール MZ は **実験的**（`alpha`）、Tyrano 系の 2 つは **beta** です:
+**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです。npm ではなくプラグインとして導入します。RPG ツクール MZ は **alpha**、Tyrano 系の 2 つは **beta** です:
 
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
@@ -113,7 +113,7 @@ flowchart TD
         core["ssplayer-core<br/>WASM・エンジン非依存"]
         webgl["ssplayer-webgl<br/>単体 WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
-        rmmz["ssplayer-rmmz<br/>RPG ツクール MZ（実験的）"]
+        rmmz["ssplayer-rmmz<br/>RPG ツクール MZ（alpha）"]
         tyrano["ssplayer-tyranoscript<br/>TyranoScript（beta）"]
         core --> webgl
         core --> pixi
