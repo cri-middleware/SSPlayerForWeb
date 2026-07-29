@@ -11,6 +11,7 @@ import ssruntimeWasmUrl from '@spritestudio/ssplayer-core/wasm/ssruntime_bg.wasm
 
 const statusEl = document.getElementById('status')!;
 const animSel = document.getElementById('anim') as HTMLSelectElement;
+const opacityInput = document.getElementById('opacity') as HTMLInputElement;
 const setStatus = (s: string) => (statusEl.textContent = s);
 
 // --- Stub the minimal MZ globals the renderer / resource manager need. --------
@@ -20,6 +21,11 @@ class StubBitmap {
   private _w = 0;
   private _h = 0;
   private _ready = false;
+  // MZ's Bitmap reports a failed load through isError(), and never calls the
+  // load listeners in that case — RMMZResourceManager polls it for exactly that
+  // reason. The stub has to model it or the manager's error watchdog throws on
+  // a Bitmap that looks nothing like MZ's.
+  private _error = false;
   private _listeners: Array<(b: StubBitmap) => void> = [];
   constructor(url: string) {
     const img = new Image();
@@ -32,13 +38,17 @@ class StubBitmap {
       this._ready = true;
       this._listeners.forEach((cb) => cb(this));
     };
-    img.onerror = () => setStatus(`texture load failed: ${url}`);
+    img.onerror = () => {
+      this._error = true;
+      setStatus(`texture load failed: ${url}`);
+    };
     img.src = url;
   }
   get canvas() { return this._canvas; }
   get width() { return this._w; }
   get height() { return this._h; }
   isReady() { return this._ready; }
+  isError() { return this._error; }
   addLoadListener(cb: (b: StubBitmap) => void) {
     if (this._ready) cb(this);
     else this._listeners.push(cb);
@@ -86,6 +96,15 @@ async function boot() {
   animSel.innerHTML = names.map((n) => `<option>${n}</option>`).join('');
   const first = names.includes('wait1') ? 'wait1' : names[0];
   animSel.value = first;
+
+  // MZ inherits opacity down the display tree: [Change Picture Opacity] sets
+  // Sprite_Picture.opacity, Pixi turns that into worldAlpha, and SSPlayerRenderer
+  // feeds it to the SS renderer as a world tint. Pixi only applies worldAlpha
+  // inside its own batch shader, which the raw GL draw bypasses, so without that
+  // hand-off the animation stayed fully opaque while the rest of the scene faded.
+  opacityInput.addEventListener('input', () => {
+    (player as unknown as { alpha: number }).alpha = Number(opacityInput.value);
+  });
 
   const playAnim = async (name: string) => {
     await player.setAnimation(name, -1);
