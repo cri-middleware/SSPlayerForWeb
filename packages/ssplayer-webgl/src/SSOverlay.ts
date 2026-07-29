@@ -39,7 +39,7 @@ export interface SSOverlayOptions extends Omit<SSSurfaceOptions, 'autoStart' | '
  * regardless of how many elements register. The same page built from one canvas
  * per animation starts blanking canvases at around a dozen.
  *
- * What it gives up, and why (see also SURFACE_PLAYER_SPEC.md §7.3):
+ * What it gives up, and why:
  *
  * - **One z-index.** Everything drawn here shares the overlay canvas's place in
  *   the stacking order, so page content cannot be interleaved between two

@@ -123,7 +123,7 @@ describe('SSSurface', () => {
     expect(canvas.width).toBe(800);
     expect(canvas.height).toBe(600);
     // The host owns layout. A library that writes inline styles fights whatever
-    // the page already set — see SURFACE_PLAYER_SPEC.md §6.7.
+    // the page already set.
     expect(canvas.style.width).toBe('123px');
   });
 

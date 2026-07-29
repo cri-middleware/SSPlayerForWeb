@@ -54,7 +54,7 @@ export interface SSSurfaceOptions {
  *   This is how `ssplayer-rmmz` rides RPG Maker MZ's own context.
  * - **overlay** — an owned surface whose canvas covers the viewport, with each
  *   player's {@link SSPlayer.box} driven from a DOM element's rect. Built on top
- *   of the above; see SURFACE_PLAYER_SPEC.md §7.
+ *   of the above; see `SSOverlay`.
  *
  * ```ts
  * await SSSurface.initialize();
