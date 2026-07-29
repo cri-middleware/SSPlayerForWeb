@@ -25,6 +25,11 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     audioManager: unknown = null;
     internalPlayer = { setLoop: vi.fn() };
     frame = 0;
+    order = 0;
+    alpha = 1;
+    // The overlay drives this from the element rect; tests only need the size,
+    // since boxOrigin() halves it to place logical coordinates.
+    box = { x: 0, y: 0, w: 1280, h: 720 };
     load = vi.fn().mockResolvedValue(undefined);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
@@ -52,53 +57,75 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _fireFrame(frame: number) { for (const cb of [...this._frameListeners]) cb(frame); }
     _fireAudio(e: unknown) { for (const cb of [...this._audioListeners]) cb(e); }
 
-    // The canvas is the surface's, exposed here so the existing assertions can
-    // reach it from the player they were handed.
-    constructor(public canvas: HTMLCanvasElement, public options: unknown) {}
+    // The character's element, exposed here so the existing assertions can reach
+    // it from the player they were handed. It is a plain div now: the overlay
+    // owns the only canvas on the layer.
+    constructor(public element: HTMLElement, public options: unknown) {}
   }
 
-  class FakeSSSurface {
-    static initialize = vi.fn().mockResolvedValue(undefined);
+  // One overlay per (layer, page), shared by every character on that layer —
+  // mirrored here rather than flattened, because "destroying a character must
+  // not destroy the layer's context" is exactly what these tests should catch.
+  class FakeSSOverlay {
     static instances: FakePlayer[] = [];
-
-    players: FakePlayer[] = [];
-    resize = vi.fn();
-    destroy = vi.fn(() => {
-      // Mirrors the real SSSurface: destroying it destroys its players.
-      for (const p of this.players) p.destroy();
+    static live = new Map<string, FakeSSOverlay>();
+    static getOrCreate = vi.fn((id: string, options?: { container?: HTMLElement }) => {
+      let o = FakeSSOverlay.live.get(id);
+      if (!o) {
+        o = new FakeSSOverlay(id, options?.container ?? document.body);
+        FakeSSOverlay.live.set(id, o);
+      }
+      return o;
     });
 
-    constructor(
-      public canvas: HTMLCanvasElement,
-      public options: unknown,
-    ) {}
+    players: FakePlayer[] = [];
+    canvas = Object.assign(document.createElement('canvas'), { width: 1280, height: 720 });
+    surface = { invalidateOrder: vi.fn() };
+    destroyed = false;
 
-    createPlayer(options?: unknown) {
-      const player = new FakePlayer(this.canvas, options);
+    constructor(public id: string, container: HTMLElement) {
+      container.appendChild(this.canvas);
+    }
+
+    createPlayer(el: HTMLElement, options?: unknown) {
+      const player = new FakePlayer(el, options);
       this.players.push(player);
-      FakeSSSurface.instances.push(player);
+      FakeSSOverlay.instances.push(player);
       return player;
     }
+
+    detach = vi.fn((player: FakePlayer) => {
+      const i = this.players.indexOf(player);
+      if (i !== -1) this.players.splice(i, 1);
+    });
+
+    destroy = vi.fn(() => {
+      this.destroyed = true;
+      this.canvas.remove();
+      FakeSSOverlay.live.delete(this.id);
+    });
   }
+
   return {
     ...store,
-    SSSurface: FakeSSSurface,
+    SSOverlay: FakeSSOverlay,
+    SSSurface: { initialize: vi.fn().mockResolvedValue(undefined) },
     SSRuntimeManager: {
       extractAnimationNames: vi.fn(() => ['Anime_1', 'Anime_2']),
     },
   };
 });
 
-import { SSSurface as SSSurfaceMock } from '@spritestudio/ssplayer-webgl';
+import { SSOverlay as SSOverlayMock, SSSurface as SSSurfaceMock } from '@spritestudio/ssplayer-webgl';
 import { registerSSTags, getRegistry, __resetStateForTest } from './registerTags.js';
 import { SAVE_KEY, type SavedPlayer } from './SaveLoadBridge.js';
 import type { TyranoGlobal, TyranoMasterTag } from './tyranoTypes.js';
 
 // Typed handle to the mocked class (with the test-only static `instances`).
-const FakeSSPlayer = SSSurfaceMock as unknown as {
-  initialize: ReturnType<typeof vi.fn>;
+const FakeSSPlayer = SSOverlayMock as unknown as {
   instances: Array<{
-    canvas: HTMLCanvasElement;
+    element: HTMLElement;
+    order: number;
     internalPlayer: { setLoop: ReturnType<typeof vi.fn> };
     load: ReturnType<typeof vi.fn>;
     setAnimation: ReturnType<typeof vi.fn>;
@@ -253,7 +280,7 @@ describe('registerSSTags', () => {
   beforeEach(() => {
     __resetStateForTest();
     FakeSSPlayer.instances = [];
-    FakeSSPlayer.initialize.mockClear();
+    (SSSurfaceMock as unknown as { initialize: ReturnType<typeof vi.fn> }).initialize.mockClear();
     document.body.innerHTML = '';
   });
 
@@ -299,7 +326,7 @@ describe('registerSSTags', () => {
     const { tyrano, nextOrder } = makeTyrano();
     registerSSTags(tyrano);
     await runTag(tyrano.kag.ftag.master_tag.ss_init, { wasm: 'others/plugin/ssplayer/rt.wasm' }, nextOrder);
-    expect(FakeSSPlayer.initialize).toHaveBeenCalledWith('data/others/plugin/ssplayer/rt.wasm');
+    expect((SSSurfaceMock as unknown as { initialize: ReturnType<typeof vi.fn> }).initialize).toHaveBeenCalledWith('data/others/plugin/ssplayer/rt.wasm');
   });
 
   it('ss_new mounts a canvas, loads, plays, and registers the player', async () => {
@@ -318,7 +345,7 @@ describe('registerSSTags', () => {
     // One player was created and its canvas overlaid on the layer.
     expect(FakeSSPlayer.instances).toHaveLength(1);
     const p = FakeSSPlayer.instances[0];
-    expect(layer.querySelector('canvas')).toBe(p.canvas);
+    expect(layer.contains(p.element)).toBe(true);
     // Textures resolve relative to the .ssab's own directory — no base arg is passed.
     expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
@@ -420,16 +447,19 @@ describe('registerSSTags', () => {
     });
   });
 
-  it('ss_free destroys the player, detaches the canvas, and clears the save slot', async () => {
+  it('ss_free destroys the player and detaches its element, keeping the layer overlay', async () => {
     const h = await withPlayer();
     const p = FakeSSPlayer.instances[0];
     const layer = document.getElementsByClassName('0_fore')[0];
-    expect(layer.querySelector('canvas')).toBe(p.canvas);
+    expect(layer.contains(p.element)).toBe(true);
 
     await runTag(h.tags.ss_free, { name: 'chr' }, h.nextOrder);
 
     expect(p.destroy).toHaveBeenCalled();
-    expect(layer.querySelector('canvas')).toBeNull();
+    expect(layer.contains(p.element)).toBe(false);
+    // The overlay draws every character on this layer, so freeing one must not
+    // take its canvas — and its GL context — with it.
+    expect(layer.querySelector('canvas')).not.toBeNull();
     expect(getRegistry().has('chr')).toBe(false);
     expect(savedSlot(h)).toEqual({});
   });
@@ -544,7 +574,7 @@ describe('registerSSTags', () => {
 
     // What [freeimage layer=] does: empty the layer, canvas and all. (Reached
     // through the canvas, because addLayer() would register a fresh element.)
-    live.canvas.parentElement!.replaceChildren();
+    live.element.parentElement!.replaceChildren();
 
     await vi.waitFor(() => expect(getRegistry().names()).toEqual([]));
     expect(live.destroy).toHaveBeenCalled();
@@ -756,9 +786,14 @@ describe('registerSSTags', () => {
   // plugins. The through-line: a player can exist without being on screen, and
   // animation follow-ups must not block the scenario the way [ss_wait] does.
 
-  /** True when the canvas is currently laid out and fully opaque. */
-  const shown = (canvas: HTMLCanvasElement): boolean =>
-    canvas.style.display !== 'none' && canvas.style.opacity !== '0';
+  /**
+   * True when the character element is laid out and fully opaque. The overlay
+   * reads exactly these two properties — display for whether to track it at all,
+   * computed opacity for the player's alpha — so this is the same signal the
+   * renderer sees.
+   */
+  const shown = (el: HTMLElement): boolean =>
+    el.style.display !== 'none' && el.style.opacity !== '0';
 
   it('ss_new visible="false" loads the player without displaying it', async () => {
     const h = makeTyrano();
@@ -772,7 +807,7 @@ describe('registerSSTags', () => {
     const p = FakeSSPlayer.instances[0];
     // Loaded and registered (that is the point of preloading) but off screen.
     expect(p.load).toHaveBeenCalled();
-    expect(shown(p.canvas)).toBe(false);
+    expect(shown(p.element)).toBe(false);
     expect((h.tyrano.kag.stat.f[SAVE_KEY] as Record<string, SavedPlayer>).chr.visible).toBe(false);
   });
 
@@ -788,7 +823,7 @@ describe('registerSSTags', () => {
 
     await runTag(tags.ss_show, { name: 'chr', x: 400, y: 300, scale: 2, anime: 'Anime_2' }, h.nextOrder);
 
-    expect(shown(p.canvas)).toBe(true);
+    expect(shown(p.element)).toBe(true);
     expect(p.setTransform).toHaveBeenLastCalledWith({ x: -240, y: -60, scaleX: 2, scaleY: 2 });
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_2');
     expect(savedSlot(h).chr).toMatchObject({ visible: true, x: 400, y: 300, anime: 'Anime_2' });
@@ -797,18 +832,18 @@ describe('registerSSTags', () => {
   it('ss_hide takes the player off screen without destroying it', async () => {
     const h = await withPlayer();
     const p = FakeSSPlayer.instances[0];
-    expect(shown(p.canvas)).toBe(true);
+    expect(shown(p.element)).toBe(true);
 
     await runTag(h.tags.ss_hide, { name: 'chr' }, h.nextOrder);
 
-    expect(shown(p.canvas)).toBe(false);
+    expect(shown(p.element)).toBe(false);
     // Unlike [ss_free]: still loaded, still registered, still in the save.
     expect(p.destroy).not.toHaveBeenCalled();
     expect(getRegistry().has('chr')).toBe(true);
     expect(savedSlot(h).chr.visible).toBe(false);
 
     await runTag(h.tags.ss_show, { name: 'chr' }, h.nextOrder);
-    expect(shown(p.canvas)).toBe(true);
+    expect(shown(p.element)).toBe(true);
   });
 
   it('ss_fadeout hides every player and ss_fadein brings back only the visible ones', async () => {
@@ -819,13 +854,13 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_hide, { name: 'bg' }, h.nextOrder);
 
     await runTag(h.tags.ss_fadeout, { time: 0 }, h.nextOrder);
-    expect(shown(chr.canvas)).toBe(false);
-    expect(shown(bg.canvas)).toBe(false);
+    expect(shown(chr.element)).toBe(false);
+    expect(shown(bg.element)).toBe(false);
 
     await runTag(h.tags.ss_fadein, { time: 0 }, h.nextOrder);
     // 'chr' comes back; 'bg' stays hidden because it was hidden on its own.
-    expect(shown(chr.canvas)).toBe(true);
-    expect(shown(bg.canvas)).toBe(false);
+    expect(shown(chr.element)).toBe(true);
+    expect(shown(bg.element)).toBe(false);
   });
 
   it('ss_show cannot override a blanket ss_fadeout', async () => {
@@ -837,21 +872,23 @@ describe('registerSSTags', () => {
 
     // The player is marked visible, but the layer-wide fade still wins…
     expect(savedSlot(h).chr.visible).toBe(true);
-    expect(shown(p.canvas)).toBe(false);
+    expect(shown(p.element)).toBe(false);
     // …until the fade is lifted.
     await runTag(h.tags.ss_fadein, { time: 0 }, h.nextOrder);
-    expect(shown(p.canvas)).toBe(true);
+    expect(shown(p.element)).toBe(true);
   });
 
   it('zindex orders players inside one layer, from ss_new and ss_pos alike', async () => {
     const h = await withPlayer();
     await runTag(h.tags.ss_new, { name: 'bg', storage: 'b.ssab', anime: 'Anime_1', zindex: 5 }, h.nextOrder);
     const [chr, bg] = FakeSSPlayer.instances;
-    expect(bg.canvas.style.zIndex).toBe('5');
-    expect(chr.canvas.style.zIndex).toBe('');
+    // Characters share one canvas per layer, so zindex is the player's draw
+    // order rather than a CSS z-index on a per-character canvas.
+    expect(bg.order).toBe(5);
+    expect(chr.order).toBe(0);
 
     await runTag(h.tags.ss_pos, { name: 'chr', zindex: 10 }, h.nextOrder);
-    expect(chr.canvas.style.zIndex).toBe('10');
+    expect(chr.order).toBe(10);
     expect(savedSlot(h).chr.zindex).toBe(10);
   });
 
@@ -976,9 +1013,9 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_restore, {}, h.nextOrder);
 
     const [chr, bg] = FakeSSPlayer.instances;
-    expect(chr.canvas.style.zIndex).toBe('7');
-    expect(shown(chr.canvas)).toBe(true);
-    expect(shown(bg.canvas)).toBe(false); // preloaded-but-hidden stays hidden
+    expect(chr.order).toBe(7);
+    expect(shown(chr.element)).toBe(true);
+    expect(shown(bg.element)).toBe(false); // preloaded-but-hidden stays hidden
 
     // The speaker link is live again on the rebuilt player.
     chr.setAnimation.mockClear();
@@ -1000,9 +1037,9 @@ describe('registerSSTags', () => {
     FakeSSPlayer.instances.length = 0;
     await runTag(h.tags.ss_restore, {}, h.nextOrder);
 
-    expect(shown(FakeSSPlayer.instances[0].canvas)).toBe(false);
+    expect(shown(FakeSSPlayer.instances[0].element)).toBe(false);
     await runTag(h.tags.ss_fadein, { time: 0 }, h.nextOrder);
-    expect(shown(FakeSSPlayer.instances[0].canvas)).toBe(true);
+    expect(shown(FakeSSPlayer.instances[0].element)).toBe(true);
   });
 
   it('ss_restore re-applies the saved overrides to the rebuilt player', async () => {

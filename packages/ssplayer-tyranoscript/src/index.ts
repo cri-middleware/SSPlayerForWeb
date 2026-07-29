@@ -2,7 +2,7 @@
 //
 // A thin TyranoScript / TyranoBuilder adapter over `@spritestudio/ssplayer-webgl`
 // (`SSPlayer`). All GPU/WebGL work lives in the webgl package; this layer
-// is pure glue: it registers `[ss_*]` KAG custom tags that mount an SS canvas
+// is pure glue: it registers `[ss_*]` KAG custom tags that mount an SS character
 // onto a Tyrano layer and drive playback (see README.md / ROADMAP.md).
 //
 // This entry point is side-effect-free: it exposes `registerSSTags()` and types
@@ -29,14 +29,13 @@ export {
 } from './SaveLoadBridge.js';
 export { TyranoAudioManager, type TyranoAudioOptions } from './TyranoAudioManager.js';
 export {
-  cancelCanvasFade,
-  createLayerCanvas,
+  boxOrigin,
+  cancelElementFade,
+  createCharacterElement,
   getLayerElement,
-  setCanvasVisible,
-  setCanvasZIndex,
+  setElementVisible,
   toTransform,
   type LayerPage,
-  type LayerCanvasResult,
 } from './LayerCanvas.js';
 export {
   attachTalkHooks,

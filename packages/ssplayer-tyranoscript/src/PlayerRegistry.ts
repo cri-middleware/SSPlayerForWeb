@@ -1,5 +1,5 @@
-import type { SSPlayer, SSSurface, SSPartOverride } from '@spritestudio/ssplayer-webgl';
-import { cancelCanvasFade } from './LayerCanvas.js';
+import type { SSPlayer, SSOverlay, SSPartOverride } from '@spritestudio/ssplayer-webgl';
+import { cancelElementFade } from './LayerCanvas.js';
 
 /**
  * A queued follow-up animation armed by `[ss_play next=]` — the Spine plugin's
@@ -38,12 +38,17 @@ export interface SSCharaBinding {
 export interface SSPlayerEntry {
   player: SSPlayer;
   /**
-   * The surface backing this player. One surface per player today, i.e. one GL
-   * context per `[ss_new]` — the consolidation to one surface per `(layer, page)`
-   * is a separate change (SURFACE_PLAYER_SPEC.md §10).
+   * The overlay drawing this player — one per `(layer, page)`, SHARED with every
+   * other SS character on that layer. Never destroy it from here: that would
+   * blank the whole layer.
    */
-  surface: SSSurface;
-  canvas: HTMLCanvasElement;
+  overlay: SSOverlay;
+  /**
+   * The character's element. It draws nothing; the overlay reads its rect and
+   * opacity. It exists so `[anim]` / `[kanim]` can still find the character by
+   * its name class (see LayerCanvas).
+   */
+  element: HTMLElement;
   /**
    * `drawingBuffer px / logical px` used to build this player's transform.
    * Kept so `[ss_pos]` / `[ss_move]` can re-map logical coords the same way
@@ -132,17 +137,19 @@ export class PlayerRegistry {
     return [...this.entries.keys()];
   }
 
-  /** Remove a single player: destroy its GL/WASM resources and detach the canvas. */
+  /** Remove a single player: free its WASM/GL resources and drop its element. */
   destroy(name: string): void {
     const entry = this.entries.get(name);
     if (!entry) return;
     if (entry.tween) cancelAnimationFrame(entry.tween);
     clearChain(entry);
-    cancelCanvasFade(entry.canvas);
-    // Destroying the surface destroys its players too, and it is the surface that
-    // owns the GL context — so this is what actually releases the context.
-    entry.surface.destroy();
-    entry.canvas.remove();
+    cancelElementFade(entry.element);
+    // Detach before destroy so the overlay stops tracking a dead player, then
+    // free only what this player owns. The overlay, its canvas and its GL context
+    // belong to the layer and outlive every character on it.
+    entry.overlay.detach(entry.player);
+    entry.player.destroy();
+    entry.element.remove();
     this.entries.delete(name);
   }
 
