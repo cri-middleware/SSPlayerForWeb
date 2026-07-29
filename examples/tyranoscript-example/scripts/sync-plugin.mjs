@@ -1,12 +1,19 @@
-// Copy the freshly-built ssplayer-tyranoscript plugin assets into this TyranoScript
-// project's plugin folder. Both files are git-ignored build artefacts — run
-// this after `pnpm --filter @spritestudio/ssplayer-tyranoscript run build`.
+// Copy the ssplayer-tyranoscript plugin folder into this TyranoScript project.
+// Run this after `pnpm --filter @spritestudio/ssplayer-tyranoscript run build`.
 //
 //   main.js            ← packages/ssplayer-tyranoscript/dist/browser/main.js (IIFE, self-registers [ss_*])
 //   ssruntime_bg.wasm  ← packages/ssplayer-core/dist/ssruntime_bg.wasm (the runtime binary)
+//   init.ks            ← packages/ssplayer-tyranoscript/plugin/init.ks (the loader [plugin] calls)
 //
 // The wasm is kept external (not bundled into main.js); [ss_init wasm=...]
-// points at it. Ship both alongside each other.
+// points at it. Ship all three alongside each other.
+//
+// `init.ks` is synced — not hand-maintained here — because it is the plugin's
+// canonical loader, and this example exists to demonstrate exactly what a real
+// project gets. When it was maintained by hand it silently drifted: the copy
+// here lost the `[ss_init]` line, so the runtime was never started and every
+// `[ss_new]` failed with "call [ss_init] before creating players". Syncing it
+// makes that class of drift impossible.
 import { copyFile, mkdir, access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +30,10 @@ const copies = [
   {
     from: resolve(repoRoot, 'packages/ssplayer-core/dist/ssruntime_bg.wasm'),
     to: resolve(destDir, 'ssruntime_bg.wasm'),
+  },
+  {
+    from: resolve(repoRoot, 'packages/ssplayer-tyranoscript/plugin/init.ks'),
+    to: resolve(destDir, 'init.ks'),
   },
 ];
 
