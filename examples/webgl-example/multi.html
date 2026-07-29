@@ -3,65 +3,137 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Many players, one WebGL context</title>
+  <title>Many animations, one WebGL context</title>
   <style>
-    body { margin: 0; font-family: sans-serif; background: #222; color: #eee; display: flex; height: 100vh; }
-    #stage { flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; }
-    /* ONE canvas. Every animation on this page is drawn into it. */
-    canvas { max-width: 100%; max-height: 100%; background: #1a1a2e; border: 1px solid #444; }
-    #panel { width: 300px; padding: 16px; background: #2b2b2b; box-sizing: border-box; overflow: auto; }
-    #panel h3 { margin: 0 0 4px; }
-    #panel p.lede { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: #aaa; }
-    label { display: block; margin-top: 10px; font-size: 12px; color: #aaa; }
-    select, button, input { width: 100%; margin: 4px 0; padding: 6px; box-sizing: border-box; }
-    .row { display: flex; gap: 6px; }
-    .row button { flex: 1; }
-    #counts { font-size: 12px; line-height: 1.7; background: #111; padding: 8px; border-radius: 4px; }
-    #counts b { color: #7ee787; font-size: 15px; }
-    #counts .warn { color: #ffa657; }
-    #snippet { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5; white-space: pre; overflow-x: auto; background: #111; color: #d6e9ff; padding: 8px; border-radius: 4px; margin: 4px 0; }
-    #status { font-size: 11px; color: #aaa; min-height: 2.4em; line-height: 1.4; }
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; background: #16161d; color: #e6e6ea;
+      font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    /* The overlay canvas is fixed behind this, so give the article a stacking
+       context of its own and let the animations show through the gaps. */
+    article { max-width: 720px; margin: 0 auto; padding: 8vh 24px 20vh; position: relative; z-index: 1; }
+    h1 { font-size: 34px; line-height: 1.25; margin: 0 0 8px; }
+    h2 { font-size: 22px; margin: 3em 0 0.6em; }
+    p { margin: 1em 0; color: #c9c9d4; }
+    code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em; background: #22222c; padding: 1px 5px; border-radius: 4px; }
+    pre { background: #22222c; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.6; }
+    .lede { font-size: 18px; color: #a9a9b8; }
+
+    /* Each <ss-player> is just a box in the flow. It owns no canvas: the shared
+       overlay reads this rect every frame and draws the animation there. */
+    ss-player { display: block; width: 100%; height: 300px; }
+    ss-player.inline { display: inline-block; width: 90px; height: 90px; vertical-align: middle; }
+    .pair { display: flex; gap: 16px; }
+    .pair ss-player { height: 220px; }
+
+    figure { margin: 2.5em 0; }
+    figcaption { font-size: 13px; color: #85859a; text-align: center; margin-top: 6px; }
+
+    #hud {
+      position: fixed; top: 14px; right: 14px; z-index: 10;
+      background: rgba(20,20,26,.92); border: 1px solid #33333f; border-radius: 8px;
+      padding: 10px 14px; font-size: 12px; line-height: 1.8; min-width: 190px;
+    }
+    #hud b { color: #7ee787; font-size: 16px; }
+    #hud .warn { color: #ffa657; }
+    #hud a { color: #d6e9ff; }
   </style>
 </head>
 <body>
-  <nav style="position: fixed; top: 10px; right: 14px; z-index: 20; font-size: 13px;"><a href="/index.html" style="color: #d6e9ff;">&larr; main demo</a></nav>
-  <div id="stage">
-    <canvas id="surface" width="1280" height="960"></canvas>
+  <div id="hud">
+    animations on page: <b id="count">0</b><br>
+    WebGL contexts: <b>1</b><br>
+    <span class="warn" id="wouldbe"></span><br>
+    <a href="/index.html">&larr; main demo</a>
   </div>
-  <div id="panel">
-    <h3>One surface, many players</h3>
+
+  <article>
+    <h1>Many animations, one WebGL context</h1>
     <p class="lede">
-      Every animation here is an <code>SSPlayer</code> on a single
-      <code>SSSurface</code> — so the whole page costs <b>one</b> WebGL context,
-      no matter how many you add. Browsers only allow about 8–16 at once.
+      Every animation on this page is an <code>&lt;ss-player&gt;</code> element sitting in
+      normal document flow. None of them owns a canvas. Scroll — they follow their
+      elements, and the counter never moves off one.
     </p>
 
-    <div id="counts"></div>
+    <figure>
+      <ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player>
+      <figcaption>A block-level element. The animation is centred in its box.</figcaption>
+    </figure>
 
-    <div class="row">
-      <button id="add">add player</button>
-      <button id="remove">remove</button>
+    <h2>Why this matters</h2>
+    <p>
+      Browsers allow only about 8–16 live WebGL contexts per page. A player that owns
+      its canvas therefore runs out at roughly a dozen: past the cap the browser drops
+      the oldest context and that canvas simply goes blank. This page would have hit
+      that limit before you finished scrolling it.
+    </p>
+    <p>
+      Instead a single <code>SSOverlay</code> holds one transparent, full-viewport canvas
+      behind the article. Each element registers with it and gets an
+      <code>SSPlayer</code>; every frame the overlay reads the element rects and writes
+      them into the players' boxes <ss-player class="inline" src="/overall/Basic.ssab" autoplay></ss-player>
+      so each animation is drawn where its element is. Elements stay plain boxes, and
+      they can sit inline in a sentence like that one.
+    </p>
+
+    <pre>&lt;ss-player src="chara.ssab" autoplay&gt;&lt;/ss-player&gt;
+
+// that is the whole page-author API — the overlay is created on first use.
+// Opt out per element when you need a private context:
+&lt;ss-player src="chara.ssab" standalone&gt;&lt;/ss-player&gt;</pre>
+
+    <h2>Off-screen animations stop</h2>
+    <p>
+      The overlay watches each element with an <code>IntersectionObserver</code> and skips
+      players whose element has scrolled away — no timeline advance, no draw. Gating on
+      the canvas instead would be useless here, since the overlay canvas always covers
+      the viewport.
+    </p>
+
+    <div class="pair">
+      <ss-player src="/overall/Shape.ssab" autoplay></ss-player>
+      <ss-player src="/overall/Mesh.ssab" autoplay></ss-player>
     </div>
 
-    <label for="ssab">Add which animation</label>
-    <select id="ssab"></select>
+    <h2>What you give up</h2>
+    <p>
+      The overlay is one canvas at one place in the stacking order, so page content
+      cannot be interleaved between two overlay animations, and clipping is a plain
+      rectangle — <code>border-radius</code>, <code>clip-path</code> and CSS filters on the
+      element do not shape the animation. Blend modes composite against the transparent
+      overlay rather than against the page.
+    </p>
+    <p>
+      When any of that matters for one element, give it <code>standalone</code> and it gets
+      its own canvas and context back — at the usual cost of one.
+    </p>
 
-    <label for="alpha">Fade the newest player <span id="alphaVal">1.00</span></label>
-    <input id="alpha" type="range" min="0" max="1" step="0.01" value="1" />
+    <figure>
+      <ss-player src="/overall/PartsColor.ssab" autoplay></ss-player>
+      <figcaption>Still the same context as everything above.</figcaption>
+    </figure>
 
-    <label for="tint">Tint the newest player</label>
-    <input id="tint" type="color" value="#ffffff" />
+    <h2>Keep scrolling</h2>
+    <p>
+      The rest of these exist only to push the count up. Watch the HUD: the animation
+      count climbs, the context count does not.
+    </p>
 
-    <div class="row">
-      <button id="front">newest to front</button>
-      <button id="back">newest to back</button>
-    </div>
+    <figure><ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="/overall/Basic.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="/overall/Shape.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="/overall/Mesh.ssab" autoplay></ss-player></figure>
+    <figure><ss-player src="/overall/PartsColor.ssab" autoplay></ss-player></figure>
+    <figure>
+      <ss-player src="/Ringo/Ringo.ssab" autoplay></ss-player>
+      <figcaption>
+        One canvas has been drawing every animation on this page the whole way down.
+      </figcaption>
+    </figure>
+  </article>
 
-    <label>What the page is doing</label>
-    <pre id="snippet"></pre>
-
-    <div id="status"></div>
-  </div>
   <script type="module" src="/src/multi-demo.ts"></script>
 </body>
 </html>

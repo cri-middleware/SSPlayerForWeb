@@ -1,5 +1,6 @@
 export * from '@spritestudio/ssplayer-core';
 export { SSSurface, type SSSurfaceOptions } from './SSSurface.js';
+export { SSOverlay, type SSOverlayOptions } from './SSOverlay.js';
 export {
   SSPlayer,
   type SSPlayerOptions,

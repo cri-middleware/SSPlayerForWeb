@@ -1,4 +1,5 @@
 import { SSSurface, type SSSurfaceOptions } from './SSSurface.js';
+import { SSOverlay } from './SSOverlay.js';
 import type { SSPlayer } from './SSPlayer.js';
 import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 
@@ -41,9 +42,13 @@ export class SSPlayerElement extends HTMLElement {
     return ['src', 'animation', 'speed'];
   }
 
-  // One surface, one player: the element is the 1:1 case of the 1:N model. Sharing
-  // one surface across many elements is overlay mode, a separate feature.
+  // Overlay mode (the default) shares ONE surface — and so one WebGL context —
+  // across every element on the page; `_surface` stays null and `_overlay` holds
+  // the shared one. `standalone` opts out into a private canvas + surface, which
+  // is what an element needs for CSS effects on the animation, its own opaque
+  // backdrop, or a place in the normal stacking order.
   private _surface: SSSurface | null = null;
+  private _overlay: SSOverlay | null = null;
   private _player: SSPlayer | null = null;
   private _canvas: HTMLCanvasElement | null = null;
   private _resizeObserver: ResizeObserver | null = null;
@@ -79,9 +84,12 @@ export class SSPlayerElement extends HTMLElement {
     return this._player;
   }
 
-  /** The surface this element owns, or null before connect / after disconnect. */
+  /**
+   * The surface backing this element: its own in `standalone` mode, or the
+   * shared overlay's otherwise. Null before connect / after disconnect.
+   */
   public get surface(): SSSurface | null {
-    return this._surface;
+    return this._surface ?? this._overlay?.surface ?? null;
   }
 
   async connectedCallback(): Promise<void> {
@@ -141,7 +149,15 @@ export class SSPlayerElement extends HTMLElement {
     // every player on the surface, which here is just ours). The canvas (and its GL
     // context) is kept so a re-connect can reuse it; a fresh surface is built on
     // reconnect. Playback state is not preserved across a disconnect.
-    this._surface?.destroy();
+    // Overlay mode: drop just our player. The overlay is shared with every other
+    // element on the page, so destroying it here would blank all of them.
+    if (this._overlay && this._player) {
+      this._overlay.detach(this._player);
+      this._player.destroy();
+    } else {
+      this._surface?.destroy();
+    }
+    this._overlay = null;
     this._surface = null;
     this._player = null;
   }
@@ -200,13 +216,23 @@ export class SSPlayerElement extends HTMLElement {
 
   // --- Internals ----------------------------------------------------------------
 
+  /** True unless the element opted out of the shared overlay. */
+  private get isOverlay(): boolean {
+    return !this.hasAttribute('standalone');
+  }
+
   private buildDom(): void {
     const root = this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
     // Author sizes the element via CSS/attributes; the canvas fills the host box.
     style.textContent = ':host{display:inline-block;position:relative}canvas{display:block;width:100%;height:100%}';
+    root.append(style);
+    // In overlay mode the element owns no canvas at all — it is just a box whose
+    // rect the overlay reads. That is the whole reason the context count stops
+    // scaling with the number of elements.
+    if (this.isOverlay) return;
     this._canvas = document.createElement('canvas');
-    root.append(style, this._canvas);
+    root.append(this._canvas);
   }
 
   private createPlayer(): void {
@@ -221,8 +247,16 @@ export class SSPlayerElement extends HTMLElement {
       pauseWhenHidden: this.boolAttr('pause-when-hidden'),
       backgroundColor: this.colorAttr('background'),
     };
-    this._surface = new SSSurface(this._canvas!, options);
-    this._player = this._surface.createPlayer();
+    if (this.isOverlay) {
+      // Every element lands on the same overlay unless it names another with
+      // `overlay`. Each extra overlay is another GL context, so that attribute
+      // exists for scroll containers, not for taste.
+      this._overlay = SSOverlay.getOrCreate(this.getAttribute('overlay') ?? undefined);
+      this._player = this._overlay.createPlayer(this);
+    } else {
+      this._surface = new SSSurface(this._canvas!, options);
+      this._player = this._surface.createPlayer();
+    }
     const speed = this.numAttr('speed');
     if (speed !== undefined) this._player.speedScale = speed;
     this.wireEvents();
@@ -272,6 +306,8 @@ export class SSPlayerElement extends HTMLElement {
   }
 
   private applyResize(): void {
+    // Overlay mode sizes nothing: the overlay canvas covers the viewport and the
+    // player follows this element's rect every frame.
     const surface = this._surface;
     if (!surface) return;
     const rect = this.getBoundingClientRect();

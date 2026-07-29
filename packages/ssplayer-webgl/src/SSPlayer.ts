@@ -158,6 +158,14 @@ export class SSPlayer {
   /** Draw order within the surface; lower draws first. Ties keep insertion order. */
   public order = 0;
 
+  /**
+   * Skip this player entirely when false — no draw, and the host should skip
+   * {@link update} too. Distinct from `alpha = 0`, which is an author-facing
+   * fade: this is for a host that knows the player cannot be seen, such as an
+   * overlay whose element has scrolled out of the viewport.
+   */
+  public visible = true;
+
   private _isPlaying = false;
   // Whether the player is live at all — set by play()/resume(), cleared by stop().
   // A PAUSED player stays live (`_isPlaying` false, `_isLive` true) so update()
@@ -243,7 +251,7 @@ export class SSPlayer {
 
   /** Whether this player contributes anything to the frame. */
   public get isVisible(): boolean {
-    return this._alpha > 0 && !!this.internalPlayer.animationName;
+    return this.visible && this._alpha > 0 && !!this.internalPlayer.animationName;
   }
 
   // --- Loading --------------------------------------------------------------
