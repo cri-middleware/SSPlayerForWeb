@@ -141,7 +141,7 @@ player.getPartIndexFromName('body');  // part name → index
 `findPartIndex('body')` does the same lookup through the runtime, and is what a `part` argument
 resolves to internally — use it when you set overrides often enough to want the index cached.
 
-The same methods are on `SSPlayer` (PixiJS) and `SSCanvasPlayer` (WebGL). See
+The same methods are on `SSPlayer` (both the PixiJS and WebGL backends). See
 [Part control (visibility / cell / color)](/customize/part-overrides) for blend operations,
 priority modes, colour packing and the caveats — and for the authoring surfaces in
 [RPG Maker MZ](/usage/rmmz), [TyranoScript](/usage/tyrano) and

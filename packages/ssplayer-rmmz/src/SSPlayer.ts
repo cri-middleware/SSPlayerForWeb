@@ -6,7 +6,10 @@
 // advanced only when the host RMMZ sprite calls `update(deltaMs)` from its own
 // `update()`, so the animation stays perfectly in step with MZ time and pauses
 // with the game (spec §7.3). Drawing happens in `_render`, called by Pixi at the
-// container's Z position, so MZ handles Z-order / opacity / tint inheritance.
+// container's Z position, so MZ handles Z-order and the transform chain.
+// Opacity is inherited too, but not automatically: Pixi applies worldAlpha in its
+// own batch shader, which the raw GL draw bypasses, so SSPlayerRenderer feeds it
+// to the SS renderer by hand as a world tint.
 //
 // The actual GL draw + WebGL-state protection lives in SSPlayerRenderer (a
 // registered PIXI.ObjectRenderer); this class only decides WHAT to draw and

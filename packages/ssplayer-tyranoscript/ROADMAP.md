@@ -1,7 +1,7 @@
 # @spritestudio/ssplayer-tyranoscript Roadmap
 
 A thin TyranoScript adapter. Rendering is delegated entirely to
-[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md) (`SSCanvasPlayer`);
+[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md) (`SSPlayer`);
 this package is pure glue — it registers `[ss_*]` KAG custom tags that mount an SS
 canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 [`../../ROADMAP.md`](../../ROADMAP.md).
@@ -10,7 +10,7 @@ canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 
 | Topic | Decision | Why |
 | --- | --- | --- |
-| Renderer | Use `ssplayer-webgl`'s `SSCanvasPlayer` | All GPU/WebGL difficulty is isolated in the webgl package; tyrano stays glue. |
+| Renderer | Use `ssplayer-webgl`'s `SSPlayer` | All GPU/WebGL difficulty is isolated in the webgl package; tyrano stays glue. |
 | Dependency | **`ssplayer-webgl` only** (not core) | webgl re-exports core; core is pulled in transitively. Core/`flatbuffers` are still inlined into the IIFE build. |
 | PixiJS | Not used | TyranoScript does not bundle Pixi; we insert our own `<canvas>`. |
 | WebGL version | Ride webgl's WebGL1 baseline + WebGL2 auto-upgrade | Broad device reach (old/mobile webviews, builder native export). |
@@ -27,7 +27,7 @@ canvas onto a Tyrano layer and drive playback. For the project-wide roadmap see
 ### PT1 — minimal display
 - [x] `[ss_init]` / `[ss_new]` / `[ss_play]`
 - [x] `LayerCanvas` (layer lookup via `kag.layer.getLayer(layer, page)`, same as the official Spine plugin)
-- [x] `PlayerRegistry` (name → `SSCanvasPlayer`)
+- [x] `PlayerRegistry` (name → `SSPlayer`)
 - [x] Coordinate mapping: Tyrano top-left logical px → `setTransform` (Y-down buffer px; HiDPI via `bufferScale`)
 
 ### PT2 — lifecycle
@@ -130,7 +130,7 @@ and component APIs behave, and what is left to build — now lives in
 
 - [ ] Respect Tyrano's SE volume slider (currently a fixed howler volume)
 - [ ] Interaction of Tyrano CSS transitions (fades, etc.) with the overlaid `<canvas>`
-- [ ] `devicePixelRatio` / Retina scaling vs `SSCanvasPlayer.resize`'s DPR clamp
+- [ ] `devicePixelRatio` / Retina scaling vs `SSPlayer.resize`'s DPR clamp
 - [ ] Optimize `ssconverter.wasm` (`wasm-opt -Oz`) — shared with
       [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/ROADMAP.md), which ships it
 - [ ] Out of scope (shared with webgl, gated on SpriteStudio-SDK FFI): Text(5) / Nine-slice(6) /
@@ -154,7 +154,7 @@ and component APIs behave, and what is left to build — now lives in
 
 | Purpose | Path / URL |
 | --- | --- |
-| Renderer (source of truth) | [`../ssplayer-webgl/`](../ssplayer-webgl/README.md), `packages/ssplayer-webgl/src/SSCanvasPlayer.ts` |
+| Renderer (source of truth) | [`../ssplayer-webgl/`](../ssplayer-webgl/README.md), `packages/ssplayer-webgl/src/SSPlayer.ts` |
 | Audio / resource interfaces | `packages/ssplayer-core/src/IAudioManager.ts`, `IResourceManager.ts` |
 | `.sspj → .ssab` converter | `packages/ssconverter-web/` (browser UI `src/main.ts`, Node CLI `scripts/cli.js`, `wasm/ssconverter.js`) |
 | Auto-importer reference | SSPlayerForRenPy `game/spritestudio/auto_importer.rpy` |

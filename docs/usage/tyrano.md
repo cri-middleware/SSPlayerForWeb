@@ -3,7 +3,7 @@
 ::: warning Beta
 `@spritestudio/ssplayer-tyranoscript` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
 tags are complete, but names and behavior may still change before `7.0.0`. Rendering is
-built on [`ssplayer-webgl`](/usage/webgl)'s `SSCanvasPlayer`.
+built on [`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
 
 **There are no releases yet.** Once the first release ships, a plugin ZIP will be
 distributed on **GitHub Releases** — but for now the only way to obtain it is to
@@ -29,7 +29,7 @@ TyranoBuilder, and TyranoStudio.
 
 - Each `[ss_new]` creates a named player: it loads the `.ssab`, mounts a `<canvas>`
   on the target layer, and drives it with [`ssplayer-webgl`](/usage/webgl)'s
-  `SSCanvasPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies).
+  `SSPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies).
 - The canvas is tagged with **your player name** as its identifier, so Tyrano's own
   `[anim]` / `[kanim]` tags drive it directly — just like any character.
 - Only the **WASM binary** (`ssruntime_bg.wasm`) stays external; the renderer and
@@ -192,7 +192,9 @@ keyframes** (the SS6 PartsColorChange / CellChangeParts / HideSet equivalents).
 ## 5. Movement & effects with `[anim]` / `[kanim]`
 
 Each SS player is a real element on the layer, tagged with your player name, so Tyrano's
-own `[anim]` / `[kanim]` tags drive it directly — just like any character:
+own `[anim]` / `[kanim]` tags drive it directly — just like any character. The element is a
+positioning box: the drawing happens on the layer's shared canvas, which follows the element
+every frame (see [Resources & lifecycle](/customize/resources)):
 
 ```
 [ss_new name="ringo" storage="others/ssdata/ringo.ssab" layer="0" x="640" y="480"]
@@ -207,13 +209,22 @@ TyranoScript's `[anim]` **`opacity` is 0–255** (not 0–1): `opacity="1"` is n
 invisible (≈ 0.4%). **Full opacity is `255`.**
 :::
 
+::: warning `scale` and `rotate` do not reach the animation
+`[anim]` / `[kanim]` `scale` and `rotate` transform the character's **element**, and every
+SS character on a layer is drawn on that layer's shared canvas rather than inside its own
+element. A CSS transform therefore moves and resizes where the character sits without
+scaling or rotating what is drawn there.
+
+Use **`[ss_pos]`** (instant) or **`[ss_move]`** (tween), which scale the animation itself
+and about its own anchor. `[anim]`'s `scale` / `rotate` pivoted on the screen centre rather
+than the anchor, so they were never accurate for this anyway.
+:::
+
 **When to use which:**
 
-- **Fades (opacity) / simple slides / shakes** → `[anim]` / `[kanim]` is ideal.
-- For **absolute, anchor-accurate** position or scale, use **`[ss_pos]`** (instant) or
-  **`[ss_move]`** (tween) instead. With `[anim]`, `left`/`top` move *relative* to the
-  starting position and `scale`/`rotate` pivot on the screen center rather than the
-  animation's anchor.
+- **Fades (opacity) / slides / shakes / keyframes** → `[anim]` / `[kanim]`.
+- **Position or scale that has to be exact** → `[ss_pos]` (instant) or `[ss_move]` (tween).
+  With `[anim]`, `left`/`top` move *relative* to the starting position.
 
 ## 6. Save / load & lifecycle
 

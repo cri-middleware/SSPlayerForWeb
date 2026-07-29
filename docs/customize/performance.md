@@ -15,7 +15,8 @@ nearly 90%.
 **WebGL** — cap the device pixel ratio. The default cap is already `2`:
 
 ```ts
-const player = new SSCanvasPlayer(canvas, { maxDPR: 1.5 });
+const surface = new SSSurface(canvas, { maxDPR: 1.5 });
+const player = surface.createPlayer();
 player.resize(cssWidth, cssHeight);       // recomputes the buffer under the cap
 ```
 

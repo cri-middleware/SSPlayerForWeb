@@ -50,4 +50,13 @@ RMMZ_SS="$ROOT_DIR/examples/rmmz-example/SampleProject/spritestudio"
 mkdir -p "$RMMZ_SS"
 node packages/ssconverter-web/scripts/cli.js --stem-dir -o "$RMMZ_SS" SpriteStudio-SDK/tests/Ringo/Ringo.sspj
 
-echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata and examples/rmmz-example/SampleProject/spritestudio."
+# rmmz-harness drives the REAL Layer-3 renderer against a real PixiJS v5 context
+# with only the MZ globals stubbed, so it needs the REFERENCE Ringo: its stubbed
+# ImageManager loads the sibling PNG by URL, exactly as the real one does. It was
+# missing from this script, so the harness fetched an .ssab that 404ed, handed
+# the dev server's HTML to the runtime and trapped in wasm.
+HARNESS_PUBLIC="$ROOT_DIR/examples/rmmz-harness/public"
+mkdir -p "$HARNESS_PUBLIC/Ringo"
+cp "$PIXI_PUBLIC/Ringo/Ringo.ssab" "$PIXI_PUBLIC/Ringo/Ringo.png" "$HARNESS_PUBLIC/Ringo/"
+
+echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata, examples/rmmz-example/SampleProject/spritestudio and examples/rmmz-harness/public."

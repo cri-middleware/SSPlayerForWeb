@@ -24,8 +24,12 @@
 !/data/scenario/make.ks
 
 # --- Generated plugin artefacts (produced by `pnpm run sync:plugin`) ---
+# init.ks is synced from the plugin's canonical template rather than committed
+# here: maintained by hand it silently drifted and lost its [ss_init] line, so
+# the runtime never started and every [ss_new] failed.
 /data/others/plugin/ssplayer/main.js
 /data/others/plugin/ssplayer/ssruntime_bg.wasm
+/data/others/plugin/ssplayer/init.ks
 
 # --- SS assets (reference .ssab + textures; generated, not committed) ---
 # Populated by the repo-wide `pnpm deploy-examples` (compiles the SDK test

@@ -24,21 +24,22 @@ PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う�
 </ss-player>
 ```
 
-Canvas を自分で用意して制御したい場合は `SSCanvasPlayer` を使います。
+Canvas を自分で用意して制御したい場合は `SSPlayer` を使います。
 
 ```ts
-import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import { SSSurface } from '@spritestudio/ssplayer-webgl';
 
 async function main() {
   // WASM ランタイムをアプリ全体で一度だけ初期化
-  await SSCanvasPlayer.initialize();
+  await SSSurface.initialize();
 
   const canvas = document.createElement('canvas');
   canvas.width = 640;
   canvas.height = 480;
   document.body.appendChild(canvas);
 
-  const player = new SSCanvasPlayer(canvas, { autoStart: true });
+  const surface = new SSSurface(canvas, { autoStart: true });
+  const player = surface.createPlayer();
   await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   await player.setAnimation('run');    // loop 既定値は -1（無限ループ）
   player.play();
@@ -82,7 +83,7 @@ main().catch(console.error);
 ## つまずきやすい点
 
 - **`initialize()` は一度だけ**：WASM ランタイムはアプリ起動時に 1 回初期化すれば
-  十分です（`SSCanvasPlayer.initialize()` / `SSPlayer.initialize()`）。
+  十分です（`SSSurface.initialize()` / `SSPlayer.initialize()`）。
 - **Pixi では `update()` を呼ばない**：`SSPlayer` は `Ticker.shared` に自動登録されます。
 - **`.ssab` が無い**：`.sspj` からの変換は [アセットの準備](/ja/usage/assets) を参照してください。
 - **テクスチャが表示されない**：テクスチャは `.ssab` と同じディレクトリから読み込まれます。

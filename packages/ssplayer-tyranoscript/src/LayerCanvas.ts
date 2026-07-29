@@ -1,32 +1,42 @@
+import type { SSPlayer } from '@spritestudio/ssplayer-webgl';
 import type { TyranoKag } from './tyranoTypes.js';
 
 /**
- * DOM glue between a TyranoScript layer `div` and an `SSCanvasPlayer`'s canvas
- * (§3.2). TyranoScript renders by stacking absolutely-positioned layer divs
- * (`<number>_<fore|back>`, e.g. `.0_fore`, with `base` for the background). We
- * overlay one `<canvas>` per player on the requested layer, reaching the layer
- * through Tyrano's own `kag.layer.getLayer(layer, page)` — the same API the
- * official Spine plugin uses (it handles the class naming and avoids building an
- * invalid `.0_fore` selector by hand).
+ * DOM glue between a TyranoScript layer `div` and an `SSPlayer`.
  *
- * Coordinate model (§3.2):
+ * TyranoScript renders by stacking absolutely-positioned layer divs
+ * (`<number>_<fore|back>`, e.g. `.0_fore`, with `base` for the background). We
+ * reach the layer through Tyrano's own `kag.layer.getLayer(layer, page)` — the
+ * same API the official Spine plugin uses (it handles the class naming and
+ * avoids building an invalid `.0_fore` selector by hand).
+ *
+ * **Each character is a `<div>`, not a canvas.** One `SSOverlay` per
+ * `(layer, page)` owns the single canvas that draws every SS character on that
+ * layer and positions each one from its div's rect. That is what keeps the WebGL
+ * context count at "layers in use" rather than "characters on screen" — browsers
+ * allow only about 8-16 contexts, which a cast of characters used to exhaust.
+ *
+ * Keeping a real element per character is not incidental. TyranoScript
+ * identifies a named element purely by a CSS class (`$.setName` is
+ * `addClass(name)`), and `[anim]` / `[kanim]` find it with
+ * `getLayer(layer,page).find(".<name>")`. Because the character is still an
+ * element those tags keep working: moving the div moves the animation with it,
+ * and the overlay reads the div's computed opacity so a fade fades the
+ * animation. Drawing on a shared canvas costs only what CSS *transforms* used to
+ * do — see the note on {@link toTransform}.
+ *
+ * Coordinate model:
  *  - Tyrano places things in **logical top-left pixels** at the game resolution
  *    (`config.scWidth × scHeight`).
- *  - `SSCanvasPlayer` uses a **Y-down** system (it calls `set_coordinate_system(1)`
- *    on load) whose `setTransform({x,y})` places the SS origin at a **drawing-
- *    buffer pixel**. The buffer is `logical × dpr`, so a logical coordinate must
- *    be multiplied by the buffer scale to land where the author expects, and the
- *    same factor keeps the animation crisp (native size) on HiDPI displays.
+ *  - `SSPlayer` uses a **Y-down** system (it calls `set_coordinate_system(1)` on
+ *    load) and its `setTransform({x,y})` is relative to the **centre of its box**
+ *    — here, the character div's rect in drawing-buffer pixels. The buffer is
+ *    `logical × dpr`, so a logical coordinate is multiplied by the buffer scale
+ *    both to land where the author expects and to stay crisp on HiDPI.
  */
 
 /** Which sub-page of a numbered layer to mount on. */
 export type LayerPage = 'fore' | 'back';
-
-export interface LayerCanvasResult {
-  canvas: HTMLCanvasElement;
-  /** `drawingBuffer px / logical px` — multiply logical coords by this. */
-  bufferScale: number;
-}
 
 /**
  * Resolve a Tyrano layer to its DOM element via `kag.layer.getLayer`. `layer` is
@@ -46,140 +56,142 @@ export function getLayerElement(
 }
 
 /**
- * Create a `<canvas>` sized to the game resolution, overlay it on `layerEl`, and
- * report the buffer scale used. The canvas fills the layer at `left:0; top:0`
- * (Tyrano layers are already positioned), so SS content shares the layer's
- * coordinate origin.
+ * Create the `<div>` that represents one SS character on `layerEl`, sized to the
+ * game resolution and pinned at `left:0; top:0` (Tyrano layers are already
+ * positioned), so SS content shares the layer's coordinate origin.
  *
- * `dpr` is clamped to `maxDPR` to bound fill-rate on HiDPI (mirrors
- * `SSCanvasPlayer.resize`; memory: webgl-perf-fillrate).
+ * The div draws nothing; the layer's overlay reads its rect. Sizing it to the
+ * whole game rather than to the character is deliberate — it makes
+ * `[anim left= top=]` move the character by the same offset it would have moved a
+ * full-screen canvas, so scenarios written against the canvas-per-character build
+ * behave identically.
  */
-export function createLayerCanvas(
+export function createCharacterElement(
   layerEl: HTMLElement,
   logicalW: number,
   logicalH: number,
-  dpr: number,
   name: string,
-  maxDPR = 2,
-): LayerCanvasResult {
-  const scale = Math.min(dpr, maxDPR);
-  const canvas = document.createElement('canvas');
-  // Backing store at device resolution; CSS box at the logical game size.
-  canvas.width = Math.round(logicalW * scale);
-  canvas.height = Math.round(logicalH * scale);
-  canvas.style.position = 'absolute';
-  canvas.style.left = '0';
-  canvas.style.top = '0';
-  canvas.style.width = `${logicalW}px`;
-  canvas.style.height = `${logicalH}px`;
+): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.position = 'absolute';
+  el.style.left = '0';
+  el.style.top = '0';
+  el.style.width = `${logicalW}px`;
+  el.style.height = `${logicalH}px`;
   // Overlay only — never eat clicks meant for Tyrano's own UI on the layer.
-  canvas.style.pointerEvents = 'none';
-  // Tag the canvas so it is addressable exactly like a TyranoScript "character":
-  // Tyrano identifies a named element purely by a CSS class (`$.setName` does
-  // `addClass(name)`), and tags like [anim]/[kanim] target it via
-  // getLayer(layer,page).find(".<name>"). Adding the player's name as a class
-  // therefore lets authors move/fade the SS canvas with Tyrano's own built-in
-  // motion tags — no custom [ss_move] needed for CSS-space effects. `ss-player`
-  // is a stable marker for bulk selection.
-  canvas.classList.add('ss-player');
-  if (name) canvas.classList.add(name);
-  layerEl.appendChild(canvas);
-  return { canvas, bufferScale: scale };
+  el.style.pointerEvents = 'none';
+  // Tag it so it is addressable exactly like a TyranoScript "character": Tyrano
+  // identifies a named element purely by a CSS class, and [anim]/[kanim] target
+  // it via getLayer(layer,page).find(".<name>"). `ss-player` is a stable marker
+  // for bulk selection.
+  el.classList.add('ss-player');
+  if (name) el.classList.add(name);
+  layerEl.appendChild(el);
+  return el;
 }
 
 /**
- * Set (or clear, when `zIndex` is undefined) the stacking order of a player's
- * canvas inside its layer. Tyrano layers stack by layer number; within ONE
- * layer several SS canvases would otherwise stack in creation order only, with
- * no way to bring a character to the front later. `z-index` works because the
- * canvases are absolutely positioned (see createLayerCanvas).
+ * Pending fade timers, keyed by element. Module-level (not on the entry) so the
+ * fade helpers stay usable on any element, and so a second fade on the same
+ * element cancels the first instead of racing it to the final style.
  */
-export function setCanvasZIndex(canvas: HTMLCanvasElement, zIndex?: number): void {
-  canvas.style.zIndex = zIndex === undefined || !Number.isFinite(zIndex) ? '' : String(zIndex);
-}
+const fadeTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-/**
- * Pending fade timers, keyed by canvas. Module-level (not on the entry) so the
- * fade helpers stay usable on any canvas, and so a second fade on the same
- * canvas cancels the first instead of racing it to the final style.
- */
-const fadeTimers = new WeakMap<HTMLCanvasElement, ReturnType<typeof setTimeout>>();
-
-/** Cancel a fade started by {@link setCanvasVisible} (teardown / re-target). */
-export function cancelCanvasFade(canvas: HTMLCanvasElement): void {
-  const pending = fadeTimers.get(canvas);
+/** Cancel a fade started by {@link setElementVisible} (teardown / re-target). */
+export function cancelElementFade(el: HTMLElement): void {
+  const pending = fadeTimers.get(el);
   if (pending === undefined) return;
   clearTimeout(pending);
-  fadeTimers.delete(canvas);
+  fadeTimers.delete(el);
 }
 
 /**
- * Show or hide a player's canvas, optionally fading over `timeMs`. Resolves
- * once the fade has finished (immediately when `timeMs <= 0`), so a tag can
- * either await it (`wait="true"`) or fire and forget.
+ * Show or hide a character, optionally fading over `timeMs`. Resolves once the
+ * fade has finished (immediately when `timeMs <= 0`), so a tag can either await
+ * it (`wait="true"`) or fire and forget.
  *
- * Hiding ends at `display:none` rather than `opacity:0` on purpose: an
- * invisible-but-laid-out canvas keeps its `SSCanvasPlayer` ticker running,
- * whereas `display:none` trips the renderer's own `pauseWhenHidden`
- * IntersectionObserver and stops the GPU work while the player stays loaded
- * (that is the whole point of `[ss_hide]` over `[ss_free]`).
+ * This animates CSS on the element even though the element draws nothing: the
+ * overlay reads its computed opacity into the player's alpha every frame, so a
+ * CSS transition fades the animation. Driving the same property Tyrano's own
+ * `[anim]` drives means an author mixing the two gets the browser's normal
+ * last-write-wins behaviour, exactly as before.
  *
- * CSS transitions are used rather than a RAF loop because the canvas is a plain
- * DOM element here — this is the same axis Tyrano's own `[anim]` animates, so
- * an author mixing the two gets the browser's normal last-write-wins behaviour.
+ * Hiding ends at `display:none` rather than `opacity:0` on purpose: a
+ * laid-out-but-invisible element still has a rect, whereas `display:none` drops
+ * out of the overlay's IntersectionObserver, which stops advancing and drawing
+ * that player entirely while it stays loaded — that is the whole point of
+ * `[ss_hide]` over `[ss_free]`.
  */
-export function setCanvasVisible(
-  canvas: HTMLCanvasElement,
+export function setElementVisible(
+  el: HTMLElement,
   visible: boolean,
   timeMs = 0,
 ): Promise<void> {
-  cancelCanvasFade(canvas);
+  cancelElementFade(el);
   const time = Math.max(0, timeMs);
 
   if (time <= 0) {
-    canvas.style.transition = '';
-    canvas.style.opacity = visible ? '1' : '0';
-    canvas.style.display = visible ? '' : 'none';
+    el.style.transition = '';
+    el.style.opacity = visible ? '1' : '0';
+    el.style.display = visible ? '' : 'none';
     return Promise.resolve();
   }
 
   if (visible) {
-    // Lay the canvas out at zero opacity first: a `display:none` element has no
+    // Lay the element out at zero opacity first: a `display:none` element has no
     // transition start value, so without this the fade-in would just pop.
-    canvas.style.transition = '';
-    canvas.style.opacity = '0';
-    canvas.style.display = '';
-    void canvas.offsetWidth; // force a reflow so the start value is committed
+    el.style.transition = '';
+    el.style.opacity = '0';
+    el.style.display = '';
+    void el.offsetWidth; // force a reflow so the start value is committed
   }
-  canvas.style.transition = `opacity ${time}ms linear`;
-  canvas.style.opacity = visible ? '1' : '0';
+  el.style.transition = `opacity ${time}ms linear`;
+  el.style.opacity = visible ? '1' : '0';
 
   return new Promise<void>((resolve) => {
     const id = setTimeout(() => {
-      fadeTimers.delete(canvas);
-      canvas.style.transition = '';
-      if (!visible) canvas.style.display = 'none';
+      fadeTimers.delete(el);
+      el.style.transition = '';
+      if (!visible) el.style.display = 'none';
       resolve();
     }, time);
-    fadeTimers.set(canvas, id);
+    fadeTimers.set(el, id);
   });
 }
 
 /**
  * Map an author-facing placement (logical px + author scale) to the
- * `SSCanvasPlayer.setTransform` arguments (buffer px + composed scale). Split
- * out so it can be unit-tested without a GL context.
+ * `SSPlayer.setTransform` arguments (buffer px + composed scale). Split out so it
+ * can be unit-tested without a GL context.
+ *
+ * `origin` is the centre of the player's box. TyranoScript addresses the screen
+ * from its top-left while `setTransform` is relative to that centre, so it is
+ * subtracted here — which also means `[ss_new]` with no position resolves to
+ * `{0,0}`, dead centre, rather than to a screen-midpoint magic number.
+ *
+ * This is also where `[anim]`'s CSS `scale` / `rotate` stop reaching the
+ * animation: the overlay derives the box from the div's rect, so a CSS transform
+ * moves and resizes the *box* without scaling or rotating what is drawn in it.
+ * The docs already point at `[ss_pos]` / `[ss_move]` for accurate scale, since
+ * `[anim]`'s pivot was the screen centre rather than the character anyway.
  */
 export function toTransform(
   x: number,
   y: number,
   scale: number,
   bufferScale: number,
+  origin: { x: number; y: number } = { x: 0, y: 0 },
 ): { x: number; y: number; scaleX: number; scaleY: number } {
   return {
-    x: x * bufferScale,
-    y: y * bufferScale,
+    x: x * bufferScale - origin.x,
+    y: y * bufferScale - origin.y,
     scaleX: scale * bufferScale,
     scaleY: scale * bufferScale,
   };
+}
+
+/** The centre of `player`'s box, to hand {@link toTransform}. */
+export function boxOrigin(player: SSPlayer): { x: number; y: number } {
+  const box = player.box;
+  return { x: box.w / 2, y: box.h / 2 };
 }

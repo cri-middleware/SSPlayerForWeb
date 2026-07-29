@@ -1,4 +1,4 @@
-import type { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import type { SSPlayer } from '@spritestudio/ssplayer-webgl';
 
 // Zoom range for the wheel. Wide enough to inspect a tiny part or to fit a
 // large animation, tight enough that a stray scroll can't lose the asset.
@@ -12,7 +12,7 @@ const ZOOM_SENSITIVITY = 0.002;
  * Pan (drag) / zoom (wheel) of the animation inside the canvas, plus the
  * default view every newly-shown animation starts from.
  *
- * SSCanvasPlayer has no scene graph, so the view lives here and is pushed to the
+ * SSPlayer has no scene graph, so the view lives here and is pushed to the
  * player through setTransform() — the same call that would otherwise just centre
  * the animation once at startup.
  */
@@ -24,7 +24,7 @@ export class ViewControls {
   private lastX = 0;
   private lastY = 0;
 
-  constructor(private player: SSCanvasPlayer, private canvas: HTMLCanvasElement) {
+  constructor(private player: SSPlayer, private canvas: HTMLCanvasElement) {
     this.reset();
     this.setupDrag();
     this.setupZoom();
@@ -36,8 +36,9 @@ export class ViewControls {
    * from the previous one never hides the new one.
    */
   public reset(): void {
-    this.x = this.canvas.width / 2;
-    this.y = this.canvas.height / 2;
+    // setTransform is relative to the player's box centre, so centred is simply 0,0.
+    this.x = 0;
+    this.y = 0;
     this.scale = 1;
     this.apply();
   }
@@ -47,15 +48,17 @@ export class ViewControls {
   }
 
   /**
-   * Client (CSS px) → drawing-buffer coordinates, which is the space
-   * setTransform() works in. The buffer is a fixed 1280x960; if CSS ever scales
-   * the canvas, the ratio below keeps the cursor mapping honest.
+   * Client (CSS px) → drawing-buffer pixels measured **from the box centre**,
+   * which is the space setTransform() works in. Keeping the cursor in the same
+   * space as `this.x/y` is what lets zoomAt() anchor correctly. The buffer is a
+   * fixed 1280x960; if CSS ever scales the canvas, the ratio below keeps the
+   * cursor mapping honest.
    */
   private toBuffer(e: { clientX: number; clientY: number }): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
     return {
-      x: (e.clientX - rect.left) * (this.canvas.width / rect.width),
-      y: (e.clientY - rect.top) * (this.canvas.height / rect.height),
+      x: (e.clientX - rect.left) * (this.canvas.width / rect.width) - this.canvas.width / 2,
+      y: (e.clientY - rect.top) * (this.canvas.height / rect.height) - this.canvas.height / 2,
     };
   }
 

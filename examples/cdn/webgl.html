@@ -17,7 +17,7 @@
   <header>
     <strong>@spritestudio/ssplayer-webgl</strong> — zero-dependency renderer loaded from a
     CDN via a classic <code>&lt;script&gt;</code>. Note the <strong>explicit WASM URL</strong>
-    passed to <code>SSCanvasPlayer.initialize()</code>: outside a bundler the runtime can't
+    passed to <code>SSSurface.initialize()</code>: outside a bundler the runtime can't
     self-locate.
   </header>
   <canvas id="stage" width="1280" height="960"></canvas>
@@ -35,18 +35,22 @@
     const ANIM = new URLSearchParams(location.search).get('anim') || 'run';
     // ------------------------------------------------------------------------
 
-    const { SSCanvasPlayer } = SSWebGLPlayer; // player class lives on the namespace global
+    const { SSSurface } = SSWebGLPlayer; // surface class lives on the namespace global
     const statusEl = document.getElementById('status');
     const setStatus = (msg, isError) => { statusEl.textContent = msg; statusEl.classList.toggle('error', !!isError); };
 
     (async () => {
       try {
         // Pass the explicit WASM URL — no bundler means no automatic resolution.
-        await SSCanvasPlayer.initialize(WASM_URL);
+        await SSSurface.initialize(WASM_URL);
 
-        const player = new SSCanvasPlayer(document.getElementById('stage'), {
+        const surface = new SSSurface(document.getElementById('stage'), {
+          autoStart: true,
           backgroundColor: 0x1a1a2e,
         });
+        // One surface can carry any number of players on a single WebGL context;
+        // this page just needs the one.
+        const player = surface.createPlayer();
         await player.load(SSAB_URL);       // must be served over http(s), not file://
         await player.setAnimation(ANIM);   // loops infinitely by default
         player.play();

@@ -33,9 +33,11 @@ import { PARTS_COLOR_VERT, ATTR_LOC, createGLProgram } from './PartsColorProgram
 
 // ---------------------------------------------------------------------------
 // Shared GLSL ES 1.00 preamble + helpers, prepended to every ss-* fragment.
-// `uColor` mirrors ssplayer-pixi's world tint (there Pixi supplied it); here the
-// renderer feeds the parent-chain hierarchical alpha (identity 1,1,1,1 today,
-// same as the plain parts-color program). `uParams[2]` packs param0..7.
+// `uColor` mirrors ssplayer-pixi's world tint (there Pixi supplies Pixi's own
+// `(tint.rgb * worldAlpha, worldAlpha)`); here the renderer feeds the per-player
+// tint passed to `render()`, premultiplied as `(rgb * a, a)` and identity when
+// the caller sets none — same value as the plain parts-color program uses.
+// `uParams[2]` packs param0..7.
 // ---------------------------------------------------------------------------
 const GL_HEAD = `
 precision mediump float;

@@ -68,8 +68,7 @@ host framework's plugin system, so they are **not installable from npm**.
 [Using RPG Maker MZ](/usage/rmmz).
 
 ::: warning
-- **A picture's opacity / tint do not affect the animation** — it always draws fully opaque.
-  *Move* and *scale* do apply.
+- **A picture's tint does not affect the animation.** *Opacity*, *move* and *scale* do apply.
 - **Some screen effects behave differently** from a normal picture: a few PIXI filters can shift
   the animation out of place, and looped sound effects play only once. MZ's own flash / tint
   overlays are unaffected.
@@ -80,9 +79,9 @@ host framework's plugin system, so they are **not installable from npm**.
   covers them.
 :::
 
-The opacity / tint and projection limitations would both be fixed by a small enhancement to
-`SSWebGLRenderer` (an injected projection matrix plus an alpha/tint uniform) — a planned
-follow-up.
+`SSWebGLRenderer` now takes a world tint, which is what made opacity inheritance work. Wiring
+MZ's *tint* through it, and injecting a projection matrix for the remaining projection
+limitation, are planned follow-ups.
 
 ## TyranoScript / TyranoBuilder
 

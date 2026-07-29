@@ -1,6 +1,6 @@
 # 基本的な再生
 
-`SSCanvasPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/ja/setup/quickstart) を参照してください。
+`SSPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/ja/setup/quickstart) を参照してください。
 
 ## 読み込みとアニメーション選択
 
@@ -8,7 +8,7 @@
 await player.load(ssabUrl); // テクスチャは .ssab と同じディレクトリから読み込まれます
 ```
 
-WebGL (`SSCanvasPlayer`):
+WebGL (`SSPlayer`):
 ```ts
 await player.setAnimation(name);                       // アニメーションを選択
 ```

@@ -15,11 +15,22 @@
 ;   [ss_init] で WASM ランタイムを起動する。準備はこの 1 行で終わり。
 [plugin name="ssplayer"]
 
+; 背景に色を敷く。既定の真っ黒だと、半透明の描画や合成の不具合が
+; 「キャラに重なったところだけ」しか見えず、原因の切り分けができない
+; （黒の上に半透明の黒を重ねても黒のままなので）。単色ではなくグラデに
+; しているのは、バンディングやアルファの取り違えもそれ単体で見えるため。
+; 背景画像を使うなら [bg storage="..."] に置き換えて構わない。
+[iscript]
+$(".base_fore").css("background", "linear-gradient(160deg, #2b3a4a 0%, #3d3550 55%, #4a3a3a 100%)");
+[endscript]
+
 [cm]
 
 「ssplayer-tyranoscript デモ。SpriteStudio アニメを表示します。」[l][r]
 
-; プレイヤーを生成 → ssab ロード → レイヤー0 に canvas を挿入 → 再生。
+; プレイヤーを生成 → ssab ロード → レイヤー0 に要素を挿入 → 再生。
+; 描画はレイヤーごとの共有 canvas（オーバーレイ）1 枚が受け持つので、
+; キャラを何体出しても WebGL コンテキストは増えない。
 ; anime を省略すると ssab の先頭アニメを自動選択する。
 [ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480" scale="1" loop="true"]
 
@@ -48,7 +59,7 @@
 [ss_pos name="ringo" x="640"]
 「ss_pos で元の位置へ瞬間移動しました。」[l][r]
 
-; --- フェードアウト → フェードイン（TyranoScript 標準 [anim] を canvas に適用） ---
+; --- フェードアウト → フェードイン（TyranoScript 標準 [anim] を要素に適用） ---
 ; canvas にはプレイヤー名 "ringo" が CSS クラスとして付くので $(".ringo") で選択される。
 ; ★ [anim] の opacity は 0〜255（0〜1 ではない！）。255 で完全表示、0 で完全透明。
 ; [anim] は非ブロッキング（アニメスタック）なので [wait] で完了を待ってから次へ。

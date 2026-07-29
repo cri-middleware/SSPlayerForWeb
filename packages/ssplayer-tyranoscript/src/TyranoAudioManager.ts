@@ -1,4 +1,4 @@
-import type { IAudioManager, SoundAsset, SSCanvasPlayer, Unsubscribe } from '@spritestudio/ssplayer-webgl';
+import type { IAudioManager, SoundAsset, SSPlayer, Unsubscribe } from '@spritestudio/ssplayer-webgl';
 
 // SS audio routed through TyranoScript's bundled **howler.js** (`window.Howl`),
 // §3.4. The SS runtime plays no sound itself: it emits `onAudio` events (sound
@@ -98,7 +98,7 @@ export class TyranoAudioManager implements IAudioManager {
    * preloads through us) and play each `onAudio` event. Returns the `onAudio`
    * unsubscribe. Call BEFORE `setAnimation`.
    */
-  bindToPlayer(player: SSCanvasPlayer): Unsubscribe {
+  bindToPlayer(player: SSPlayer): Unsubscribe {
     player.audioManager = this;
     return player.onAudio((e) => {
       if (e.soundName) this.play(e.soundName, e.loopNum);

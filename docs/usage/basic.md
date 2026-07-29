@@ -1,6 +1,6 @@
 # Basic playback
 
-This page collects the playback-control API shared by `SSCanvasPlayer` (WebGL) and `SSPlayer` (PixiJS v8). Most of the API is common to both. For the minimal load-and-play steps, see the [Quick start](/setup/quickstart).
+This page collects the playback-control API shared by `SSPlayer` (both the WebGL and PixiJS v8 backends). Most of the API is common to both. For the minimal load-and-play steps, see the [Quick start](/setup/quickstart).
 
 ## Loading and selecting an animation
 
@@ -8,7 +8,7 @@ This page collects the playback-control API shared by `SSCanvasPlayer` (WebGL) a
 await player.load(ssabUrl); // textures load from the .ssab's own directory
 ```
 
-WebGL (`SSCanvasPlayer`):
+WebGL (`SSPlayer`):
 ```ts
 await player.setAnimation(name);                       // select an animation
 ```

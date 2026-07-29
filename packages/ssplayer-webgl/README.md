@@ -6,7 +6,7 @@ Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio 7** pl
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
 
-> **Who this is for:** web developers with no framework — drop a SpriteStudio player into any page, either as a single `<ss-player>` HTML tag or via the `SSCanvasPlayer` JS API, with zero runtime dependencies.
+> **Who this is for:** web developers with no framework — drop a SpriteStudio player into any page, either as a single `<ss-player>` HTML tag or via the `SSPlayer` JS API, with zero runtime dependencies.
 > **Install:** `npm install @spritestudio/ssplayer-webgl@beta`
 > **Not what you need?** → [package table](../../README.md#-which-package-should-i-use) — already on PixiJS or RPG Maker MZ? there's a dedicated renderer for that.
 
@@ -17,7 +17,7 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 - **Drop it in with a single HTML tag.** The built-in **`<ss-player>` custom
   element** plays a `.ssab` declaratively — `<ss-player src="chara.ssab"
   animation="idle" autoplay>` — with no build step and no JavaScript, in any
-  framework or plain HTML. Prefer code? The `SSCanvasPlayer` class gives full
+  framework or plain HTML. Prefer code? The `SSPlayer` class gives full
   imperative control over the same renderer.
 - **A whole scene, not just a character.** SpriteStudio composes characters,
   backgrounds, effects, and UI onto a single timeline, so one `.ssab` can be a
@@ -51,7 +51,7 @@ re-dispatches them as DOM `CustomEvent`s.
 ### Drop-in — `<ss-player>` Web Component (little/no JS)
 
 The fastest way onto a page: a declarative custom element that wraps
-`SSCanvasPlayer`. Register the tag once, then use it anywhere in your HTML.
+`SSPlayer`. Register the tag once, then use it anywhere in your HTML.
 
 ```ts
 import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
@@ -82,24 +82,25 @@ Observed attributes (`src`, `animation`, `speed`) react live; construction-time 
 > tree-shaking contract (see [Entry points](#entry-points)). One call registers
 > the tag; if you never import it, it's stripped from your bundle.
 
-### Code-driven — `SSCanvasPlayer` (JS API)
+### Code-driven — `SSPlayer` (JS API)
 
-Want full imperative control? Use the `SSCanvasPlayer` class directly against a `<canvas>`.
+Want full imperative control? Use the `SSPlayer` class directly against a `<canvas>`.
 
 ```ts
-import { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import { SSSurface } from '@spritestudio/ssplayer-webgl';
 
 // 1. Load the WASM runtime once for the whole app.
-await SSCanvasPlayer.initialize();
+await SSSurface.initialize();
 
 // 2. Create a player on a canvas, load a .ssab, and pick an animation.
 const canvas = document.querySelector('canvas')!;
-const player = new SSCanvasPlayer(canvas, {
+const surface = new SSSurface(canvas, {
   maxDPR: 2,                 // cap devicePixelRatio for fill-rate control
   powerPreference: 'low-power',
   pauseWhenHidden: true,     // pause when the tab/element is not visible
   backgroundColor: 0x1a1a2e, // opaque backdrop; omit for a transparent canvas
 });
+const player = surface.createPlayer();
 
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 await player.setAnimation('run');
@@ -107,7 +108,7 @@ await player.setAnimation('run');
 player.play();                       // drives itself via requestAnimationFrame
 ```
 
-`SSCanvasPlayer` accepts either an `HTMLCanvasElement` or an existing `WebGL(2)RenderingContext` as its target, so it can share a context with your own renderer.
+`SSPlayer` accepts either an `HTMLCanvasElement` or an existing `WebGL(2)RenderingContext` as its target, so it can share a context with your own renderer.
 
 > **Reference *and* embedded ssab both work.** `load()` (and the element's `src`)
 > take either variant; `--embedded` ssab render from inlined textures with no
@@ -120,7 +121,7 @@ This package ships a zero-dependency browser build you can load straight from a
 CDN. **The one thing you must do by hand is point the loader at the WASM binary.**
 The runtime is a separate `.wasm` file, and outside a bundler (a classic
 `<script>`, or any CDN context) the automatic path resolution bundlers rely on
-isn't available — so pass its URL to `SSCanvasPlayer.initialize(wasm)`.
+isn't available — so pass its URL to `SSSurface.initialize(wasm)`.
 
 > **Copy the URL pair from a snippet below; don't assemble it by hand.** The
 > `.wasm` and its JS glue share an ABI, so both URLs must carry an exact version —
@@ -164,22 +165,23 @@ you need to pass.
 
 ### Classic `<script>` — global `SSWebGLPlayer`
 
-No peer dependencies to load first. The player class is `SSWebGLPlayer.SSCanvasPlayer`.
+No peer dependencies to load first. The player class is `SSWebGLPlayer.SSSurface`.
 
 ```html
 <canvas id="stage" width="1280" height="960"></canvas>
 <script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ssplayer-webgl.browser.min.js"></script>
 <script>
-  const { SSCanvasPlayer } = SSWebGLPlayer;
+  const { SSSurface } = SSWebGLPlayer;
   const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
 
   (async () => {
     // Pass the explicit WASM URL — no bundler means no automatic resolution.
-    await SSCanvasPlayer.initialize(WASM_URL);
+    await SSSurface.initialize(WASM_URL);
 
-    const player = new SSCanvasPlayer(document.getElementById('stage'), {
+    const surface = new SSSurface(document.getElementById('stage'), {
       backgroundColor: 0x1a1a2e,
     });
+    const player = surface.createPlayer();
     await player.load('./Ringo.ssab');   // serve over http(s), not file://
     await player.setAnimation('run');
     player.play();
@@ -195,11 +197,12 @@ Same rule: pass the WASM URL explicitly.
 ```html
 <canvas id="stage" width="1280" height="960"></canvas>
 <script type="module">
-  import { SSCanvasPlayer } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1';
+  import { SSSurface } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1';
 
-  await SSCanvasPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
+  await SSSurface.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
 
-  const player = new SSCanvasPlayer(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
+  const surface = new SSSurface(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
+  const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
   await player.setAnimation('run');
   player.play();
@@ -220,7 +223,7 @@ Import only what you need — all three are tree-shakeable (`sideEffects: false`
 
 ## Playback & events
 
-Timeline events apply to **both** usage modes above. `SSCanvasPlayer` exposes the same facade as the other renderers:
+Timeline events apply to **both** usage modes above. `SSPlayer` exposes the same facade as the other renderers:
 
 ```ts
 player.play(startFrame?);  player.pause();  player.resume();  player.stop();

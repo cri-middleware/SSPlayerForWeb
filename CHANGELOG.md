@@ -35,6 +35,11 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `setPartCellOverride`, `setPartVisibilityOverride`, their `clear…` counterparts, and
   `clearAllPartOverrides` — each taking a part **name or index**. Available on every player, plus
   RPG Maker MZ plugin commands and TyranoScript `[ss_part_*]` tags.
+- **One WebGL context for any number of animations.** An `SSSurface` owns the context and carries
+  as many `SSPlayer`s as you like, so the browser's limit of roughly 8–16 live contexts applies to
+  surfaces rather than to animations. `<ss-player>` elements share a page-level overlay by default
+  (`standalone` opts an element out), the TyranoScript plugin uses one surface per layer rather
+  than per character, and textures are uploaded once per surface and shared between its players.
 - **Events, shaders, and performance tuning** documented under *Customize* in the docs site.
 
 ### Known Limitations

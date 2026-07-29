@@ -2,7 +2,7 @@
 
 パーツ単位のランタイムオーバーライドは、「このパーツを**今**この色に / このセルに / 非表示に」とスクリプトから指示する機能です。オーバーライドはキーフレームやアニメーションのブレンドよりも優先されるので、アニメーションと取り合いになりません。
 
-`SSPlayer`（PixiJS）と `SSCanvasPlayer`（WebGL）の両方で、同じメソッド名で使えます。
+`SSPlayer`（PixiJS・WebGL の両バックエンド）の両方で、同じメソッド名で使えます。
 
 ▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — 色 / 表示 / セルの 3 種類を順に切り替えるサンプル（ソースは `examples/override-example`）
 
@@ -111,14 +111,14 @@ player.setPartColorOverrideCorners('body', SSBlendOp.Mix, [
 | プレイヤー | 挙動 |
 |---|---|
 | `SSPlayer`（PixiJS） | 停止中は ticker が早期 return しますが、オーバーライドの適用に成功すると現在フレームを自動で再描画します |
-| `SSCanvasPlayer`（WebGL） | 内蔵の RAF ループが毎フレーム無条件に `draw()` するため、そのまま反映されます。**フレームを自前で駆動している場合**のみ、`draw()` を呼んでください |
+| `SSPlayer`（WebGL） | 内蔵の RAF ループが毎フレーム無条件に `draw()` するため、そのまま反映されます。**フレームを自前で駆動している場合**のみ、`draw()` を呼んでください |
 | RPG ツクール MZ | MZ が毎フレーム描画するため、そのまま反映されます |
 
 ## 各ホストからの使い方
 
 コードを書かないホスト向けには、それぞれの流儀のオーサリング面を用意しています。
 
-- **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、オーバーライドは `el.player`（下層の `SSCanvasPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
+- **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、オーバーライドは `el.player`（下層の `SSPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
 - **RPG ツクール MZ** — イベントの**プラグインコマンド**（SSパーツ色変更 / SSパーツ表示切替 / SSパーツセル差替 / SSパーツ上書き解除）から操作できます。設定内容はピクチャに保存され、**セーブ・ロードをまたいでも復元されます**。詳しくは [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
 - **TyranoScript** — シナリオに `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` タグを書いて操作できます。設定内容はセーブに含まれ、`[ss_restore]` で復元されます。詳しくは [TyranoScript で使う](/ja/usage/tyrano) を参照してください。
 - **ティラノビルダー** — 同じ 4 つのタグを、エディタの「ティラノスクリプト」コンポーネントから記述します（専用のパレット項目はまだありません）。詳しくは [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。

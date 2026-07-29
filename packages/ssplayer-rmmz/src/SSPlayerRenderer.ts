@@ -30,6 +30,8 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
   private _gl: GL | null = null;
   // Reused transform scratch: [m00, m01, m10, m11, tx, ty] (see SSWebGLRenderer).
   private _t = new Float32Array(6);
+  // Reused world-tint scratch, premultiplied as (rgb * a, a) — see below.
+  private _tint = new Float32Array([1, 1, 1, 1]);
 
   /** Drop the GL renderer when the context is (re)created; rebuilt on next draw. */
   public contextChange(): void {
@@ -79,9 +81,29 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
     t[4] = wt.tx * r;
     t[5] = wt.ty * r;
 
-    // flipY: MZ's shared framebuffer has the opposite Y convention to a standalone
-    // canvas's default framebuffer, so SS otherwise renders upside-down here.
-    this.ssRenderer.render(ip, player.resourceManager, t, true);
+    // Inherit MZ's opacity. Pixi computes worldAlpha down the display tree, and
+    // an SS player is mounted as a child of its Sprite_Picture — but Pixi only
+    // applies worldAlpha inside its own batch shader, which this raw GL draw
+    // bypasses entirely. Without feeding it in by hand, [Change Picture Opacity]
+    // (and a fading scene) left SS animations fully opaque while everything
+    // around them faded.
+    //
+    // Premultiplied as (rgb * a, a): uColor multiplies an already-premultiplied
+    // fragment, so scaling only the alpha channel would leave RGB unattenuated.
+    const alpha = (player as unknown as { worldAlpha?: number }).worldAlpha ?? 1;
+    const tint = this._tint;
+    tint[0] = alpha; tint[1] = alpha; tint[2] = alpha; tint[3] = alpha;
+
+    // flipY: SSWebGLRenderer builds its own projection, so it has to be told which
+    // way up the destination runs. Pixi draws the scene straight to the default
+    // framebuffer most of the time, but into an FBO whenever a filter or mask is
+    // in play — and it flips its projection for the FBO case so the result samples
+    // upright. Read which one we are in rather than assuming: this was hardcoded
+    // to `true`, which drew upside-down on the plain path.
+    const intoFramebuffer = !!(renderer as unknown as { framebuffer?: { current?: unknown } })
+      .framebuffer?.current;
+
+    this.ssRenderer.render(ip, player.resourceManager, t, intoFramebuffer, tint);
 
     // --- MZ Effekseer-style: restore Pixi's cached GL state ---
     renderer.texture.reset();

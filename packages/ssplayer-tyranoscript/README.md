@@ -250,13 +250,19 @@ just like any character:
 > ⚠️ TyranoScript's `[anim]` **`opacity` is 0–255** (not 0–1): `opacity="1"` is
 > nearly invisible (≈ 0.4%). **Full opacity is `255`.**
 
+> [!WARNING]
+> **`scale` and `rotate` do not reach the animation.** They transform the character's
+> *element*, and every SS character on a layer is drawn on that layer's shared canvas
+> rather than inside its own element — so a CSS transform moves and resizes where the
+> character sits without scaling or rotating what is drawn there. Use `[ss_pos]` /
+> `[ss_move]`, which scale the animation about its own anchor. `[anim]`'s `scale` /
+> `rotate` pivoted on the screen centre, so they were never accurate for this anyway.
+
 **When to use which:**
 
-- **Fades (opacity) / simple slides / shakes** → `[anim]` / `[kanim]` is ideal.
-- For **absolute, anchor-accurate** position or scale, use **`[ss_pos]`** (instant)
-  or **`[ss_move]`** (tween) instead. With `[anim]`, `left`/`top` move *relative* to
-  the starting position and `scale`/`rotate` pivot on the screen center rather than
-  the animation's anchor.
+- **Fades (opacity) / slides / shakes / keyframes** → `[anim]` / `[kanim]`.
+- **Position or scale that has to be exact** → `[ss_pos]` (instant) or `[ss_move]`
+  (tween). With `[anim]`, `left`/`top` move *relative* to the starting position.
 
 ## Save / load & lifecycle
 
@@ -304,7 +310,7 @@ Known limitations and planned work are tracked in [`ROADMAP.md`](./ROADMAP.md).
 *Consumers can stop here — everything below is for hacking on this package.*
 
 This is a thin adapter. Rendering is handled by
-[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSCanvasPlayer`
+[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSPlayer`
 (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies). This package holds **no
 GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a layer
 `div`, coordinate mapping, and playback control. Remaining work lives in
@@ -328,7 +334,7 @@ GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a l
 ### Internals (coordinates, lifecycle)
 
 - **Coordinates**: Tyrano's top-left logical pixels (`config.scWidth × scHeight`) map
-  to `SSCanvasPlayer`'s (Y-down) drawing-buffer space; HiDPI folds `devicePixelRatio`
+  to `SSPlayer`'s (Y-down) drawing-buffer space; HiDPI folds `devicePixelRatio`
   into the buffer scale, clamped by `maxDPR`.
 - **Naming for `[anim]`**: on creation the canvas is tagged with the player name as a
   CSS class (`$.setName` is `addClass(name)`, the same way TyranoScript identifies a

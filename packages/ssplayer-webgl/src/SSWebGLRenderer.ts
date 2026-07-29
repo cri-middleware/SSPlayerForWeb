@@ -52,6 +52,20 @@ export class SSWebGLRenderer {
   private _vaoExt: OES_vertex_array_object | null = null;
   private _vaoSupported = false;
 
+  // Player-level tint fed into `uColor`, the world tint every fragment path
+  // multiplies its premultiplied output by:
+  //   gl_FragColor = vec4(outRgb * outA, outA) * uColor
+  // (PartsColorProgram / SSShaderLib). ssplayer-pixi supplies Pixi's
+  // (tint.rgb * worldAlpha, worldAlpha) here; standalone WebGL had no per-player
+  // concept, so this stayed pinned at identity. Set once per render() call and
+  // read by every program path, including instance-child recursion, so a tint
+  // applies to the whole tree the player draws.
+  //
+  // MUST stay premultiplied — (rgb * a, a). uColor multiplies component-wise
+  // against an already-premultiplied fragment, so scaling only the alpha channel
+  // would leave RGB unattenuated and fades would wash out instead of dimming.
+  private readonly _tint = new Float32Array([1, 1, 1, 1]);
+
   // For Effect batching
   private _fxDesc: { partIdx: number, plan: any, cellmap: number, blend: number, quadCount: number, particleOffset: number, partAlpha: number }[] = [];
   private _fxCount = 0;
@@ -162,7 +176,7 @@ export class SSWebGLRenderer {
    * Rebuild all GL objects after a `webglcontextrestored` event.
    * The old programs / buffers / VAO handles died with the context; recreate them
    * from the retained capability flags. Textures are the resource manager's job
-   * (SSWebGLResourceManager.restoreContext), orchestrated by SSCanvasPlayer.
+   * (SSWebGLResourceManager.restoreContext), orchestrated by SSPlayer.
    */
   public restoreContext(): void {
     this._createGLResources();
@@ -303,8 +317,20 @@ export class SSWebGLRenderer {
    * (program, projection, blend enable); the per-context drawing (and recursive
    * instance children) lives in `_renderContext`.
    */
-  public render(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, flipY = false): void {
+  public render(
+    player: DirectInternalPlayer,
+    resourceManager: SSWebGLResourceManager,
+    transform: Float32Array,
+    flipY = false,
+    tint?: ArrayLike<number> | null,
+  ): void {
     if (!player.animationName) return;
+
+    // Latch the player tint for this whole call (see _tint). Omitted → identity,
+    // which is what every caller before per-player alpha existed relied on.
+    const t = this._tint;
+    if (tint) { t[0] = tint[0]; t[1] = tint[1]; t[2] = tint[2]; t[3] = tint[3]; }
+    else { t[0] = 1; t[1] = 1; t[2] = 1; t[3] = 1; }
 
     const gl = this.gl;
     gl.useProgram(this.partsColorProgram.program);
@@ -375,10 +401,11 @@ export class SSWebGLRenderer {
 
     const pcp = this.partsColorProgram;
 
-    // Position this context (uTransform) and reset the parent-chain alpha.
+    // Position this context (uTransform) and seed the parent-chain colour from
+    // the player tint (identity unless the caller set one).
     this.setTransformUniform(transform);
     if (pcp.uColor) {
-      gl.uniform4f(pcp.uColor, 1.0, 1.0, 1.0, 1.0);
+      gl.uniform4fv(pcp.uColor, this._tint);
     }
 
     // The VAO (if any) already carries the attribute layout, bound once in render();
@@ -745,11 +772,12 @@ export class SSWebGLRenderer {
           meshIOff = player.runtimeManager.getMeshIndexOffsets();
           shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
 
-          // Restore this context's program state after the child rebound it.
+          // Restore this context's program state after the child rebound it —
+          // back to the PLAYER's tint, not identity (the child left its own).
           gl.useProgram(this.partsColorProgram.program);
           this.setTransformUniform(transform);
           if (pcp.uColor) {
-            gl.uniform4f(pcp.uColor, 1.0, 1.0, 1.0, 1.0);
+            gl.uniform4fv(pcp.uColor, this._tint);
           }
           // The VAO stays bound across the child recursion (same buffers/program);
           // only the no-VAO path must re-bind the attribute pointers.
@@ -874,7 +902,8 @@ export class SSWebGLRenderer {
    * part's geometry is built (reads the corner UVs from this.batchUv). Returns the
    * program (caller draws), or null when the id_hash isn't a built-in ss-* shader (the
    * caller then falls back to the plain parts-color program). uProjection/uTransform/
-   * uColor mirror the context state the parts-color program uses (world tint = identity).
+   * uColor mirror the context state the parts-color program uses (uColor = the player
+   * tint latched for this render() call, identity when the caller passed none).
    */
   private applySsShader(fd: FrameData, shaderIdx: number, invW: number, invH: number): SsShaderProgram | null {
     const attr = fd.shaders(shaderIdx, this._scratchShader);
@@ -886,7 +915,7 @@ export class SSWebGLRenderer {
     gl.useProgram(prog.program);
     if (prog.uProjection) gl.uniformMatrix3fv(prog.uProjection, false, this.projMatrix);
     if (prog.uTransform) gl.uniformMatrix3fv(prog.uTransform, false, this.transformMatrix3);
-    if (prog.uColor) gl.uniform4f(prog.uColor, 1.0, 1.0, 1.0, 1.0);
+    if (prog.uColor) gl.uniform4fv(prog.uColor, this._tint);
     if (prog.uTexture) gl.uniform1i(prog.uTexture, 0);
 
     const p = this._ssParams;

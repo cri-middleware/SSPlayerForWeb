@@ -4,7 +4,8 @@ import {
   parsePartOverrideColor,
   prunePartOverridesForNewAnimation,
   removePartOverrides,
-  SSCanvasPlayer,
+  SSOverlay,
+  SSSurface,
   SSRuntimeManager,
   type SSBlendOp,
   type SSOverridePriority,
@@ -18,10 +19,10 @@ import {
   type SSPlayerEntry,
 } from './PlayerRegistry.js';
 import {
-  createLayerCanvas,
+  boxOrigin,
+  createCharacterElement,
   getLayerElement,
-  setCanvasVisible,
-  setCanvasZIndex,
+  setElementVisible,
   toTransform,
   type LayerPage,
 } from './LayerCanvas.js';
@@ -43,7 +44,7 @@ import type { TyranoGlobal, TyranoKag } from './tyranoTypes.js';
 const registry = new PlayerRegistry();
 
 interface AdapterState {
-  /** Whether `[ss_init]` has run `SSCanvasPlayer.initialize` (WASM ready). */
+  /** Whether `[ss_init]` has run the runtime initialiser (WASM ready). */
   initialized: boolean;
   /** In-flight init promise so a second `[ss_init]` awaits the first. */
   initPromise: Promise<void> | null;
@@ -184,6 +185,49 @@ function gameResolution(kag: TyranoKag): { w: number; h: number } {
   return { w: num(kag.config?.scWidth, 1280), h: num(kag.config?.scHeight, 720) };
 }
 
+/**
+ * Live overlays, keyed `<layer>_<page>`. One overlay owns one canvas and one GL
+ * context and draws every SS character on that layer, which is what keeps the
+ * context count at "layers in use" rather than "characters on screen".
+ *
+ * Tracked here as well as inside SSOverlay so teardown can drop them: a scene
+ * transition replaces Tyrano's layer divs, and an overlay still parented to the
+ * old one would draw nowhere.
+ */
+const overlays = new Map<string, SSOverlay>();
+
+/** Get (or lazily create) the overlay that draws `layer`/`page`. */
+function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: number): SSOverlay {
+  const key = `${layer}_${page}`;
+  const existing = overlays.get(key);
+  // A scene transition rebuilds the layer divs, so an overlay whose canvas is no
+  // longer inside the current layer element is stale — drop it and start again.
+  if (existing && existing.canvas.parentElement === layerEl) return existing;
+  existing?.destroy();
+
+  const overlay = SSOverlay.getOrCreate(`ss_${key}`, {
+    container: layerEl,
+    // Reads each character div's computed opacity into its player's alpha, so
+    // Tyrano's own [anim opacity=] / [kanim] still fade the animation.
+    followOpacity: true,
+    maxDPR: Math.min(dpr, 2),
+  });
+  overlays.set(key, overlay);
+  return overlay;
+}
+
+/** Destroy every overlay (scene teardown). Players must already be gone. */
+function destroyOverlays(): void {
+  for (const overlay of overlays.values()) overlay.destroy();
+  overlays.clear();
+}
+
+/** Apply a `zindex=` as this player's draw order within its layer. */
+function setPlayerOrder(entry: SSPlayerEntry, zindex?: number): void {
+  entry.player.order = zindex !== undefined && Number.isFinite(zindex) ? zindex : 0;
+  entry.overlay.surface.invalidateOrder();
+}
+
 // ---------------------------------------------------------------------------
 // Player construction — shared by [ss_new] and [ss_restore].
 // ---------------------------------------------------------------------------
@@ -229,16 +273,29 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   const { w, h } = gameResolution(kag);
   const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio ?? 1;
 
-  const { canvas, bufferScale } = createLayerCanvas(layerEl, w, h, dpr, opts.name);
-  setCanvasZIndex(canvas, opts.zindex);
+  const element = createCharacterElement(layerEl, w, h, opts.name);
   // Apply visibility before the (awaited) load so a preloading `[ss_new
   // visible="false"]` never flashes on screen for a frame.
-  void setCanvasVisible(canvas, opts.visible && !state.layerHidden, 0);
+  void setElementVisible(element, opts.visible && !state.layerHidden, 0);
+
+  // One overlay — one canvas, one GL context — per (layer, page), shared by every
+  // SS character on that layer. followOpacity is what keeps `[anim opacity=]`,
+  // `[kanim]`, `[ss_fadein]` and `[ss_hide]` working now that the character is a
+  // div: the overlay reads the element's computed opacity into the player's alpha
+  // every frame.
+  const overlay = overlayFor(opts.layer, opts.page, layerEl, dpr);
   // Disable the default Web Audio manager; we route SS sounds through
   // TyranoScript's howler instead (attached below, before setAnimation so the
   // core preloads through it). When audio is disabled, nothing is attached.
-  const player = new SSCanvasPlayer(canvas, { autoStart: true, autoAudio: false });
-  player.resize(w, h, dpr);
+  const player = overlay.createPlayer(element, { autoAudio: false });
+  // Draw order within the layer. Tyrano layers stack by layer number; within one
+  // layer the characters share a canvas, so ordering is a draw-order key rather
+  // than a CSS z-index.
+  if (opts.zindex !== undefined) {
+    player.order = opts.zindex;
+    overlay.surface.invalidateOrder();
+  }
+  const bufferScale = overlay.canvas.width / Math.max(1, w);
   ensureAudioManager()?.bindToPlayer(player);
 
   await player.load(storageUrl);
@@ -252,7 +309,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
   await player.setAnimation(anime);
 
-  player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale));
+  player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale, boxOrigin(player)));
   player.internalPlayer.setLoop(opts.loop);
   // A fresh player means a fresh WASM context, whose override table starts
   // empty — so a restore has to put the saved overrides back. Must run after
@@ -261,7 +318,8 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 
   const entry: SSPlayerEntry = {
     player,
-    canvas,
+    overlay,
+    element,
     bufferScale,
     meta: {
       name: opts.name,
@@ -401,7 +459,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
    * only when it is itself visible AND no `[ss_fadeout]` is in force.
    */
   const applyVisibility = (entry: SSPlayerEntry, timeMs: number): Promise<void> =>
-    setCanvasVisible(entry.canvas, entry.meta.visible && !state.layerHidden, timeMs);
+    setElementVisible(entry.element, entry.meta.visible && !state.layerHidden, timeMs);
 
   /** Every live entry, for the bulk tags. */
   const allEntries = (): SSPlayerEntry[] =>
@@ -546,7 +604,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
             );
           }
           const wasm = pm.wasm ? resolveDataPath(String(pm.wasm)) : undefined;
-          state.initPromise = SSCanvasPlayer.initialize(wasm);
+          state.initPromise = SSSurface.initialize(wasm);
         }
         await state.initPromise;
         state.initialized = true;
@@ -621,12 +679,12 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         // Placement before the fade, so a fade-in never shows the old position.
         if (pm.zindex !== undefined && pm.zindex !== '') {
           m.zindex = num(pm.zindex, 0);
-          setCanvasZIndex(entry.canvas, m.zindex);
+          setPlayerOrder(entry, m.zindex);
         }
         m.x = num(pm.x, m.x);
         m.y = num(pm.y, m.y);
         m.scale = num(pm.scale, m.scale);
-        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale));
+        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale, boxOrigin(entry.player)));
         if (pm.anime) await applyPlayback(entry, pm);
         m.visible = true;
         persist();
@@ -854,6 +912,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start() {
       runSync('ss_free_all', () => {
         registry.destroyAll();
+        // Nothing left to draw on this layer, so release its context too —
+        // [ss_free_all] is the scene-transition tag, and holding an overlay for a
+        // layer that may not come back is exactly the leak this tag exists to
+        // avoid. The next [ss_new] lazily builds a fresh one.
+        destroyOverlays();
         persist();
       });
     },
@@ -932,9 +995,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         m.scale = num(pm.scale, m.scale);
         if (pm.zindex !== undefined && pm.zindex !== '') {
           m.zindex = num(pm.zindex, 0);
-          setCanvasZIndex(entry.canvas, m.zindex);
+          setPlayerOrder(entry, m.zindex);
         }
-        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale));
+        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale, boxOrigin(entry.player)));
         persist();
       });
     },
@@ -980,7 +1043,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const raf = (globalThis as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
         const now = () => (globalThis.performance?.now?.() ?? 0);
         if (time <= 0 || typeof raf !== 'function') {
-          entry.player.setTransform(toTransform(toX, toY, toS, entry.bufferScale));
+          entry.player.setTransform(toTransform(toX, toY, toS, entry.bufferScale, boxOrigin(entry.player)));
           finish();
           return;
         }
@@ -990,7 +1053,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           const p = Math.min(1, (t - start) / time);
           const e = 1 - (1 - p) * (1 - p); // easeOutQuad
           entry.player.setTransform(
-            toTransform(fromX + (toX - fromX) * e, fromY + (toY - fromY) * e, fromS + (toS - fromS) * e, entry.bufferScale),
+            toTransform(fromX + (toX - fromX) * e, fromY + (toY - fromY) * e, fromS + (toS - fromS) * e, entry.bufferScale, boxOrigin(entry.player)),
           );
           entry.tween = p < 1 ? raf(step) : 0;
         };
@@ -1029,7 +1092,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
             const entry = registry.get(name);
             if (!entry) continue;
             // The canvas itself, or an ancestor that took it with it.
-            if (removed !== entry.canvas && !(removed as Element).contains?.(entry.canvas)) {
+            if (removed !== entry.element && !(removed as Element).contains?.(entry.element)) {
               continue;
             }
             // `destroy()` detaches the canvas too, so `[ss_free]` and
@@ -1046,7 +1109,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   /** Start watching the layer a player was just mounted on. */
   const observeLayerOf = (entry: SSPlayerEntry): void => {
     watchForDetachedCanvases();
-    const parent = entry.canvas.parentElement;
+    const parent = entry.element.parentElement;
     if (!parent) return;
     // Not `subtree`: a message layer mutates on every character typed out, and
     // this only ever needs the layer's own child list.
@@ -1055,9 +1118,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
   /** Rebuild every player from the saved state (§3.3). */
   const restoreSavedPlayers = async (): Promise<void> => {
-    // Tear down stale players first: module state survives a load, the DOM
-    // canvases do not.
+    // Tear down stale players first: module state survives a load, the DOM does
+    // not. The overlays go with them — a load rebuilds Tyrano's layer divs, and
+    // an overlay parented to the old one would draw nowhere.
     registry.destroyAll();
+    destroyOverlays();
     state.talking = null;
     // Read the blanket-fade flag BEFORE rebuilding: createPlayer consults it
     // to decide whether a restored player is shown at all.
@@ -1164,6 +1229,7 @@ export function getRegistry(): PlayerRegistry {
 /** Reset adapter state — test-only; lets each test start from a clean slate. */
 export function __resetStateForTest(): void {
   registry.destroyAll();
+  destroyOverlays();
   state.initialized = false;
   state.initPromise = null;
   state.layerHidden = false;

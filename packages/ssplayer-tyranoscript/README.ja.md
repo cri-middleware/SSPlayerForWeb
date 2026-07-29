@@ -233,12 +233,18 @@
 > ⚠️ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）。`opacity="1"`
 > はほぼ透明（約 0.4%）になります。**完全表示は `255`**。
 
+> [!WARNING]
+> **`scale` / `rotate` はアニメに効きません。** これらはキャラの*要素*に CSS 変形を掛けますが、
+> レイヤー上の SS キャラは要素の中ではなくレイヤー共有の canvas 1 枚に描かれます。そのため
+> CSS 変形は「キャラが座る位置と大きさ」を動かすだけで、描かれている絵は拡縮も回転もしません。
+> 拡縮には `[ss_pos]` / `[ss_move]` を使ってください（アニメ自体を、そのアンカーを軸に拡縮します）。
+> `[anim]` の `scale`/`rotate` は元々画面中心が軸だったため、この用途には正確ではありませんでした。
+
 **使い分け:**
 
-- **フェード（opacity）／単純なスライド・シェイク**は `[anim]` / `[kanim]` が最適です。
-- **絶対座標・アンカー基準**の位置やスケールが要る場合は、代わりに **`[ss_pos]`**（瞬間）
-  または **`[ss_move]`**（補間）を使ってください。`[anim]` では `left`/`top` は初期位置からの
-  **相対**移動になり、`scale`/`rotate` はアニメのアンカーではなく画面中心を軸に回ります。
+- **フェード（opacity）／スライド・シェイク／キーフレーム**は `[anim]` / `[kanim]`。
+- **正確な位置やスケール**が要るときは `[ss_pos]`（瞬間）/ `[ss_move]`（補間）。
+  `[anim]` の `left`/`top` は初期位置からの**相対**移動である点にも注意してください。
 
 ## セーブ / ロードとライフサイクル
 
@@ -285,7 +291,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 *利用者はここまで。以下はこのパッケージを開発する人向けです。*
 
 本パッケージは TyranoScript 向けの薄いアダプタです。描画は
-[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSCanvasPlayer`
+[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSPlayer`
 （WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）が担います。このパッケージは **GPU 処理を
 持たず**、レイヤー `div` への `<canvas>` 挿入・座標マッピング・再生制御といった
 **TyranoScript 固有のグルー**に徹します。実装済み範囲は実 TyranoScript で確認済みで、
@@ -306,7 +312,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 ### 内部仕様（座標・ライフサイクル）
 
 - **座標**: Tyrano の左上原点・論理ピクセル（`config.scWidth × scHeight`）を、
-  `SSCanvasPlayer`（Y-down）の描画バッファ座標へマップします。HiDPI は `devicePixelRatio`
+  `SSPlayer`（Y-down）の描画バッファ座標へマップします。HiDPI は `devicePixelRatio`
   をバッファ倍率に反映し、`maxDPR` で上限を設けます。
 - **`[anim]` 用の命名**: 生成時に canvas へプレイヤー名を CSS クラスとして付与します
   （`$.setName`＝`addClass(name)`。TyranoScript のキャラ識別と同じ仕組み）。`ss-player`
