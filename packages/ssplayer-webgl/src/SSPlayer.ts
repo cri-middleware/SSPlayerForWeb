@@ -124,7 +124,7 @@ export class SSPlayer {
   /** The surface this player draws onto. */
   public readonly surface: SSSurface;
 
-  // --- Box (SURFACE_PLAYER_SPEC.md §3.0) ---
+  // --- Box ---
   // Null means "track the whole surface", so a player follows surface resizes
   // without the host re-setting anything. An explicit box pins it — that is what
   // overlay mode writes every frame from getBoundingClientRect().
@@ -154,8 +154,8 @@ export class SSPlayer {
   /**
    * Clear {@link box} to this opaque `0xRRGGBB` before drawing, so framebuffer-reading
    * blend modes (Add / Screen / Mul) have a real backdrop. Null = draw straight onto
-   * whatever the surface already holds. Costs a batch break when set; see
-   * SURFACE_PLAYER_SPEC.md §6.2.
+   * whatever the surface already holds. Costs a batch break when set, which is why
+   * it is opt-in.
    */
   public backdrop: number | null = null;
 
