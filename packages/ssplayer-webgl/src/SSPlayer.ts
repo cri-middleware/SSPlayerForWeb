@@ -300,6 +300,17 @@ export class SSPlayer {
     this.configureContext();
   }
 
+  /**
+   * Animation names in the loaded pack, in table order; empty until `load` /
+   * `loadBuffer` resolves. Use it to pick a default (`[0]`) or to validate a
+   * name before {@link setAnimation}, which otherwise fails only at play time.
+   * The list is read out of the pack when it is bound, so this costs nothing and
+   * needs no second read of the `.ssab`.
+   */
+  public getAnimationNames(): readonly string[] {
+    return this.internalPlayer.animationNames;
+  }
+
   public async setAnimation(name: string): Promise<void> {
     // Auto-wire a default audio manager BEFORE setAnimation, since the core
     // preloads the animation's sounds there (only when an audioManager is set).
