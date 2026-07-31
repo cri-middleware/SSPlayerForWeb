@@ -77,6 +77,9 @@ export class SSOverlay {
   private readonly entries = new Map<SSPlayer, HTMLElement>();
   private readonly io: IntersectionObserver | null;
   private readonly onResize: () => void;
+  // Declared with the other fields so it exists before the constructor's first
+  // resize() call, which fires it.
+  private readonly _resizeListeners = new Set<() => void>();
   private rafId = 0;
   private lastTime = 0;
 
@@ -156,9 +159,36 @@ export class SSOverlay {
     return this.entries.size;
   }
 
+  /**
+   * Called after the overlay has resized its canvas, so hosts that placed
+   * players in **drawing-buffer pixels** can recompute those coordinates.
+   *
+   * A player's transform is stored in buffer pixels, and a resize changes how
+   * many of those there are per CSS pixel — so a host that converted once, when
+   * the player was created, is left holding coordinates for a canvas that no
+   * longer exists, and its characters drift on the next window resize. There is
+   * nothing the overlay can fix on their behalf: only the host knows what the
+   * numbers meant. Returns an unsubscribe function.
+   */
+  public onResized(listener: () => void): () => void {
+    this._resizeListeners.add(listener);
+    return () => this._resizeListeners.delete(listener);
+  }
+
   private resize(): void {
     const rect = this.canvas.getBoundingClientRect();
     this.surface.resize(Math.max(1, rect.width), Math.max(1, rect.height));
+    // After the surface, so a listener reading `canvas.width` sees the new size.
+    // Fired even when the size did not actually change (the surface clamps DPR
+    // and may keep the same buffer): re-placing is idempotent, and suppressing
+    // it would need this class to track the buffer size it last reported.
+    for (const cb of [...this._resizeListeners]) {
+      try {
+        cb();
+      } catch (e) {
+        console.error('[SSOverlay] resize listener failed:', e);
+      }
+    }
   }
 
   private start(): void {

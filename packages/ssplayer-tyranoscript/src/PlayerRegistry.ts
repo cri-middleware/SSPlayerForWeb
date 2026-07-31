@@ -50,11 +50,13 @@ export interface SSPlayerEntry {
    */
   element: HTMLElement;
   /**
-   * `drawingBuffer px / logical px` used to build this player's transform.
-   * Kept so `[ss_pos]` / `[ss_move]` can re-map logical coords the same way
-   * `[ss_new]` did (see LayerCanvas.toTransform).
+   * The game's logical width (`config.scWidth`), the denominator of the
+   * buffer-scale conversion. The numerator — the overlay's drawing-buffer width
+   * — is deliberately NOT cached: it changes whenever the window resizes, and a
+   * ratio captured at `[ss_new]` left later `[ss_pos]` / `[ss_move]` placing
+   * against a canvas that no longer existed.
    */
-  bufferScale: number;
+  logicalWidth: number;
   /** Active `[ss_move]` RAF handle, if a tween is running (0 = none). */
   tween?: number;
   /**

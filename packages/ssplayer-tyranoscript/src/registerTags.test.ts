@@ -91,6 +91,16 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     surface = { invalidateOrder: vi.fn() };
     destroyed = false;
 
+    // Resize notification. Real, not a stub returning undefined: the adapter
+    // re-places every player on the layer from here, and `_fireResize` lets a
+    // test drive that without a real window resize.
+    resizeListeners = new Set<() => void>();
+    onResized = (cb: () => void) => {
+      this.resizeListeners.add(cb);
+      return () => this.resizeListeners.delete(cb);
+    };
+    _fireResize() { for (const cb of [...this.resizeListeners]) cb(); }
+
     constructor(public id: string, container: HTMLElement) {
       container.appendChild(this.canvas);
     }
@@ -663,6 +673,23 @@ describe('registerSSTags', () => {
     // dpr 1 in jsdom → bufferScale 1: transform == logical coords, scale composed.
     expect(p.setTransform).toHaveBeenCalledWith({ x: -340, y: -310, scaleX: 2, scaleY: 2 });
     expect(savedSlot(h).chr).toMatchObject({ x: 300, y: 50, scale: 2 });
+  });
+
+  it('re-places every player on the layer when the overlay resizes', async () => {
+    const h = await withPlayer(); // created at x=100 y=200, scale 1
+    const p = FakeSSPlayer.instances[0];
+    const overlay = (SSOverlayMock as unknown as { live: Map<string, { canvas: HTMLCanvasElement; _fireResize(): void }> })
+      .live.get('ss_0_fore')!;
+    p.setTransform.mockClear();
+
+    // The window got wider: the overlay's drawing buffer is now 2x the game's
+    // logical width, so the same logical placement is twice as many buffer px.
+    overlay.canvas.width = 2560;
+    overlay._fireResize();
+
+    // Placement is stored in logical px and re-derived, so it survives the
+    // resize instead of drifting on a scale captured at [ss_new].
+    expect(p.setTransform).toHaveBeenCalledWith({ x: 200 - 640, y: 400 - 360, scaleX: 2, scaleY: 2 });
   });
 
   it('ss_move commits the destination to the save slot (instant when time=0)', async () => {
