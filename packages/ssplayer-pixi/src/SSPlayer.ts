@@ -472,12 +472,21 @@ export class SSPlayer extends Container {
             const defaultAudioManager = new SSWebAudioManager();
             defaultAudioManager.bindToPlayer(this);
             this.audioManager = defaultAudioManager;
+            // Attaching starts the preload; finish it here so `load()` still means
+            // "everything this pack needs is in memory" and setAnimation stays sync.
+            await this.internalPlayer.preloadSounds();
         }
     }
 
-    public async setAnimation(animationName: string, loop: number = -1) {
-        await this.internalPlayer.setAnimation(animationName);
-        this.internalPlayer.setLoop(loop);
+    /**
+     * Select an animation. Synchronous: `load()` has already brought in the
+     * pack's textures, instance packs and sounds, so a switch is a runtime reset.
+     *
+     * Playback settings are separate properties — set {@link loopCount} after
+     * this, the way the Godot / Unity players do it.
+     */
+    public setAnimation(animationName: string): void {
+        this.internalPlayer.setAnimation(animationName);
     }
 
     public get animationName(): string {

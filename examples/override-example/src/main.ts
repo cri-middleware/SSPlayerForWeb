@@ -72,7 +72,7 @@ async function main() {
     // /examples/override/ subpath the Pages build is served from.
     const player = new SSPlayer();
     await player.load(new URL('Ringo/Ringo.ssab', document.baseURI).href);
-    await player.setAnimation('run');
+    player.setAnimation('run');
     // Horizontally centred, 250px below centre: Ringo's origin sits near its feet,
     // so centring outright leaves it high in the frame. Same offset the Godot demo
     // applies (viewport centre + (0, 250)).

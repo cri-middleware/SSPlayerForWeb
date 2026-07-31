@@ -33,7 +33,8 @@ import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 await SSPlayer.initialize();            // once at startup
 const player = new SSPlayer();          // no arguments
 await player.load('character.ssab');    // load the .ssab
-await player.setAnimation('walk', -1);  // select by name (-1 = infinite loop)
+player.setAnimation('walk');            // select by name
+player.loopCount = -1;                  // -1 = infinite loop
 app.stage.addChild(player);
 player.play();
 ```
@@ -46,12 +47,12 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 
 | SS6Player | This version | Notes |
 |---|---|---|
-| `Setup(pack, anime)` / constructor args | `setAnimation(name, loop?)` | No pack name; anime name only |
+| `Setup(pack, anime)` / constructor args | `setAnimation(name)` | No pack name; anime name only |
 | `Play(frameNo?)` | `play(startFrame = -1)` | `-1` = from current frame |
 | `Pause()` / `Resume()` / `Stop()` | `pause()` / `resume()` / `stop()` | |
 | `SetFrame(frame)` | `frame` (get/set) | Seek; subframe-capable |
 | `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | Dedicated methods removed |
-| `loop` (get/set, `-1` = infinite) | `loopCount` (get/set, `-1` = infinite) | Also settable via `setAnimation(name, loop)` |
+| `loop` (get/set, `-1` = infinite) | `loopCount` (get/set, `-1` = infinite) | Set it after `setAnimation` |
 | `SetAnimationSpeed(rate)` (negative = reverse) | `speedScale` (get/set, negative = reverse) | Speed multiplier |
 | `SetAnimationFramerate(fps)` (deprecated) | `fps` (get/set) | Absolute fps |
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | Loop split out to `loopCount` |

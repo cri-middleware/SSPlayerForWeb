@@ -5,19 +5,19 @@ This page collects the playback-control API shared by `SSPlayer` (both the WebGL
 ## Loading and selecting an animation
 
 ```ts
-await player.load(ssabUrl); // textures load from the .ssab's own directory
+await player.load(ssabUrl); // textures, instance packs and sounds load from the .ssab's own directory
 ```
 
-WebGL (`SSPlayer`):
 ```ts
-await player.setAnimation(name);                       // select an animation
+player.setAnimation(name);  // select an animation (WebGL and PixiJS alike)
+player.animationName;       // current animation name
 ```
 
-PixiJS (`SSPlayer`):
-```ts
-await player.setAnimation(name); // 2nd arg: loop count (default -1)
-player.animationName;            // current animation name
-```
+Playback settings are properties, not arguments — set `loopCount`, `speedScale` and the rest after
+selecting the animation (see [Playback control](#playback-control)).
+
+`setAnimation` is synchronous: `load()` brings in everything the `.ssab` needs — those assets belong to
+the pack, not to one animation — so switching is only a runtime reset, with no loading to wait for.
 
 ## Playback control
 

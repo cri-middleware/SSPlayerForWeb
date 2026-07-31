@@ -33,7 +33,8 @@ import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 await SSPlayer.initialize();            // 起動時に一度だけ
 const player = new SSPlayer();          // 引数なし
 await player.load('character.ssab');    // .ssab を読み込み
-await player.setAnimation('walk', -1);  // アニメ名を直接指定（-1 = 無限ループ）
+player.setAnimation('walk');            // アニメ名を直接指定
+player.loopCount = -1;                  // -1 = 無限ループ
 app.stage.addChild(player);
 player.play();
 ```
@@ -46,12 +47,12 @@ player.play();
 
 | SS6Player | 本バージョン | 備考 |
 |---|---|---|
-| `Setup(pack, anime)` / コンストラクタ引数 | `setAnimation(name, loop?)` | パック名不要。アニメ名のみ |
+| `Setup(pack, anime)` / コンストラクタ引数 | `setAnimation(name)` | パック名不要。アニメ名のみ |
 | `Play(frameNo?)` | `play(startFrame = -1)` | `-1` は現在フレームから |
 | `Pause()` / `Resume()` / `Stop()` | `pause()` / `resume()` / `stop()` | |
 | `SetFrame(frame)` | `frame`（get/set） | シーク。サブフレーム可 |
 | `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | 専用メソッドは廃止 |
-| `loop`（get/set, `-1`=無限） | `loopCount`（get/set, `-1`=無限） | `setAnimation(name, loop)` でも指定可 |
+| `loop`（get/set, `-1`=無限） | `loopCount`（get/set, `-1`=無限） | `setAnimation` の後に設定 |
 | `SetAnimationSpeed(rate)`（負値で逆再生） | `speedScale`（get/set, 負値で逆再生） | 倍率指定 |
 | `SetAnimationFramerate(fps)`（非推奨） | `fps`（get/set） | 絶対 fps 指定 |
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | ループは `loopCount` に分離 |

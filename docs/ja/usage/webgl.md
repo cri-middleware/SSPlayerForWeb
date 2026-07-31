@@ -68,7 +68,7 @@ async function main() {
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
   await player.load('/assets/Ringo.ssab');
-  await player.setAnimation('run');
+  player.setAnimation('run');
   player.play();
 }
 

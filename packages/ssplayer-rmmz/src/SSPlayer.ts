@@ -149,18 +149,31 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     if (!res.ok) throw new Error(`[ssplayer-rmmz] failed to load SSAB: ${res.status} ${res.statusText}`);
     const buffer = new Uint8Array(await res.arrayBuffer());
     this.bindResource(buffer, ssabUrl);
+    await this.prepareResources();
   }
 
   /**
    * Bind an already-fetched .ssab (bytes). Pair with setAnimation. Pass the ssab's
    * source URL (when known) so textures resolve relative to it; omit for inline
    * bytes whose textures are supplied by other means.
+   *
+   * Binding only reads the pack's tables; follow with {@link prepareResources}
+   * to pull in its textures up front (`load()` does), or the first setAnimation
+   * pays for them.
    */
   public bindResource(buffer: Uint8Array, ssabUrl?: string): void {
     this.internalPlayer.bindResource(buffer, ssabUrl);
     // Direct render mode + Y-down, matching ssplayer-pixi (MZ world space is y-down).
     this.internalPlayer.runtimeManager.context.set_render_mode(0);
     this.internalPlayer.runtimeManager.context.set_coordinate_system(1);
+  }
+
+  /**
+   * Load the bound pack's textures and instance packs (once). Awaiting this
+   * after {@link bindResource} keeps `setAnimation` a pure runtime switch.
+   */
+  public prepareResources(): Promise<void> {
+    return this.internalPlayer.prepareResources();
   }
 
   /**
@@ -172,12 +185,14 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   /**
-   * Play `animationName`. If empty, the first animation in the .ssab is used; if
-   * a non-existent name is given, we warn (listing the real names) and fall back
-   * to the first — so authors who mistype in the plugin command still see
+   * Select `animationName`. If empty, the first animation in the .ssab is used;
+   * if a non-existent name is given, we warn (listing the real names) and fall
+   * back to the first — so authors who mistype in the plugin command still see
    * *something*, and get the exact names in the console.
+   *
+   * Playback settings are separate properties — set {@link loopCount} after this.
    */
-  public async setAnimation(animationName: string, loop = -1): Promise<void> {
+  public setAnimation(animationName: string): void {
     const names = this.getAnimationNames();
     let target = animationName;
     if (!target) {
@@ -188,8 +203,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       );
       target = names[0];
     }
-    await this.internalPlayer.setAnimation(target);
-    this.internalPlayer.setLoop(loop);
+    this.internalPlayer.setAnimation(target);
   }
 
   public play(startFrame = -1): void {

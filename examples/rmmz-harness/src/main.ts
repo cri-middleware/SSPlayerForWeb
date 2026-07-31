@@ -106,13 +106,14 @@ async function boot() {
     (player as unknown as { alpha: number }).alpha = Number(opacityInput.value);
   });
 
-  const playAnim = async (name: string) => {
-    await player.setAnimation(name, -1);
+  const playAnim = (name: string) => {
+    player.setAnimation(name);
+    player.loopCount = -1;
     player.play();
   };
-  await playAnim(first);
+  playAnim(first);
 
-  animSel.onchange = () => void playAnim(animSel.value);
+  animSel.onchange = () => playAnim(animSel.value);
   document.getElementById('play')!.onclick = () => player.play();
   document.getElementById('pause')!.onclick = () => player.pause();
 

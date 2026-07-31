@@ -62,7 +62,7 @@ document.body.appendChild(app.canvas);
 const player = new SSPlayer();
 player.attachRenderer(app.renderer); // optional — see the mask note below
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-await player.setAnimation('run');   // loop = -1 (infinite) by default
+player.setAnimation('run');
 
 player.position.set(640, 480);
 app.stage.addChild(player);
@@ -119,7 +119,7 @@ bundle reads `window.PIXI`. The renderer class is `SSPixiPlayer.SSPlayer`.
 
     const player = new SSPlayer();
     await player.load('./Ringo.ssab');   // serve over http(s), not file://
-    await player.setAnimation('run');
+    player.setAnimation('run');
     player.position.set(640, 480);
     app.stage.addChild(player);
     player.play();
@@ -145,7 +145,7 @@ Same rule: pass the WASM URL explicitly.
 
   const player = new SSPlayer();
   await player.load('./Ringo.ssab');
-  await player.setAnimation('run');
+  player.setAnimation('run');
   player.position.set(640, 480);
   app.stage.addChild(player);
   player.play();

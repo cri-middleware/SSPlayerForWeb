@@ -53,7 +53,7 @@ async function main() {
 
   // --- Sound ---
   // Nothing to wire up: when an SSAB references sounds, the player auto-creates a
-  // default Web Audio manager on setAnimation and plays them (autoAudio, on by
+  // default Web Audio manager while loading and plays them (autoAudio, on by
   // default). Just select/drop Sound.ssab. Audio starts after a user gesture per
   // the browser autoplay policy — clicking anywhere on the page resumes it.
   //
@@ -82,7 +82,7 @@ async function main() {
 
   const playAnimation = async (name: string) => {
     if (!name) return;
-    await player.setAnimation(name);
+    player.setAnimation(name);
     // Refreshes the seek-bar range, resets the pan/zoom and starts playback.
     ui.syncAfterLoad();
   };

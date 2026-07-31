@@ -90,8 +90,9 @@ canvas は復帰せず白いままになります。
 テクスチャは通常 `.ssab` の兄弟ファイルとして解決されます。それ以外の場所から供給したい場合
 （インメモリのバンドル、エンジンが既に GPU 上に持っているアトラスなど）は、
 [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) を実装して
-コアを直接駆動するか、WebGL であれば `setAnimation()` の前に `bindTextureSource()` で
-セルマップハッシュに紐づけて登録してください。
+コアを直接駆動するか、WebGL であれば `bindTextureSource()` でセルマップハッシュに紐づけて
+登録してください。登録は `load()` より前に行います（パックのテクスチャはそこで解決されるため）。
+`loadBuffer()` を使う場合は第 2 引数に渡せば代わりに登録されます。
 
 URL で辿れないインスタンスパックも同様で、
 [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md)

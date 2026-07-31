@@ -103,7 +103,7 @@ const surface = new SSSurface(canvas, {
 const player = surface.createPlayer();
 
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-await player.setAnimation('run');
+player.setAnimation('run');
 
 player.play();                       // drives itself via requestAnimationFrame
 ```
@@ -183,7 +183,7 @@ No peer dependencies to load first. The player class is `SSWebGLPlayer.SSSurface
     });
     const player = surface.createPlayer();
     await player.load('./Ringo.ssab');   // serve over http(s), not file://
-    await player.setAnimation('run');
+    player.setAnimation('run');
     player.play();
   })();
 </script>
@@ -204,7 +204,7 @@ Same rule: pass the WASM URL explicitly.
   const surface = new SSSurface(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
   const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
-  await player.setAnimation('run');
+  player.setAnimation('run');
   player.play();
 </script>
 ```
