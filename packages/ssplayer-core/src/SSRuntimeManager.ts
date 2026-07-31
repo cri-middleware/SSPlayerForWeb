@@ -503,6 +503,13 @@ export class SSRuntimeManager {
 
     /**
      * Parse the SSAB buffer and extract the image paths and their name hashes.
+     *
+     * Two tables feed this, because `DrawBatch.texture_hash` is drawn from two
+     * namespaces: a cell-map's own name hash for an ordinary part, and a texture
+     * FILE-name hash for a part whose drawing applies a texture change (`TCHG`).
+     * The latter live in `external_textures`, so a player that reads only
+     * `cellmaps` leaves those batches without a texture and drops the part. Both
+     * go into one hash-keyed list, exactly as the runtime looks them up.
      */
     public static extractTexturePaths(ssabBuffer: Uint8Array): { hash: number, path: string }[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
@@ -513,18 +520,35 @@ export class SSRuntimeManager {
         if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
         const results: { hash: number, path: string }[] = [];
+        const seen = new Set<number>();
 
         for (let i = 0; i < ssab.cellmapsLength(); i++) {
             const cellmap = ssab.cellmaps(i);
             if (cellmap) {
                 const path = cellmap.imagePath();
-                const hash = cellmap.nameHash();
-                if (path) {
+                const hash = cellmap.nameHash() >>> 0;
+                if (path && !seen.has(hash)) {
+                    seen.add(hash);
                     results.push({ hash, path });
                 }
             }
         }
-        
+
+        // Texture-change targets. `name` is a file path resolved the same way as a
+        // cell-map's `image_path` (relative to the .ssab), but the key is the file
+        // -name hash — a different namespace, so an atlas that is also a cell-map
+        // image legitimately appears twice under two hashes.
+        for (let i = 0; i < ssab.externalTexturesLength(); i++) {
+            const texture = ssab.externalTextures(i);
+            if (!texture) continue;
+            const path = texture.name();
+            const hash = texture.nameHash() >>> 0;
+            if (path && !seen.has(hash)) {
+                seen.add(hash);
+                results.push({ hash, path });
+            }
+        }
+
         return results;
     }
 
@@ -533,9 +557,10 @@ export class SSRuntimeManager {
      * embedded directly in the file (the converter's `--embedded` mode) instead
      * of shipping as sibling files.
      *
-     * Embedded assets are keyed by `fnv1a(image_path)` (== `CellMap.imagePathHash()`);
-     * this joins them back to each cell-map and returns them under the render-time
-     * key (`CellMap.nameHash()`), matching {@link extractTexturePaths}. Returns an
+     * Embedded assets are keyed by the FILE-name hash (`fnv1a(image_path)` ==
+     * `CellMap.imagePathHash()` for a cell-map, `fnv1a(name)` == `nameHash()` for
+     * an external texture); this joins them back to both tables and returns them
+     * under the render-time keys, matching {@link extractTexturePaths}. Returns an
      * empty array for external-file (non-embedded) SSABs.
      *
      * The returned `bytes` are views over `ssabBuffer` — the caller must consume
@@ -559,11 +584,29 @@ export class SSRuntimeManager {
         }
 
         const results: { hash: number, bytes: Uint8Array }[] = [];
+        const seen = new Set<number>();
         for (let i = 0; i < ssab.cellmapsLength(); i++) {
             const cellmap = ssab.cellmaps(i);
             if (!cellmap) continue;
+            const hash = cellmap.nameHash() >>> 0;
             const bytes = byPathHash.get(cellmap.imagePathHash() >>> 0);
-            if (bytes) results.push({ hash: cellmap.nameHash(), bytes });
+            if (bytes && !seen.has(hash)) {
+                seen.add(hash);
+                results.push({ hash, bytes });
+            }
+        }
+
+        // Texture-change (`TCHG`) targets are embedded too. Their render-time key
+        // IS the file-name hash, so the embedded asset joins on it directly.
+        for (let i = 0; i < ssab.externalTexturesLength(); i++) {
+            const texture = ssab.externalTextures(i);
+            if (!texture) continue;
+            const hash = texture.nameHash() >>> 0;
+            const bytes = byPathHash.get(hash);
+            if (bytes && !seen.has(hash)) {
+                seen.add(hash);
+                results.push({ hash, bytes });
+            }
         }
 
         return results;
