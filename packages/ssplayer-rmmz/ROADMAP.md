@@ -148,9 +148,38 @@ actual behaviour. (A real `@param wasmPath` honoring an override, with
 signal `commandId` / params to specific switches or variables (e.g. set a variable
 from a signal param), matching the "アニメ演出に合わせてイベント進行" goal.
 
-### R8 — Tests & CI
+### R8 — Tests & CI — **deferred by decision**
 Unit tests cover only `splitBitmapUrl` and `rmmzGlobals`. No coverage for the MVC
 bridge, boot gate, wait-mode, or lip-sync (all monkey-patch MZ globals — testable
-with a jsdom MZ stub). Package is `private` (no npm publish); distribution is the
-`pack` zip via GitHub Releases — publish CI intentionally deferred, consistent
-with the repo-wide release strategy.
+with a jsdom MZ stub). **A jsdom MZ stub was proposed and declined (2026-07-31):**
+regressions here are guarded by running the real engine instead (see R2), which
+is what caught every defect in R9 and R11. Package is `private` (no npm publish);
+distribution is the `pack` zip via GitHub Releases — publish CI intentionally
+deferred, consistent with the repo-wide release strategy.
+
+### R10 — One texture upload per picture, not per pack
+Each picture builds its own `RMMZResourceManager`, so two pictures showing the
+same `.ssab` upload the same atlas twice, and re-showing a picture uploads it
+again. MZ's `ImageManager` caches the `Bitmap`, so this is GL-side duplication
+on top of a cache that already did its job.
+
+Wants a manager shared per `(gl, ssabUrl)` with **reference counting** — and the
+refcount is the whole difficulty, not an optimisation on top: `ssplayer-pixi`
+shipped shared textures whose `destroy()` unloaded them globally and pulled them
+out from under every other player still drawing. Do not land the sharing without
+the counting.
+
+### R11 — Adapter state that the core already held — ✅ **FIXED**
+A review of what this package was keeping its own copy of (PRs #42 / #43):
+
+- The whole `.ssab` was retained **per picture** so `getAnimationNames()` could
+  re-parse it on demand. The core caches the names when the pack is bound;
+  the bytes are transient now.
+- `attachToPart` was written out here and in `ssplayer-pixi` with the same
+  attachment record, hide-tracking and detach ordering. `SSPartFollower` in core
+  owns that; this package keeps only the five lines that write onto a Pixi v5
+  object.
+- The part-override list is still (correctly) owned by `Game_Picture` — it is
+  written before a player is mounted and outlives every rebuild — but the
+  three-step dance around it is `SSPartOverrideStore` now, which is what the R9
+  lip-sync defect came out of.

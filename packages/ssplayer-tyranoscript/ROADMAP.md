@@ -75,6 +75,26 @@ blending — no SS7 runtime equivalent, see the FFI-gated item under "Open quest
 `lip_time` / `lip_sound_level` / `breath` (Live2D parameter-rig specifics);
 `bgimage` (Tyrano's own background layer already does this).
 
+### PT6.5 — state that belongs to the player, not to the adapter
+
+A review of what this adapter was holding that the core already knew
+(PRs #42 / #43). Each of these was a copy that could drift, and one of them did.
+
+- [x] **The pack is read once.** `[ss_new]` without `anime=` used to download the
+      whole `.ssab` a second time just to read its animation names; the player
+      caches them when it binds the pack (`getAnimationNames()`).
+- [x] **Loop goes through the player.** Four call sites reached past it into
+      `internalPlayer.setLoop`; `SSPlayer.loopCount` exists now. Note it is
+      write-to-request, not read-compare — the runtime resets its remaining-loop
+      counter on every write and normalises `0` to `-1`.
+- [x] **The buffer-scale ratio is derived, not cached.** It was captured at
+      `[ss_new]`, so the first window resize left every character on the layer
+      misplaced and `[ss_pos]` / `[ss_move]` re-used the same stale ratio.
+      `SSOverlay.onResized` now re-places the layer's players.
+- [x] **The override dance is one call.** `SSPartOverrideStore` keeps the saved
+      list and the live runtime in step; the list itself stays here, because it
+      is written before a player exists and has to outlive every rebuild.
+
 ### PT6 — one line to set up, and nothing to clean up
 
 Everything a scenario needed to remember to do, the plugin now does.
@@ -123,6 +143,42 @@ and component APIs behave, and what is left to build — now lives in
 ### PT5 — examples / docs
 - [x] `examples/tyranoscript-example` — hand-written TyranoScript
 - [ ] Docs upkeep; consider submitting to the official plugin library (plugin.tyrano.jp)
+
+### PT7 — tag surface still missing next to the other adapters
+
+Found by comparing this adapter against `ssplayer-rmmz` tag-for-tag rather than
+against the Spine / Live2D plugins. The runtime already has all of it; the gap
+is entirely in what the tags expose.
+
+- [ ] **Nothing carries an animation event back to the scenario.** RPG Maker MZ
+      has `signalSwitch`; here neither signals nor user data reach the author, so
+      "the moment the attack connects, shake the screen / branch / play a sound"
+      cannot be written at all. The largest functional gap in this package.
+      Shape to aim for: `[ss_signal name= f=]` writing the engine's own variable,
+      plus an `[ss_wait_signal]` for the blocking case.
+- [ ] **No `[ss_speed]`.** `SSPlayer.speedScale` reads and writes since #42;
+      rmmz has exposed `setSSSpeed` from the start. Persisting it needs a `speed`
+      field on the saved player, next to `loop`.
+- [ ] **No seek / section / reverse tags.** `frame`, `setAnimationSection` and
+      `setPlaybackDirection` all exist on the core player and none is reachable
+      from a scenario.
+- [ ] **`[ss_move wait="true"]` advances on a timer, not on the tween.** It calls
+      `setTimeout(nextOrder, time)` when the tween starts, so `[ss_pos]`
+      cancelling the tween does not cancel the advance, and a `[jump]` in between
+      lands the `nextOrder` on an unrelated scenario position. Resolve on the
+      tween's final frame instead, guarded by a token.
+
+### PT8 — audio
+
+- [ ] **A looping SE outlives the player that started it.** `[ss_free]` tears the
+      player down but nothing stops its sounds, and the manager is shared at
+      module scope, so the sound plays on for the rest of the session. At minimum
+      `stopAll()` on `[ss_free_all]` / restore; properly, per-player tracking.
+- [ ] **`TyranoAudioManager.urlFor` hard-codes `data/`** instead of going through
+      `resolveDataPath` / `$.parseStorage` like every other path in this adapter,
+      so it is the one asset kind that breaks under a different base path.
+- [ ] Respect Tyrano's SE volume slider — see "Open questions" below; the volume
+      is fixed when the manager is constructed.
 
 ---
 
