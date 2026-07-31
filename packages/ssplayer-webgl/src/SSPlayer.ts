@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, IAudioManager, ssFormat, SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, IAudioManager, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 import type { SSSurface } from './SSSurface.js';
 
@@ -396,7 +396,29 @@ export class SSPlayer {
   public get frame(): number { return this.internalPlayer.getFrameNo(); }
   public set frame(v: number) { this.internalPlayer.setFrame(v); }
 
+  /** Frames in the current playback range, inclusive of both ends. */
+  public get totalFrames(): number { return this.internalPlayer.getTotalFrames(); }
+
+  /**
+   * First / last frame of the current playback range. These follow
+   * {@link setAnimationSection}: without one they are the animation's own bounds,
+   * with one they are the section's.
+   */
+  public get startFrame(): number { return this.internalPlayer.getAnimationSectionStart(); }
+  public get endFrame(): number { return this.internalPlayer.getAnimationSectionEnd(); }
+
+  /** Playback rate in frames per second. Defaults to the animation's authored fps. */
+  public get fps(): number { return this.internalPlayer.getFrameRate(); }
+  public set fps(v: number) { this.internalPlayer.setFrameRate(v); }
+
+  /** The animation currently set up, or `''` before the first `setAnimation`. */
+  public get animationName(): string { return this.internalPlayer.animationName; }
+
   public get isPlaying(): boolean { return this._isPlaying; }
+
+  /** Whether playback is paused (as opposed to stopped or never started). */
+  public get isPausing(): boolean { return this.internalPlayer.isPausing; }
+
   public get speedScale(): number { return this.internalPlayer.getSpeed(); }
   public set speedScale(v: number) { this.internalPlayer.setSpeed(v); }
 
@@ -420,6 +442,32 @@ export class SSPlayer {
 
   public get subFrameEnabled(): boolean { return this.internalPlayer.subFrameEnabled; }
   public set subFrameEnabled(v: boolean) { this.internalPlayer.subFrameEnabled = v; }
+
+  /**
+   * Whether the runtime may skip frames to keep up with wall-clock time (on by
+   * default). Turning it off only gives you every frame if sub-frame
+   * interpolation is off too — otherwise the timeline still advances by
+   * fractional amounts and the timing drifts.
+   */
+  public get frameSkipEnabled(): boolean { return this.internalPlayer.isSkipFrames(); }
+  public set frameSkipEnabled(v: boolean) { this.internalPlayer.setSkipFrames(v); }
+
+  /**
+   * Limit playback to `[startFrame, endFrame]`. This narrows the range every
+   * other frame API reports and loops within — {@link startFrame},
+   * {@link endFrame} and {@link totalFrames} all follow it.
+   */
+  public setAnimationSection(startFrame: number, endFrame: number): void {
+    this.internalPlayer.setAnimationSection(startFrame, endFrame);
+  }
+
+  /** Play forwards or backwards, once through or ping-ponging. */
+  public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle): void {
+    this.internalPlayer.setPlaybackDirection(direction, style);
+  }
+
+  public getPlaybackDirection(): WebPlaybackDirection { return this.internalPlayer.getPlaybackDirection(); }
+  public getPlaybackStyle(): WebPlaybackStyle { return this.internalPlayer.getPlaybackStyle(); }
 
   // --- Transform ------------------------------------------------------------
 
@@ -510,6 +558,11 @@ export class SSPlayer {
   /** Resolve a part name to its index, or -1 if the part is not in the current animation. */
   public findPartIndex(partName: string): number {
     return this.internalPlayer.findPartIndex(partName);
+  }
+
+  /** Number of parts in the current animation; indices run `0 .. count - 1`. */
+  public getPartsCount(): number {
+    return this.internalPlayer.runtimeManager.getPartsCount();
   }
 
   /** Force-hide a part (or revert it to the animation), optionally cascading to its descendants. */
