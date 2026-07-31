@@ -23,7 +23,12 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _frameListeners = new Set<(frame: number) => void>();
     _audioListeners = new Set<(e: unknown) => void>();
     audioManager: unknown = null;
-    internalPlayer = { setLoop: vi.fn() };
+    // `loopCount` is a real accessor on the player, so the fake records writes
+    // through one too — asserting on a plain field would not catch the adapter
+    // going back to poking `internalPlayer` directly.
+    _loopWrites: number[] = [];
+    get loopCount() { return this._loopWrites[this._loopWrites.length - 1] ?? -1; }
+    set loopCount(v: number) { this._loopWrites.push(v); }
     frame = 0;
     order = 0;
     alpha = 1;
@@ -31,6 +36,9 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     // since boxOrigin() halves it to place logical coordinates.
     box = { x: 0, y: 0, w: 1280, h: 720 };
     load = vi.fn().mockResolvedValue(undefined);
+    // Read out of the pack when it is bound, so the adapter can pick a default
+    // animation without downloading the .ssab a second time.
+    getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2']);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
     play = vi.fn(() => { this._playing = true; });
@@ -110,9 +118,6 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     ...store,
     SSOverlay: FakeSSOverlay,
     SSSurface: { initialize: vi.fn().mockResolvedValue(undefined) },
-    SSRuntimeManager: {
-      extractAnimationNames: vi.fn(() => ['Anime_1', 'Anime_2']),
-    },
   };
 });
 
@@ -126,7 +131,8 @@ const FakeSSPlayer = SSOverlayMock as unknown as {
   instances: Array<{
     element: HTMLElement;
     order: number;
-    internalPlayer: { setLoop: ReturnType<typeof vi.fn> };
+    _loopWrites: number[];
+    loopCount: number;
     load: ReturnType<typeof vi.fn>;
     setAnimation: ReturnType<typeof vi.fn>;
     setTransform: ReturnType<typeof vi.fn>;
@@ -349,7 +355,7 @@ describe('registerSSTags', () => {
     // Textures resolve relative to the .ssab's own directory — no base arg is passed.
     expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
-    expect(p.internalPlayer.setLoop).toHaveBeenCalledWith(-1); // loop=true → infinite
+    expect(p._loopWrites).toContain(-1); // loop=true → infinite
     expect(p.play).toHaveBeenCalled();
 
     // Coordinate mapping: logical (640,360) → buffer px at dpr 1 (jsdom) = (640,360).
@@ -358,13 +364,14 @@ describe('registerSSTags', () => {
     expect(getRegistry().has('chr')).toBe(true);
   });
 
-  it('ss_new picks the first animation when anime= is omitted (fetch path)', async () => {
+  it('ss_new picks the first animation when anime= is omitted, without re-reading the pack', async () => {
     const { tyrano, nextOrder, addLayer } = makeTyrano();
     registerSSTags(tyrano);
     const tags = tyrano.kag.ftag.master_tag;
     addLayer('0', 'fore');
 
-    // The adapter fetches the ssab bytes to read its animation names.
+    // The player already knows the names once it has loaded the pack, so the
+    // adapter must ask it rather than downloading the .ssab all over again.
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
@@ -373,10 +380,13 @@ describe('registerSSTags', () => {
     await runTag(tags.ss_init, { wasm: 'rt.wasm' }, nextOrder);
     await runTag(tags.ss_new, { name: 'chr', storage: 'others/ssdata/Basic.ssab' }, nextOrder);
 
-    expect(fetchMock).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     const p = FakeSSPlayer.instances[0];
-    // extractAnimationNames mock → ['Anime_1', 'Anime_2']; first is chosen.
+    expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
+    expect(p.getAnimationNames).toHaveBeenCalled();
+    // getAnimationNames mock → ['Anime_1', 'Anime_2']; first is chosen.
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
+    // The regression this guards: a second download of the same pack.
+    expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
@@ -411,7 +421,7 @@ describe('registerSSTags', () => {
     await runTag(tags.ss_play, { name: 'chr', anime: 'Anime_2', loop: 'false' }, nextOrder);
 
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_2');
-    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(1); // loop=false → once
+    expect(p._loopWrites.at(-1)).toBe(1); // loop=false → once
     expect(p.play).toHaveBeenCalled();
   });
 
@@ -901,12 +911,12 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
     expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_2');
     // `next=` with no loop= plays the first animation once (else the end never comes).
-    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(1);
+    expect(p._loopWrites.at(-1)).toBe(1);
     expect(savedSlot(h).chr.next).toEqual({ anime: 'Anime_1', loop: -1, atframe: undefined });
 
     p._fireEnd();
     await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
-    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(-1); // idle loops
+    expect(p._loopWrites.at(-1)).toBe(-1); // idle loops
     await vi.waitFor(() => expect(savedSlot(h).chr).toMatchObject({ anime: 'Anime_1', next: undefined }));
   });
 

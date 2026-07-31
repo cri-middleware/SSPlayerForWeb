@@ -34,6 +34,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _ssabUrl: string = '';
     private _assetBaseUrl: string = '';
     private _texturePaths: { hash: number, path: string }[] = [];
+    private _animationNames: string[] = [];
     private _ssabResource: SSABResource | null = null;
     public _isChildPlayer: boolean = false;
     public _instancePackResources: Map<number, SSABResource> = new Map();
@@ -83,8 +84,17 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
         const buffer = await response.arrayBuffer();
 
-        this._ssabUrl = ssabUrl;
         this.bindResource(new Uint8Array(buffer), ssabUrl);
+    }
+
+    /**
+     * URL the bound pack came from, or `''` for one bound as bytes with no URL.
+     * Hosts otherwise have to remember this themselves to answer "is this the
+     * same pack?" when deciding between an in-place animation switch and a
+     * rebuild.
+     */
+    public get ssabUrl(): string {
+        return this._ssabUrl;
     }
 
     /**
@@ -97,6 +107,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public bindResource(buffer: Uint8Array, ssabUrl?: string) {
         if (ssabUrl !== undefined) {
+            // Recorded on this path too, not just in load(): a host that fetches
+            // the bytes itself (ssplayer-rmmz does, for a better error message)
+            // would otherwise leave `ssabUrl` empty for a pack that plainly has
+            // one, and only the asset base would survive.
+            this._ssabUrl = ssabUrl;
             this._assetBaseUrl = ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
         }
         if (this._ssabResource) {
@@ -107,6 +122,19 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._ssabResource = new SSABResource(buffer);
         this.runtimeManager.bindResource(this._ssabResource);
         this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer);
+        // Cached here rather than left to the caller, because the alternative is
+        // holding on to the whole SSAB (megabytes) or re-fetching it just to read
+        // a couple of dozen strings — both of which adapters were doing.
+        this._animationNames = SSRuntimeManager.extractAnimationNames(buffer);
+    }
+
+    /**
+     * The bound SSAB's animation names, in table order; empty until a resource is
+     * bound. Read-only: it is the cache, not a copy, so hosts handing it to
+     * application code should copy it themselves.
+     */
+    public get animationNames(): readonly string[] {
+        return this._animationNames;
     }
 
     /**

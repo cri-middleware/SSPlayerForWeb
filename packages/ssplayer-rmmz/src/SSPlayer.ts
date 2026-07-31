@@ -19,7 +19,6 @@ import {
   DirectInternalPlayer,
   initializeWasm,
   ssFormat,
-  SSRuntimeManager,
   SSOverridePriority,
   decomposePartAffine,
   type SSBlendOp,
@@ -99,9 +98,6 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public readonly internalPlayer: DirectInternalPlayer;
   public readonly resourceManager: RMMZResourceManager;
   private readonly _gl: GL;
-  // Retained .ssab bytes so we can list animation names
-  // (SSRuntimeManager.extractAnimationNames) and validate the requested name.
-  private _ssabBuffer: Uint8Array | null = null;
 
   private _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
   private _signalListeners = new Set<(e: SSSignalEvent) => void>();
@@ -139,10 +135,11 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // --- Loading & playback (thin wrappers over the core player) ---
 
   public async load(ssabUrl: string): Promise<void> {
-    // Fetch the .ssab ourselves (single fetch) so we can retain the bytes for
-    // animation-name introspection, then bind it via the public bindResource.
-    // Forward the ssab URL so the core resolves textures relative to it (siblings
-    // of the .ssab — the structure ssconverter emits).
+    // Fetched here rather than through the core's own load() only for the error
+    // message: MZ users hit this via a plugin command, and "404 on <url>" is
+    // worth far more to them than "Failed to load SSAB". Forward the ssab URL so
+    // the core resolves textures relative to it (siblings of the .ssab — the
+    // structure ssconverter emits).
     const res = await fetch(ssabUrl);
     if (!res.ok) throw new Error(`[ssplayer-rmmz] failed to load SSAB: ${res.status} ${res.statusText}`);
     const buffer = new Uint8Array(await res.arrayBuffer());
@@ -155,16 +152,18 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * bytes whose textures are supplied by other means.
    */
   public bindResource(buffer: Uint8Array, ssabUrl?: string): void {
-    this._ssabBuffer = buffer;
     this.internalPlayer.bindResource(buffer, ssabUrl);
     // Direct render mode + Y-down, matching ssplayer-pixi (MZ world space is y-down).
     this.internalPlayer.runtimeManager.context.set_render_mode(0);
     this.internalPlayer.runtimeManager.context.set_coordinate_system(1);
   }
 
-  /** Animation names in the loaded .ssab (table order). Empty until load(). */
+  /**
+   * Animation names in the loaded .ssab (table order). Empty until load().
+   * A copy, so callers may keep or sort it; the core holds the original.
+   */
   public getAnimationNames(): string[] {
-    return this._ssabBuffer ? SSRuntimeManager.extractAnimationNames(this._ssabBuffer) : [];
+    return [...this.internalPlayer.animationNames];
   }
 
   /**

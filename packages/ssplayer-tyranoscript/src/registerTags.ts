@@ -6,7 +6,6 @@ import {
   removePartOverrides,
   SSOverlay,
   SSSurface,
-  SSRuntimeManager,
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
@@ -111,7 +110,7 @@ function num(value: unknown, fallback: number): number {
 }
 
 /**
- * Map a Tyrano `loop` attribute to `internalPlayer.setLoop`'s count:
+ * Map a Tyrano `loop` attribute to `SSPlayer.loopCount`:
  *  - `"true"` / omitted → `-1` (infinite, the SS default),
  *  - `"false"` → `1` (play once),
  *  - a number string → that many loops.
@@ -300,17 +299,16 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 
   await player.load(storageUrl);
 
-  // Pick the animation: the given name, else the ssab's first animation.
+  // Pick the animation: the given name, else the pack's first animation. The
+  // player already read the names when it bound the pack, so this no longer
+  // costs a second download of the same `.ssab`.
   let anime = opts.anime;
-  if (!anime) {
-    const buf = new Uint8Array(await (await fetch(storageUrl)).arrayBuffer());
-    anime = SSRuntimeManager.extractAnimationNames(buf)[0] ?? '';
-  }
+  if (!anime) anime = player.getAnimationNames()[0] ?? '';
   if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
   await player.setAnimation(anime);
 
   player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale, boxOrigin(player)));
-  player.internalPlayer.setLoop(opts.loop);
+  player.loopCount = opts.loop;
   // A fresh player means a fresh WASM context, whose override table starts
   // empty — so a restore has to put the saved overrides back. Must run after
   // setAnimation: before that, part names cannot resolve.
@@ -373,7 +371,7 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
         // The author DID ask for this animation change (they wrote `next=`), so
         // drop the overrides a new setup discards, exactly like [ss_play].
         meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
-        player.internalPlayer.setLoop(next.loop);
+        player.loopCount = next.loop;
         player.play();
         persist();
       })
@@ -512,7 +510,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         }
       : undefined;
 
-    player.internalPlayer.setLoop(meta.loop);
+    player.loopCount = meta.loop;
     player.play(num(pm.start, -1));
     armChain(entry, persist);
   };
@@ -532,7 +530,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         // setAnimation drops the non-Permanent overrides; the author never
         // asked for that here, so put them straight back.
         applyPartOverrides(player, meta.overrides);
-        player.internalPlayer.setLoop(loop);
+        player.loopCount = loop;
         player.play();
       })
       .catch((err) => console.error('[ss_chara] animation switch failed:', (err as Error)?.stack ?? err));
