@@ -61,10 +61,9 @@ export class UIManager {
     this.setupControls();
   }
 
-  // SSCanvasPlayer exposes the timeline through its (public) core player.
-  private get startFrame(): number { return this.player.internalPlayer.getAnimationSectionStart(); }
-  private get endFrame(): number { return this.player.internalPlayer.getAnimationSectionEnd(); }
-  private get isPausing(): boolean { return this.player.internalPlayer.isPausing; }
+  private get startFrame(): number { return this.player.startFrame; }
+  private get endFrame(): number { return this.player.endFrame; }
+  private get isPausing(): boolean { return this.player.isPausing; }
 
   private setupControls() {
     // The seek-bar range is set by syncAfterLoad(), which runs for every loaded

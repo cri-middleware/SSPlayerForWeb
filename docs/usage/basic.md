@@ -30,39 +30,40 @@ player.stop();              // stop
 
 ## Frame and speed
 
-**Common properties:**
 ```ts
 player.frame;               // current frame (get / set)
 player.speedScale = 1.5;    // playback speed multiplier
-player.subFrameEnabled;     // sub-frame interpolation (on by default; smooth in slow-motion / high-refresh)
 player.isPlaying;           // whether playback is running
-```
-
-**PixiJS (`SSPlayer`)-only extended properties:**
-```ts
-player.fps;                 // frame rate (get / set)
-player.totalFrames;         // total frame count
-player.startFrame;          // start frame
-player.endFrame;            // end frame
-player.loopCount;           // configured loop count (-1 = infinite)
 player.isPausing;           // whether playback is paused
+player.fps;                 // frame rate (get / set)
+player.totalFrames;         // frames in the current playback range
+player.startFrame;          // first frame of the range
+player.endFrame;            // last frame of the range
+player.loopCount;           // configured loop count (-1 = infinite)
+player.animationName;       // the animation currently set up
 ```
 
-## Section and direction (PixiJS `SSPlayer` only)
+Sub-frame interpolation is on by default (smooth in slow motion and on high-refresh displays).
+The property is named `subFrameEnabled` on the WebGL player and `subframe` on the PixiJS one.
+
+## Section and direction
 
 ```ts
 player.setAnimationSection(startFrame, endFrame);      // limit the playback range
 player.setPlaybackDirection(direction, style);         // direction / style
-player.subframe = false;                               // turn off together with frameSkip
-player.frameSkipEnabled = false;                       // stop skipping frames; also needs subframe off, or timing drifts
+player.frameSkipEnabled = false;                       // stop skipping frames; also turn sub-frame off, or timing drifts
 ```
 
-## Part lookup (PixiJS `SSPlayer` only)
+`startFrame` / `endFrame` / `totalFrames` all follow the section once one is set.
+
+## Part lookup
 
 ```ts
-player.getPartsCount();                 // number of parts
-player.getPartIndexFromName('body');    // name → index
+player.getPartsCount();          // number of parts
+player.findPartIndex('body');    // name → index (-1 if unknown)
 ```
+
+The PixiJS player also has `getPartIndexFromName()`, an older spelling of the same lookup.
 
 To override a part's colour, cell or visibility at run time, see
 [Part control (visibility / cell / color)](/customize/part-overrides) — that API is

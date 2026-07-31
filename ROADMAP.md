@@ -27,6 +27,32 @@ The following features were present in previous JavaScript-only versions (e.g., 
 
 *(Note: As the `SpriteStudio-SDK` progresses through its roadmap phases, the corresponding TypeScript bindings and renderer logic will be added to `ssplayer-core` and `ssplayer-pixi` respectively.)*
 
+## Player-side features
+
+These need no new SDK API — the runtime already provides everything required. They are listed
+here because they are player responsibilities the
+[Player Porting Guide](https://github.com/cri-middleware/SpriteStudio-SDK/tree/HEAD/libs/ssruntime/docs)
+describes and the official players implement, but this one does not yet.
+
+*   [ ] **Run-time texture swap** (costume changes, dynamic expressions)
+    Replace the texture bound to a cell map from application code, without touching the `.ssab`.
+    See *External resources and textures* in the porting guide — this is explicitly the player's
+    job, and distinct from the Override Layer API.
+    *   *Current state*: only partially available, and only on `ssplayer-webgl`, as
+        `SSWebGLResourceManager.bindTextureSource()`. The caller has to hash the cell-map name
+        itself, `ssplayer-pixi` has no equivalent, and nothing can **restore** the original.
+    *   *Target*: a name-keyed method on the player itself, on both renderers, where passing
+        `null` reloads the original from the `.ssab` definition (looking in `cellmaps` and then
+        `external_textures`, as `SSPlayerForGodot`'s `set_cellmap_texture` does).
+
+*   [ ] **Flip** (`flipH` / `flipV`)
+    Mirror playback horizontally / vertically. Available on `SSPlayerForGodot`; no equivalent
+    here, so hosts mirror the whole display object instead. *Low priority.*
+
+*   [ ] **`getPartNames()`**
+    Return every part name in one call. Today a caller has to walk `getPartsCount()` and resolve
+    each index. *Low priority.*
+
 ## Potential Renderer Integrations
 
 Candidate renderer packages that could be added alongside the existing `ssplayer-pixi` / `ssplayer-webgl` backends. Each would be a new package that consumes the engine-agnostic `@spritestudio/ssplayer-core` and adapts the `DrawBatch` output to the target renderer's scene graph — no changes to the core or the `<ss-player>` Custom Element are required.

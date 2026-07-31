@@ -30,39 +30,40 @@ player.stop();              // 停止
 
 ## フレーム・速度
 
-**共通プロパティ:**
 ```ts
 player.frame;               // 現在フレーム（get / set）
 player.speedScale = 1.5;    // 再生速度倍率
-player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー再生や高リフレッシュで滑らか）
 player.isPlaying;           // 再生中か
-```
-
-**PixiJS (`SSPlayer`) 固有の拡張プロパティ:**
-```ts
-player.fps;                 // フレームレート（get / set）
-player.totalFrames;         // 総フレーム数
-player.startFrame;          // 開始フレーム
-player.endFrame;            // 終了フレーム
-player.loopCount;           // 設定したループ回数（-1 = 無限）
 player.isPausing;           // 一時停止中か
+player.fps;                 // フレームレート（get / set）
+player.totalFrames;         // 現在の再生範囲のフレーム数
+player.startFrame;          // 範囲の開始フレーム
+player.endFrame;            // 範囲の終了フレーム
+player.loopCount;           // 設定したループ回数（-1 = 無限）
+player.animationName;       // 現在設定されているアニメーション名
 ```
 
-## 区間・方向 (PixiJS `SSPlayer` 固有)
+サブフレーム補間は既定で on です（スロー再生や高リフレッシュ環境で滑らかになります）。
+プロパティ名は WebGL プレイヤーが `subFrameEnabled`、PixiJS プレイヤーが `subframe` です。
+
+## 区間・方向
 
 ```ts
 player.setAnimationSection(startFrame, endFrame);      // 再生区間を限定
 player.setPlaybackDirection(direction, style);         // 方向 / スタイル
-player.subframe = false;                               // frameSkip と一緒に off にする
-player.frameSkipEnabled = false;                       // フレームスキップを止める（subframe も off にしないとタイミングが崩れる）
+player.frameSkipEnabled = false;                       // フレームスキップを止める（サブフレームも off にしないとタイミングが崩れる）
 ```
 
-## パーツ照会 (PixiJS `SSPlayer` 固有)
+区間を設定すると `startFrame` / `endFrame` / `totalFrames` はいずれもその区間に追従します。
+
+## パーツ照会
 
 ```ts
-player.getPartsCount();                 // パーツ数
-player.getPartIndexFromName('body');    // 名前 → インデックス
+player.getPartsCount();          // パーツ数
+player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
+
+PixiJS プレイヤーには同じ照会の旧名 `getPartIndexFromName()` もあります。
 
 パーツ単位で色 / セル / 表示を実行時に上書きするには
 [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください
