@@ -36,6 +36,12 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   there possible at all — settled by undoing the file's string-array
   obfuscation rather than by guessing. The handler is delegated from `document`,
   because the host rewrites that element on every change of the plugin list.
+- **One pack scan per task.** `listPacks()` walks the whole of `data/`, and one
+  inspector render asks for it more than once — the pack picker's options, its
+  default, and the widened animation picker. The result is now shared for the
+  current task and dropped on the next turn of the event loop, which needs no
+  invalidation anywhere: a conversion, or a `.ssab` an author copies in, always
+  lands in a later turn than the render that would have shown it.
 - **Conversion in a Worker.** The wasm call is synchronous and was long enough
   to see: a folder of 20 sample projects froze the editor for 1.2 s, 0.64 s of
   it in one project. Measured again through the same harness, the longest pause
@@ -75,9 +81,18 @@ conversion, the palette, preview, and save/load.
   uses go through `bound_type: 'camera'`, so whether it will call an arbitrary
   `onChange` is unknown and `js/app/param/param.js` is obfuscated. It is a
   one-line swap to find out on a running builder.
-- **`listPacks()` walks the whole of `data/` on every dropdown render**, over the
-  same bridge, while `listAnimations()` right next to it is already cached by
-  mtime and size. Give the pack scan the same treatment.
+- **One pack scan per inspector render is what remains.** The scan is a walk of
+  the whole of `data/` — 43 `readdir` plus 334 `stat` across the bridge on a
+  small project, about 9 ms, growing with the project's total assets rather
+  than its pack count. It is now shared within a task, which halved the render
+  that asks more than once (`[ss_new]`: 11.5 ms → 6.0 ms steady) and left the
+  one that asks once alone (`[ss_play]` widened: 7.5 ms → 7.8 ms). Removing the
+  last one needs either a cache that outlives a task — and then something has
+  to invalidate it, which nothing cheaper than the walk can decide — or a
+  cheaper traversal. `TB.io.getAllFilesUnderDirectory` is the candidate for the
+  second: it is one `ipcRenderer.sendSync`, and the main process walks in Node
+  and returns `{path: {item, path, is_dir}}` in a single round trip, so 377
+  crossings become one. Undocumented, so it would need proving first.
 - **Windows.** Untested, and `pack-tbp.mjs` shells out to `zip`, so a release
   cannot currently be cut from a Windows machine.
 - **A sample builder project**, and a submission to plugin.tyrano.jp.

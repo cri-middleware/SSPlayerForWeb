@@ -253,6 +253,41 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     expect(importer.listAnimations('others/ssdata/Ringo/Ringo.png')).toEqual([]);
   });
 
+  it('walks data/ once per task, however many pickers ask', async () => {
+    const root = makeProject();
+    const count: Crossings = { stat: 0, readdir: 0 };
+    const importer = importerFor(root, withApi('faithful', count), []);
+    await importer.runOnce();
+
+    const hand = nodePath.join(root, 'data/image/scene1');
+    mkdirSync(hand, { recursive: true });
+
+    count.readdir = 0;
+    const first = importer.listPacks();
+    const walked = count.readdir;
+    expect(walked).toBeGreaterThan(0);
+    expect(first.length).toBeGreaterThan(0);
+
+    // What one inspector render looks like: the host renders a component's
+    // params in a single synchronous loop, and more than one of them asks.
+    expect(importer.listPacks()).toBe(first);
+    expect(importer.listPacks()).toBe(first);
+    expect(count.readdir).toBe(walked);
+
+    // A pack that appears while the builder is open — a conversion, or a file
+    // an author copied in. Nothing tells the importer about it, so the scan has
+    // to be dropped rather than invalidated.
+    cpSync(
+      nodePath.join(root, 'data/others/ssdata/Ringo/Ringo.ssab'),
+      nodePath.join(hand, 'Copy.ssab'),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(count.readdir).toBe(walked);
+    expect(importer.listPacks().map((p) => p.val)).toContain('image/scene1/Copy.ssab');
+    expect(count.readdir).toBeGreaterThan(walked);
+  });
+
   it('migrates the old in-output marker out of data/, without reconverting', async () => {
     const root = makeProject();
     const fs = withApi('faithful');
