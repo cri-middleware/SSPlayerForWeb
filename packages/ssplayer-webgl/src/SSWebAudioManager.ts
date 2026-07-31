@@ -17,7 +17,7 @@ import type { SSPlayer, SSAudioEvent } from './SSPlayer.js';
  * const player = surface.createPlayer();
  * new SSWebAudioManager().bindToPlayer(player); // preload + play wired in one call
  * await player.load('chara.ssab');
- * await player.setAnimation('idle'); // sounds preload here (audioManager is set)
+ * player.setAnimation('idle'); // sounds preload here (audioManager is set)
  * player.play();
  * ```
  *

@@ -55,7 +55,7 @@
 
         const player = new SSPlayer();
         await player.load(SSAB_URL);       // must be served over http(s), not file://
-        await player.setAnimation(ANIM);   // loops infinitely by default
+        player.setAnimation(ANIM);         // loops infinitely by default
         player.position.set(640, 480);
         app.stage.addChild(player);
         player.play();

@@ -174,7 +174,11 @@ export class SSPlayerElement extends HTMLElement {
         if (newValue) this.loadSrc(newValue, ++this._loadToken).catch((err) => this.emit('error', err));
         break;
       case 'animation':
-        if (newValue) this.applyAnimation(newValue).catch((err) => this.emit('error', err));
+        // Reflected onto the player synchronously, so an unknown name throws right
+        // here — keep it a DOM 'error' event like the async paths do.
+        if (newValue) {
+          try { this.applyAnimation(newValue); } catch (err) { this.emit('error', err); }
+        }
         break;
       case 'speed':
         player.speedScale = this.numAttr('speed') ?? 1;
@@ -189,9 +193,8 @@ export class SSPlayerElement extends HTMLElement {
   public resume(): void { this._player?.resume(); }
   public stop(): void { this._player?.stop(); }
 
-  public async setAnimation(name: string): Promise<void> {
-    await this.applyAnimation(name);
-  }
+  /** No-op until the player exists (`await el.ready` first). */
+  public setAnimation(name: string): void { this.applyAnimation(name); }
 
   /**
    * Load from raw bytes + a texture map (inline / playable-ad path). Requires the
@@ -209,7 +212,7 @@ export class SSPlayerElement extends HTMLElement {
     if (token !== this._loadToken) return;
     const anim = this.getAttribute('animation')
       ?? SSRuntimeManager.extractAnimationNames(ssab instanceof Uint8Array ? ssab : new Uint8Array(ssab))[0];
-    if (anim) await this.applyAnimation(anim);
+    if (anim) this.applyAnimation(anim);
     if (token !== this._loadToken) return;
     this.emit('load');
   }
@@ -291,15 +294,15 @@ export class SSPlayerElement extends HTMLElement {
       if (token !== this._loadToken) return;
       anim = SSRuntimeManager.extractAnimationNames(buf)[0] ?? null;
     }
-    if (anim) await this.applyAnimation(anim);
+    if (anim) this.applyAnimation(anim);
     if (token !== this._loadToken) return;
     this.emit('load');
   }
 
-  private async applyAnimation(name: string): Promise<void> {
+  private applyAnimation(name: string): void {
     const player = this._player;
     if (!player) return;
-    await player.setAnimation(name);
+    player.setAnimation(name);
     // Without `autoplay` the element stays paused on the first frame (poster-like);
     // draw() still renders it since it's independent of the playing state.
     if (this.hasAttribute('autoplay')) player.play();
