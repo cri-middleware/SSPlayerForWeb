@@ -57,11 +57,14 @@
   "scripts": {
     "build": "tsdown",
     "clean": "rimraf dist",
+    "test": "vitest run",
     "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },
   "devDependencies": {
+    "jsdom": "^29.1.1",
     "pixi.js": "^8.19.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "license": "BSD-3-Clause"
 }
