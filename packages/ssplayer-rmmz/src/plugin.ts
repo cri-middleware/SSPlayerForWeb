@@ -17,11 +17,9 @@ import { installInterpreterWait, beginSSWait } from './rmmz/interpreterWait.js';
 import { installMessageTalk, setSSTalk, clearSSTalk } from './rmmz/messageTalk.js';
 import type { SSPictureData } from './rmmz/gamePictureBridge.js';
 import {
-  applyPartOverrides,
-  mergePartOverride,
   parsePartOverrideColor,
   prunePartOverridesForNewAnimation,
-  removePartOverrides,
+  SSPartOverrideStore,
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
@@ -69,26 +67,25 @@ function boot(): void {
     return { pic, cur };
   };
 
-  // Record a part override on the picture (authoritative, saved) and apply it to
-  // the live player so it shows immediately — the same two-step `setSSSpeed`
-  // uses. When no player is mounted yet (the .ssab is still loading) only the
-  // persisted copy is written; the bridge applies it as the player mounts.
-  const setOverride = (pictureId: number, label: string, entry: SSPartOverride): void => {
-    const target = ssPicture(pictureId, label);
-    if (!target) return;
-    target.pic.setSSData({ ...target.cur, overrides: mergePartOverride(target.cur.overrides, entry) });
-    const player = getLivePlayer(pictureId);
-    if (player) applyPartOverrides(player, [entry]);
-  };
+  // The override list for one picture: the saved copy lives on Game_Picture
+  // (authoritative — the player may not be mounted yet, and is rebuilt on every
+  // scene change), the live copy on the runtime. The store keeps the two in step
+  // so no command has to remember the dance. Cheap enough to build per call.
+  const overridesOf = (pictureId: number): SSPartOverrideStore =>
+    new SSPartOverrideStore({
+      read: () => g.$gameScreen.picture(pictureId)?.ssData?.()?.overrides,
+      write: (list) => {
+        const pic = g.$gameScreen.picture(pictureId);
+        const cur = pic && pic.ssData ? pic.ssData() : null;
+        if (cur) pic.setSSData({ ...cur, overrides: list });
+      },
+      player: () => getLivePlayer(pictureId) ?? null,
+    });
 
-  // Setting up a new animation makes the runtime drop every override but the
-  // Permanent ones. Keep the saved copy in step so a later load cannot resurrect
-  // what the runtime already discarded.
-  const pruneOverrides = (pictureId: number): void => {
-    const pic = g.$gameScreen.picture(pictureId);
-    const cur = pic && pic.ssData ? pic.ssData() : null;
-    if (!cur || !cur.overrides || cur.overrides.length === 0) return;
-    pic.setSSData({ ...cur, overrides: prunePartOverridesForNewAnimation(cur.overrides) });
+  /** Set one override, after checking the picture actually carries an SS. */
+  const setPartOverride = (pictureId: number, label: string, entry: SSPartOverride): void => {
+    if (!ssPicture(pictureId, label)) return;
+    overridesOf(pictureId).set(entry);
   };
 
   const buildSSData = (args: Record<string, string>): SSPictureData => ({
@@ -193,7 +190,7 @@ function boot(): void {
     }
     // Both the one-shot and the return-to-base set up an animation, so the
     // runtime drops every non-Permanent override; keep the saved copy in step.
-    pruneOverrides(pictureId);
+    overridesOf(pictureId).pruneForNewAnimation();
     const base = cur.animation;
     const baseLoop = cur.loop;
     const revert = () => {
@@ -237,7 +234,7 @@ function boot(): void {
     }
     // Every entry sets up an animation, so the runtime drops each non-Permanent
     // override; keep the saved copy in step.
-    pruneOverrides(pictureId);
+    overridesOf(pictureId).pruneForNewAnimation();
     let i = 0;
     const step = () => {
       const name = seq[i];
@@ -287,7 +284,7 @@ function boot(): void {
       console.warn(`[ssplayer-rmmz] setSSPartColor: 色 "${args.color}" を解釈できません（例: #FF0000 / #FF0000BF）。`);
       return;
     }
-    setOverride(num(args.pictureId, 1), 'setSSPartColor', {
+    setPartOverride(num(args.pictureId, 1), 'setSSPartColor', {
       kind: 'color',
       part: String(args.part || ''),
       blendOp: num(args.blendOp, 0) as SSBlendOp,
@@ -300,7 +297,7 @@ function boot(): void {
   // note that a keyframed hide never cascades, so this is the only way to hide a
   // whole sub-tree. Visibility has no priority mode.
   reg(PLUGIN_NAME, 'setSSPartVisibility', (args: Record<string, string>) => {
-    setOverride(num(args.pictureId, 1), 'setSSPartVisibility', {
+    setPartOverride(num(args.pictureId, 1), 'setSSPartVisibility', {
       kind: 'visibility',
       part: String(args.part || ''),
       hide: args.hide !== 'false',
@@ -311,7 +308,7 @@ function boot(): void {
   // Swap the cell a part draws. The cell map name carries no .ssce extension.
   // Normal and mask parts only.
   reg(PLUGIN_NAME, 'setSSPartCell', (args: Record<string, string>) => {
-    setOverride(num(args.pictureId, 1), 'setSSPartCell', {
+    setPartOverride(num(args.pictureId, 1), 'setSSPartCell', {
       kind: 'cell',
       part: String(args.part || ''),
       cellmap: String(args.cellmap || ''),
@@ -323,19 +320,8 @@ function boot(): void {
   // Clear the overrides on one part, or on every part when `part` is blank.
   reg(PLUGIN_NAME, 'clearSSPartOverrides', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
-    const part = String(args.part || '');
-    const target = ssPicture(pictureId, 'clearSSPartOverrides');
-    if (!target) return;
-    target.pic.setSSData({ ...target.cur, overrides: removePartOverrides(target.cur.overrides, part || undefined) });
-    const player = getLivePlayer(pictureId);
-    if (!player) return;
-    if (part) {
-      player.clearPartColorOverride(part);
-      player.clearPartCellOverride(part);
-      player.clearPartVisibilityOverride(part);
-    } else {
-      player.clearAllPartOverrides();
-    }
+    if (!ssPicture(pictureId, 'clearSSPartOverrides')) return;
+    overridesOf(pictureId).clear(String(args.part || '') || undefined);
   });
 
   // playSS / stopSS restart or end playback outright, so a queued follow-up is

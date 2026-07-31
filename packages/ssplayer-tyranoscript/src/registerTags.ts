@@ -1,9 +1,7 @@
 import {
   applyPartOverrides,
-  mergePartOverride,
   parsePartOverrideColor,
-  prunePartOverridesForNewAnimation,
-  removePartOverrides,
+  SSPartOverrideStore,
   SSOverlay,
   SSSurface,
   type SSBlendOp,
@@ -248,6 +246,19 @@ function bufferScaleOf(overlay: SSOverlay, logicalW: number): number {
   return overlay.canvas.width / Math.max(1, logicalW);
 }
 
+/**
+ * The override list for one player: the saved copy on `meta` (mirrored into
+ * `stat.f` by persist), the live copy on the runtime. The store keeps the two in
+ * step, so no tag has to remember the three-step dance by hand.
+ */
+function overridesOf(entry: SSPlayerEntry, persist: () => void): SSPartOverrideStore {
+  return new SSPartOverrideStore({
+    read: () => entry.meta.overrides,
+    write: (list) => { entry.meta.overrides = list; persist(); },
+    player: () => entry.player,
+  });
+}
+
 /** Push a player's stored placement to the renderer, at the current buffer scale. */
 function applyPlacement(entry: SSPlayerEntry): void {
   const { player, meta, overlay } = entry;
@@ -400,7 +411,7 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
       .then(() => {
         // The author DID ask for this animation change (they wrote `next=`), so
         // drop the overrides a new setup discards, exactly like [ss_play].
-        meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+        overridesOf(entry, persist).pruneForNewAnimation();
         player.loopCount = next.loop;
         player.play();
         persist();
@@ -522,7 +533,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       // Setting up an animation makes the runtime drop every override but the
       // Permanent ones; keep the saved mirror in step so a later [ss_restore]
       // cannot resurrect what the runtime discarded.
-      meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+      overridesOf(entry, persist).pruneForNewAnimation();
     }
     if (pm.loop !== undefined && pm.loop !== '') {
       meta.loop = loopCount(pm.loop);
@@ -559,7 +570,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       .then(() => {
         // setAnimation drops the non-Permanent overrides; the author never
         // asked for that here, so put them straight back.
-        applyPartOverrides(player, meta.overrides);
+        overridesOf(entry, persist).reapply();
         player.loopCount = loop;
         player.play();
       })
@@ -836,10 +847,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
   /** Apply one override now and remember it for save/restore. */
   const setOverride = (label: string, name: string, entry: SSPartOverride): void => {
-    const target = lookup(label, name);
-    applyPartOverrides(target.player, [entry]);
-    target.meta.overrides = mergePartOverride(target.meta.overrides, entry);
-    persist();
+    overridesOf(lookup(label, name), persist).set(entry);
   };
 
   // [ss_part_color name= part= color= blend= priority=] — tint one part.
@@ -908,16 +916,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start(pm) {
       runSync('ss_part_clear', () => {
         const entry = lookup('ss_part_clear', String(pm.name));
-        const part = String(pm.part ?? '');
-        if (part) {
-          entry.player.clearPartColorOverride(part);
-          entry.player.clearPartCellOverride(part);
-          entry.player.clearPartVisibilityOverride(part);
-        } else {
-          entry.player.clearAllPartOverrides();
-        }
-        entry.meta.overrides = removePartOverrides(entry.meta.overrides, part || undefined);
-        persist();
+        overridesOf(entry, persist).clear(String(pm.part ?? '') || undefined);
       });
     },
   };

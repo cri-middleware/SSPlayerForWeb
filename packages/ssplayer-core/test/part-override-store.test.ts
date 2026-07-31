@@ -9,6 +9,7 @@ import {
     SSOverridePriority,
     type SSPartOverride,
     type SSPartOverrideTarget,
+    SSPartOverrideStore,
 } from '../src/PartOverride.js';
 
 // The store is the policy hosts share when they have to survive a player being
@@ -141,5 +142,104 @@ describe('parsePartOverrideColor', () => {
         expect(parsePartOverrideColor('red')).toBeNull();
         expect(parsePartOverrideColor('#12345')).toBeNull();
         expect(parsePartOverrideColor('')).toBeNull();
+    });
+});
+
+// --- SSPartOverrideStore ---------------------------------------------------
+//
+// The three-step dance the hosts used to write by hand. What matters here is
+// that the stored list and the live runtime cannot drift: every operation has to
+// touch both, and the pair of animation-change methods has to differ in exactly
+// the documented way.
+
+describe('SSPartOverrideStore', () => {
+    function makeStore(initial: SSPartOverride[] = [], withPlayer = true) {
+        const calls: string[] = [];
+        let list: SSPartOverride[] | undefined = initial.length ? [...initial] : undefined;
+        const player = {
+            setPartColorOverride: (p: number | string) => { calls.push(`color:${p}`); return true; },
+            setPartCellOverride: (p: number | string) => { calls.push(`cell:${p}`); return true; },
+            setPartVisibilityOverride: (p: number | string) => { calls.push(`vis:${p}`); return true; },
+            clearPartColorOverride: (p: number | string) => { calls.push(`-color:${p}`); return true; },
+            clearPartCellOverride: (p: number | string) => { calls.push(`-cell:${p}`); return true; },
+            clearPartVisibilityOverride: (p: number | string) => { calls.push(`-vis:${p}`); return true; },
+            clearAllPartOverrides: () => { calls.push('-all'); return true; },
+        };
+        const writes: number[] = [];
+        const store = new SSPartOverrideStore({
+            read: () => list,
+            write: (l) => { list = l; writes.push(l.length); },
+            player: () => (withPlayer ? player : null),
+        });
+        return { store, calls, writes, current: () => list ?? [] };
+    }
+
+    const color = (part: string, priority = SSOverridePriority.HoldUntilNextAnimation): SSPartOverride =>
+        ({ kind: 'color', part, blendOp: SSBlendOp.Mix, rgba: 0xff0000ff, priority });
+
+    it('set stores and applies in one step', () => {
+        const s = makeStore();
+        s.store.set(color('body'));
+        expect(s.current()).toEqual([color('body')]);
+        expect(s.calls).toEqual(['color:body']);
+    });
+
+    it('set still stores when no player is mounted yet', () => {
+        // RPG Maker MZ writes overrides onto a picture whose .ssab is still
+        // loading; the stored copy is what the mount replays.
+        const s = makeStore([], false);
+        s.store.set(color('body'));
+        expect(s.current()).toEqual([color('body')]);
+        expect(s.calls).toEqual([]);
+    });
+
+    it('clear drops one part from both the list and the runtime', () => {
+        const s = makeStore([color('body'), color('head')]);
+        s.store.clear('body');
+        expect(s.current()).toEqual([color('head')]);
+        expect(s.calls).toEqual(['-color:body', '-cell:body', '-vis:body']);
+    });
+
+    it('clear with no part empties both', () => {
+        const s = makeStore([color('body'), color('head')]);
+        s.store.clear();
+        expect(s.current()).toEqual([]);
+        expect(s.calls).toEqual(['-all']);
+    });
+
+    it('pruneForNewAnimation keeps only what the runtime keeps, and touches nothing else', () => {
+        const s = makeStore([color('body'), color('head', SSOverridePriority.Permanent)]);
+        s.store.pruneForNewAnimation();
+        // The runtime already dropped the non-Permanent one itself, so this must
+        // NOT re-apply anything — it only stops a later restore resurrecting it.
+        expect(s.current()).toEqual([color('head', SSOverridePriority.Permanent)]);
+        expect(s.calls).toEqual([]);
+    });
+
+    it('pruneForNewAnimation does not write when there is nothing stored', () => {
+        const s = makeStore();
+        s.store.pruneForNewAnimation();
+        expect(s.writes).toEqual([]);
+    });
+
+    it('reapply puts the whole list back without changing it', () => {
+        // The lip-sync swap: an animation change the author never asked for, so
+        // the overrides it dropped are collateral damage and go straight back.
+        const s = makeStore([color('body'), color('head')]);
+        s.store.reapply();
+        expect(s.calls).toEqual(['color:body', 'color:head']);
+        expect(s.writes).toEqual([]);
+        expect(s.current()).toHaveLength(2);
+    });
+
+    it('prune and reapply are opposites, which is the distinction hosts get wrong', () => {
+        const pruned = makeStore([color('body')]);
+        pruned.store.pruneForNewAnimation();
+        expect(pruned.current()).toEqual([]); // gone for good
+
+        const kept = makeStore([color('body')]);
+        kept.store.reapply();
+        expect(kept.current()).toEqual([color('body')]); // still there, and back on screen
+        expect(kept.calls).toEqual(['color:body']);
     });
 });
