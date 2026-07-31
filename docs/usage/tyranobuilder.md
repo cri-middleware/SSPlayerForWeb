@@ -79,7 +79,7 @@ graph LR
 
     SS -->|"put in SpriteStudio_Source/"| AUTO
     SS -->|"drag & drop / CLI"| TOOLS
-    AUTO -. "on open, then every 3 s" .-> BIN
+    AUTO -. "on project open, or on demand" .-> BIN
     TOOLS --> MANUAL --> BIN
     BIN -->|"picked from a dropdown"| COMP
     COMP -. "plays" .-> RT
@@ -111,27 +111,44 @@ Subfolders are searched too, so you can group sources however you like — the w
 walked for `.sspj` files, and only the folder name of the `.sspj` itself decides the output
 name.
 
-### Live iteration, without touching the editor
+### Picking up a change
 
-The importer does not stop after the first pass. **While the project is open it re-checks the
-source folder every 3 seconds**, so the loop is:
+A pass runs **when the project is opened**, and after that only when you ask for one. Nothing
+polls in the background: a pass costs one `stat` per source file, each a synchronous hop across
+Electron's contextBridge on the thread that draws the editor, and it bought nothing — you are
+in SpriteStudio when the save happens, not looking at the toast. This is the same shape as
+[SpriteStudio Player for Ren'Py](https://github.com/cri-middleware/SSPlayerForRenPy) (which
+converts at startup and needs `Shift + R`) and
+[SpriteStudio Player for Godot](https://github.com/cri-middleware/SSPlayerForGodot) (which has
+an inspector button and no freshness check at all).
 
-1. Leave TyranoBuilder open.
-2. Edit the animation in SpriteStudio and save.
-3. A few seconds later a toast appears in TyranoBuilder — the `.ssab` has already been rebuilt.
-4. Preview the scene.
+So after saving in SpriteStudio, there are two ways back:
 
-Nothing to press, and no reopening. This is the part that differs from
-[SpriteStudio Player for Ren'Py](https://github.com/cri-middleware/SSPlayerForRenPy), whose
-importer runs at startup and needs a reload (`Shift + R`) to pick a change up: Ren'Py runs the
-game and exits, while the builder is a long-lived editor process the plugin can keep polling
-from.
+| | Where | What it does |
+| --- | --- | --- |
+| **Reconvert now** | on the **SpriteStudio: show** component that plays the animation | Rebuilds that one pack, whatever its record says |
+| **Import now** | plugin manager (the **Plugin** menu) → **SpriteStudio** | Converts everything added or edited since the project was opened |
+
+**Reconvert now** is the everyday one — it is per-pack and forced, because pressing it means
+you have already decided the pack is out of date. **Import now** is for a `.sspj` that is
+*new*: a component can only point at a pack that already exists, so a project dropped into
+`SpriteStudio_Source/` while the builder is open has nowhere to press. The plugin manager panel
+is not attached to anything in the scenario, which is exactly why the button lives there.
 
 ::: tip Where the notifications come from
-A background reconversion happens while you are in SpriteStudio, not in the editor, so it is
+A reconversion often finishes while you are in SpriteStudio rather than in the editor, so it is
 reported as a **toast** rather than a modal — nothing steals focus from the app you are
 actually using. The one modal is on a project whose `SpriteStudio_Source/` holds no `.sspj` at
 all, which tells a first-time author where projects go.
+:::
+
+::: tip The editor keeps drawing while it converts
+The converter is WebAssembly and its call is synchronous, so it used to freeze the editor for
+as long as a pass took — on a folder of 20 sample projects, 1.2 s, with a single project
+accounting for 0.64 s of it. It now runs in a Worker, which brings the longest pause on that
+same folder under 50 ms. Reading and writing the files still happens on the editor's thread,
+because the filesystem reaches a plugin through a renderer-only bridge; that is the part that
+remains.
 :::
 
 ### What counts as a change
@@ -201,21 +218,26 @@ sessions (it is started over once it passes 256 KB):
 
 ```
 2026-07-29T04:15:02.118Z  --- session start ---
-2026-07-29T04:15:02.140Z  watching: /Users/you/TyranoBuilder/mygame/SpriteStudio_Source
+2026-07-29T04:15:02.140Z  sources: /Users/you/TyranoBuilder/mygame/SpriteStudio_Source
 2026-07-29T04:15:02.141Z  output:   /Users/you/TyranoBuilder/mygame/data/others/ssdata
+2026-07-29T04:15:02.150Z  converter: worker (7.0.0-beta.1+427024d)
 2026-07-29T04:15:02.219Z  converted Ringo: 14 in -> 2 out (+1 textures) in 78ms -> …/ssdata/Ringo
 2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed
-2026-07-29T04:15:02.221Z  watching for changes every 3000ms
 ```
+
+The `converter:` line says where the wasm ran. `worker` is the normal answer; `inline` means
+the editor could not start a Worker, the reason is printed on the same line, and conversions
+block the UI as they used to.
 
 It also records the host environment it found at startup, which is the first thing to look at
 if the plugin does not seem to be doing anything.
 
 ### Current limits
 
-- **Conversion blocks the editor while it runs.** The wasm call is synchronous — around 78 ms
-  for one sample project, but a first pass over a folder of them freezes the UI for as long as
-  the whole batch takes. Subsequent passes only touch what changed, so this is a startup cost.
+- **Reading and writing the files still happens on the editor's thread.** The conversion itself
+  does not — it runs in a Worker — but a plugin reaches the filesystem only through a
+  renderer-only bridge, so the I/O around each project cannot move. On a folder of 20 sample
+  projects that leaves pauses under 50 ms rather than the 1.2 s the whole pass used to take.
 - **The folders are fixed.** `SpriteStudio_Source/` and `data/others/ssdata/` are not
   configurable yet (Ren'Py's importer takes an override; this one does not).
 - **Textures are copied, not embedded.** Each pack ships its images as sibling files next to
@@ -272,8 +294,10 @@ with the reason when one fails.
   and check you are not over the free version's two-plugin limit.
 - **It converted, but nothing shows in the game** — make sure *show* comes before the
   components that refer to it, and that the layer is one your game uses.
-- **A change in SpriteStudio was not picked up** — the pass runs every 3 seconds, so give it a
-  moment; if it never arrives, delete `.ss_import_state.json` and reopen the project.
+- **A change in SpriteStudio was not picked up** — nothing runs on its own after the project is
+  opened. Use **Reconvert now** on the component, or **Import now** in the plugin manager for a
+  project that has no component yet; if neither takes, delete `.ss_import_state.json` and reopen
+  the project.
 
 ## Building from source
 

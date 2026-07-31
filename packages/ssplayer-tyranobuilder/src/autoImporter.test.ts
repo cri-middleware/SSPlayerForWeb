@@ -119,11 +119,17 @@ function makeProject(): string {
   return root;
 }
 
-function importerFor(root: string, fs: HostFs, log: string[]): AutoImporter {
+function importerFor(
+  root: string,
+  fs: HostFs,
+  log: string[],
+  extra: { wasmPath?: string; workerSource?: string } = {},
+): AutoImporter {
   return new AutoImporter({
     fs,
     projectRoot: root,
-    wasmPath: WASM,
+    wasmPath: extra.wasmPath ?? WASM,
+    workerSource: extra.workerSource,
     log: (line) => log.push(line),
   });
 }
@@ -414,6 +420,47 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     // walked in full — copied textures and all — on top of that.
     expect(count.stat).toBe(sourceEntries);
     expect(count.readdir).toBeLessThan(sourceEntries);
+  });
+
+  it('still converts when the Worker refuses to start', async () => {
+    // The Worker is created from a Blob URL because a file:// document cannot
+    // load a worker script from another file:// URL, and no vendor documents
+    // what a given builder build allows. Whatever the reason it fails, the
+    // fallback is the behaviour this plugin shipped with, not a broken one.
+    const root = makeProject();
+    const fs = withApi('faithful');
+
+    // Its own wasm path, because the converter is cached per wasm for the
+    // session and the other tests in this file have already started one.
+    const wasmPath = nodePath.join(root, 'ssconverter_bg.wasm');
+    cpSync(WASM, wasmPath);
+
+    const original = (globalThis as { Worker?: unknown }).Worker;
+    (globalThis as { Worker?: unknown }).Worker = class {
+      constructor() {
+        throw new Error('refused');
+      }
+    };
+
+    try {
+      const importer = importerFor(root, fs, [], { wasmPath, workerSource: '/* a worker */' });
+      const converter = await importer.converter();
+      expect(converter.mode).toBe('inline');
+      // The log line an author would read to find out why the editor froze.
+      expect(converter.detail).toContain('refused');
+
+      const run = await importer.runOnce();
+      expect(run.failed).toEqual([]);
+      expect(run.converted.map((c) => c.name)).toEqual(['Ringo']);
+      expect(
+        readdirSync(nodePath.join(root, 'data/others/ssdata/Ringo')).some((f) =>
+          f.endsWith('.ssab'),
+        ),
+      ).toBe(true);
+    } finally {
+      if (original === undefined) delete (globalThis as { Worker?: unknown }).Worker;
+      else (globalThis as { Worker?: unknown }).Worker = original;
+    }
   });
 
   it('serialises passes that overlap', async () => {

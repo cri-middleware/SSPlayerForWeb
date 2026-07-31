@@ -13,12 +13,15 @@
 //
 // Everything the importer does is written to `<project>/ss_import_log.txt`.
 
+import workerSource from 'virtual:converter-worker';
+
 import { AutoImporter, DEFAULT_SOURCE_DIR, type ImportRunResult } from './autoImporter.js';
-import type { BuilderComponentEntry, TB } from './builderTypes.js';
+import type { BuilderComponentEntry, JQueryLike, TB } from './builderTypes.js';
 import { BUTTON_PARAM_TYPE, registerButtonParam } from './buttonParam.js';
 import { defineSSComponents } from './components.js';
 import { HostFs } from './hostFs.js';
 import { ImportLog } from './importLog.js';
+import { bindImportButton, panelHtml } from './managerPanel.js';
 
 const WASM_FILENAME = 'ssconverter_bg.wasm';
 
@@ -115,6 +118,60 @@ function notifyRun(TB: TB | undefined, run: ImportRunResult): void {
   }
 }
 
+/**
+ * Convert whatever is new or edited in the source folder, from the plugin
+ * manager panel.
+ *
+ * The counterpart of a project open, not of the per-pack Reconvert: it checks
+ * freshness rather than forcing, because what it exists to catch is a project
+ * the editor has never seen. Forcing instead would rebuild every pack in the
+ * folder to pick up one addition, and the author who wants exactly that already
+ * has the button on the `[ss_new]`.
+ *
+ * Unlike a project open it always answers, up to date included. Silence is the
+ * right reply to work nobody asked for; it is the wrong reply to a press.
+ */
+let importing = false;
+
+function importNow(TB: TB | undefined, importer: AutoImporter, button: JQueryLike): void {
+  // `queuePass` would serialise a second press safely, but running the same
+  // pass twice tells the author nothing and takes twice as long to say it.
+  if (importing) return;
+  importing = true;
+
+  const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
+  const label = button.val();
+  button.prop('disabled', true).val(t('Converting…'));
+
+  void importer
+    .runOnce()
+    .then((run) => {
+      if (run.empty) {
+        TB?.$?.inform?.(
+          `SpriteStudio: ${t('Put a SpriteStudio project here, and it is converted for you:')} ` +
+            `${DEFAULT_SOURCE_DIR}/`,
+        );
+        return;
+      }
+      if (run.converted.length === 0 && run.failed.length === 0) {
+        TB?.$?.inform?.(`SpriteStudio: ${t('Already up to date')}`, 'success');
+        return;
+      }
+      notifyRun(TB, run);
+    })
+    .catch((e) => {
+      console.error('[ssplayer-tyranobuilder] import failed', e);
+      TB?.$?.inform?.(`SpriteStudio: ${t('Failed')} (${LOG_FILENAME})`, 'error');
+    })
+    .finally(() => {
+      importing = false;
+      // The panel may have been re-rendered underneath us, in which case this
+      // restores a button nobody is looking at. Harmless, and simpler than
+      // finding whichever one is on screen now.
+      button.prop('disabled', false).val(label);
+    });
+}
+
 /** Everything the plugin needs from the editor, resolved once at construction. */
 interface Host {
   fs: HostFs;
@@ -176,6 +233,7 @@ function createHost(TB: TB | undefined): Host | null {
     fs,
     projectRoot,
     wasmPath: relocateConverterWasm(fs, projectRoot, pluginDir),
+    workerSource,
     log: (line) => log.line(line),
   });
 
@@ -214,6 +272,23 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
   const wasmPath = importer.wasmPath;
   log.line(`converter wasm: ${wasmPath} (${fs.statOf(wasmPath)?.size ?? 0} bytes)`);
 
+  // Started before the first pass rather than by it, so this line lands above
+  // the conversions it explains. `inline` is the answer to "why did the editor
+  // freeze": the Worker could not be started, and the reason is on the line.
+  //
+  // Not fatal to the boot. Nothing here can convert if this failed, but the
+  // pass below reports that as a failed run in the terms an author is reading
+  // for, and stopping now would leave the log ending mid-sentence.
+  try {
+    const converter = await importer.converter();
+    log.line(
+      `converter: ${converter.mode} (${converter.version})` +
+        (converter.detail ? ` — no worker: ${converter.detail}` : ''),
+    );
+  } catch (e) {
+    log.line(`converter: unavailable (${(e as Error).message})`);
+  }
+
   // Create the drop folder on first run so there is somewhere obvious to put
   // projects — the Ren'Py version simply returns when it is missing, which
   // leaves a first-time user with nothing to go on.
@@ -230,9 +305,10 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
       `${run.failed.length} failed${run.empty ? ' (no .sspj found)' : ''}`,
   );
 
-  // Said plainly, because it is the plugin's most surprising property: adding a
-  // .sspj now will do nothing until the project is reopened.
-  log.line('one pass per project open; use Reconvert in an [ss_new] to refresh');
+  log.line(
+    'one pass per project open; "Import now" in the plugin manager picks up ' +
+      'later additions, Reconvert in an [ss_new] rebuilds one pack',
+  );
 
   // Deferred either way: the constructor runs mid-boot, and alertify is nicer
   // once the editor has finished painting.
@@ -274,19 +350,25 @@ export class plugin_setting {
     const t = (text: string): string =>
       typeof TB?.$?.s === 'function' ? TB.$.s(text) : text;
     this.name = t('SpriteStudio');
-    this.plugin_text = t(
-      'Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted each time the project is opened. After editing in SpriteStudio, use "Reconvert now" on a SpriteStudio: show component. Place the animation from the SpriteStudio components in the palette.',
-    );
+
     // Must never throw: `loadPlugins()` does not guard the constructor, and an
     // exception here would abort loading of every plugin after this one.
-    let host: Host | null = null;
+    let started: Host | null = null;
     try {
-      host = createHost(TB);
-      if (host) void boot(host, TB).catch((e) => console.error('[ssplayer-tyranobuilder]', e));
+      started = createHost(TB);
+      if (started) void boot(started, TB).catch((e) => console.error('[ssplayer-tyranobuilder]', e));
     } catch (e) {
       console.error('[ssplayer-tyranobuilder] boot failed', e);
     }
+    const host = started;
     this.host = host;
+
+    // Written after the host is resolved, because the panel only offers to
+    // convert when there is something that can.
+    this.plugin_text = panelHtml(t, host !== null);
+    if (host) {
+      bindImportButton(TB?.$, (button) => importNow(TB, host.importer, button));
+    }
   }
 
   /**

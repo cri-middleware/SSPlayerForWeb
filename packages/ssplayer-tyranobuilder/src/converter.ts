@@ -5,19 +5,76 @@
 // hands back a `Map<name, bytes>`. That is exactly the shape this host needs,
 // because in the builder the *host* is the only thing that can read files (via
 // `studio_api`), and wasm cannot `fetch()` a `file://` URL anyway.
+//
+// It is also what lets the wasm run in a Worker. The call is synchronous and
+// long enough to be seen — on the machine this was measured on, a project open
+// with 20 sample projects froze the editor for 1.2 s, 680 ms of it in one
+// project — so it runs off the UI thread, and this file keeps only the halves a
+// Worker cannot do: reading the sources and writing the results, both of which
+// need the renderer-only `studio_api` bridge.
+//
+// The Worker is not assumed to exist. It is started from a Blob URL — a
+// `file://` document cannot load a worker script from another `file://` URL,
+// and no vendor documents what a given builder build allows — so it is proven
+// at startup and falls back to converting in-thread, which is exactly what
+// `probeBinaryBridge()` does for the binary bridge. The fallback is the old
+// behaviour, not a degraded one: the editor freezes, as it always did.
 
 import { convertProject, init, version as converterVersion } from '@spritestudio/ssconverter-core';
 
+import { CONVERT_OPTIONS, type FromWorker, type ToWorker } from './converterProtocol.js';
 import type { HostFs } from './hostFs.js';
 
-let initialised: Promise<string> | null = null;
+/** One conversion's results, as they leave the converter. */
+export interface Conversion {
+  /** Generated file name -> contents. */
+  output: Map<string, Uint8Array>;
+  /** Referenced textures: destination path -> path within the source project. */
+  assets: Map<string, string>;
+}
+
+export interface Converter {
+  /** Converter build version; what a pack's import record is stamped with. */
+  readonly version: string;
+  /** Whether conversions block the editor. Logged once, at startup. */
+  readonly mode: 'worker' | 'inline';
+  /** Why the Worker was not used; empty when it was. */
+  readonly detail: string;
+  convert(files: Map<string, Uint8Array>): Promise<Conversion>;
+  dispose(): void;
+}
+
+export interface ConverterOptions {
+  /** Absolute path of `ssconverter_bg.wasm`. */
+  wasmPath: string;
+  /**
+   * The Worker's own bundle, as source. Inlined into the plugin at build time
+   * (`tsdown.config.ts`) because a Blob URL is the only way to start a Worker
+   * from a `file://` document. Omitted — as it is in the tests — conversion
+   * runs on the calling thread.
+   */
+  workerSource?: string;
+}
 
 /**
- * Instantiate the converter wasm once per editor session. Resolves to the
- * converter's build version string.
+ * How long to wait for a Worker to report itself ready before giving up on it.
+ *
+ * A Worker that cannot load normally fires `onerror`, which is faster than any
+ * timeout; this is the backstop for the case that stays silent. Generous,
+ * because it is paid once per session and only ever by a builder that was going
+ * to fall back anyway — instantiating 1.4 MB of wasm on a slow machine must not
+ * be mistaken for a Worker that never started.
  */
-export function ensureConverter(fs: HostFs, wasmPath: string): Promise<string> {
-  initialised ??= (async () => {
+const WORKER_START_TIMEOUT_MS = 20_000;
+
+/**
+ * Instantiate the converter wasm on this thread. Once per session: the module
+ * is 1.4 MB and the editor converts repeatedly.
+ */
+let inlineInit: Promise<string> | null = null;
+
+function startInline(fs: HostFs, wasmPath: string, detail: string): Promise<Converter> {
+  inlineInit ??= (async () => {
     if (!fs.exists(wasmPath)) {
       throw new Error(`converter wasm not found: ${wasmPath}`);
     }
@@ -26,7 +83,184 @@ export function ensureConverter(fs: HostFs, wasmPath: string): Promise<string> {
     await init(fs.readBinary(wasmPath));
     return converterVersion();
   })();
-  return initialised;
+
+  return inlineInit.then((version) => ({
+    version,
+    mode: 'inline' as const,
+    detail,
+    convert(files: Map<string, Uint8Array>): Promise<Conversion> {
+      const result = convertProject(files, CONVERT_OPTIONS);
+      try {
+        return Promise.resolve({
+          output: result.output as Map<string, Uint8Array>,
+          assets: result.assets as unknown as Map<string, string>,
+        });
+      } finally {
+        // Release the wasm-side result now rather than waiting for the
+        // FinalizationRegistry — this process converts repeatedly and stays
+        // alive for as long as the editor is open. The byte arrays above are
+        // copies out of the wasm heap, so they outlive it.
+        result.free();
+      }
+    },
+    dispose() {},
+  }));
+}
+
+/**
+ * Start the Worker and wait for it to say the wasm is up. Rejects for every
+ * reason a Worker can fail to be one, which is the signal to fall back.
+ */
+async function startWorker(
+  fs: HostFs,
+  wasmPath: string,
+  source: string,
+  /** Called if the Worker dies after it was working, so it can be replaced. */
+  onDeath: () => void,
+): Promise<Converter> {
+  if (typeof Worker !== 'function' || typeof Blob !== 'function') {
+    throw new Error('no Worker in this runtime');
+  }
+  if (!fs.exists(wasmPath)) {
+    throw new Error(`converter wasm not found: ${wasmPath}`);
+  }
+
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+
+  let worker: Worker;
+  try {
+    worker = new Worker(url);
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
+
+  const pending = new Map<
+    number,
+    { resolve: (value: Conversion) => void; reject: (error: Error) => void }
+  >();
+  let nextId = 1;
+  let onReady: (version: string) => void = () => {};
+  let onFailed: (error: Error) => void = () => {};
+  const ready = new Promise<string>((resolve, reject) => {
+    onReady = resolve;
+    onFailed = reject;
+  });
+
+  worker.onmessage = (event: MessageEvent<FromWorker>) => {
+    const reply = event.data;
+    switch (reply.kind) {
+      case 'ready':
+        onReady(reply.version);
+        return;
+      case 'unavailable':
+        onFailed(new Error(reply.message));
+        return;
+      case 'converted':
+        pending.get(reply.id)?.resolve({ output: reply.output, assets: reply.assets });
+        pending.delete(reply.id);
+        return;
+      case 'failed':
+        pending.get(reply.id)?.reject(new Error(reply.message));
+        pending.delete(reply.id);
+        return;
+    }
+  };
+
+  // Covers the script failing to load at all, and anything the Worker throws
+  // outside a request. Without this a rejected conversion would simply never
+  // settle, and the import pass behind it would wait forever.
+  let started = false;
+  let dead: Error | null = null;
+  worker.onerror = (event: ErrorEvent) => {
+    dead = new Error(event.message || 'the conversion worker stopped');
+    onFailed(dead);
+    for (const request of pending.values()) request.reject(dead);
+    pending.clear();
+    // Before it was ready this is just a failed start, and the caller is
+    // already falling back. After that it has to be replaced, or every later
+    // conversion would post into nothing.
+    if (started) onDeath();
+  };
+
+  const timer = setTimeout(
+    () => onFailed(new Error(`worker did not start within ${WORKER_START_TIMEOUT_MS} ms`)),
+    WORKER_START_TIMEOUT_MS,
+  );
+  worker.postMessage({ kind: 'init', wasm: fs.readBinary(wasmPath) } satisfies ToWorker);
+
+  let version: string;
+  try {
+    version = await ready;
+  } catch (e) {
+    worker.terminate();
+    URL.revokeObjectURL(url);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+  // Held until now: revoking straight after `new Worker()` can outrun the
+  // fetch of the script it was given.
+  URL.revokeObjectURL(url);
+  started = true;
+
+  return {
+    version,
+    mode: 'worker',
+    detail: '',
+    convert(files: Map<string, Uint8Array>): Promise<Conversion> {
+      // A dead Worker takes messages and never answers, so say so instead:
+      // the pass reports a failed project, rather than waiting forever.
+      if (dead) return Promise.reject(dead);
+      const id = nextId++;
+      return new Promise<Conversion>((resolve, reject) => {
+        pending.set(id, { resolve, reject });
+        worker.postMessage({ kind: 'convert', id, files } satisfies ToWorker);
+      });
+    },
+    dispose() {
+      worker.terminate();
+    },
+  };
+}
+
+/**
+ * One converter per editor session, not per plugin instance: `loadPlugins()`
+ * rebuilds every plugin whenever any one of them is added, removed or
+ * installed, and a Worker started in each of those constructors would leak one
+ * wasm instance per rebuild. Keyed by the wasm it was built from, so opening a
+ * different project — which moves it — replaces the Worker rather than reusing
+ * one holding the previous project's converter.
+ */
+let current: { key: string; converter: Promise<Converter> } | null = null;
+
+export function ensureConverter(fs: HostFs, opts: ConverterOptions): Promise<Converter> {
+  const key = opts.wasmPath;
+  if (current?.key === key) return current.converter;
+
+  current?.converter.then(
+    (previous) => previous.dispose(),
+    () => {},
+  );
+
+  const source = opts.workerSource;
+  const converter = (async () => {
+    if (!source) {
+      return startInline(fs, opts.wasmPath, 'no worker bundle supplied');
+    }
+    try {
+      return await startWorker(fs, opts.wasmPath, source, () => {
+        // Drop it from the cache so the next pass starts a fresh Worker, or
+        // falls back. A dead one would otherwise be handed out all session.
+        if (current?.key === key) current = null;
+      });
+    } catch (e) {
+      return startInline(fs, opts.wasmPath, (e as Error).message);
+    }
+  })();
+
+  current = { key, converter };
+  return converter;
 }
 
 export interface ConvertStats {
@@ -48,16 +282,17 @@ export interface ConvertStats {
  * paths relative to the `.sspj`'s own directory, and non-embedded output ships
  * the textures as sibling files (`result.assets` maps destination -> source).
  *
- * Synchronous wasm work — it blocks the editor UI for its duration. Acceptable
- * for a PoC; a Worker is the fix (the core's byte-in/byte-out API already suits
- * one, since a Worker has no filesystem access of its own).
+ * The middle of this — the wasm — is where the time goes and is the part that
+ * runs elsewhere. The reads and writes around it are `studio_api` calls, so
+ * they stay on the UI thread whatever `converter.mode` says.
  */
-export function convertProjectAt(
+export async function convertProjectAt(
   fs: HostFs,
+  converter: Converter,
   sspjPath: string,
   outDir: string,
   now: () => number,
-): ConvertStats {
+): Promise<ConvertStats> {
   const started = now();
   const sourceDir = fs.path.dirname(sspjPath);
 
@@ -70,7 +305,7 @@ export function convertProjectAt(
     throw new Error(`no readable files under ${sourceDir}`);
   }
 
-  const result = convertProject(files, { embedded: false });
+  const { output, assets } = await converter.convert(files);
 
   const stats: ConvertStats = {
     inputFiles: files.size,
@@ -80,30 +315,23 @@ export function convertProjectAt(
     elapsedMs: 0,
   };
 
-  try {
-    fs.mkdirp(outDir);
+  fs.mkdirp(outDir);
 
-    for (const [name, data] of result.output.entries() as IterableIterator<[string, Uint8Array]>) {
-      const dest = fs.resolveWithin(outDir, name, 'output path');
-      fs.writeBinary(dest, data);
-      stats.outputFiles++;
-      if (name.toLowerCase().endsWith('.ssab')) stats.ssab.push(name);
-    }
+  for (const [name, data] of output) {
+    const dest = fs.resolveWithin(outDir, name, 'output path');
+    fs.writeBinary(dest, data);
+    stats.outputFiles++;
+    if (name.toLowerCase().endsWith('.ssab')) stats.ssab.push(name);
+  }
 
-    // Textures: a Node-side `copySync`, so these bytes never cross the bridge.
-    for (const [destPath, srcPath] of result.assets.entries() as IterableIterator<[string, string]>) {
-      const src = fs.resolveWithin(sourceDir, srcPath, 'asset source path');
-      const dest = fs.resolveWithin(outDir, destPath, 'asset output path');
-      if (!fs.exists(src)) continue;
-      fs.mkdirp(fs.path.dirname(dest));
-      fs.copy(src, dest);
-      stats.copiedAssets++;
-    }
-  } finally {
-    // Release the wasm-side result now rather than waiting for the
-    // FinalizationRegistry — this process converts repeatedly and stays alive
-    // for as long as the editor is open.
-    result.free();
+  // Textures: a Node-side `copySync`, so these bytes never cross the bridge.
+  for (const [destPath, srcPath] of assets) {
+    const src = fs.resolveWithin(sourceDir, srcPath, 'asset source path');
+    const dest = fs.resolveWithin(outDir, destPath, 'asset output path');
+    if (!fs.exists(src)) continue;
+    fs.mkdirp(fs.path.dirname(dest));
+    fs.copy(src, dest);
+    stats.copiedAssets++;
   }
 
   stats.elapsedMs = Math.round(now() - started);
