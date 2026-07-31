@@ -380,7 +380,26 @@ export class SSPlayer {
   public set frame(v: number) { this.internalPlayer.setFrame(v); }
 
   public get isPlaying(): boolean { return this._isPlaying; }
+  public get speedScale(): number { return this.internalPlayer.getSpeed(); }
   public set speedScale(v: number) { this.internalPlayer.setSpeed(v); }
+
+  /**
+   * How many times the animation plays: `-1` for forever, `n > 0` for n times.
+   * The runtime normalises anything `<= 0` to `-1`, so reading back a `0` you
+   * wrote gives `-1`.
+   *
+   * **Assigning restarts the loop budget**, even with the value it already has:
+   * the runtime resets its remaining-loop counter on every write. So drive it
+   * from the value you last *requested*, never from a read-back comparison —
+   * `if (player.loopCount !== wanted) player.loopCount = wanted` re-writes on
+   * every frame when `wanted` is `0` (it reads back as `-1`), and an animation
+   * whose budget is reset every frame never finishes.
+   */
+  public get loopCount(): number { return this.internalPlayer.getLoop(); }
+  public set loopCount(v: number) { this.internalPlayer.setLoop(v); }
+
+  /** URL the loaded pack came from; empty for packs bound as bytes without one. */
+  public get ssabUrl(): string { return this.internalPlayer.ssabUrl; }
 
   public get subFrameEnabled(): boolean { return this.internalPlayer.subFrameEnabled; }
   public set subFrameEnabled(v: boolean) { this.internalPlayer.subFrameEnabled = v; }
@@ -399,6 +418,18 @@ export class SSPlayer {
     this._scaleX = t.scaleX ?? 1;
     this._scaleY = t.scaleY ?? 1;
     this._rotation = t.rotation ?? 0;
+  }
+
+  /**
+   * What {@link setTransform} last received, with its defaults filled in — the
+   * same shape, so `setTransform(getTransform())` is a no-op.
+   *
+   * Note this is the *authored* placement, not where the player is on screen:
+   * the box it is relative to may have moved since (a surface resize, an overlay
+   * scroll), which is why the matrix is only composed at draw time.
+   */
+  public getTransform(): { x: number; y: number; scaleX: number; scaleY: number; rotation: number } {
+    return { x: this._x, y: this._y, scaleX: this._scaleX, scaleY: this._scaleY, rotation: this._rotation };
   }
 
   /**

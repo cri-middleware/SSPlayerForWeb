@@ -84,8 +84,17 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
         const buffer = await response.arrayBuffer();
 
-        this._ssabUrl = ssabUrl;
         this.bindResource(new Uint8Array(buffer), ssabUrl);
+    }
+
+    /**
+     * URL the bound pack came from, or `''` for one bound as bytes with no URL.
+     * Hosts otherwise have to remember this themselves to answer "is this the
+     * same pack?" when deciding between an in-place animation switch and a
+     * rebuild.
+     */
+    public get ssabUrl(): string {
+        return this._ssabUrl;
     }
 
     /**
@@ -98,6 +107,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public bindResource(buffer: Uint8Array, ssabUrl?: string) {
         if (ssabUrl !== undefined) {
+            // Recorded on this path too, not just in load(): a host that fetches
+            // the bytes itself (ssplayer-rmmz does, for a better error message)
+            // would otherwise leave `ssabUrl` empty for a pack that plainly has
+            // one, and only the asset base would survive.
+            this._ssabUrl = ssabUrl;
             this._assetBaseUrl = ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
         }
         if (this._ssabResource) {
