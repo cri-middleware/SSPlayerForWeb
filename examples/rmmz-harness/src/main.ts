@@ -107,7 +107,8 @@ async function boot() {
   });
 
   const playAnim = (name: string) => {
-    player.setAnimation(name, -1);
+    player.setAnimation(name);
+    player.loopCount = -1;
     player.play();
   };
   playAnim(first);

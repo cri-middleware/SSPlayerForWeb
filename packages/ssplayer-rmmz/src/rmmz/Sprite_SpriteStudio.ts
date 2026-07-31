@@ -59,7 +59,8 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
       const token = ++this._loadToken;
       await this.player.load(spec.ssabUrl);
       if (token !== this._loadToken) return; // superseded by a newer load
-      this.player.setAnimation(spec.animation, spec.loop ?? -1);
+      this.player.setAnimation(spec.animation);
+      this.player.loopCount = spec.loop ?? -1;
       this.player.play();
     }
 
@@ -74,7 +75,8 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
       // Nothing awaits below, so no load can slip in between: bump the token so a
       // load still in flight does not overwrite this switch when it lands.
       this._loadToken += 1;
-      this.player.setAnimation(animation, loop);
+      this.player.setAnimation(animation);
+      this.player.loopCount = loop;
       this.player.play();
     }
 

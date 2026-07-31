@@ -8,16 +8,13 @@
 await player.load(ssabUrl); // テクスチャ・インスタンスパック・サウンドは .ssab と同じディレクトリから読み込まれます
 ```
 
-WebGL (`SSPlayer`):
 ```ts
-player.setAnimation(name);                       // アニメーションを選択
+player.setAnimation(name);  // アニメーションを選択（WebGL / PixiJS 共通）
+player.animationName;       // 現在のアニメーション名
 ```
 
-PixiJS (`SSPlayer`):
-```ts
-player.setAnimation(name); // 第2引数: loop回数(既定-1)
-player.animationName;            // 現在のアニメーション名
-```
+再生設定は引数ではなくプロパティです。`loopCount` や `speedScale` などはアニメーション選択後に
+設定してください（[再生制御](#再生制御)）。
 
 `setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので
 `load()` で全て読み込まれ、切り替えはランタイムのリセットのみ — 待つべき読み込みはありません。

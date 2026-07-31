@@ -481,10 +481,12 @@ export class SSPlayer extends Container {
     /**
      * Select an animation. Synchronous: `load()` has already brought in the
      * pack's textures, instance packs and sounds, so a switch is a runtime reset.
+     *
+     * Playback settings are separate properties — set {@link loopCount} after
+     * this, the way the Godot / Unity players do it.
      */
-    public setAnimation(animationName: string, loop: number = -1): void {
+    public setAnimation(animationName: string): void {
         this.internalPlayer.setAnimation(animationName);
-        this.internalPlayer.setLoop(loop);
     }
 
     public get animationName(): string {

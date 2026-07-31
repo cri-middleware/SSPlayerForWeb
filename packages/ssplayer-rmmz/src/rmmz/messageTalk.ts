@@ -69,7 +69,8 @@ function apply(printing: boolean): void {
     // and the saved copy is pruned to match what the runtime discarded.)
     const overrides = g.$gameScreen?.picture(pid)?.ssData?.()?.overrides;
     try {
-      player.setAnimation(desired, -1);
+      player.setAnimation(desired);
+      player.loopCount = -1;
       applyPartOverrides(player, overrides);
       player.play();
     } catch (e: unknown) {

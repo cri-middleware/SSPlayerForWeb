@@ -185,12 +185,14 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   /**
-   * Play `animationName`. If empty, the first animation in the .ssab is used; if
-   * a non-existent name is given, we warn (listing the real names) and fall back
-   * to the first — so authors who mistype in the plugin command still see
+   * Select `animationName`. If empty, the first animation in the .ssab is used;
+   * if a non-existent name is given, we warn (listing the real names) and fall
+   * back to the first — so authors who mistype in the plugin command still see
    * *something*, and get the exact names in the console.
+   *
+   * Playback settings are separate properties — set {@link loopCount} after this.
    */
-  public setAnimation(animationName: string, loop = -1): void {
+  public setAnimation(animationName: string): void {
     const names = this.getAnimationNames();
     let target = animationName;
     if (!target) {
@@ -202,7 +204,6 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       target = names[0];
     }
     this.internalPlayer.setAnimation(target);
-    this.internalPlayer.setLoop(loop);
   }
 
   public play(startFrame = -1): void {

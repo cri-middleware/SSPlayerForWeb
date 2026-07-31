@@ -195,7 +195,8 @@ function boot(): void {
     const baseLoop = cur.loop;
     const revert = () => {
       try {
-        player.setAnimation(base, baseLoop);
+        player.setAnimation(base);
+        player.loopCount = baseLoop;
         player.play();
       } catch (e: unknown) {
         console.error('[ssplayer-rmmz] playSSOnce: failed to return to base loop:', e);
@@ -212,7 +213,8 @@ function boot(): void {
       }),
     );
     try {
-      player.setAnimation(oneShot, count);
+      player.setAnimation(oneShot);
+      player.loopCount = count;
       player.play();
     } catch (e: unknown) {
       clearLiveChain(pictureId);
@@ -260,7 +262,8 @@ function boot(): void {
         );
       }
       try {
-        player.setAnimation(name, loop);
+        player.setAnimation(name);
+        player.loopCount = loop;
         player.play();
       } catch (e: unknown) {
         clearLiveChain(pictureId);

@@ -41,7 +41,7 @@ async function main() {
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
   await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
-  player.setAnimation('run');    // loop 既定値は -1（無限ループ）
+  player.setAnimation('run');    // loopCount の既定値は -1（無限ループ）
   player.play();
 }
 
@@ -68,7 +68,7 @@ async function main() {
   // 2. プレイヤーを生成し、.ssab を読み込んでアニメーションを選択
   const player = new SSPlayer();
   await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
-  player.setAnimation('run');    // loop 既定値は -1（無限ループ）
+  player.setAnimation('run');    // loopCount の既定値は -1（無限ループ）
 
   player.position.set(640, 480);
   app.stage.addChild(player);
