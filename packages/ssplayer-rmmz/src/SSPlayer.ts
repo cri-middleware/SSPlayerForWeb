@@ -20,12 +20,13 @@ import {
   initializeWasm,
   ssFormat,
   SSOverridePriority,
-  decomposePartAffine,
+  SSPartFollower,
   type SSBlendOp,
   type IAudioManager,
   type WebPlaybackDirection,
   type WebPlaybackStyle,
   type SSPartFollowOptions,
+  type SSPartAttachment as SSPartAttachmentOf,
 } from '@spritestudio/ssplayer-webgl';
 import type { Container as PixiContainer, Renderer } from 'pixi.js';
 import { getMZGl, getPIXI, type GL } from './rmmzGlobals.js';
@@ -36,25 +37,9 @@ export type Unsubscribe = () => void;
 
 /**
  * A live part attachment created by {@link SSPlayer.attachToPart}: `target`
- * follows the part each frame until {@link detach} is called.
+ * follows the part each frame until `detach()` is called.
  */
-export interface SSPartAttachment {
-  readonly target: PixiContainer;
-  detach(): void;
-}
-
-// Internal per-attachment state; `autoHidden` tracks a hide WE imposed (part
-// absent / hidden) so we only restore visibility we took away.
-interface PartAttachmentState {
-  part: number | string;
-  target: PixiContainer;
-  position: boolean;
-  rotation: boolean;
-  scale: boolean;
-  onHide: 'follow' | 'hide';
-  addedAsChild: boolean;
-  autoHidden: boolean;
-}
+export type SSPartAttachment = SSPartAttachmentOf<PixiContainer>;
 
 export interface SSUserDataEvent {
   partIndex: number;
@@ -104,11 +89,11 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   private _audioListeners = new Set<(e: SSAudioEvent) => void>();
   private _frameListeners = new Set<(frame: number) => void>();
 
-  // Part following: targets driven to follow a part each frame. Unlike
+  // Part following. The bookkeeping is core's (shared with ssplayer-pixi, which
+  // had the same code); only the write onto a Pixi object is ours. Unlike
   // ssplayer-pixi we don't clear children per frame (drawing goes through
   // _render), so an addAsChild target is a plain child and needs no re-add.
-  private _attachments: PartAttachmentState[] = [];
-  private readonly _attachAffine = new Float32Array(6);
+  private readonly _follower: SSPartFollower<PixiContainer>;
   // Reused PIXI.Matrix (v5) for full-affine application; created lazily since
   // PIXI is only guaranteed present once MZ has booted.
   private _attachMatrix: any = null;
@@ -124,6 +109,26 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     this._gl = gl ?? getMZGl();
     this.resourceManager = new RMMZResourceManager(this._gl);
     this.internalPlayer = new DirectInternalPlayer(this.resourceManager);
+    this._follower = new SSPartFollower<PixiContainer>(this.internalPlayer, {
+      addChild: (t) => { this.addChild(t); },
+      // Only un-parent what is still ours: a host that re-parented the target
+      // itself must not have it yanked out from under it.
+      removeChild: (t) => { if (t.parent === (this as unknown as PixiContainer)) this.removeChild(t); },
+      setVisible: (t, v) => { t.visible = v; },
+      applyAffine: (t, affine) => {
+        // PIXI.Matrix is (a, b, c, d, tx, ty) = (m00, m10, m01, m11, tx, ty).
+        const PIXIrt = getPIXI();
+        if (!PIXIrt) return;
+        if (!this._attachMatrix) this._attachMatrix = new PIXIrt.Matrix();
+        this._attachMatrix.set(affine[0], affine[2], affine[1], affine[3], affine[4], affine[5]);
+        t.transform.setFromMatrix(this._attachMatrix);
+      },
+      applyDecomposed: (t, d, axes) => {
+        if (axes.position) t.position.set(d.x, d.y);
+        if (axes.rotation) t.rotation = d.rotation;
+        if (axes.scale) t.scale.set(d.scaleX, d.scaleY);
+      },
+    });
     registerSSPlayerRenderer(); // idempotent Renderer.registerPlugin('ssplayer', ...)
   }
 
@@ -212,7 +217,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
 
     // World matrices are now final for this frame: drive followers, then notify
     // per-frame listeners (the point getPartTransform is valid for this frame).
-    if (this._attachments.length > 0) this.updateAttachments();
+    if (this._follower.size > 0) this._follower.update();
     if (this._frameListeners.size > 0) {
       const f = this.internalPlayer.getFrameNo();
       this._frameListeners.forEach((cb) => cb(f));
@@ -411,62 +416,12 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * earlier attachment. Returns a handle whose `detach()` stops the following.
    */
   public attachToPart(part: number | string, target: PixiContainer, options: SSPartFollowOptions = {}): SSPartAttachment {
-    this.detachFromPart(target);
-
-    const addedAsChild = options.addAsChild ?? true;
-    const state: PartAttachmentState = {
-      part,
-      target,
-      position: options.position ?? true,
-      rotation: options.rotation ?? true,
-      scale: options.scale ?? true,
-      onHide: options.onHide ?? 'follow',
-      addedAsChild,
-      autoHidden: false,
-    };
-    if (addedAsChild) this.addChild(target);
-    this._attachments.push(state);
-
-    return { target, detach: () => this.detachFromPart(target) };
+    return this._follower.attach(part, target, options);
   }
 
   /** Stop following for `target`; reverses the parenting / visibility the attach set up. */
   public detachFromPart(target: PixiContainer): void {
-    const i = this._attachments.findIndex((a) => a.target === target);
-    if (i < 0) return;
-    const [state] = this._attachments.splice(i, 1);
-    if (state.addedAsChild && target.parent === this) this.removeChild(target);
-    if (state.autoHidden) target.visible = true;
-  }
-
-  private updateAttachments(): void {
-    const PIXIrt = getPIXI();
-    for (const a of this._attachments) {
-      const idx = typeof a.part === 'string' ? this.internalPlayer.findPartIndex(a.part) : a.part;
-
-      const hide = idx < 0 || (a.onHide === 'hide' && this.internalPlayer.isPartHidden(idx) === true);
-      if (hide) {
-        if (!a.autoHidden) { a.target.visible = false; a.autoHidden = true; }
-        continue;
-      }
-      if (a.autoHidden) { a.target.visible = true; a.autoHidden = false; }
-
-      const affine = this.internalPlayer.getPartTransform(idx, this._attachAffine);
-      if (!affine) continue;
-
-      if (a.position && a.rotation && a.scale && PIXIrt) {
-        // Full affine → exact (skew / mirror). PIXI.Matrix is (a, b, c, d, tx,
-        // ty) = (m00, m10, m01, m11, tx, ty). Reuse one scratch matrix.
-        if (!this._attachMatrix) this._attachMatrix = new PIXIrt.Matrix();
-        this._attachMatrix.set(affine[0], affine[2], affine[1], affine[3], affine[4], affine[5]);
-        a.target.transform.setFromMatrix(this._attachMatrix);
-      } else {
-        const d = decomposePartAffine(affine);
-        if (a.position) a.target.position.set(d.x, d.y);
-        if (a.rotation) a.target.rotation = d.rotation;
-        if (a.scale) a.target.scale.set(d.scaleX, d.scaleY);
-      }
-    }
+    this._follower.detach(target);
   }
 
   private pollEvents(): void {
@@ -611,7 +566,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public override destroy(options?: any): void {
     // Detach followers first so a host-owned target is neither destroyed nor
     // left hidden by our teardown.
-    for (const a of [...this._attachments]) this.detachFromPart(a.target);
+    this._follower.detachAll();
     // Immediately free WASM memory (spec §10.1) rather than waiting for GC.
     this.internalPlayer?.destroy();
     this.resourceManager?.destroy();
