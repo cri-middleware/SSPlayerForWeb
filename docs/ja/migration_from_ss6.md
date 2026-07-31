@@ -33,7 +33,7 @@ import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 await SSPlayer.initialize();            // 起動時に一度だけ
 const player = new SSPlayer();          // 引数なし
 await player.load('character.ssab');    // .ssab を読み込み
-await player.setAnimation('walk', -1);  // アニメ名を直接指定（-1 = 無限ループ）
+player.setAnimation('walk', -1);  // アニメ名を直接指定（-1 = 無限ループ）
 app.stage.addChild(player);
 player.play();
 ```

@@ -116,7 +116,7 @@ export class UIManager {
         this.animationSelect.addEventListener('change', async (e) => {
             const animName = (e.target as HTMLSelectElement).value;
             if (animName) {
-                await this.player.setAnimation(animName);
+                this.player.setAnimation(animName);
                 this.syncAfterLoad();
             }
         });

@@ -253,7 +253,7 @@ export class DropLoader {
             this.ui.updateAnimationSelect(anims);
 
             if (anims.length > 0) {
-                await this.player.setAnimation(anims[0]);
+                this.player.setAnimation(anims[0]);
                 this.ui.syncAfterLoad();
             }
 

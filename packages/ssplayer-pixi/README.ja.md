@@ -63,7 +63,7 @@ document.body.appendChild(app.canvas);
 const player = new SSPlayer();
 player.attachRenderer(app.renderer); // 任意 — 下のマスクの注意を参照
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-await player.setAnimation('run');   // loop = -1 (infinite) by default
+player.setAnimation('run');
 
 player.position.set(640, 480);
 app.stage.addChild(player);
@@ -121,7 +121,7 @@ CDN 経由）ではバンドラが行う自動パス解決が効きません。�
 
     const player = new SSPlayer();
     await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
-    await player.setAnimation('run');
+    player.setAnimation('run');
     player.position.set(640, 480);
     app.stage.addChild(player);
     player.play();
@@ -147,7 +147,7 @@ CDN 経由）ではバンドラが行う自動パス解決が効きません。�
 
   const player = new SSPlayer();
   await player.load('./Ringo.ssab');
-  await player.setAnimation('run');
+  player.setAnimation('run');
   player.position.set(640, 480);
   app.stage.addChild(player);
   player.play();

@@ -344,7 +344,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   let anime = opts.anime;
   if (!anime) anime = player.getAnimationNames()[0] ?? '';
   if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
-  await player.setAnimation(anime);
+  player.setAnimation(anime);
 
   player.loopCount = opts.loop;
   // A fresh player means a fresh WASM context, whose override table starts
@@ -406,17 +406,17 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
     meta.next = undefined;
     meta.anime = next.anime;
     meta.loop = next.loop;
-    void player
-      .setAnimation(next.anime)
-      .then(() => {
-        // The author DID ask for this animation change (they wrote `next=`), so
-        // drop the overrides a new setup discards, exactly like [ss_play].
-        overridesOf(entry, persist).pruneForNewAnimation();
-        player.loopCount = next.loop;
-        player.play();
-        persist();
-      })
-      .catch((err) => console.error('[ss] next animation failed:', (err as Error)?.stack ?? err));
+    try {
+      player.setAnimation(next.anime);
+      // The author DID ask for this animation change (they wrote `next=`), so
+      // drop the overrides a new setup discards, exactly like [ss_play].
+      overridesOf(entry, persist).pruneForNewAnimation();
+      player.loopCount = next.loop;
+      player.play();
+      persist();
+    } catch (err) {
+      console.error('[ss] next animation failed:', (err as Error)?.stack ?? err);
+    }
   };
 
   const chain: Array<() => void> = [];
@@ -529,7 +529,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
     if (pm.anime) {
       meta.anime = String(pm.anime);
-      await player.setAnimation(meta.anime);
+      player.setAnimation(meta.anime);
       // Setting up an animation makes the runtime drop every override but the
       // Permanent ones; keep the saved mirror in step so a later [ss_restore]
       // cannot resurrect what the runtime discarded.
@@ -565,16 +565,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   const switchAnimation = (entry: SSPlayerEntry, anime: string, loop: number): void => {
     if (!anime) return;
     const { player, meta } = entry;
-    void player
-      .setAnimation(anime)
-      .then(() => {
-        // setAnimation drops the non-Permanent overrides; the author never
-        // asked for that here, so put them straight back.
-        overridesOf(entry, persist).reapply();
-        player.loopCount = loop;
-        player.play();
-      })
-      .catch((err) => console.error('[ss_chara] animation switch failed:', (err as Error)?.stack ?? err));
+    try {
+      player.setAnimation(anime);
+      // setAnimation drops the non-Permanent overrides; the author never
+      // asked for that here, so put them straight back.
+      overridesOf(entry, persist).reapply();
+      player.loopCount = loop;
+      player.play();
+    } catch (err) {
+      console.error('[ss_chara] animation switch failed:', (err as Error)?.stack ?? err);
+    }
   };
 
   /** Return the currently-talking player (if any) to its idle animation. */

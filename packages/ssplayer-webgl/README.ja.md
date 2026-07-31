@@ -104,7 +104,7 @@ const surface = new SSSurface(canvas, {
 const player = surface.createPlayer();
 
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-await player.setAnimation('run');
+player.setAnimation('run');
 
 player.play();                       // drives itself via requestAnimationFrame
 ```
@@ -185,7 +185,7 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
     });
     const player = surface.createPlayer();
     await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
-    await player.setAnimation('run');
+    player.setAnimation('run');
     player.play();
   })();
 </script>
@@ -206,7 +206,7 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
   const surface = new SSSurface(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
   const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
-  await player.setAnimation('run');
+  player.setAnimation('run');
   player.play();
 </script>
 ```

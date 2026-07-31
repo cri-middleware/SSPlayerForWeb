@@ -37,7 +37,7 @@ async function main() {
 
     console.log("Loading default animation...");
     await player.load(ssabUrl('Ringo.ssab'));
-    await player.setAnimation("run");
+    player.setAnimation("run");
 
     app.stage.addChild(player);
 
@@ -100,7 +100,7 @@ async function main() {
             const buffer = await (await fetch(ssabUrl(name))).arrayBuffer();
             const anims = extractAnimationNames(buffer);
             uiManager.updateAnimationSelect(anims, anims[0]);
-            if (anims.length > 0) await player.setAnimation(anims[0]);
+            if (anims.length > 0) player.setAnimation(anims[0]);
             // Refresh the seek-bar range for the new animation, reset the view and
             // start playback (the seek bar's max is otherwise stale from Ringo).
             uiManager.syncAfterLoad();

@@ -68,13 +68,13 @@ function apply(printing: boolean): void {
     // changeSSAnimation deliberately do NOT do this: there the author asked,
     // and the saved copy is pruned to match what the runtime discarded.)
     const overrides = g.$gameScreen?.picture(pid)?.ssData?.()?.overrides;
-    player
-      .setAnimation(desired, -1)
-      .then(() => {
-        applyPartOverrides(player, overrides);
-        player.play();
-      })
-      .catch((e: unknown) => console.error('[ssplayer-rmmz] setSSTalk: failed to switch:', e));
+    try {
+      player.setAnimation(desired, -1);
+      applyPartOverrides(player, overrides);
+      player.play();
+    } catch (e: unknown) {
+      console.error('[ssplayer-rmmz] setSSTalk: failed to switch:', e);
+    }
   }
 }
 

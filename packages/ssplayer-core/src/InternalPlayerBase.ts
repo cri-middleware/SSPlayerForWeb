@@ -27,7 +27,7 @@ export interface InstanceChildState<T> {
  */
 export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public runtimeManager: SSRuntimeManager;
-    public audioManager: IAudioManager | null = null;
+    private _audioManager: IAudioManager | null = null;
     private _speedRate: number = 1.0;
     private _prevFinished: boolean = false;
     private _resourceManager: IResourceManager | null = null;
@@ -41,15 +41,43 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public _instancePackProvider: InstancePackProvider | null = null;
     private _animationName: string = '';
     private _subFrameEnabled: boolean = true;
+    // Asset loading is per-PACK, not per-animation (see prepareResources): these
+    // track the one-shot so an animation switch costs nothing but a runtime reset.
+    private _prepared: Promise<void> | null = null;
+    private _resourcesReady: boolean = false;
+    // The audioManager the pack's sounds were preloaded into, so a manager
+    // attached late still gets its preload, and exactly once.
+    private _soundsPreloadedFor: IAudioManager | null = null;
+    private _soundsPromise: Promise<void> | null = null;
+    private _catchUpPending: boolean = false;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
 
     constructor(resourceManager?: IResourceManager) {
         this.runtimeManager = new SSRuntimeManager();
-        
+
         if (resourceManager) {
             this._resourceManager = resourceManager;
         }
+    }
+
+    /**
+     * Optional audio manager for the pack's sound parts.
+     *
+     * Attaching one starts preloading the pack's sounds right away (in the
+     * background) when a resource is already bound — sounds belong to the pack,
+     * so there is nothing to wait for. Await {@link preloadSounds} if you need
+     * them in memory before playback rather than shortly after.
+     */
+    public get audioManager(): IAudioManager | null {
+        return this._audioManager;
+    }
+
+    public set audioManager(manager: IAudioManager | null) {
+        this._audioManager = manager;
+        void this.preloadSounds().catch(e => {
+            console.error('[SSPlayer] Failed to preload the pack sounds', e);
+        });
     }
 
     public setResourceManager(resourceManager: IResourceManager) {
@@ -72,9 +100,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Fetches and binds an SSAB file to the player. Textures and instance packs
-     * always resolve relative to the SSAB's own location (the structure that
-     * ssconverter emits) — there is no separate asset-base override.
+     * Fetches and binds an SSAB file to the player, then loads everything the
+     * pack needs (textures, instance packs) — when this resolves the player is
+     * ready to draw and `setAnimation` does no asset I/O at all. Textures and
+     * instance packs always resolve relative to the SSAB's own location (the
+     * structure that ssconverter emits) — there is no separate asset-base
+     * override.
      * @param ssabUrl The URL of the SSAB file.
      */
     public async load(ssabUrl: string) {
@@ -85,6 +116,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const buffer = await response.arrayBuffer();
 
         this.bindResource(new Uint8Array(buffer), ssabUrl);
+        await this.prepareResources();
     }
 
     /**
@@ -121,6 +153,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._instancePackResources.clear();
         this._ssabResource = new SSABResource(buffer);
         this.runtimeManager.bindResource(this._ssabResource);
+        // A new pack means new assets: re-arm the one-shot load.
+        this._prepared = null;
+        this._resourcesReady = false;
+        this._soundsPreloadedFor = null;
+        this._soundsPromise = null;
         this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer);
         // Cached here rather than left to the caller, because the alternative is
         // holding on to the whole SSAB (megabytes) or re-fetching it just to read
@@ -140,6 +177,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /**
      * Loads all textures required by the bound SSAB resource via the ResourceManager.
      * Textures resolve relative to the SSAB's own location (set on load/bind).
+     *
+     * Prefer {@link prepareResources}, which pairs this with the instance packs
+     * and runs both exactly once per bound resource.
      */
     public async loadTextures(): Promise<void> {
         if (!this._resourceManager) {
@@ -181,33 +221,127 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Helper to load textures and set the animation in one call.
-     * @param animationName The name of the animation to set.
+     * Load every asset the bound pack needs, whichever animation ends up playing:
+     * all cell-map textures and, transitively, every instance-referenced pack.
+     * None of it is animation-scoped — the cell maps live on the binary, not on
+     * the animation table — so it is loaded once here rather than on each switch.
+     *
+     * Idempotent: the work runs once per bound resource and later calls return
+     * the same promise (a failed attempt is not cached, so a 404'd texture can be
+     * retried). `load()` awaits it, so URL-loaded packs are ready before the
+     * first `setAnimation`; hosts that bind bytes themselves should await it
+     * after `bindResource` to keep the first switch free of asset I/O too.
      */
-    public async setAnimation(animationName: string) {
-        await this.loadTextures();
-        await this.loadInstancePacks();
-        this.runtimeManager.setupAnimation(animationName);
-        this._animationName = animationName;
-        
-        if (this.audioManager) {
-            if (this.audioManager.stopAll) {
-                this.audioManager.stopAll();
+    public prepareResources(): Promise<void> {
+        if (this._prepared) return this._prepared;
+
+        const run = (async () => {
+            try {
+                await this.loadTextures();
+                await this.loadInstancePacks();
+                this._resourcesReady = true;
+                // Sounds are equally pack-scoped; preload them here too when a
+                // manager is already attached, so `load()` covers audio as well.
+                await this.preloadSounds();
+            } catch (e) {
+                // Don't let one failed attempt poison every later setAnimation.
+                if (this._prepared === run) this._prepared = null;
+                throw e;
             }
-            const sounds = this.runtimeManager.getSounds();
-            if (sounds.length > 0) {
+        })();
+        this._prepared = run;
+        return run;
+    }
+
+    /**
+     * Preload the pack's sounds into the attached audioManager, once. Like the
+     * textures these are listed per pack (`soundLists` on the binary), so the set
+     * does not change with the animation; the manager is tracked rather than a
+     * flag so one attached later still gets its preload. Resolves immediately
+     * when there is no manager, no bound pack, or the work is already done.
+     */
+    public preloadSounds(): Promise<void> {
+        const audio = this._audioManager;
+        // Children play through the parent's manager and have no asset base of
+        // their own; the pack they share was preloaded by the parent.
+        if (!audio || this._isChildPlayer) return Promise.resolve();
+        // Already done or in flight — hand back the same promise, so a caller that
+        // wants the sounds in memory can await work the attach already started.
+        if (this._soundsPreloadedFor === audio) return this._soundsPromise ?? Promise.resolve();
+        // Nothing to read yet — retried when a pack is bound (prepareResources).
+        if (!this._ssabResource) return Promise.resolve();
+
+        this._soundsPreloadedFor = audio;
+        const run = (async () => {
+            try {
+                const sounds = this.runtimeManager.getSounds();
+                if (sounds.length === 0) return;
+
                 const base = this._assetBaseUrl;
                 const prefix = base && !base.endsWith('/') ? base + '/' : base;
-                const preppedSounds = sounds.map(s => ({
-                    name: s.name,
-                    path: prefix + s.path
-                }));
-                await this.audioManager.preload(preppedSounds);
+                await audio.preload(sounds.map(s => ({ name: s.name, path: prefix + s.path })));
+            } catch (e) {
+                // Retryable: forget the attempt rather than pinning this manager
+                // to a preload that never completed.
+                if (this._soundsPreloadedFor === audio) this._soundsPreloadedFor = null;
+                throw e;
+            } finally {
+                if (this._soundsPromise === run) this._soundsPromise = null;
             }
-        }
-        
+        })();
+        this._soundsPromise = run;
+        return run;
+    }
+
+    /**
+     * Switch to `animationName`. Synchronous, by design: an animation switch is a
+     * runtime context reset and nothing more.
+     *
+     * Everything that could stall — textures, instance packs, sounds — belongs to
+     * the *pack*, not to the animation, and is loaded once by `load()` /
+     * {@link prepareResources}. Calling this on a pack whose assets are not in
+     * yet still switches immediately (the runtime needs no textures to set up an
+     * animation; the renderer simply has nothing to draw with until they land)
+     * and the load is started in the background.
+     * @param animationName The name of the animation to set.
+     */
+    public setAnimation(animationName: string): void {
+        this.runtimeManager.setupAnimation(animationName);
+        this._animationName = animationName;
+
+        // The previous animation's sounds are not this animation's business.
+        this._audioManager?.stopAll?.();
+
         this.setupInstanceChildren();
         this.setupEffectChildren();
+
+        if (!this._resourcesReady) this.catchUpResources();
+        // A no-op once done; only ever does real work for a manager attached
+        // before any pack was bound.
+        void this.preloadSounds().catch(e => {
+            console.error('[SSPlayer] Failed to preload the pack sounds', e);
+        });
+    }
+
+    /**
+     * Load the pack's assets in the background, for a player switched before
+     * `load()` / {@link prepareResources} finished (or was ever called).
+     * Instance parts whose pack had not arrived were skipped by
+     * `setupInstanceChildren`, so it is re-run once the packs are in.
+     */
+    private catchUpResources(): void {
+        if (this._catchUpPending) return;
+        this._catchUpPending = true;
+        this.prepareResources()
+            .then(() => {
+                if (this._animationName) this.setupInstanceChildren();
+            })
+            .catch(e => {
+                console.error(`[SSPlayer] Failed to load the assets for "${this._animationName}"`, e);
+            })
+            .finally(() => {
+                this._catchUpPending = false;
+            });
     }
 
         private setupEffectChildren() {
@@ -288,6 +422,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._ssabResource = resource;
         this.runtimeManager.bindResource(resource);
         this._texturePaths = []; // Handled by parent
+        // The parent loaded this pack's textures and resolved its instance packs
+        // before creating us, so we are ready by construction: without this a
+        // host that drives a child from getInstanceChild() would re-scan the
+        // shared pack (embedded textures included) on every switch.
+        this._prepared = Promise.resolve();
+        this._resourcesReady = true;
     }
 
     private getSsabBuffer(): Uint8Array | null {

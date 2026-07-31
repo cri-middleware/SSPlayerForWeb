@@ -110,9 +110,11 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       // switch, so the runtime already kept the Permanent ones and dropped the
       // rest itself (the persisted copy is pruned to match by the command that
       // changed the animation).
-      this._ssChild.switchAnimation(ss.animation, ss.loop).catch((e: unknown) => {
+      try {
+        this._ssChild.switchAnimation(ss.animation, ss.loop);
+      } catch (e: unknown) {
         console.error('[ssplayer-rmmz] failed to switch SS animation:', e);
-      });
+      }
       // switchAnimation applies the loop itself; record it so _ssApplyLive
       // does not set the same value a second time.
       this._ssLoop = ss.loop;

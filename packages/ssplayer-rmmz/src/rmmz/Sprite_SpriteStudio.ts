@@ -28,7 +28,7 @@ export interface SSViewSpec {
 export interface ISpriteSpriteStudio {
   readonly player: SSPlayer;
   loadAnimation(spec: SSViewSpec): Promise<void>;
-  switchAnimation(animation: string, loop?: number): Promise<void>;
+  switchAnimation(animation: string, loop?: number): void;
   update(): void;
   destroy(options?: unknown): void;
 }
@@ -59,21 +59,22 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
       const token = ++this._loadToken;
       await this.player.load(spec.ssabUrl);
       if (token !== this._loadToken) return; // superseded by a newer load
-      await this.player.setAnimation(spec.animation, spec.loop ?? -1);
-      if (token !== this._loadToken) return;
+      this.player.setAnimation(spec.animation, spec.loop ?? -1);
       this.player.play();
     }
 
     /**
      * Switch to another animation WITHOUT reloading the .ssab (the project is
-     * already loaded). Much lighter than loadAnimation and keeps playback
+     * already loaded). Synchronous — the pack's assets came in with
+     * loadAnimation, so this is only a runtime reset and playback stays
      * subframe-smooth. Use loadAnimation when the .ssab itself changes.
      */
-    public async switchAnimation(animation: string, loop = -1): Promise<void> {
+    public switchAnimation(animation: string, loop = -1): void {
       if (this._spec) this._spec = { ...this._spec, animation, loop };
-      const token = ++this._loadToken;
-      await this.player.setAnimation(animation, loop);
-      if (token !== this._loadToken) return; // superseded by a newer load/switch
+      // Nothing awaits below, so no load can slip in between: bump the token so a
+      // load still in flight does not overwrite this switch when it lands.
+      this._loadToken += 1;
+      this.player.setAnimation(animation, loop);
       this.player.play();
     }
 

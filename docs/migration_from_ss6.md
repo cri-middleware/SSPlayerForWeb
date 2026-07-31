@@ -33,7 +33,7 @@ import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 await SSPlayer.initialize();            // once at startup
 const player = new SSPlayer();          // no arguments
 await player.load('character.ssab');    // load the .ssab
-await player.setAnimation('walk', -1);  // select by name (-1 = infinite loop)
+player.setAnimation('walk', -1);  // select by name (-1 = infinite loop)
 app.stage.addChild(player);
 player.play();
 ```

@@ -41,7 +41,7 @@ async function main() {
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
   await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-  await player.setAnimation('run');    // loop defaults to -1 (infinite)
+  player.setAnimation('run');    // loop defaults to -1 (infinite)
   player.play();
 }
 
@@ -69,7 +69,7 @@ async function main() {
   // 2. Create the player, load the .ssab, and select an animation
   const player = new SSPlayer();
   await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-  await player.setAnimation('run');    // loop defaults to -1 (infinite)
+  player.setAnimation('run');    // loop defaults to -1 (infinite)
 
   player.position.set(640, 480);
   app.stage.addChild(player);

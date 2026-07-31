@@ -91,7 +91,8 @@ Textures normally resolve as siblings of the `.ssab`. To serve them from somewhe
 in-memory bundle, an atlas your engine already has on the GPU — implement
 [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) and drive
 the core directly, or on WebGL register the texture under its cell-map hash with
-`bindTextureSource()` before `setAnimation()`.
+`bindTextureSource()` — before `load()`, since that is where the pack's textures are resolved.
+`loadBuffer()` takes the same textures as its second argument and registers them for you.
 
 The same applies to Instance parts whose packs are not URL-addressable: hand the bytes over with
 [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md).

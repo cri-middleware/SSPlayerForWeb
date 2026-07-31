@@ -194,9 +194,12 @@ function boot(): void {
     const base = cur.animation;
     const baseLoop = cur.loop;
     const revert = () => {
-      player.setAnimation(base, baseLoop).then(() => player.play()).catch((e: unknown) => {
+      try {
+        player.setAnimation(base, baseLoop);
+        player.play();
+      } catch (e: unknown) {
         console.error('[ssplayer-rmmz] playSSOnce: failed to return to base loop:', e);
-      });
+      }
     };
     // Owned by the registry, so a later command (changeSSAnimation, another
     // playSSOnce, stopSS, removeSS) can cancel the pending revert instead of
@@ -208,10 +211,13 @@ function boot(): void {
         revert();
       }),
     );
-    player.setAnimation(oneShot, count).then(() => player.play()).catch((e: unknown) => {
+    try {
+      player.setAnimation(oneShot, count);
+      player.play();
+    } catch (e: unknown) {
       clearLiveChain(pictureId);
       console.error('[ssplayer-rmmz] playSSOnce: failed to play one-shot:', e);
-    });
+    }
   });
 
   // Play a comma-separated SEQUENCE of animations: every entry but the LAST
@@ -253,10 +259,13 @@ function boot(): void {
           }),
         );
       }
-      player.setAnimation(name, loop).then(() => player.play()).catch((e: unknown) => {
+      try {
+        player.setAnimation(name, loop);
+        player.play();
+      } catch (e: unknown) {
         clearLiveChain(pictureId);
         console.error('[ssplayer-rmmz] playSSSequence: failed to play:', e);
-      });
+      }
     };
     step();
   });

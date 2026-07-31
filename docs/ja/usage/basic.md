@@ -5,19 +5,22 @@
 ## 読み込みとアニメーション選択
 
 ```ts
-await player.load(ssabUrl); // テクスチャは .ssab と同じディレクトリから読み込まれます
+await player.load(ssabUrl); // テクスチャ・インスタンスパック・サウンドは .ssab と同じディレクトリから読み込まれます
 ```
 
 WebGL (`SSPlayer`):
 ```ts
-await player.setAnimation(name);                       // アニメーションを選択
+player.setAnimation(name);                       // アニメーションを選択
 ```
 
 PixiJS (`SSPlayer`):
 ```ts
-await player.setAnimation(name); // 第2引数: loop回数(既定-1)
+player.setAnimation(name); // 第2引数: loop回数(既定-1)
 player.animationName;            // 現在のアニメーション名
 ```
+
+`setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので
+`load()` で全て読み込まれ、切り替えはランタイムのリセットのみ — 待つべき読み込みはありません。
 
 ## 再生制御
 

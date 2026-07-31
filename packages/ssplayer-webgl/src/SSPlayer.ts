@@ -69,15 +69,17 @@ export interface SSPlayerOptions {
    * Automatically play the animation's sounds (default `true`).
    *
    * When the loaded SSAB references sounds and no `audioManager` has been set, the
-   * player lazily creates a default `SSWebAudioManager` on `setAnimation` and wires
-   * it up — so sound "just works" with zero consumer code, like ssplayer-pixi. The
-   * audio adapter is loaded via a **dynamic import**, so it is a separate chunk
-   * fetched only when a sound-bearing animation is set: animations without sound
-   * (and the `./lite` build) never pull in any audio code, keeping the default
-   * bundle within the size budget.
+   * player creates a default `SSWebAudioManager` while loading and wires it up —
+   * so sound "just works" with zero consumer code, like ssplayer-pixi. The audio
+   * adapter is loaded via a **dynamic import**, so it is a separate chunk fetched
+   * only for a sound-bearing pack: packs without sound (and the `./lite` build)
+   * never pull in any audio code, keeping the default bundle within the size
+   * budget.
    *
    * Set to `false` for full manual control (attach your own `IAudioManager`, or
-   * none) — nothing audio-related is then loaded automatically.
+   * none) — nothing audio-related is then loaded automatically. Attaching your own
+   * manager *after* `load()` also works, but with `autoAudio` left on the default
+   * one has been created by then.
    */
   autoAudio?: boolean;
   /**
@@ -293,11 +295,18 @@ export class SSPlayer {
         this.resourceManager.bindTextureSource(src as TexImageSource, hash, (src as any).width as number, (src as any).height as number);
       }
     }
+    // Finish the pack's asset load here, like `load()` does, so `setAnimation`
+    // stays a pure runtime switch. Textures the caller just supplied are already
+    // in the manager under their hash and are not fetched again; this resolves
+    // what the caller could not — embedded textures and instance packs.
+    await this.internalPlayer.prepareResources();
+    await this.ensureAutoAudio();
   }
 
   public async load(ssabUrl: string): Promise<void> {
     await this.internalPlayer.load(ssabUrl);
     this.configureContext();
+    await this.ensureAutoAudio();
   }
 
   /**
@@ -311,11 +320,16 @@ export class SSPlayer {
     return this.internalPlayer.animationNames;
   }
 
-  public async setAnimation(name: string): Promise<void> {
-    // Auto-wire a default audio manager BEFORE setAnimation, since the core
-    // preloads the animation's sounds there (only when an audioManager is set).
-    await this.ensureAutoAudio();
-    await this.internalPlayer.setAnimation(name);
+  /**
+   * Select an animation. Synchronous: `load()` / `loadBuffer()` have already
+   * brought in everything the pack needs, so a switch is a runtime reset.
+   */
+  public setAnimation(name: string): void {
+    // Safety net for a player driven through the core directly (bytes bound
+    // without going through load/loadBuffer): wiring is a no-op once done, and
+    // attaching a manager starts its own preload.
+    void this.ensureAutoAudio();
+    this.internalPlayer.setAnimation(name);
   }
 
   /** Direct render mode + Y-down coordinate system, matching the WebGL projection. */
@@ -346,6 +360,9 @@ export class SSPlayer {
       const { SSWebAudioManager } = await import('./SSWebAudioManager.js');
       // bindToPlayer sets `this.audioManager` and subscribes onAudio → play.
       new SSWebAudioManager().bindToPlayer(this);
+      // Attaching starts the pack's sound preload; finish it here so callers of
+      // load() get the sounds in memory, not merely on their way.
+      await this.internalPlayer.preloadSounds();
     } catch (e) {
       console.warn('[SSPlayer] Failed to auto-load the audio adapter; sound disabled. Attach an IAudioManager manually if needed.', e);
     }
