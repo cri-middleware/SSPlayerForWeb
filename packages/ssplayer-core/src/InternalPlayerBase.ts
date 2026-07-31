@@ -272,25 +272,36 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         if (!this._ssabResource) return Promise.resolve();
 
         this._soundsPreloadedFor = audio;
-        const run = (async () => {
-            try {
-                const sounds = this.runtimeManager.getSounds();
-                if (sounds.length === 0) return;
-
-                const base = this._assetBaseUrl;
-                const prefix = base && !base.endsWith('/') ? base + '/' : base;
-                await audio.preload(sounds.map(s => ({ name: s.name, path: prefix + s.path })));
-            } catch (e) {
-                // Retryable: forget the attempt rather than pinning this manager
-                // to a preload that never completed.
-                if (this._soundsPreloadedFor === audio) this._soundsPreloadedFor = null;
-                throw e;
-            } finally {
-                if (this._soundsPromise === run) this._soundsPromise = null;
-            }
-        })();
+        const run = this.readSoundsInto(audio);
         this._soundsPromise = run;
+        // Settled outside the body, and only once `_soundsPromise` holds it.
+        // This used to be a `finally` inside a self-referencing async IIFE, and
+        // a pack with no sounds returns from that body before its first
+        // `await` — so the cleanup ran synchronously, read the `const` still
+        // being initialised, and threw "Cannot access 'run' before
+        // initialization" out of every `load()` that had an audio manager
+        // attached. Soundless packs are the common case, not the exotic one.
+        const forget = (): void => {
+            if (this._soundsPromise === run) this._soundsPromise = null;
+        };
+        void run.then(forget, forget);
         return run;
+    }
+
+    private async readSoundsInto(audio: IAudioManager): Promise<void> {
+        try {
+            const sounds = this.runtimeManager.getSounds();
+            if (sounds.length === 0) return;
+
+            const base = this._assetBaseUrl;
+            const prefix = base && !base.endsWith('/') ? base + '/' : base;
+            await audio.preload(sounds.map(s => ({ name: s.name, path: prefix + s.path })));
+        } catch (e) {
+            // Retryable: forget the attempt rather than pinning this manager
+            // to a preload that never completed.
+            if (this._soundsPreloadedFor === audio) this._soundsPreloadedFor = null;
+            throw e;
+        }
     }
 
     /**

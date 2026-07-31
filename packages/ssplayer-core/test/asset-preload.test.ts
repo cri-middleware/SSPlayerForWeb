@@ -93,6 +93,25 @@ describe('asset loading is per-pack, not per-animation', () => {
 });
 
 describe('sound preloading', () => {
+    it('handles a pack with no sounds, which finishes before its first await', async () => {
+        const player = makePlayer(makeResourceManager());
+        player.runtimeManager.getSounds = () => [];
+        const audio = { preload: vi.fn().mockResolvedValue(undefined), stopAll: vi.fn() };
+
+        // The reason this deserves its own case: with nothing to preload the
+        // work returns synchronously, so any bookkeeping that runs "after" it
+        // runs before the promise it refers to exists. That threw
+        // "Cannot access 'run' before initialization" out of load() for every
+        // soundless pack that had an audio manager attached — which is most of
+        // them.
+        player.audioManager = audio;
+        await expect(player.preloadSounds()).resolves.toBeUndefined();
+        expect(audio.preload).not.toHaveBeenCalled();
+
+        // And the whole of load() stays clear of it.
+        await expect(player.prepareResources()).resolves.toBeUndefined();
+    });
+
     it('runs on attach, once per audioManager, and never on a switch', async () => {
         const player = makePlayer(makeResourceManager());
         const first = { preload: vi.fn().mockResolvedValue(undefined), stopAll: vi.fn() };
