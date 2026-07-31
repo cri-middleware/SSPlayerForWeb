@@ -136,6 +136,19 @@ export class AutoImporter {
     string,
     { mtimeMs: number; size: number; names: string[] }
   >();
+  /**
+   * The pack scan, for the current task only.
+   *
+   * One inspector render asks for it more than once — `select_list` and
+   * `default_val` on the pack picker, and the widened animation picker on top
+   * of that — and the host renders those params in a single synchronous loop.
+   *
+   * Scoped to a task rather than validated the way `animationCache` is, because
+   * nothing cheaper than the walk itself can answer "has a `.ssab` appeared";
+   * a directory mtime would need the same traversal to be read. A task is
+   * precisely the window in which the answer cannot have changed.
+   */
+  private packsThisTask: { name: string; val: string }[] | null = null;
   readonly sourceDir: string;
   readonly outRoot: string;
   readonly wasmPath: string;
@@ -165,6 +178,27 @@ export class AutoImporter {
    * only `others/ssdata` would turn the picker into a cage.
    */
   listPacks(): { name: string; val: string }[] {
+    if (this.packsThisTask) return this.packsThisTask;
+
+    const packs = this.scanPacks();
+    this.packsThisTask = packs;
+    // Dropped on the next turn of the event loop. That is what makes this safe
+    // without an invalidation hook anywhere: a conversion, or a file an author
+    // drops in by hand, always reaches a later turn than the render that would
+    // have shown it.
+    setTimeout(() => {
+      this.packsThisTask = null;
+    }, 0);
+    return packs;
+  }
+
+  /**
+   * The scan itself: a walk of the whole of `data/`, which on a small project
+   * is 43 `readdir` plus 334 `stat` — every one a synchronous hop across the
+   * contextBridge — for about 9 ms. It grows with the project's total assets,
+   * not with how many packs it holds.
+   */
+  private scanPacks(): { name: string; val: string }[] {
     const root = this.fs.exists(this.dataDir) ? this.dataDir : this.outRoot;
     if (!this.fs.exists(root)) return [];
 
