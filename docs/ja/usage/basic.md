@@ -41,10 +41,8 @@ player.startFrame;          // 範囲の開始フレーム
 player.endFrame;            // 範囲の終了フレーム
 player.loopCount;           // 設定したループ回数（-1 = 無限）
 player.animationName;       // 現在設定されているアニメーション名
+player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー再生や高リフレッシュで滑らか）
 ```
-
-サブフレーム補間は既定で on です（スロー再生や高リフレッシュ環境で滑らかになります）。
-プロパティ名は WebGL プレイヤーが `subFrameEnabled`、PixiJS プレイヤーが `subframe` です。
 
 ## 区間・方向
 
@@ -62,8 +60,6 @@ player.frameSkipEnabled = false;                       // フレームスキッ�
 player.getPartsCount();          // パーツ数
 player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
-
-PixiJS プレイヤーには同じ照会の旧名 `getPartIndexFromName()` もあります。
 
 パーツ単位で色 / セル / 表示を実行時に上書きするには
 [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください

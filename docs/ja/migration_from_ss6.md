@@ -58,7 +58,7 @@ player.play();
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | ループは `loopCount` に分離 |
 | （往復再生の直接指定なし） | `setPlaybackDirection(dir, style)` | Forward/Backward × Normal/PingPong |
 | `SetAlpha(alpha)` | `player.alpha`（Pixi 標準） | `Container` の標準プロパティを利用 |
-| `GetPartIndexFromName(name)` | `getPartIndexFromName(name)` | |
+| `GetPartIndexFromName(name)` | `findPartIndex(name)` | 不明なパーツは `-1` |
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | 同名 |
 | `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `fps` | |
 
@@ -136,7 +136,7 @@ player.setPartVisibilityOverride('body', true);
 
 ```ts
 player.getPartsCount();               // パーツ数
-player.getPartIndexFromName('body');  // パーツ名 → インデックス
+player.findPartIndex('body');  // パーツ名 → インデックス（不明なら -1）
 ```
 
 `findPartIndex('body')` はランタイム側で同じ解決を行うもので、`part` 引数の内部処理でも使われます。

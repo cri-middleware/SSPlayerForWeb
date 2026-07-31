@@ -58,7 +58,7 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | Loop split out to `loopCount` |
 | (no direct ping-pong control) | `setPlaybackDirection(dir, style)` | Forward/Backward × Normal/PingPong |
 | `SetAlpha(alpha)` | `player.alpha` (Pixi standard) | Use the standard `Container` property |
-| `GetPartIndexFromName(name)` | `getPartIndexFromName(name)` | |
+| `GetPartIndexFromName(name)` | `findPartIndex(name)` | `-1` when the part is unknown |
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | Same names |
 | `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `fps` | |
 
@@ -135,12 +135,12 @@ player.setPartVisibilityOverride('body', true);
 The part-query APIs are unchanged:
 
 ```ts
-player.getPartsCount();               // number of parts
-player.getPartIndexFromName('body');  // part name → index
+player.getPartsCount();        // number of parts
+player.findPartIndex('body');  // part name → index (-1 if unknown)
 ```
 
-`findPartIndex('body')` does the same lookup through the runtime, and is what a `part` argument
-resolves to internally — use it when you set overrides often enough to want the index cached.
+`findPartIndex` is what a `part` argument resolves to internally — call it yourself and pass the
+index when you set overrides often enough to want the lookup cached.
 
 The same methods are on `SSPlayer` (both the PixiJS and WebGL backends). See
 [Part control (visibility / cell / color)](/customize/part-overrides) for blend operations,
