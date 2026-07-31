@@ -34,7 +34,7 @@ point, not "unimplemented."
 | §2.1 | `SSPlayerRenderer` ObjectRenderer, WebGL-state protection | ✅ Done (full `texture/geometry/state/shader/framebuffer.reset()`) |
 | §2.2 | `SSPlayer` extends `PIXI.Container`, `_render` → `setObjectRenderer` | ✅ Done |
 | §3.1–3.3 | Vertex layout / fan indices / blend map / PartsColor shader | ✅ Done **in `ssplayer-webgl`** (delegated; see note above) |
-| §4 | Cold-start steps (mock → core+geometry → shader → plugin iface) | ⚠️ Code done; §4.1 in-MZ mock (Z-order / filter sanity) not verified |
+| §4 | Cold-start steps (mock → core+geometry → shader → plugin iface) | ⚠️ Code done; §4.1 Z-order verified in real MZ (see R2), filter/blend sanity still open |
 | §5 | v8↔v5 API translation, WebGL-state protection | ✅ Done |
 | §7.1 | Model/View split (`Game_Picture.setSSData/ssData`) | ✅ Done |
 | §7.2 | Attach as CHILD of `Sprite_Picture` (no monkey-patch of updateBitmap internals) | ✅ Done (aliases `updateBitmap`, adds `Sprite_SpriteStudio` child) |
@@ -70,16 +70,55 @@ Follow-ups still open:
 - `loopNum` (looping SE) is still ignored (see `RMMZAudioManager` header) — route
   looped sounds to a channel we own, or document the limitation.
 
-### R2 — In-MZ visual verification (§4.1) — **not yet confirmed**
-No confirmed real-runtime render check exists. Validate inside an actual MZ
-project:
-- Z-order correctness vs characters and other pictures.
+### R2 — In-MZ visual verification (§4.1) — **partly confirmed**
+
+Confirmed in a real RPG Maker MZ runtime (Steam build's bundled NW.js 0.51 /
+Chromium 88, driven headlessly from a throwaway copy of `SampleProject`):
+
+- The plugin registers, the WASM boot gate releases, the `.ssab` loads and the
+  animation advances and loops in step with MZ's frame loop. No console errors.
+- **Z-order vs map characters is correct.** Verified by pixel, not by eye: a
+  solid picture and the SS animation were placed on the same anchor and the
+  framebuffer was sampled from a `postrender` hook — over the player sprite the
+  SS reads back as the animation's own colour, exactly as the native picture
+  reads back as its own. (Eyeballing a screenshot is misleading here: characters
+  standing just outside the silhouette look like they are in front.)
+- **Environment facts worth not rediscovering:** MZ's NW.js serves the game from
+  `chrome-extension://`, *not* `file://`, so `fetch` works and `Utils.isLocal()`
+  is false. `WebAssembly` SIMD is unavailable on Chromium 88, which is exactly
+  why this package ships the scalar runtime and passes `requireSimd: false` —
+  now confirmed against the real engine rather than assumed.
+
+Still unverified:
 - Screen flash / tint / `Sprite` filters wrap SS without corruption (state
   restore is correct).
 - Blend modes (Add / Multiply / Screen) and PartsColor (混色) match SpriteStudio.
 - Mask parts and the 13 SS special shaders render as in `ssplayer-pixi`.
-Build the §4.1 "red square" ObjectRenderer mock first to isolate Z-order/filter
-from geometry, then the full animation.
+
+### R9 — Playback-command fixes (found by the R2 in-MZ run) — ✅ **FIXED**
+
+Three defects, each reproduced in real MZ before the fix and re-run after:
+
+- **A pending `playSSOnce` revert outlived the command that superseded it.**
+  `onAnimationEnd` is a player-level event, so the queued return-to-base fired at
+  the end of *whatever* was playing by then: `playSSOnce` followed by
+  `changeSSAnimation` to a finite animation snapped back to the old base as soon
+  as the new animation ended. The follow-up listener now lives on the live
+  registry (`armLiveChain` / `clearLiveChain`) so any later playback command can
+  cancel it — the discipline `ssplayer-tyranoscript` already applies to
+  `[ss_play next=]`. Same fix covers `playSSSequence`.
+- **A loop-only change was ignored.** `_ssKey` is `asset|animation`, so
+  `changeSSAnimation` that altered nothing but `loop` produced the same key and
+  `_ssSync` returned before applying it. Properties that need no animation
+  re-setup (loop, speed, `signalSwitch`) moved into `_ssApplyLive`, called on
+  every path. `signalSwitch` was additionally bound once at mount and never
+  revisited; it is now rebound when it changes and unsubscribed on removal.
+- **The lip-sync swap dropped part overrides.** Setting up an animation makes the
+  runtime discard every non-Permanent override, and `messageTalk` re-asserts the
+  animation on every message — so a tinted portrait lost its tint on its first
+  line. The swap is a transient decoration the author never asked for, so it now
+  re-applies the picture's persisted overrides, matching what the TyranoScript
+  adapter does in `[ss_chara]`.
 
 ### R3 — Character (map/battler) attach path (§7.1 mentions `Game_Character`)
 Only the `Game_Picture` ↔ `Sprite_Picture` bridge is implemented. Attaching SS to

@@ -90,7 +90,14 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       return;
     }
     const key = `${ss.ssabUrl}|${ss.animation}`;
-    if (this._ssChild && this._ssKey === key) return;
+    // Same asset AND same animation: nothing to (re)build, but the model may
+    // still have changed in ways that need no re-setup — see _ssApplyLive.
+    // Returning outright here used to drop a loop-only or signalSwitch-only
+    // change on the floor, since neither is part of the key.
+    if (this._ssChild && this._ssKey === key) {
+      this._ssApplyLive(ss);
+      return;
+    }
 
     // Same .ssab, only the animation changed → switch in place (no reload). This
     // keeps playback subframe-smooth and avoids re-parsing the project. A full
@@ -106,7 +113,10 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       this._ssChild.switchAnimation(ss.animation, ss.loop).catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to switch SS animation:', e);
       });
-      if (typeof ss.speed === 'number') this._ssChild.player.speedScale = ss.speed;
+      // switchAnimation applies the loop itself; record it so _ssApplyLive
+      // does not set the same value a second time.
+      this._ssLoop = ss.loop;
+      this._ssApplyLive(ss);
       return;
     }
 
@@ -116,6 +126,12 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     this._ssChild = child;
     this._ssKey = key;
     this._ssAsset = ss.ssabUrl;
+    // A fresh player owns none of the live state yet. loadAnimation applies the
+    // loop below, so record it up front and let _ssApplyLive handle the rest.
+    this._ssLoop = ss.loop;
+    this._ssSpeed = undefined;
+    this._ssSignalSwitch = 0;
+    this._ssSignalUnsub = null;
     this.addChild(child as unknown as any);
     if (typeof this._pictureId === 'number') {
       const pid = this._pictureId;
@@ -124,12 +140,6 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       child.player.onAnimationEnd(() => markLivePlayerEnded(pid));
     }
 
-    if (ss.signalSwitch) {
-      const switchId = ss.signalSwitch;
-      child.player.onSignal(() => {
-        (globalThis as any).$gameSwitches?.setValue(switchId, true);
-      });
-    }
     child
       .loadAnimation({ ssabUrl: ss.ssabUrl, animation: ss.animation, loop: ss.loop })
       // This is a fresh WASM context, so its override table starts empty. Restore
@@ -139,16 +149,65 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       .catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to load SS animation:', e);
       });
-    if (typeof ss.speed === 'number') child.player.speedScale = ss.speed;
+    this._ssApplyLive(ss);
+  };
+
+  /**
+   * Apply the parts of the model that need NO animation re-setup: loop count,
+   * speed, and the signal switch. Each is compared against the last value we
+   * applied, because `updateBitmap` re-reads the picture every frame.
+   *
+   * Keeping these out of `_ssKey` is what lets a `changeSSAnimation` that only
+   * alters `loop` — or a second `setSSAsPicture` that only changes
+   * `signalSwitch` — take effect. Both used to be silently ignored: the key was
+   * unchanged, so `_ssSync` returned before reaching them, and `signalSwitch`
+   * was additionally bound once at mount and never revisited.
+   */
+  Sprite_Picture.prototype._ssApplyLive = function (this: any, ss: SSPictureData): void {
+    const child = this._ssChild;
+    if (!child) return;
+    const player = child.player;
+
+    if (this._ssLoop !== ss.loop) {
+      this._ssLoop = ss.loop;
+      player.loopCount = ss.loop;
+    }
+    if (typeof ss.speed === 'number' && this._ssSpeed !== ss.speed) {
+      this._ssSpeed = ss.speed;
+      player.speedScale = ss.speed;
+    }
+
+    const switchId = ss.signalSwitch || 0;
+    if (this._ssSignalSwitch !== switchId) {
+      this._ssSignalSwitch = switchId;
+      if (this._ssSignalUnsub) {
+        this._ssSignalUnsub();
+        this._ssSignalUnsub = null;
+      }
+      if (switchId) {
+        this._ssSignalUnsub = player.onSignal(() => {
+          (globalThis as any).$gameSwitches?.setValue(switchId, true);
+        });
+      }
+    }
   };
 
   Sprite_Picture.prototype._ssRemove = function (this: any): void {
     if (!this._ssChild) return;
     if (typeof this._pictureId === 'number') clearLivePlayer(this._pictureId);
+    if (this._ssSignalUnsub) {
+      this._ssSignalUnsub();
+      this._ssSignalUnsub = null;
+    }
     this.removeChild(this._ssChild);
     this._ssChild.destroy();
     this._ssChild = null;
     this._ssKey = null;
     this._ssAsset = null;
+    // Drop the live-state cache too: the next mount is a different player, and
+    // a stale value here would make _ssApplyLive skip the call that sets it.
+    this._ssLoop = undefined;
+    this._ssSpeed = undefined;
+    this._ssSignalSwitch = 0;
   };
 }

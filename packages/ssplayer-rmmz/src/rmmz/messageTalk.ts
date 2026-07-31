@@ -14,6 +14,7 @@
 // the live SSPlayer, exactly like playSSOnce — the picture's _ssData base loop
 // is left untouched, so a save/load mid-message resumes the base animation.
 
+import { applyPartOverrides } from '@spritestudio/ssplayer-webgl';
 import { getLivePlayer } from './liveRegistry.js';
 
 interface TalkBinding {
@@ -59,9 +60,20 @@ function apply(printing: boolean): void {
     if (!player || player.getAnimationNames().length === 0) continue; // not loaded yet → retry
     const desired = printing && b.name === speaker ? b.talk : b.idle;
     if (player.animationName === desired) continue; // already playing it — don't restart
+    // Setting up an animation makes the runtime drop every override but the
+    // Permanent ones. Here the author never asked for an animation change — the
+    // swap is a transient decoration over whatever the scenario last set — so
+    // the picture's persisted overrides go straight back on, or a tinted
+    // portrait would lose its tint on its very first line. (playSSOnce and
+    // changeSSAnimation deliberately do NOT do this: there the author asked,
+    // and the saved copy is pruned to match what the runtime discarded.)
+    const overrides = g.$gameScreen?.picture(pid)?.ssData?.()?.overrides;
     player
       .setAnimation(desired, -1)
-      .then(() => player.play())
+      .then(() => {
+        applyPartOverrides(player, overrides);
+        player.play();
+      })
       .catch((e: unknown) => console.error('[ssplayer-rmmz] setSSTalk: failed to switch:', e));
   }
 }
