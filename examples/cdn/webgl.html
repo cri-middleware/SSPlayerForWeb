@@ -52,7 +52,7 @@
         // this page just needs the one.
         const player = surface.createPlayer();
         await player.load(SSAB_URL);       // must be served over http(s), not file://
-        await player.setAnimation(ANIM);   // loops infinitely by default
+        player.setAnimation(ANIM);         // loops infinitely by default
         player.play();
 
         setStatus(`Playing "${ANIM}" from ${SSAB_URL}`);

@@ -61,7 +61,7 @@ export interface SSSurfaceOptions {
  * const surface = new SSSurface(canvas, { autoStart: true });
  * const player = surface.createPlayer();
  * await player.load('chara.ssab');
- * await player.setAnimation('idle');
+ * player.setAnimation('idle');
  * player.play();
  * ```
  */
