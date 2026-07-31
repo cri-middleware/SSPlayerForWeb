@@ -76,6 +76,13 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
+/** One file found by `walkEntries`, with the stat that found it. */
+export interface WalkedFile {
+  path: string;
+  mtimeMs: number;
+  size: number;
+}
+
 /** Result of the startup round-trip test, surfaced in the import log. */
 export interface BridgeProbe {
   mode: BinaryMode;
@@ -183,23 +190,44 @@ export class HostFs {
     return { isDir, size: typeof st.size === 'number' ? st.size : 0, mtimeMs };
   }
 
-  /** Absolute paths of every file under `dir`, recursively. Never throws. */
-  walkFiles(dir: string, out: string[] = []): string[] {
-    let entries: string[];
+  /** Names directly inside `dir`, unsorted. Empty when it cannot be read. */
+  readDir(dir: string): string[] {
     try {
-      entries = this.api.fs.readdirSync(dir);
+      return this.api.fs.readdirSync(dir);
     } catch {
-      return out;
+      return [];
     }
-    for (const name of entries) {
-      if (name === '.DS_Store' || name === 'Thumbs.db') continue;
+  }
+
+  /**
+   * Every file under `dir`, recursively, each carrying the `stat` the walk had
+   * to perform anyway to tell a file from a directory.
+   *
+   * Handing that stat back matters more here than it looks: every call on this
+   * object is a synchronous hop across Electron's contextBridge, on the editor's
+   * UI thread. A caller that wants mtimes gets them for the price of the walk
+   * instead of statting the same files a second time.
+   */
+  walkEntries(dir: string, out: WalkedFile[] = []): WalkedFile[] {
+    for (const name of this.readDir(dir)) {
+      // Dot entries are pruned wholesale, directories included. Their contents
+      // are not themselves dot-prefixed, so a `.git` checkout beside the
+      // sources would otherwise bump the newest mtime and force a reconversion
+      // on every project open — the same pruning, for the same reason, as
+      // SSPlayerForRenPy's `latest_source_mtime()`.
+      if (name.startsWith('.') || name === 'Thumbs.db') continue;
       const full = this.path.join(dir, name);
       const st = this.statOf(full);
       if (!st) continue;
-      if (st.isDir) this.walkFiles(full, out);
-      else out.push(full);
+      if (st.isDir) this.walkEntries(full, out);
+      else out.push({ path: full, mtimeMs: st.mtimeMs, size: st.size });
     }
     return out;
+  }
+
+  /** Absolute paths of every file under `dir`, recursively. Never throws. */
+  walkFiles(dir: string): string[] {
+    return this.walkEntries(dir).map((entry) => entry.path);
   }
 
   /**

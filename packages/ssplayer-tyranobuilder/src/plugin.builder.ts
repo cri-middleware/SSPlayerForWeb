@@ -8,13 +8,14 @@
 // block in `SSPlayerForRenPy/game/spritestudio/auto_importer.rpy`.
 //
 // The plugin does two things from there:
-//   - imports SpriteStudio projects, and keeps watching for changes; and
+//   - imports SpriteStudio projects, once per project open; and
 //   - contributes the `[ss_*]` GUI components (see `components.ts`).
 //
 // Everything the importer does is written to `<project>/ss_import_log.txt`.
 
 import { AutoImporter, DEFAULT_SOURCE_DIR, type ImportRunResult } from './autoImporter.js';
 import type { BuilderComponentEntry, TB } from './builderTypes.js';
+import { BUTTON_PARAM_TYPE, registerButtonParam } from './buttonParam.js';
 import { defineSSComponents } from './components.js';
 import { HostFs } from './hostFs.js';
 import { ImportLog } from './importLog.js';
@@ -49,9 +50,6 @@ function relocateConverterWasm(fs: HostFs, projectRoot: string, pluginDir: strin
   // Fall back to wherever it actually is, so a failed move degrades to working.
   return fs.exists(kept) ? kept : staged;
 }
-
-/** How often to re-check the source folder while the editor is open. */
-const WATCH_INTERVAL_MS = 3000;
 
 const LOG_FILENAME = 'ss_import_log.txt';
 
@@ -127,15 +125,34 @@ interface Host {
 }
 
 /**
- * The importer owned by the most recent `plugin_setting`.
+ * Rebuild the pack an `[ss_new]` names, and report what happened.
  *
- * The editor constructs the plugin more than once per session: opening a
- * project, installing a `.tbp`, and adding or removing any other plugin each
- * call `loadPlugins()`, which builds every plugin again. Each build starts a
- * watcher, so without this the timers would pile up and the same folder would
- * be polled several times over.
+ * Nothing else in the plugin converts after boot, so this is where the author's
+ * "I changed the animation, pick it up" lands. It is deliberately not silent:
+ * the whole point of pressing it is to find out whether it worked.
  */
-let activeImporter: AutoImporter | null = null;
+function reconvert(TB: TB | undefined, importer: AutoImporter, storage: unknown): void {
+  const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
+  void importer
+    .reconvertPack(storage)
+    .then((run) => {
+      // Not one of ours: a pack an author placed in `data/` by hand has no
+      // `.sspj` behind it, so there is nothing to rebuild it from.
+      if (!run) {
+        TB?.$?.inform?.(`SpriteStudio: ${t('Not converted from')} ${DEFAULT_SOURCE_DIR}/`);
+        return;
+      }
+      if (run.empty) {
+        TB?.$?.inform?.(`SpriteStudio: ${t('Source project not found')}`, 'error');
+        return;
+      }
+      notifyRun(TB, run);
+    })
+    .catch((e) => {
+      console.error('[ssplayer-tyranobuilder] reconvert failed', e);
+      TB?.$?.inform?.(`SpriteStudio: ${t('Failed')} (${LOG_FILENAME})`, 'error');
+    });
+}
 
 /**
  * Synchronous so `defineComponents()` — which the builder calls immediately
@@ -160,15 +177,7 @@ function createHost(TB: TB | undefined): Host | null {
     projectRoot,
     wasmPath: relocateConverterWasm(fs, projectRoot, pluginDir),
     log: (line) => log.line(line),
-    // A background reconversion happens while the author is in SpriteStudio,
-    // not in the editor — a modal would steal focus from the app they are
-    // actually using. `$.inform` is alertify's toast: it says the save landed
-    // and then goes away.
-    onChange: (run) => notifyRun(TB, run),
   });
-
-  activeImporter?.stop();
-  activeImporter = importer;
 
   return { fs, pluginDir, projectRoot, log, importer };
 }
@@ -212,7 +221,7 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
     fs.mkdirp(importer.sourceDir);
     log.line(`created source folder: ${importer.sourceDir}`);
   }
-  log.line(`watching: ${importer.sourceDir}`);
+  log.line(`sources: ${importer.sourceDir}`);
   log.line(`output:   ${importer.outRoot}`);
 
   const run = await importer.runOnce();
@@ -221,8 +230,9 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
       `${run.failed.length} failed${run.empty ? ' (no .sspj found)' : ''}`,
   );
 
-  importer.start(WATCH_INTERVAL_MS);
-  log.line(`watching for changes every ${WATCH_INTERVAL_MS}ms`);
+  // Said plainly, because it is the plugin's most surprising property: adding a
+  // .sspj now will do nothing until the project is reopened.
+  log.line('one pass per project open; use Reconvert in an [ss_new] to refresh');
 
   // Deferred either way: the constructor runs mid-boot, and alertify is nicer
   // once the editor has finished painting.
@@ -265,7 +275,7 @@ export class plugin_setting {
       typeof TB?.$?.s === 'function' ? TB.$.s(text) : text;
     this.name = t('SpriteStudio');
     this.plugin_text = t(
-      'Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted automatically, every time you save it. Place the animation from the SpriteStudio components in the palette.',
+      'Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted each time the project is opened. After editing in SpriteStudio, use "Reconvert now" on a SpriteStudio: show component. Place the animation from the SpriteStudio components in the palette.',
     );
     // Must never throw: `loadPlugins()` does not guard the constructor, and an
     // exception here would abort loading of every plugin after this one.
@@ -315,10 +325,19 @@ export class plugin_setting {
   defineComponents(): Record<string, BuilderComponentEntry> {
     const host = this.host;
     if (!host) return {};
+    // Decided here rather than in the constructor because this is where the
+    // answer is consumed, and it must be an answer: `Builder.Core.Param.create()`
+    // does `new Builder['Param'][type](...)` with no guard, so claiming a type
+    // that did not register would blank the whole [ss_new] inspector.
+    const hasButton = registerButtonParam(this.TB?.$, window.Builder);
+    host.log.line(`reconvert control: ${hasButton ? BUTTON_PARAM_TYPE : 'Check (fallback)'}`);
+
     return defineSSComponents({
       $: this.TB?.$ ?? (undefined as unknown as TB['$']),
       listPacks: () => host.importer.listPacks(),
       listAnimations: (storage) => host.importer.listAnimations(storage),
+      reconvert: (storage) => reconvert(this.TB, host.importer, storage),
+      buttonType: hasButton ? BUTTON_PARAM_TYPE : 'Check',
     });
   }
 }

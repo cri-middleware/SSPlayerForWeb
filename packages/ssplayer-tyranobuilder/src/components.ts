@@ -39,6 +39,19 @@ export interface ComponentContext {
   listPacks(): PackChoice[];
   /** Animation names inside one pack; empty when it cannot be read from disk. */
   listAnimations(storage: unknown): string[];
+  /**
+   * Rebuild the pack a `storage=` value names. Fire-and-forget: it reports to
+   * the author itself, because the inspector control that calls it cannot wait
+   * for a promise.
+   */
+  reconvert(storage: unknown): void;
+  /**
+   * `BUTTON_PARAM_TYPE` when the plugin managed to register its button view,
+   * `'Check'` when it did not. Naming a type the host cannot resolve throws
+   * inside `Builder.Core.Param.create()`, which is not guarded — and takes the
+   * whole inspector down with it, so this is decided before it is claimed.
+   */
+  buttonType: string;
 }
 
 /**
@@ -165,6 +178,58 @@ function screenCentre(): { x: number; y: number } {
   return {
     x: Number.isFinite(w) && w > 0 ? Math.round(w / 2) : 640,
     y: Number.isFinite(h) && h > 0 ? Math.round(h / 2) : 480,
+  };
+}
+
+/**
+ * The Reconvert control: a button where the host let the plugin register one,
+ * and a momentary tick box where it did not.
+ *
+ * Scoped to this component's own pack — `storage` names an asset, which is the
+ * same footing SSPlayerForGodot's per-asset inspector button stands on.
+ *
+ * Whichever shape it takes, it stores nothing. `$.tag()` writes every key in
+ * `pm` unconditionally (`js/app/core/libs.js.bk`), with no filtering of
+ * `_`-prefixed names, so the key is deleted outright rather than merely left
+ * unset — otherwise a stray `reconvert=` would ride into the author's scenario
+ * on the back of a host-side default.
+ */
+function reconvertParam(ctx: ComponentContext, t: (text: string) => string): BuilderParam {
+  const help = t(
+    'Rebuilds this animation pack from its SpriteStudio project. Needed after editing in SpriteStudio — the editor only converts when the project is opened.',
+  );
+
+  const press = (component: unknown): void => {
+    const params = paramsOf(component);
+    const storage = params.storage;
+    delete params.reconvert;
+    ctx.reconvert(storage);
+  };
+
+  if (ctx.buttonType !== 'Check') {
+    return {
+      type: ctx.buttonType,
+      name: t('Rebuild'),
+      label: t('Reconvert now'),
+      help,
+      onClick: press,
+    };
+  }
+
+  // `name` and `default_val` are not optional in practice: every `Check` in the
+  // host's own `js/app/component/default.js` carries both.
+  return {
+    type: 'Check',
+    name: t('Rebuild'),
+    text: t('Reconvert now'),
+    help,
+    default_val: false,
+    onChange: (_value, component, checkbox) => {
+      // Momentary: `Check` hands storing the value to onChange, so simply not
+      // storing it — and clearing the box — leaves a button behind.
+      checkbox?.prop?.('checked', false);
+      press(component);
+    },
   };
 }
 
@@ -465,6 +530,16 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
           help: t('Off loads without displaying, so a later "fade in" is instant.'),
           default_val: true,
         },
+        // A button, not a setting, and scoped to this component's own pack —
+        // the counterpart of SSPlayerForGodot's per-asset inspector button,
+        // which is possible here for the same reason: `storage` names an asset.
+        //
+        // `$.tag()` writes every key in `pm` unconditionally (no filtering of
+        // `_`-prefixed names, unlike what the host's own `_preview` params
+        // suggest), so the key is deleted outright rather than merely left
+        // unset — otherwise a stray `reconvert=` would ride into the author's
+        // scenario file on the back of a host-side default.
+        reconvert: reconvertParam(ctx, t),
       },
     ),
 

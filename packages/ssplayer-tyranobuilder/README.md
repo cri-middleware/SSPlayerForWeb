@@ -5,9 +5,9 @@
 Use **SpriteStudio 7** animations in **TyranoBuilder** — placed from the
 component palette, with no scenario code to write.
 
-Drop a SpriteStudio project into a folder and the editor converts it for you,
-every time you save it. The animation then appears in the palette's dropdowns
-alongside your other assets.
+Drop a SpriteStudio project into a folder and the editor converts it for you
+whenever the project is opened. The animation then appears in the palette's
+dropdowns alongside your other assets.
 
 > **Who this is for:** TyranoBuilder authors.
 > Writing scenarios by hand instead? Use
@@ -40,13 +40,23 @@ stacking the two leaves the editor and runtime halves on different versions.
 1. Put your SpriteStudio project — the `.sspj` **and its folder**, since an
    animation is several files — into `SpriteStudio_Source/` in your project
    folder. Subfolders are fine; the whole tree is searched.
-2. Open the project in TyranoBuilder (or just leave it open). Conversion runs by
-   itself, and a message tells you when it has.
+2. Open the project in TyranoBuilder. Conversion runs by itself, and a message
+   tells you when it has.
 3. Place a **SpriteStudio: show** component and pick your animation from the
    dropdowns.
 
-Keep the editor open while you work: re-save the `.sspj` in SpriteStudio and it
-is reconverted within a few seconds. Nothing to press.
+## After editing in SpriteStudio
+
+Conversion happens **once, when the project is opened** — nothing runs in the
+background while you work. So after saving in SpriteStudio, tick **Reconvert
+now** on the **SpriteStudio: show** component that plays the animation you
+edited. It rebuilds that one pack and reports what it did; the tick box clears
+itself, because it is a button rather than a setting.
+
+> **Adding a *new* `.sspj` needs the project reopened.** Reconvert lives on a
+> component, and a component can only point at a pack that already exists — so
+> there is nowhere to press for a project that has never been converted. Close
+> and reopen the TyranoBuilder project and it is picked up.
 
 ## The components
 
