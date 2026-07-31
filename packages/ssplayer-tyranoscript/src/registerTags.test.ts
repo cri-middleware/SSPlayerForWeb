@@ -23,7 +23,12 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _frameListeners = new Set<(frame: number) => void>();
     _audioListeners = new Set<(e: unknown) => void>();
     audioManager: unknown = null;
-    internalPlayer = { setLoop: vi.fn() };
+    // `loopCount` is a real accessor on the player, so the fake records writes
+    // through one too — asserting on a plain field would not catch the adapter
+    // going back to poking `internalPlayer` directly.
+    _loopWrites: number[] = [];
+    get loopCount() { return this._loopWrites[this._loopWrites.length - 1] ?? -1; }
+    set loopCount(v: number) { this._loopWrites.push(v); }
     frame = 0;
     order = 0;
     alpha = 1;
@@ -126,7 +131,8 @@ const FakeSSPlayer = SSOverlayMock as unknown as {
   instances: Array<{
     element: HTMLElement;
     order: number;
-    internalPlayer: { setLoop: ReturnType<typeof vi.fn> };
+    _loopWrites: number[];
+    loopCount: number;
     load: ReturnType<typeof vi.fn>;
     setAnimation: ReturnType<typeof vi.fn>;
     setTransform: ReturnType<typeof vi.fn>;
@@ -349,7 +355,7 @@ describe('registerSSTags', () => {
     // Textures resolve relative to the .ssab's own directory — no base arg is passed.
     expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
-    expect(p.internalPlayer.setLoop).toHaveBeenCalledWith(-1); // loop=true → infinite
+    expect(p._loopWrites).toContain(-1); // loop=true → infinite
     expect(p.play).toHaveBeenCalled();
 
     // Coordinate mapping: logical (640,360) → buffer px at dpr 1 (jsdom) = (640,360).
@@ -415,7 +421,7 @@ describe('registerSSTags', () => {
     await runTag(tags.ss_play, { name: 'chr', anime: 'Anime_2', loop: 'false' }, nextOrder);
 
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_2');
-    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(1); // loop=false → once
+    expect(p._loopWrites.at(-1)).toBe(1); // loop=false → once
     expect(p.play).toHaveBeenCalled();
   });
 
@@ -905,12 +911,12 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
     expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_2');
     // `next=` with no loop= plays the first animation once (else the end never comes).
-    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(1);
+    expect(p._loopWrites.at(-1)).toBe(1);
     expect(savedSlot(h).chr.next).toEqual({ anime: 'Anime_1', loop: -1, atframe: undefined });
 
     p._fireEnd();
     await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
-    expect(p.internalPlayer.setLoop).toHaveBeenLastCalledWith(-1); // idle loops
+    expect(p._loopWrites.at(-1)).toBe(-1); // idle loops
     await vi.waitFor(() => expect(savedSlot(h).chr).toMatchObject({ anime: 'Anime_1', next: undefined }));
   });
 
