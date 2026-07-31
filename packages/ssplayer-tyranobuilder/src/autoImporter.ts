@@ -16,11 +16,12 @@
 // all, only an explicit `Reconvert`. `reconvert()` below is the counterpart,
 // reached from the `[ss_new]` inspector.
 //
-// The known cost of that choice: a `.sspj` added to the source folder while the
-// builder is open is not picked up, and cannot be — nothing points at it yet,
-// so the inspector that hosts `Reconvert` cannot be opened for it. Reopening
-// the project converts it, exactly as relaunching does in Ren'Py. Updating an
-// *existing* project is what `Reconvert` covers.
+// A `.sspj` added to the source folder while the builder is open is therefore
+// not picked up on its own, and the inspector that hosts `Reconvert` cannot be
+// opened for it either — nothing points at a pack that does not exist yet. The
+// way in is the plugin manager panel, which is not attached to anything in the
+// scenario: "Import now" there runs `runOnce()`, the same freshness-checked
+// pass a project open runs. See `managerPanel.ts`.
 //
 // The marker discipline is copied deliberately: output mtimes alone cannot tell
 // you a run succeeded, because a failed conversion still leaves fresh-looking
@@ -35,7 +36,12 @@
 
 import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 
-import { convertProjectAt, ensureConverter, type ConvertStats } from './converter.js';
+import {
+  convertProjectAt,
+  ensureConverter,
+  type ConvertStats,
+  type Converter,
+} from './converter.js';
 import type { HostFs, WalkedFile } from './hostFs.js';
 
 /**
@@ -54,6 +60,16 @@ const LEGACY_MARKER = '.ss_import_ok';
 
 /** Where authors drop their SpriteStudio projects, relative to the project root. */
 export const DEFAULT_SOURCE_DIR = 'SpriteStudio_Source';
+
+/**
+ * Hand the editor a turn of the event loop.
+ *
+ * A macrotask, not a microtask: awaiting a resolved promise lets other promises
+ * run but never lets the window paint, so a loop that only did that would be
+ * just as frozen as one that did not yield at all.
+ */
+const yieldToEditor = (): Promise<void> =>
+  new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /**
  * Where the runtime expects packs: `[ss_new storage="others/ssdata/…"]`.
@@ -98,6 +114,12 @@ export interface AutoImporterOptions {
   projectRoot: string;
   /** Absolute path of `ssconverter_bg.wasm`. */
   wasmPath: string;
+  /**
+   * The conversion Worker's bundle, as source. Without it every conversion runs
+   * on the calling thread — which is what the tests do, and what the editor
+   * falls back to when it cannot start a Worker.
+   */
+  workerSource?: string;
   sourceDirName?: string;
   outDirName?: string;
   log: (line: string) => void;
@@ -117,6 +139,7 @@ export class AutoImporter {
   readonly sourceDir: string;
   readonly outRoot: string;
   readonly wasmPath: string;
+  private readonly workerSource?: string;
   /** Tail of the pass queue; see `queuePass`. */
   private inFlight: Promise<void> = Promise.resolve();
 
@@ -124,6 +147,7 @@ export class AutoImporter {
     this.fs = opts.fs;
     this.log = opts.log;
     this.wasmPath = opts.wasmPath;
+    this.workerSource = opts.workerSource;
     const p = this.fs.path;
     this.projectRoot = opts.projectRoot;
     this.dataDir = p.join(opts.projectRoot, 'data');
@@ -377,6 +401,14 @@ export class AutoImporter {
     return previous.source_mtime >= latest && previous.converter === converterVer;
   }
 
+  /**
+   * The converter backing this importer, started on first use and shared for
+   * the rest of the editor session.
+   */
+  converter(): Promise<Converter> {
+    return ensureConverter(this.fs, { wasmPath: this.wasmPath, workerSource: this.workerSource });
+  }
+
   private async importPass(opts: PassOptions): Promise<ImportRunResult> {
     const result: ImportRunResult = { converted: [], skipped: [], failed: [], empty: false };
 
@@ -395,20 +427,29 @@ export class AutoImporter {
       return result;
     }
 
-    let converterVer: string;
+    let converter: Converter;
     try {
-      converterVer = await ensureConverter(this.fs, this.wasmPath);
+      converter = await this.converter();
     } catch (e) {
       result.failed.push({ name: '(converter)', error: (e as Error).message });
       return result;
     }
+    const converterVer = converter.version;
 
     const mtimes = this.latestSourceMtimes(
       sourceFiles,
       sspjs.map((f) => this.fs.path.dirname(f)),
     );
 
+    let converted = false;
     for (const sspj of sspjs) {
+      // Between projects, not before the first: a pass that skips everything —
+      // the ordinary project open — must not cost a turn of the event loop per
+      // project just to say so. In `worker` mode the conversion itself is the
+      // yield, so this is what keeps the editor painting when there is no
+      // Worker to convert in.
+      if (converted && converter.mode === 'inline') await yieldToEditor();
+
       const stem = this.fs.path.basename(sspj, '.sspj');
       const sourceProjectDir = this.fs.path.dirname(sspj);
       const outDir = this.fs.path.join(this.outRoot, stem);
@@ -427,8 +468,11 @@ export class AutoImporter {
         continue;
       }
 
+      converted = true;
       try {
-        const stats = convertProjectAt(this.fs, sspj, outDir, () => performance.now());
+        const stats = await convertProjectAt(this.fs, converter, sspj, outDir, () =>
+          performance.now(),
+        );
         this.stampMarker(stem, latest, converterVer);
         result.converted.push({ name: stem, stats });
         this.log(

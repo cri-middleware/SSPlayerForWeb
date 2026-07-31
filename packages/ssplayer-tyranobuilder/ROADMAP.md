@@ -28,6 +28,23 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   since the first release and never read, so a plugin update shipping a new
   converter never reached packs whose sources had not moved. A project open now
   rebuilds those.
+- **Import now.** A button in the plugin manager panel, running the same
+  freshness-checked pass a project open runs. This is the way in for a `.sspj`
+  added while the builder is open: Reconvert is hosted on a component, and a
+  component cannot name a pack that does not exist yet. `window.js` fills
+  `.plugin_text` with `.html()` and not `.text()`, which is what makes a control
+  there possible at all — settled by undoing the file's string-array
+  obfuscation rather than by guessing. The handler is delegated from `document`,
+  because the host rewrites that element on every change of the plugin list.
+- **Conversion in a Worker.** The wasm call is synchronous and was long enough
+  to see: a folder of 20 sample projects froze the editor for 1.2 s, 0.64 s of
+  it in one project. Measured again through the same harness, the longest pause
+  is now under 50 ms. The Worker is started from a Blob URL — a `file://`
+  document cannot load a worker script from another `file://` URL — and its
+  bundle is inlined into the plugin as a string, so nothing new lands in
+  `data/`. Failing to start one falls back to converting in-thread, which is
+  the old behaviour rather than a broken one, and the `converter:` line in the
+  log says which happened and why.
 - **Components.** Seventeen of the runtime's twenty-three `[ss_*]` tags, with
   packs, animations and player names as dropdowns rather than text fields.
 - **`.tbp` packaging**, installed from the editor's own plugin dialog.
@@ -45,19 +62,13 @@ conversion, the palette, preview, and save/load.
   animation names are read today. (`[ss_restore]` deliberately has none — it is
   not a timeline step, and restore is automatic.) Until then those tags are
   written with the builder's own TyranoScript-code component.
-- **Conversion off the UI thread.** The wasm call is synchronous: 78 ms for one
-  sample, but a pass over a folder of them blocks the editor for as long as it
-  takes. A Worker is the fix, and its costs are the reason it has not happened
-  yet — a second wasm instance, the payload crossing `postMessage`, and another
-  file in `data/`. Less pressing now that a pass only runs on project open or on
-  an explicit Reconvert, both moments where the author expects to wait.
-- **A new `.sspj` needs the project reopened.** Reconvert is hosted on a
-  component, and a component cannot point at a pack that does not exist yet, so
-  a project dropped in while the builder is open has nowhere to press.
-  Documented as a limitation; the fix would be a Reconvert reachable without a
-  component. The plugin manager panel is the only candidate surface — whether
-  `.plugin_text` is rendered with `.html()` (injectable) or `.text()` (not) is
-  unresolved, `window.js` being obfuscated.
+- **File I/O still runs on the UI thread.** The conversion moved to a Worker;
+  the reads and writes around it cannot, because a plugin reaches the
+  filesystem only through `window.studio_api`, which the preload publishes into
+  the renderer. That is what the ~50 ms residual pauses are. Overlapping the
+  next project's reads with the current one's conversion would hide most of
+  what is left, at the cost of a pipeline in `importPass`; not obviously worth
+  it while the number is this size.
 - **`type: 'PreviewButton'` instead of a momentary `Check`.** The host has a
   real button param — `js/app/component/default.js:1149` uses one — which would
   read better than a tick box that unticks itself. Untried because the built-in

@@ -16,7 +16,8 @@
     "@spritestudio/ssplayer-core": "workspace:^"
   },
   "scripts": {
-    "build": "tsdown",
+    "//build": "Ordered: the plugin bundle inlines the finished Worker bundle as a string.",
+    "build": "tsdown --config tsdown.worker.config.ts && tsdown",
     "clean": "rimraf dist",
     "test": "vitest run",
     "pack": "node scripts/pack-tbp.mjs",

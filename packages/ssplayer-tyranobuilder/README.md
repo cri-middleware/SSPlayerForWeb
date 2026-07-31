@@ -53,10 +53,12 @@ now** on the **SpriteStudio: show** component that plays the animation you
 edited. It rebuilds that one pack and reports what it did; the tick box clears
 itself, because it is a button rather than a setting.
 
-> **Adding a *new* `.sspj` needs the project reopened.** Reconvert lives on a
-> component, and a component can only point at a pack that already exists — so
-> there is nowhere to press for a project that has never been converted. Close
-> and reopen the TyranoBuilder project and it is picked up.
+**Added a *new* `.sspj` while the builder was open?** Reconvert lives on a
+component, and a component can only point at a pack that already exists — so
+there is nowhere to press for a project that has never been converted. Open the
+plugin manager instead (the editor's **Plugin** menu), select **SpriteStudio**,
+and press **Import now**. It converts anything added or edited since the project
+was opened, exactly as opening the project does.
 
 ## The components
 

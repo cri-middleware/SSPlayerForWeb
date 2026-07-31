@@ -77,7 +77,10 @@ export interface TBIo {
   exists(path: string): boolean;
 }
 
-/** The slice of jQuery this plugin uses to repopulate a `<select>` in place. */
+/**
+ * The slice of jQuery this plugin uses: repopulating a `<select>` in place, and
+ * a delegated handler for a control the host renders from a string of ours.
+ */
 export interface JQueryLike {
   length: number;
   find(selector: string): JQueryLike;
@@ -89,6 +92,10 @@ export interface JQueryLike {
   change(): JQueryLike;
   prop(name: string): unknown;
   prop(name: string, value: boolean): JQueryLike;
+  /** Delegated form: the element need not exist when this is called. */
+  on(events: string, selector: string, handler: (event: { currentTarget: unknown }) => void): JQueryLike;
+  /** Namespaced form (`'click.ssplayer'`), so only our own handler is removed. */
+  off(events: string): JQueryLike;
 }
 
 /** A placed component, as handed to `name()` / `header()` / `select_list()`. */
