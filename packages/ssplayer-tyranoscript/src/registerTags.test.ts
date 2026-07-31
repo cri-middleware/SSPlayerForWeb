@@ -31,6 +31,9 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     // since boxOrigin() halves it to place logical coordinates.
     box = { x: 0, y: 0, w: 1280, h: 720 };
     load = vi.fn().mockResolvedValue(undefined);
+    // Read out of the pack when it is bound, so the adapter can pick a default
+    // animation without downloading the .ssab a second time.
+    getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2']);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
     play = vi.fn(() => { this._playing = true; });
@@ -110,9 +113,6 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     ...store,
     SSOverlay: FakeSSOverlay,
     SSSurface: { initialize: vi.fn().mockResolvedValue(undefined) },
-    SSRuntimeManager: {
-      extractAnimationNames: vi.fn(() => ['Anime_1', 'Anime_2']),
-    },
   };
 });
 
@@ -358,13 +358,14 @@ describe('registerSSTags', () => {
     expect(getRegistry().has('chr')).toBe(true);
   });
 
-  it('ss_new picks the first animation when anime= is omitted (fetch path)', async () => {
+  it('ss_new picks the first animation when anime= is omitted, without re-reading the pack', async () => {
     const { tyrano, nextOrder, addLayer } = makeTyrano();
     registerSSTags(tyrano);
     const tags = tyrano.kag.ftag.master_tag;
     addLayer('0', 'fore');
 
-    // The adapter fetches the ssab bytes to read its animation names.
+    // The player already knows the names once it has loaded the pack, so the
+    // adapter must ask it rather than downloading the .ssab all over again.
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
@@ -373,10 +374,13 @@ describe('registerSSTags', () => {
     await runTag(tags.ss_init, { wasm: 'rt.wasm' }, nextOrder);
     await runTag(tags.ss_new, { name: 'chr', storage: 'others/ssdata/Basic.ssab' }, nextOrder);
 
-    expect(fetchMock).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     const p = FakeSSPlayer.instances[0];
-    // extractAnimationNames mock → ['Anime_1', 'Anime_2']; first is chosen.
+    expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
+    expect(p.getAnimationNames).toHaveBeenCalled();
+    // getAnimationNames mock → ['Anime_1', 'Anime_2']; first is chosen.
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
+    // The regression this guards: a second download of the same pack.
+    expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 

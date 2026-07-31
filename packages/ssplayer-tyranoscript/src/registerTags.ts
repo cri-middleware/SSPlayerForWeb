@@ -6,7 +6,6 @@ import {
   removePartOverrides,
   SSOverlay,
   SSSurface,
-  SSRuntimeManager,
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
@@ -300,12 +299,11 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 
   await player.load(storageUrl);
 
-  // Pick the animation: the given name, else the ssab's first animation.
+  // Pick the animation: the given name, else the pack's first animation. The
+  // player already read the names when it bound the pack, so this no longer
+  // costs a second download of the same `.ssab`.
   let anime = opts.anime;
-  if (!anime) {
-    const buf = new Uint8Array(await (await fetch(storageUrl)).arrayBuffer());
-    anime = SSRuntimeManager.extractAnimationNames(buf)[0] ?? '';
-  }
+  if (!anime) anime = player.getAnimationNames()[0] ?? '';
   if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
   await player.setAnimation(anime);
 
