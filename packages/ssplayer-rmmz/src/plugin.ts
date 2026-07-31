@@ -12,7 +12,7 @@ import { getSelfScriptDir } from './rmmzGlobals.js';
 import { installWasmBootGate } from './rmmz/boot.js';
 import { defineSpriteSpriteStudio } from './rmmz/Sprite_SpriteStudio.js';
 import { installGamePictureBridge } from './rmmz/gamePictureBridge.js';
-import { getLivePlayer } from './rmmz/liveRegistry.js';
+import { armLiveChain, clearLiveChain, getLivePlayer } from './rmmz/liveRegistry.js';
 import { installInterpreterWait, beginSSWait } from './rmmz/interpreterWait.js';
 import { installMessageTalk, setSSTalk, clearSSTalk } from './rmmz/messageTalk.js';
 import type { SSPictureData } from './rmmz/gamePictureBridge.js';
@@ -104,6 +104,7 @@ function boot(): void {
   reg(PLUGIN_NAME, 'showSS', function (this: any, args: Record<string, string>) {
     const pictureId = num(args.pictureId, 1);
     const scale = num(args.scale, 100);
+    clearLiveChain(pictureId); // this picture is being redefined
     // Show a (bitmap-less) anchor picture carrying the transform; the bridge
     // keeps it visible and mounts the SS child.
     g.$gameScreen.showPicture(pictureId, '', 0, num(args.x, 408), num(args.y, 312), scale, scale, 255, 0);
@@ -119,6 +120,7 @@ function boot(): void {
   // Picture and Erase Picture stay under the standard event commands.
   reg(PLUGIN_NAME, 'setSSAsPicture', function (this: any, args: Record<string, string>) {
     const pictureId = num(args.pictureId, 1);
+    clearLiveChain(pictureId); // this picture is being redefined
     const pic = g.$gameScreen.picture(pictureId);
     if (!pic || !pic.setSSData) {
       console.warn(
@@ -141,6 +143,9 @@ function boot(): void {
   // change survives save/load.
   reg(PLUGIN_NAME, 'changeSSAnimation', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
+    // The author asked for THIS animation; a one-shot's pending return-to-base
+    // (or a queued sequence step) must not overwrite it a moment later.
+    clearLiveChain(pictureId);
     const pic = g.$gameScreen.picture(pictureId);
     const cur = pic && pic.ssData ? pic.ssData() : null;
     if (!cur) {
@@ -174,6 +179,7 @@ function boot(): void {
   // resumes the loop.
   reg(PLUGIN_NAME, 'playSSOnce', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
+    clearLiveChain(pictureId); // supersede an earlier one-shot / sequence
     const oneShot = String(args.animation || '');
     // Play count for the one-shot: >=1 finite (0 is coerced to 1; -1 would never
     // end and never revert, so it's clamped to 1 too).
@@ -195,12 +201,18 @@ function boot(): void {
         console.error('[ssplayer-rmmz] playSSOnce: failed to return to base loop:', e);
       });
     };
-    const unsub = player.onAnimationEnd(() => {
-      unsub();
-      revert();
-    });
+    // Owned by the registry, so a later command (changeSSAnimation, another
+    // playSSOnce, stopSS, removeSS) can cancel the pending revert instead of
+    // having it fire afterwards and clobber whatever is playing by then.
+    armLiveChain(
+      pictureId,
+      player.onAnimationEnd(() => {
+        clearLiveChain(pictureId);
+        revert();
+      }),
+    );
     player.setAnimation(oneShot, count).then(() => player.play()).catch((e: unknown) => {
-      unsub();
+      clearLiveChain(pictureId);
       console.error('[ssplayer-rmmz] playSSOnce: failed to play one-shot:', e);
     });
   });
@@ -212,6 +224,7 @@ function boot(): void {
   // state matches _ssData (save/load resumes the base).
   reg(PLUGIN_NAME, 'playSSSequence', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
+    clearLiveChain(pictureId); // supersede an earlier one-shot / sequence
     const seq = String(args.animations || '')
       .split(',')
       .map((s) => s.trim())
@@ -230,16 +243,23 @@ function boot(): void {
       const name = seq[i];
       const isLast = i === seq.length - 1;
       const loop = isLast ? lastLoop : 1;
+      // Arm BEFORE starting playback so a failed setAnimation can drop the
+      // pending step rather than leaving the sequence stalled on a listener
+      // for an animation that never began.
+      if (!isLast) {
+        armLiveChain(
+          pictureId,
+          player.onAnimationEnd(() => {
+            clearLiveChain(pictureId);
+            i += 1;
+            step();
+          }),
+        );
+      }
       player.setAnimation(name, loop).then(() => player.play()).catch((e: unknown) => {
+        clearLiveChain(pictureId);
         console.error('[ssplayer-rmmz] playSSSequence: failed to play:', e);
       });
-      if (!isLast) {
-        const unsub = player.onAnimationEnd(() => {
-          unsub();
-          i += 1;
-          step();
-        });
-      }
     };
     step();
   });
@@ -318,17 +338,24 @@ function boot(): void {
     }
   });
 
+  // playSS / stopSS restart or end playback outright, so a queued follow-up is
+  // no longer wanted. pauseSS deliberately keeps it: resuming should carry on.
   reg(PLUGIN_NAME, 'playSS', (args: Record<string, string>) => {
-    getLivePlayer(num(args.pictureId, 1))?.play();
+    const pictureId = num(args.pictureId, 1);
+    clearLiveChain(pictureId);
+    getLivePlayer(pictureId)?.play();
   });
   reg(PLUGIN_NAME, 'pauseSS', (args: Record<string, string>) => {
     getLivePlayer(num(args.pictureId, 1))?.pause();
   });
   reg(PLUGIN_NAME, 'stopSS', (args: Record<string, string>) => {
-    getLivePlayer(num(args.pictureId, 1))?.stop();
+    const pictureId = num(args.pictureId, 1);
+    clearLiveChain(pictureId);
+    getLivePlayer(pictureId)?.stop();
   });
   reg(PLUGIN_NAME, 'removeSS', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
+    clearLiveChain(pictureId);
     const pic = g.$gameScreen.picture(pictureId);
     if (pic && pic.setSSData) pic.setSSData(null);
     g.$gameScreen.erasePicture(pictureId);
