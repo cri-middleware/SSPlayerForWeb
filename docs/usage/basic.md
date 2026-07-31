@@ -41,10 +41,8 @@ player.startFrame;          // first frame of the range
 player.endFrame;            // last frame of the range
 player.loopCount;           // configured loop count (-1 = infinite)
 player.animationName;       // the animation currently set up
+player.subFrameEnabled;     // sub-frame interpolation (on by default; smooth in slow motion / high-refresh)
 ```
-
-Sub-frame interpolation is on by default (smooth in slow motion and on high-refresh displays).
-The property is named `subFrameEnabled` on the WebGL player and `subframe` on the PixiJS one.
 
 ## Section and direction
 
@@ -62,8 +60,6 @@ player.frameSkipEnabled = false;                       // stop skipping frames; 
 player.getPartsCount();          // number of parts
 player.findPartIndex('body');    // name → index (-1 if unknown)
 ```
-
-The PixiJS player also has `getPartIndexFromName()`, an older spelling of the same lookup.
 
 To override a part's colour, cell or visibility at run time, see
 [Part control (visibility / cell / color)](/customize/part-overrides) — that API is

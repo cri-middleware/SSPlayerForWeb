@@ -100,9 +100,9 @@ export class UIManager {
 
         if (this.subframeCheck) {
             this.subframeCheck.addEventListener('change', (e) => {
-                this.player.subframe = (e.target as HTMLInputElement).checked;
+                this.player.subFrameEnabled = (e.target as HTMLInputElement).checked;
             });
-            this.player.subframe = this.subframeCheck.checked;
+            this.player.subFrameEnabled = this.subframeCheck.checked;
         }
 
         // Update UI every frame

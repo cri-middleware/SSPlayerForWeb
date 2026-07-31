@@ -231,11 +231,17 @@ export class SSPlayer extends Container {
     public set audioManager(value: IAudioManager | null) {
         this.internalPlayer.audioManager = value;
     }
-    public get subframe(): boolean {
+    /**
+     * Sub-frame interpolation: evaluate the timeline at fractional frames rather
+     * than snapping to integers (on by default). Pairs with
+     * {@link frameSkipEnabled} — turning frame skipping off without turning this
+     * off too leaves the playhead advancing fractionally, so the timing drifts.
+     */
+    public get subFrameEnabled(): boolean {
         return this.internalPlayer.subFrameEnabled;
     }
 
-    public set subframe(value: boolean) {
+    public set subFrameEnabled(value: boolean) {
         this.internalPlayer.subFrameEnabled = value;
     }
     
@@ -569,10 +575,6 @@ export class SSPlayer extends Container {
 
     public set frameSkipEnabled(value: boolean) {
         this.internalPlayer.setSkipFrames(value);
-    }
-
-    public getPartIndexFromName(partName: string): number {
-        return this.internalPlayer.runtimeManager.getPartIndexFromName(partName);
     }
 
     public getPartsCount(): number {

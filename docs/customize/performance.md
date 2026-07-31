@@ -49,17 +49,17 @@ invisible; opt out explicitly with `pause-when-hidden="false"`.
 ## Playback options
 
 ```ts
-player.subframe = false;  // disable subframe interpolation (on by default); use to reduce load
+player.subFrameEnabled = false;  // disable sub-frame interpolation (on by default); use to reduce load
 ```
 
-- **`subframe`**: **on by default**. Smooths motion on high refresh rates and during
+- **`subFrameEnabled`**: **on by default**. Smooths motion on high refresh rates and during
   slow-motion effects. Set it to `false` when running many players at once makes the
   per-frame computation too expensive.
 - **`frameSkipEnabled`**: **on by default**. Skips frames to keep playback timing when
   rendering can't keep up — no action needed for performance.
 
 ::: warning
-`subframe` and `frameSkipEnabled` work as a pair. If you turn one off, turn off the
+`subFrameEnabled` and `frameSkipEnabled` work as a pair. If you turn one off, turn off the
 other too — disabling only one leaves playback timing inconsistent.
 :::
 
