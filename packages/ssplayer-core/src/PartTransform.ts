@@ -84,3 +84,164 @@ export function decomposePartAffine(a: ArrayLike<number>): SSDecomposedTransform
         scaleY,
     };
 }
+
+// --- Follower ------------------------------------------------------------
+//
+// Which parts are being followed, by what, and whether we were the one that
+// hid a target — none of that is engine-specific, and it was written out twice
+// (ssplayer-pixi and ssplayer-rmmz) with the same edge cases each time. What IS
+// engine-specific is a single step: writing a transform onto a display object.
+// So the bookkeeping lives here and the host supplies the write.
+
+/**
+ * The player state a follower reads each frame. Structural on purpose, so both
+ * {@link InternalPlayerBase} and every renderer facade already satisfy it.
+ */
+export interface SSPartFollowSource {
+    findPartIndex(partName: string): number;
+    isPartHidden(part: number | string): boolean | null;
+    getPartTransform(part: number | string, out?: Float32Array): Float32Array | null;
+}
+
+/** Which axes a component-wise write should touch. */
+export interface SSPartFollowAxes {
+    position: boolean;
+    rotation: boolean;
+    scale: boolean;
+}
+
+/** How a host parents, shows and transforms the objects it makes follow parts. */
+export interface SSPartFollowHost<T> {
+    /** Parent `target` under the player. Only called when `addAsChild` is on. */
+    addChild(target: T): void;
+    /** Undo {@link addChild}. Must itself check the target is still ours. */
+    removeChild(target: T): void;
+    setVisible(target: T, visible: boolean): void;
+    /** Write the exact affine `[m00, m01, m10, m11, tx, ty]` (skew and mirroring intact). */
+    applyAffine(target: T, affine: SSPartAffine): void;
+    /**
+     * Write only the enabled axes, leaving the target's own values for the rest.
+     * `transform` and `axes` are scratch objects reused across attachments and
+     * frames — read them, do not retain them.
+     */
+    applyDecomposed(target: T, transform: SSDecomposedTransform, axes: SSPartFollowAxes): void;
+}
+
+/** Handle returned by {@link SSPartFollower.attach}; `detach()` stops the following. */
+export interface SSPartAttachment<T> {
+    readonly target: T;
+    detach(): void;
+}
+
+interface Attachment<T> {
+    part: number | string;
+    target: T;
+    position: boolean;
+    rotation: boolean;
+    scale: boolean;
+    onHide: 'follow' | 'hide';
+    addedAsChild: boolean;
+    /** A hide WE imposed, so `detach` only restores visibility it took away. */
+    autoHidden: boolean;
+}
+
+/**
+ * Drives external objects to follow animation parts — a weapon in a hand, an
+ * effect on a muzzle, a hitbox on a null part.
+ *
+ * The host owns when to call {@link update}: it must run after the frame's world
+ * matrices are final, which is the only moment `getPartTransform` describes the
+ * frame about to be drawn.
+ */
+export class SSPartFollower<T> {
+    private readonly attachments: Attachment<T>[] = [];
+    /** Reused so a per-frame update over many attachments allocates nothing. */
+    private readonly scratch = new Float32Array(6);
+    // Handed to applyDecomposed instead of the attachment itself, which would put
+    // this class's internal record in the host's hands.
+    private readonly axes: SSPartFollowAxes = { position: true, rotation: true, scale: true };
+
+    constructor(
+        private readonly source: SSPartFollowSource,
+        private readonly host: SSPartFollowHost<T>,
+    ) {}
+
+    /** How many targets are currently following a part. */
+    public get size(): number {
+        return this.attachments.length;
+    }
+
+    /**
+     * Make `target` follow `part` (a name or an index). Attaching a target that
+     * is already attached replaces the earlier attachment rather than stacking a
+     * second one. With position, rotation and scale all enabled the full affine
+     * is written, so a skewed or mirrored part is reproduced exactly.
+     */
+    public attach(part: number | string, target: T, options: SSPartFollowOptions = {}): SSPartAttachment<T> {
+        this.detach(target);
+
+        const addedAsChild = options.addAsChild ?? true;
+        this.attachments.push({
+            part,
+            target,
+            position: options.position ?? true,
+            rotation: options.rotation ?? true,
+            scale: options.scale ?? true,
+            onHide: options.onHide ?? 'follow',
+            addedAsChild,
+            autoHidden: false,
+        });
+        if (addedAsChild) this.host.addChild(target);
+
+        return { target, detach: () => this.detach(target) };
+    }
+
+    /** Stop following for `target`, reversing the parenting and visibility we imposed. */
+    public detach(target: T): void {
+        const i = this.attachments.findIndex(a => a.target === target);
+        if (i < 0) return;
+        const [state] = this.attachments.splice(i, 1);
+        if (state.addedAsChild) this.host.removeChild(target);
+        // Only undo a hide we imposed; a target the host hid stays hidden.
+        if (state.autoHidden) this.host.setVisible(target, true);
+    }
+
+    /** Detach every target — for teardown, so nothing is left hidden or reparented. */
+    public detachAll(): void {
+        for (const a of [...this.attachments]) this.detach(a.target);
+    }
+
+    /** Drive every attachment to its part's transform on the current frame. */
+    public update(): void {
+        for (const a of this.attachments) {
+            const index = typeof a.part === 'string' ? this.source.findPartIndex(a.part) : a.part;
+
+            // Absent from this animation, or hidden and the caller asked to
+            // follow that: hide once and stop driving it.
+            const hide = index < 0 || (a.onHide === 'hide' && this.source.isPartHidden(index) === true);
+            if (hide) {
+                if (!a.autoHidden) {
+                    this.host.setVisible(a.target, false);
+                    a.autoHidden = true;
+                }
+                continue;
+            }
+            if (a.autoHidden) {
+                this.host.setVisible(a.target, true);
+                a.autoHidden = false;
+            }
+
+            const affine = this.source.getPartTransform(index, this.scratch);
+            if (!affine) continue;
+
+            if (a.position && a.rotation && a.scale) {
+                this.host.applyAffine(a.target, affine);
+            } else {
+                this.axes.position = a.position;
+                this.axes.rotation = a.rotation;
+                this.axes.scale = a.scale;
+                this.host.applyDecomposed(a.target, decomposePartAffine(affine), this.axes);
+            }
+        }
+    }
+}

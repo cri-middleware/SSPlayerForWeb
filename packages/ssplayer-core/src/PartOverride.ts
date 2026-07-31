@@ -72,6 +72,14 @@ export interface SSPartOverrideTarget {
     setPartVisibilityOverride(part: number | string, hide: boolean, cascade: boolean): boolean;
 }
 
+/** A target that can also drop overrides — what {@link SSPartOverrideStore} drives. */
+export interface SSPartOverrideOwner extends SSPartOverrideTarget {
+    clearPartColorOverride(part: number | string): boolean;
+    clearPartCellOverride(part: number | string): boolean;
+    clearPartVisibilityOverride(part: number | string): boolean;
+    clearAllPartOverrides(): boolean;
+}
+
 /**
  * Add `entry`, replacing any override of the same kind already set on that part —
  * setting a part's colour twice means the second call wins, exactly as it does
@@ -154,4 +162,95 @@ export function parsePartOverrideColor(raw: string): number | null {
         return null;
     }
     return parseInt(rgb + alpha, 16) >>> 0;
+}
+
+/**
+ * Where a host keeps its override list, and how to reach its live player.
+ *
+ * Both are host-shaped: RPG Maker MZ's list is a field on `Game_Picture` (which
+ * the save system serialises) and its player may not be mounted yet;
+ * TyranoScript's is a field on its registry entry that has to be mirrored into
+ * `stat.f` after every change.
+ */
+export interface SSPartOverrideStoreAccess {
+    /** The list as it stands. */
+    read(): SSPartOverride[] | undefined;
+    /** Replace the list. Hosts that mirror it into a save target do that here. */
+    write(list: SSPartOverride[]): void;
+    /** The live player, or null when none is mounted yet. */
+    player(): SSPartOverrideOwner | null;
+}
+
+/**
+ * The three-step dance every host was writing by hand: change the stored list,
+ * change the live runtime, and keep the two consistent when an animation change
+ * makes the runtime drop overrides behind your back.
+ *
+ * Doing it by hand is what made a whole class of bug possible — an override that
+ * survives in a save but not on screen, or the reverse. The methods here are
+ * named for the *intent* so the choice that actually matters is explicit:
+ *
+ * - the author asked for a different animation → {@link pruneForNewAnimation},
+ *   because the runtime discarded all but the Permanent overrides and the stored
+ *   list must not resurrect them;
+ * - something swapped the animation transiently, without the author asking (a
+ *   lip-sync talk/idle swap) → {@link reapply}, because the author's overrides
+ *   were collateral damage and should go straight back.
+ *
+ * Getting that pair the wrong way round is exactly the bug fixed in
+ * ssplayer-rmmz's `messageTalk`.
+ */
+export class SSPartOverrideStore {
+    constructor(private readonly access: SSPartOverrideStoreAccess) {}
+
+    /** The stored list (never null, so callers can serialise it directly). */
+    public list(): SSPartOverride[] {
+        return this.access.read() ?? [];
+    }
+
+    /**
+     * Set one override: store it and apply it now. A player that is not mounted
+     * yet is not an error — the stored copy is what a mount replays.
+     */
+    public set(entry: SSPartOverride): void {
+        this.access.write(mergePartOverride(this.access.read(), entry));
+        const player = this.access.player();
+        if (player) applyPartOverrides(player, [entry]);
+    }
+
+    /** Drop the overrides on `part`, or all of them when `part` is omitted. */
+    public clear(part?: string): void {
+        this.access.write(removePartOverrides(this.access.read(), part || undefined));
+        const player = this.access.player();
+        if (!player) return;
+        if (part) {
+            player.clearPartColorOverride(part);
+            player.clearPartCellOverride(part);
+            player.clearPartVisibilityOverride(part);
+        } else {
+            player.clearAllPartOverrides();
+        }
+    }
+
+    /**
+     * Bring the stored list in line with what the runtime keeps across an
+     * animation setup the author asked for. The runtime has already done its
+     * half; this stops a later restore from resurrecting the rest.
+     */
+    public pruneForNewAnimation(): void {
+        const list = this.access.read();
+        if (!list || list.length === 0) return;
+        this.access.write(prunePartOverridesForNewAnimation(list));
+    }
+
+    /**
+     * Put the whole stored list back onto the player — after a rebuild (a fresh
+     * WASM context starts with an empty override table), or after an animation
+     * swap the author never asked for. Call once the animation is set up: before
+     * that, part names cannot resolve.
+     */
+    public reapply(): void {
+        const player = this.access.player();
+        if (player) applyPartOverrides(player, this.access.read());
+    }
 }

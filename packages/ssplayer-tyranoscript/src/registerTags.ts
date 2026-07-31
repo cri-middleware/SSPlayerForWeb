@@ -1,9 +1,7 @@
 import {
   applyPartOverrides,
-  mergePartOverride,
   parsePartOverrideColor,
-  prunePartOverridesForNewAnimation,
-  removePartOverrides,
+  SSPartOverrideStore,
   SSOverlay,
   SSSurface,
   type SSBlendOp,
@@ -211,6 +209,16 @@ function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: n
     followOpacity: true,
     maxDPR: Math.min(dpr, 2),
   });
+  // A placement is stored in logical pixels but pushed to the renderer in
+  // drawing-buffer pixels, and a resize changes the ratio between them. Without
+  // this, every character on the layer drifts the first time the window is
+  // resized — and stays wrong until the scenario happens to move it again.
+  overlay.onResized(() => {
+    for (const name of registry.names()) {
+      const entry = registry.get(name);
+      if (entry && entry.overlay === overlay) applyPlacement(entry);
+    }
+  });
   overlays.set(key, overlay);
   return overlay;
 }
@@ -225,6 +233,38 @@ function destroyOverlays(): void {
 function setPlayerOrder(entry: SSPlayerEntry, zindex?: number): void {
   entry.player.order = zindex !== undefined && Number.isFinite(zindex) ? zindex : 0;
   entry.overlay.surface.invalidateOrder();
+}
+
+/**
+ * `drawingBuffer px / logical px` for this overlay, right now.
+ *
+ * Derived at every use rather than captured when the player was created: the
+ * overlay resizes its canvas with the window, and a ratio captured at `[ss_new]`
+ * would place `[ss_pos]` / `[ss_move]` against a canvas that no longer exists.
+ */
+function bufferScaleOf(overlay: SSOverlay, logicalW: number): number {
+  return overlay.canvas.width / Math.max(1, logicalW);
+}
+
+/**
+ * The override list for one player: the saved copy on `meta` (mirrored into
+ * `stat.f` by persist), the live copy on the runtime. The store keeps the two in
+ * step, so no tag has to remember the three-step dance by hand.
+ */
+function overridesOf(entry: SSPlayerEntry, persist: () => void): SSPartOverrideStore {
+  return new SSPartOverrideStore({
+    read: () => entry.meta.overrides,
+    write: (list) => { entry.meta.overrides = list; persist(); },
+    player: () => entry.player,
+  });
+}
+
+/** Push a player's stored placement to the renderer, at the current buffer scale. */
+function applyPlacement(entry: SSPlayerEntry): void {
+  const { player, meta, overlay } = entry;
+  player.setTransform(
+    toTransform(meta.x, meta.y, meta.scale, bufferScaleOf(overlay, entry.logicalWidth), boxOrigin(player)),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -294,7 +334,6 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     player.order = opts.zindex;
     overlay.surface.invalidateOrder();
   }
-  const bufferScale = overlay.canvas.width / Math.max(1, w);
   ensureAudioManager()?.bindToPlayer(player);
 
   await player.load(storageUrl);
@@ -307,7 +346,6 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
   await player.setAnimation(anime);
 
-  player.setTransform(toTransform(opts.x, opts.y, opts.scale, bufferScale, boxOrigin(player)));
   player.loopCount = opts.loop;
   // A fresh player means a fresh WASM context, whose override table starts
   // empty — so a restore has to put the saved overrides back. Must run after
@@ -318,7 +356,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     player,
     overlay,
     element,
-    bufferScale,
+    logicalWidth: w,
     meta: {
       name: opts.name,
       storage: opts.storage,
@@ -337,6 +375,9 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     },
   };
   registry.set(entry);
+  // Placement must come after the entry exists, since it reads meta and the
+  // current buffer scale through it.
+  applyPlacement(entry);
   return entry;
 }
 
@@ -370,7 +411,7 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
       .then(() => {
         // The author DID ask for this animation change (they wrote `next=`), so
         // drop the overrides a new setup discards, exactly like [ss_play].
-        meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+        overridesOf(entry, persist).pruneForNewAnimation();
         player.loopCount = next.loop;
         player.play();
         persist();
@@ -492,7 +533,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       // Setting up an animation makes the runtime drop every override but the
       // Permanent ones; keep the saved mirror in step so a later [ss_restore]
       // cannot resurrect what the runtime discarded.
-      meta.overrides = prunePartOverridesForNewAnimation(meta.overrides);
+      overridesOf(entry, persist).pruneForNewAnimation();
     }
     if (pm.loop !== undefined && pm.loop !== '') {
       meta.loop = loopCount(pm.loop);
@@ -529,7 +570,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       .then(() => {
         // setAnimation drops the non-Permanent overrides; the author never
         // asked for that here, so put them straight back.
-        applyPartOverrides(player, meta.overrides);
+        overridesOf(entry, persist).reapply();
         player.loopCount = loop;
         player.play();
       })
@@ -682,7 +723,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         m.x = num(pm.x, m.x);
         m.y = num(pm.y, m.y);
         m.scale = num(pm.scale, m.scale);
-        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale, boxOrigin(entry.player)));
+        applyPlacement(entry);
         if (pm.anime) await applyPlayback(entry, pm);
         m.visible = true;
         persist();
@@ -806,10 +847,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
   /** Apply one override now and remember it for save/restore. */
   const setOverride = (label: string, name: string, entry: SSPartOverride): void => {
-    const target = lookup(label, name);
-    applyPartOverrides(target.player, [entry]);
-    target.meta.overrides = mergePartOverride(target.meta.overrides, entry);
-    persist();
+    overridesOf(lookup(label, name), persist).set(entry);
   };
 
   // [ss_part_color name= part= color= blend= priority=] — tint one part.
@@ -878,16 +916,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start(pm) {
       runSync('ss_part_clear', () => {
         const entry = lookup('ss_part_clear', String(pm.name));
-        const part = String(pm.part ?? '');
-        if (part) {
-          entry.player.clearPartColorOverride(part);
-          entry.player.clearPartCellOverride(part);
-          entry.player.clearPartVisibilityOverride(part);
-        } else {
-          entry.player.clearAllPartOverrides();
-        }
-        entry.meta.overrides = removePartOverrides(entry.meta.overrides, part || undefined);
-        persist();
+        overridesOf(entry, persist).clear(String(pm.part ?? '') || undefined);
       });
     },
   };
@@ -995,7 +1024,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           m.zindex = num(pm.zindex, 0);
           setPlayerOrder(entry, m.zindex);
         }
-        entry.player.setTransform(toTransform(m.x, m.y, m.scale, entry.bufferScale, boxOrigin(entry.player)));
+        applyPlacement(entry);
         persist();
       });
     },
@@ -1041,7 +1070,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const raf = (globalThis as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
         const now = () => (globalThis.performance?.now?.() ?? 0);
         if (time <= 0 || typeof raf !== 'function') {
-          entry.player.setTransform(toTransform(toX, toY, toS, entry.bufferScale, boxOrigin(entry.player)));
+          applyPlacement(entry); // meta already holds the destination
           finish();
           return;
         }
@@ -1050,8 +1079,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const step = (t: number): void => {
           const p = Math.min(1, (t - start) / time);
           const e = 1 - (1 - p) * (1 - p); // easeOutQuad
+          // Re-read the buffer scale each frame rather than closing over it: a
+          // window resize mid-tween must not send the character off course.
           entry.player.setTransform(
-            toTransform(fromX + (toX - fromX) * e, fromY + (toY - fromY) * e, fromS + (toS - fromS) * e, entry.bufferScale, boxOrigin(entry.player)),
+            toTransform(
+              fromX + (toX - fromX) * e,
+              fromY + (toY - fromY) * e,
+              fromS + (toS - fromS) * e,
+              bufferScaleOf(entry.overlay, entry.logicalWidth),
+              boxOrigin(entry.player),
+            ),
           );
           entry.tween = p < 1 ? raf(step) : 0;
         };

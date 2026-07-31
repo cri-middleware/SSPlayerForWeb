@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, decomposePartAffine, type SSPartFollowOptions } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -74,24 +74,7 @@ export type Unsubscribe = () => void;
  * called. Re-export of the follow options lives in ssplayer-core
  * ({@link SSPartFollowOptions}).
  */
-export interface SSPartAttachment {
-    readonly target: Container;
-    detach(): void;
-}
-
-// Internal per-attachment state. `autoHidden` tracks whether *we* hid the target
-// (part absent / hidden) so detach and re-appearance only restore visibility we
-// took away — a target the user hid themselves is left alone.
-interface PartAttachmentState {
-    part: number | string;
-    target: Container;
-    position: boolean;
-    rotation: boolean;
-    scale: boolean;
-    onHide: 'follow' | 'hide';
-    addedAsChild: boolean;
-    autoHidden: boolean;
-}
+export type SSPartAttachment = SSPartAttachmentOf<Container>;
 
 // Per-context mask coverage produced by the pre-pass: the offscreen texture,
 // the affine that maps a part's player-local position into the coverage's
@@ -159,9 +142,32 @@ export class SSPlayer extends Container {
     // children every frame, so the layer is re-added and driven at the end of
     // renderFrame() — after the meshes, so followers draw on top.
     private readonly _attachmentLayer = new Container();
-    private readonly _attachments: PartAttachmentState[] = [];
-    private readonly _attachAffine = new Float32Array(6);
     private readonly _attachMatrix = new Matrix();
+    // The bookkeeping (who follows what, did we hide it, detach ordering) is
+    // core's, shared with ssplayer-rmmz which had the same code; only the write
+    // onto a Pixi object below is engine-specific.
+    private readonly _follower = new SSPartFollower<Container>(
+        { 
+            findPartIndex: (n) => this.internalPlayer.findPartIndex(n),
+            isPartHidden: (p) => this.internalPlayer.isPartHidden(p),
+            getPartTransform: (p, out) => this.internalPlayer.getPartTransform(p, out),
+        },
+        {
+            addChild: (t) => { this._attachmentLayer.addChild(t); },
+            removeChild: (t) => { if (t.parent === this._attachmentLayer) this._attachmentLayer.removeChild(t); },
+            setVisible: (t, v) => { t.visible = v; },
+            applyAffine: (t, affine) => {
+                // Pixi Matrix is (a, b, c, d, tx, ty) = (m00, m10, m01, m11, tx, ty).
+                this._attachMatrix.set(affine[0], affine[2], affine[1], affine[3], affine[4], affine[5]);
+                t.setFromMatrix(this._attachMatrix);
+            },
+            applyDecomposed: (t, d, axes) => {
+                if (axes.position) t.position.set(d.x, d.y);
+                if (axes.rotation) t.rotation = d.rotation;
+                if (axes.scale) t.scale.set(d.scaleX, d.scaleY);
+            },
+        },
+    );
 
     private partsColorShaders: Map<Texture, Shader> = new Map();
     private effectShaders: Map<Texture, Shader> = new Map();
@@ -423,7 +429,7 @@ export class SSPlayer extends Container {
         // Detach followers (removes them from our layer and restores any
         // visibility we changed) so destroying the player never destroys or
         // hides a target the host still owns, then free the now-empty layer.
-        for (const a of [...this._attachments]) this.detachFromPart(a.target);
+        this._follower.detachAll();
         this._attachmentLayer.destroy({ children: false });
 
         if (this.internalPlayer) {
@@ -741,75 +747,12 @@ export class SSPlayer extends Container {
      * the following.
      */
     public attachToPart(part: number | string, target: Container, options: SSPartFollowOptions = {}): SSPartAttachment {
-        // Replace any existing attachment for this target first.
-        this.detachFromPart(target);
-
-        const addedAsChild = options.addAsChild ?? true;
-        const state: PartAttachmentState = {
-            part,
-            target,
-            position: options.position ?? true,
-            rotation: options.rotation ?? true,
-            scale: options.scale ?? true,
-            onHide: options.onHide ?? 'follow',
-            addedAsChild,
-            autoHidden: false,
-        };
-        if (addedAsChild) this._attachmentLayer.addChild(target);
-        this._attachments.push(state);
-
-        return { target, detach: () => this.detachFromPart(target) };
+        return this._follower.attach(part, target, options);
     }
 
     /** Stop following for `target`; reverses the parenting/visibility attach set up. */
     public detachFromPart(target: Container): void {
-        const i = this._attachments.findIndex(a => a.target === target);
-        if (i < 0) return;
-        const [state] = this._attachments.splice(i, 1);
-        if (state.addedAsChild && target.parent === this._attachmentLayer) {
-            this._attachmentLayer.removeChild(target);
-        }
-        // Undo only a hide we imposed; leave a user-hidden target hidden.
-        if (state.autoHidden) target.visible = true;
-    }
-
-    /**
-     * Drive every attachment to its part's current-frame transform. Called from
-     * renderFrame() after the meshes are placed, so followers read the same
-     * finalized world matrices the frame drew with.
-     */
-    private updateAttachments(): void {
-        for (const a of this._attachments) {
-            const idx = typeof a.part === 'string' ? this.internalPlayer.findPartIndex(a.part) : a.part;
-
-            // Part not in this animation, or hidden and onHide === 'hide': hide
-            // the target (once) and stop driving it.
-            const hide = idx < 0 || (a.onHide === 'hide' && this.internalPlayer.isPartHidden(idx) === true);
-            if (hide) {
-                if (!a.autoHidden) { a.target.visible = false; a.autoHidden = true; }
-                continue;
-            }
-            if (a.autoHidden) { a.target.visible = true; a.autoHidden = false; }
-
-            const affine = this.internalPlayer.getPartTransform(idx, this._attachAffine);
-            if (!affine) continue;
-            this.applyAffineToTarget(a, affine);
-        }
-    }
-
-    private applyAffineToTarget(a: PartAttachmentState, affine: Float32Array): void {
-        if (a.position && a.rotation && a.scale) {
-            // Full affine → exact, preserving skew and mirroring. Pixi Matrix is
-            // (a, b, c, d, tx, ty) = (m00, m10, m01, m11, tx, ty).
-            this._attachMatrix.set(affine[0], affine[2], affine[1], affine[3], affine[4], affine[5]);
-            a.target.setFromMatrix(this._attachMatrix);
-            return;
-        }
-        // Component-wise: write only the enabled axes, keep the target's own rest.
-        const d = decomposePartAffine(affine);
-        if (a.position) a.target.position.set(d.x, d.y);
-        if (a.rotation) a.target.rotation = d.rotation;
-        if (a.scale) a.target.scale.set(d.scaleX, d.scaleY);
+        this._follower.detach(target);
     }
 
     /**
@@ -1018,9 +961,9 @@ export class SSPlayer extends Container {
         // renderContext addChild'd this frame's meshes onto us; re-add the
         // attachment layer last so followers draw above the animation, then
         // drive each target to its part's just-finalized transform.
-        if (this._attachments.length > 0) {
+        if (this._follower.size > 0) {
             this.addChild(this._attachmentLayer);
-            this.updateAttachments();
+            this._follower.update();
         }
     }
 
