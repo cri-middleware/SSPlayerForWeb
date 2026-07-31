@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { BUTTON_PARAM_TYPE, registerButtonParam } from './buttonParam.js';
 import { defineSSComponents, type PackChoice } from './components.js';
 
 const here = nodePath.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +78,8 @@ function build(overrides: Partial<Parameters<typeof defineSSComponents>[0]> = {}
     $: undefined as never,
     listPacks: () => packs,
     listAnimations: (storage) => animations[String(storage)] ?? [],
+    reconvert: () => {},
+    buttonType: BUTTON_PARAM_TYPE,
     ...overrides,
   });
 }
@@ -102,6 +105,15 @@ describe('defineSSComponents', () => {
     }
   });
 
+  /**
+   * Params that drive an editor action instead of describing a tag attribute,
+   * as `<tag>.<param>`. They must never reach the scenario file, so they are
+   * exempt from the runtime cross-check below — and listed one by one, because
+   * the whole value of that check is that an ordinary param cannot quietly opt
+   * out of it.
+   */
+  const EDITOR_ONLY_PARAMS = new Set(['ss_new.reconvert']);
+
   it.skipIf(!existsSync(REGISTER_TAGS))('agrees with the tags ssplayer-tyranoscript registers', () => {
     const tags = runtimeTags();
     // A parse that silently found nothing would make this test vacuous.
@@ -113,6 +125,7 @@ describe('defineSSComponents', () => {
       expect(runtime, `[${tag}] is not registered by ssplayer-tyranoscript`).toBeDefined();
 
       for (const key of Object.keys(component.param)) {
+        if (EDITOR_ONLY_PARAMS.has(`${tag}.${key}`)) continue;
         expect(
           runtime!.attrs.has(key),
           `[${tag} ${key}=] is not read by ssplayer-tyranoscript's ${tag} tag`,
@@ -126,6 +139,146 @@ describe('defineSSComponents', () => {
         ).toContain(name);
       }
     }
+  });
+
+  /** Seeded as if the host had stored a value from a default. */
+  const placed = () => ({
+    data: { tag_name: 'ss_new', pm: { storage: packs[0].val, reconvert: true } },
+  });
+
+  it('presses Reconvert on its own pack, and leaves nothing behind in the tag', () => {
+    const asked: unknown[] = [];
+    const param = build({ reconvert: (s) => asked.push(s) }).ss_new.component.param.reconvert;
+    expect(param.type).toBe(BUTTON_PARAM_TYPE);
+
+    const component = placed();
+    param.onClick?.(component);
+
+    // Scoped to the pack this component plays, not to every project.
+    expect(asked).toEqual([packs[0].val]);
+    // Or every [ss_new] the author places carries a meaningless `reconvert=`
+    // into the scenario file.
+    expect('reconvert' in component.data.pm).toBe(false);
+  });
+
+  it('falls back to a momentary tick box when the button could not be registered', () => {
+    const asked: unknown[] = [];
+    const param = build({ reconvert: (s) => asked.push(s), buttonType: 'Check' }).ss_new.component
+      .param.reconvert;
+    expect(param.type).toBe('Check');
+    // Every Check in the host's own components carries both; leaving them off
+    // is the difference between the inspector rendering and not.
+    expect(param.name).toBeTruthy();
+    expect(param.default_val).toBe(false);
+
+    const component = placed();
+    let checked: unknown = true;
+    const checkbox = {
+      prop: (_name: string, value?: boolean) => {
+        if (value !== undefined) checked = value;
+        return checked;
+      },
+    };
+    param.onChange?.(undefined, component, checkbox as never);
+
+    expect(asked).toEqual([packs[0].val]);
+    expect('reconvert' in component.data.pm).toBe(false);
+    // Momentary: the box does not stay ticked, because there is no state to show.
+    expect(checked).toBe(false);
+  });
+});
+
+describe('registerButtonParam', () => {
+  /** `Builder.Param.Base.extend`, as Backbone provides it. */
+  function fakeBuilder() {
+    const Base = {
+      extend(proto: Record<string, unknown>) {
+        return function View(this: Record<string, unknown>, attrs: Record<string, unknown>) {
+          Object.assign(this, proto, {
+            get: (key: string) => attrs[key],
+          });
+        };
+      },
+    };
+    return { Param: { Base } as Record<string, unknown> };
+  }
+
+  /** Enough jQuery to build an element and record a click handler. */
+  function fake$() {
+    const made: { html: string; handlers: Record<string, () => void> }[] = [];
+    const $ = (html: string) => {
+      const node = { html, handlers: {} as Record<string, () => void>, children: [] as unknown[] };
+      made.push(node);
+      return {
+        append(child: unknown) {
+          node.children.push(child);
+          return this;
+        },
+        on(event: string, handler: () => void) {
+          node.handlers[event] = handler;
+          return this;
+        },
+      };
+    };
+    return { $, made };
+  }
+
+  it('registers a view that renders a button and calls onClick', () => {
+    const builder = fakeBuilder();
+    const { $, made } = fake$();
+    expect(registerButtonParam($, builder)).toBe(true);
+
+    const View = builder.Param[BUTTON_PARAM_TYPE] as new (attrs: unknown) => {
+      createHtml(): unknown;
+      valid(): boolean;
+    };
+    const component = { id: 'the component' };
+    let pressed: unknown;
+    const view = new View({
+      param_name: 'reconvert',
+      param: { label: 'Reconvert now', onClick: (c: unknown) => (pressed = c) },
+      component,
+    });
+
+    view.createHtml();
+    const button = made.find((n) => n.html.includes('type="button"'));
+    expect(button?.html).toContain('value="Reconvert now"');
+    button?.handlers.click();
+    expect(pressed).toBe(component);
+
+    // Base.valid() looks the control up by `[name=…]`, which a bare button has
+    // none of; there is nothing to validate here anyway.
+    expect(view.valid()).toBe(true);
+  });
+
+  it('escapes the label rather than injecting it into the attribute', () => {
+    const builder = fakeBuilder();
+    const { $, made } = fake$();
+    registerButtonParam($, builder);
+    const View = builder.Param[BUTTON_PARAM_TYPE] as new (attrs: unknown) => { createHtml(): void };
+    new View({ param: { label: '" onmouseover="x' }, component: {} }).createHtml();
+
+    const html = made.find((n) => n.html.includes('type="button"'))?.html ?? '';
+    // The text may survive as inert data; the quote that would close `value="`
+    // and open an event handler beside it may not.
+    expect(html).toContain('&quot;');
+    expect(html).not.toContain('" onmouseover=');
+  });
+
+  it('says no when the host does not expose what it needs', () => {
+    const { $ } = fake$();
+    expect(registerButtonParam($, undefined)).toBe(false);
+    expect(registerButtonParam($, { Param: {} })).toBe(false);
+    expect(registerButtonParam(undefined, fakeBuilder())).toBe(false);
+  });
+
+  it('registers once, so a plugin rebuild does not swap the class out', () => {
+    const builder = fakeBuilder();
+    const { $ } = fake$();
+    registerButtonParam($, builder);
+    const first = builder.Param[BUTTON_PARAM_TYPE];
+    expect(registerButtonParam($, builder)).toBe(true);
+    expect(builder.Param[BUTTON_PARAM_TYPE]).toBe(first);
   });
 
   it('offers every pack in the project, and says so when there are none', () => {

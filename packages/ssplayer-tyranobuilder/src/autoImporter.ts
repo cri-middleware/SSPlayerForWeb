@@ -6,20 +6,37 @@
 // a success marker) and writes into `game/ss_assets/`.
 //
 // The builder gives us the same opening — a plugin's constructor runs when the
-// project is opened — and one thing Ren'Py cannot offer: the editor is a
-// long-lived process, so we can keep polling while it is open. Save in
-// SpriteStudio, and the `.ssab` is rebuilt seconds later without touching the
-// editor at all; Ren'Py needs a relaunch.
+// project is opened — so the shape is Ren'Py's, deliberately: one pass when the
+// project opens, and after that nothing happens on its own.
+//
+// The editor could do more (it is a long-lived process, so a save could be
+// noticed while it is open) and an earlier revision of this file did, driven by
+// the window regaining focus. It was dropped to keep the whole family of
+// players answering the same way: SSPlayerForGodot has no freshness check at
+// all, only an explicit `Reconvert`. `reconvert()` below is the counterpart,
+// reached from the `[ss_new]` inspector.
+//
+// The known cost of that choice: a `.sspj` added to the source folder while the
+// builder is open is not picked up, and cannot be — nothing points at it yet,
+// so the inspector that hosts `Reconvert` cannot be opened for it. Reopening
+// the project converts it, exactly as relaunching does in Ren'Py. Updating an
+// *existing* project is what `Reconvert` covers.
 //
 // The marker discipline is copied deliberately: output mtimes alone cannot tell
 // you a run succeeded, because a failed conversion still leaves fresh-looking
 // partial files behind. Only a marker written *after* a successful run lets the
 // next run skip.
+//
+// What the marker records is the newest mtime across the project folder — not
+// the `.sspj` alone. SpriteStudio writes only the files a save actually
+// changed, so editing an animation moves the `.ssae` and leaves the `.sspj`
+// untouched; keying off the manifest would miss the most ordinary edit there
+// is. Ren'Py's `latest_source_mtime()` walks the folder for the same reason.
 
 import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 
 import { convertProjectAt, ensureConverter, type ConvertStats } from './converter.js';
-import type { HostFs } from './hostFs.js';
+import type { HostFs, WalkedFile } from './hostFs.js';
 
 /**
  * Import bookkeeping, at the project root.
@@ -46,6 +63,7 @@ export const DEFAULT_OUT_DIR = 'data/others/ssdata';
 
 /** What one successful import covered. */
 interface PackState {
+  /** Newest mtime across the source project folder at the time it was read. */
   source_mtime: number;
   converter?: string;
 }
@@ -59,8 +77,19 @@ export interface ImportRunResult {
   converted: { name: string; stats: ConvertStats }[];
   skipped: string[];
   failed: { name: string; error: string }[];
-  /** True when the source folder holds no `.sspj` at all. */
+  /**
+   * True when the pass found no `.sspj` to consider — an empty source folder,
+   * or for a pass scoped to one pack, a source project that is no longer there.
+   */
   empty: boolean;
+}
+
+/** What one pass is asked to do. */
+interface PassOptions {
+  /** Restrict the pass to this `.sspj` stem. Undefined means every project. */
+  only?: string;
+  /** Convert even when the record says the output is current. */
+  force?: boolean;
 }
 
 export interface AutoImporterOptions {
@@ -72,18 +101,11 @@ export interface AutoImporterOptions {
   sourceDirName?: string;
   outDirName?: string;
   log: (line: string) => void;
-  /**
-   * Called after a *watch* pass that actually did something. Not called for the
-   * quiet passes, which are almost all of them — this is the hook for telling
-   * the author their save was picked up.
-   */
-  onChange?: (result: ImportRunResult) => void;
 }
 
 export class AutoImporter {
   private readonly fs: HostFs;
   private readonly log: (line: string) => void;
-  private readonly onChange?: (result: ImportRunResult) => void;
   private readonly projectRoot: string;
   /** `<project>/data` — `storage=` attributes are written relative to it. */
   private readonly dataDir: string;
@@ -95,13 +117,12 @@ export class AutoImporter {
   readonly sourceDir: string;
   readonly outRoot: string;
   readonly wasmPath: string;
-  private timer: ReturnType<typeof setInterval> | null = null;
-  private running = false;
+  /** Tail of the pass queue; see `queuePass`. */
+  private inFlight: Promise<void> = Promise.resolve();
 
   constructor(opts: AutoImporterOptions) {
     this.fs = opts.fs;
     this.log = opts.log;
-    this.onChange = opts.onChange;
     this.wasmPath = opts.wasmPath;
     const p = this.fs.path;
     this.projectRoot = opts.projectRoot;
@@ -184,16 +205,33 @@ export class AutoImporter {
 
   /** Every `.sspj` under the source folder, absolute paths. */
   findProjects(): string[] {
-    if (!this.fs.exists(this.sourceDir)) return [];
-    return this.fs.walkFiles(this.sourceDir).filter((f) => f.toLowerCase().endsWith('.sspj'));
+    return this.sspjsIn(this.fs.walkEntries(this.sourceDir));
   }
 
-  /** Newest mtime across a project folder (its `.sspj`, `.ssae`, `.ssce`, textures). */
-  private latestSourceMtime(dir: string): number {
-    let latest = 0;
-    for (const f of this.fs.walkFiles(dir)) {
-      const st = this.fs.statOf(f);
-      if (st && st.mtimeMs > latest) latest = st.mtimeMs;
+  private sspjsIn(files: WalkedFile[]): string[] {
+    return files.filter((f) => f.path.toLowerCase().endsWith('.sspj')).map((f) => f.path);
+  }
+
+  /**
+   * Newest mtime under each project folder — its `.sspj`, `.ssae`, `.ssce` and
+   * textures — from one walk's worth of stats.
+   *
+   * The whole folder, not the `.sspj`: SpriteStudio writes only what a save
+   * changed, so an edited animation moves its `.ssae` and leaves the manifest
+   * alone. Mirrors `latest_source_mtime()` in SSPlayerForRenPy's
+   * `ss_renpy/import_marker.py`, which is the canonical version of this rule.
+   *
+   * A project folder nested inside another counts towards both, exactly as a
+   * per-folder walk would: `dir` covers everything below it.
+   */
+  private latestSourceMtimes(files: WalkedFile[], dirs: string[]): Map<string, number> {
+    const latest = new Map(dirs.map((dir) => [dir, 0]));
+    for (const file of files) {
+      for (const [dir, seen] of latest) {
+        if (file.mtimeMs > seen && file.path.startsWith(dir + this.fs.path.sep)) {
+          latest.set(dir, file.mtimeMs);
+        }
+      }
     }
     return latest;
   }
@@ -256,22 +294,103 @@ export class AutoImporter {
     this.saveState();
   }
 
+  /**
+   * Whether a previous conversion left anything behind — the guard against a
+   * state file that outlived the output folder someone deleted.
+   *
+   * One shallow `readdir`, deliberately: recursing through the copied textures
+   * every pass cost as much as the source walk itself, to answer a question the
+   * top level already answers. The dot-file filter is what remains of that: a
+   * folder holding only the legacy marker is not output.
+   */
   private hasOutput(outDir: string): boolean {
-    if (!this.fs.exists(outDir)) return false;
-    return this.fs
-      .walkFiles(outDir)
-      .some((f) => !this.fs.path.basename(f).startsWith('.'));
+    return this.fs.readDir(outDir).some((name) => !name.startsWith('.'));
   }
 
   /**
-   * Convert every project whose sources are newer than its last successful
-   * import. Safe to call repeatedly; unchanged projects cost a few `stat`s.
+   * Convert every project whose sources no longer match its last successful
+   * import. Safe to call repeatedly; an unchanged project costs one `stat` per
+   * source file and a single `readdir` of its output folder.
    */
   async runOnce(): Promise<ImportRunResult> {
+    return this.queuePass({});
+  }
+
+  /**
+   * Rebuild the one pack a `storage=` value names, whatever its record says.
+   *
+   * Scoped to a single pack because the control that calls it is attached to an
+   * `[ss_new]`, and that component names the pack it plays — the same shape as
+   * SSPlayerForGodot's per-asset inspector button. Forcing is affordable at
+   * this scope and is what "Reconvert" means: the author has already decided
+   * the pack is wrong, so a freshness check would only be an opportunity to
+   * disagree with them.
+   *
+   * Returns `null` for a pack this importer did not produce — one placed in
+   * `data/` by hand has no `.sspj` to go back to.
+   */
+  async reconvertPack(storage: unknown): Promise<ImportRunResult | null> {
+    const stem = this.stemOfPack(storage);
+    if (!stem) return null;
+    return this.queuePass({ only: stem, force: true });
+  }
+
+  /**
+   * The `.sspj` stem behind a `storage=` value, or null when the pack does not
+   * live in this importer's output folder.
+   */
+  private stemOfPack(storage: unknown): string | null {
+    const abs = this.resolvePack(storage);
+    if (!abs) return null;
+    const rel = this.fs.path.relative(this.outRoot, abs).replace(/\\/g, '/');
+    // `..` means it resolved outside the output root: a hand-placed pack.
+    if (!rel || rel.startsWith('..')) return null;
+    const stem = rel.split('/')[0];
+    return stem && stem !== rel ? stem : null;
+  }
+
+  /**
+   * Passes run one at a time. Project open and a `Reconvert` click are
+   * independent callers that can want different work done, so a later caller
+   * waits for the earlier one rather than being handed its result.
+   */
+  private queuePass(opts: PassOptions): Promise<ImportRunResult> {
+    const next = this.inFlight.then(() => this.importPass(opts));
+    this.inFlight = next.then(
+      () => {},
+      () => {},
+    );
+    return next;
+  }
+
+  /**
+   * Whether a record still describes what is on disk, and what this build of
+   * the converter would produce from it.
+   *
+   * The converter half matters because nothing else rebuilds a pack after a
+   * plugin update: the version has been recorded since the first release and
+   * never read, and `Reconvert` is scoped to one pack the author points at, so
+   * without this a new converter would never reach the rest. A record carrying
+   * no version predates this and is rebuilt once.
+   */
+  private isCurrent(previous: PackState, latest: number, converterVer: string): boolean {
+    return previous.source_mtime >= latest && previous.converter === converterVer;
+  }
+
+  private async importPass(opts: PassOptions): Promise<ImportRunResult> {
     const result: ImportRunResult = { converted: [], skipped: [], failed: [], empty: false };
 
-    const sspjs = this.findProjects();
+    // One walk for the whole pass: it finds the projects *and* dates them. The
+    // two used to be separate traversals, which statted every source file three
+    // times over.
+    const sourceFiles = this.fs.walkEntries(this.sourceDir);
+    const all = this.sspjsIn(sourceFiles);
+    const sspjs = opts.only
+      ? all.filter((f) => this.fs.path.basename(f, '.sspj') === opts.only)
+      : all;
     if (sspjs.length === 0) {
+      // For a scoped pass this reads "the source is gone", which is exactly
+      // what the caller needs to tell the author.
       result.empty = true;
       return result;
     }
@@ -284,16 +403,26 @@ export class AutoImporter {
       return result;
     }
 
+    const mtimes = this.latestSourceMtimes(
+      sourceFiles,
+      sspjs.map((f) => this.fs.path.dirname(f)),
+    );
+
     for (const sspj of sspjs) {
       const stem = this.fs.path.basename(sspj, '.sspj');
       const sourceProjectDir = this.fs.path.dirname(sspj);
       const outDir = this.fs.path.join(this.outRoot, stem);
-      const latest = this.latestSourceMtime(sourceProjectDir);
+      const latest = mtimes.get(sourceProjectDir) ?? 0;
 
       // Unconditional, so a legacy marker is migrated and deleted even when the
       // output around it is gone.
       const previous = this.readMarker(stem, outDir);
-      if (previous && previous.source_mtime >= latest && this.hasOutput(outDir)) {
+      if (
+        !opts.force &&
+        previous &&
+        this.isCurrent(previous, latest, converterVer) &&
+        this.hasOutput(outDir)
+      ) {
         result.skipped.push(stem);
         continue;
       }
@@ -316,31 +445,4 @@ export class AutoImporter {
     return result;
   }
 
-  /**
-   * Keep watching while the editor is open. This is the part Ren'Py has no
-   * equivalent for — no reopen, no restart, just save in SpriteStudio.
-   */
-  start(intervalMs: number): void {
-    if (this.timer) return;
-    this.timer = setInterval(() => {
-      if (this.running) return;
-      this.running = true;
-      void this.runOnce()
-        .then((result) => {
-          if (result.converted.length > 0 || result.failed.length > 0) {
-            this.onChange?.(result);
-          }
-        })
-        .catch((e) => this.log(`watch error: ${(e as Error).message}`))
-        .finally(() => {
-          this.running = false;
-        });
-    }, intervalMs);
-  }
-
-  stop(): void {
-    if (!this.timer) return;
-    clearInterval(this.timer);
-    this.timer = null;
-  }
 }

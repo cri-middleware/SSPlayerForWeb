@@ -88,6 +88,7 @@ export interface JQueryLike {
   val(value: string): JQueryLike;
   change(): JQueryLike;
   prop(name: string): unknown;
+  prop(name: string, value: boolean): JQueryLike;
 }
 
 /** A placed component, as handed to `name()` / `header()` / `select_list()`. */
@@ -109,6 +110,10 @@ export interface BuilderParam {
   text?: string;
   /** `Num` only: suffix shown after the field. */
   unit?: string;
+  /** {@link BUTTON_PARAM_TYPE} only: the text on the button. */
+  label?: string;
+  /** {@link BUTTON_PARAM_TYPE} only: what pressing it does. */
+  onClick?: (component: unknown) => void;
   /**
    * `Select` only. Receives the param *view*, not the component — reach the
    * component's values through `.get('component').data.pm`.
@@ -192,5 +197,11 @@ export interface TB {
 declare global {
   interface Window {
     studio_api?: StudioApi;
+    /**
+     * The editor's own namespace, a plain global in the renderer the plugin
+     * shares. `Builder.Param` is the registry `Builder.Core.Param.create()`
+     * resolves a param's `type` against — see `buttonParam.ts`.
+     */
+    Builder?: unknown;
   }
 }

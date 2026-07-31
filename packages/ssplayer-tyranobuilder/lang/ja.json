@@ -1,5 +1,5 @@
 {
-  "Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted automatically, every time you save it. Place the animation from the SpriteStudio components in the palette.": "SpriteStudio のプロジェクト（.sspj とそのフォルダ）を SpriteStudio_Source に入れておくと、保存するたびに自動で変換されます。配置はパレットの SpriteStudio 系コンポーネントから行えます。",
+  "Put a SpriteStudio project (.sspj and its folder) in SpriteStudio_Source and it is converted each time the project is opened. After editing in SpriteStudio, use \"Reconvert now\" on a SpriteStudio: show component. Place the animation from the SpriteStudio components in the palette.": "SpriteStudio のプロジェクト（.sspj とそのフォルダ）を SpriteStudio_Source に入れておくと、プロジェクトを開くたびに変換されます。SpriteStudio で編集した後は「SpriteStudio 表示」コンポーネントの「今すぐ再変換」を使ってください。配置はパレットの SpriteStudio 系コンポーネントから行えます。",
   "Play sounds embedded in the animation": "アニメに含まれる効果音を鳴らす",
   "Routes SpriteStudio audio through TyranoScript.": "SpriteStudio の音声をティラノスクリプト経由で再生します。",
   "SpriteStudio: show": "SpriteStudio 表示",
@@ -25,6 +25,11 @@
   "Off plays the animation once and holds the last frame.": "オフにすると1回だけ再生し、最後のフレームで止まります。",
   "Show immediately": "すぐに表示する",
   "Off loads without displaying, so a later \"fade in\" is instant.": "オフにすると読み込みだけ行います。後から「フェードイン」で即座に表示できます。",
+  "Rebuild": "再変換",
+  "Reconvert now": "今すぐ再変換",
+  "Rebuilds this animation pack from its SpriteStudio project. Needed after editing in SpriteStudio — the editor only converts when the project is opened.": "このアニメデータを SpriteStudio プロジェクトから変換し直します。プロジェクトを開いたときにしか変換されないため、SpriteStudio で編集した後はこれを使ってください。",
+  "Not converted from": "自動変換の対象ではありません:",
+  "Source project not found": "変換元のプロジェクトが見つかりません",
   "SpriteStudio: fade in": "SpriteStudio フェードイン",
   "Reveals an animation that was loaded hidden, optionally moving it first.": "非表示で読み込んだアニメを表示します。同時に位置も変えられます。",
   "SpriteStudio: fade out": "SpriteStudio フェードアウト",

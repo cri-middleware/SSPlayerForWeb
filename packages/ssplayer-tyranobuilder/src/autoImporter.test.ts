@@ -41,8 +41,17 @@ const haveFixtures = existsSync(WASM) && existsSync(SAMPLE);
 
 type BridgeBehaviour = 'faithful' | 'mangled';
 
+/**
+ * Bridge crossings, which is what a pass actually costs: every one of these is
+ * a synchronous IPC hop on the editor's UI thread.
+ */
+interface Crossings {
+  stat: number;
+  readdir: number;
+}
+
 /** A stand-in for `window.studio_api`, backed by the real filesystem. */
-function makeStudioApi(behaviour: BridgeBehaviour) {
+function makeStudioApi(behaviour: BridgeBehaviour, count: Crossings = { stat: 0, readdir: 0 }) {
   return {
     fs: {
       readFileSync(path: string, encoding?: string) {
@@ -66,8 +75,14 @@ function makeStudioApi(behaviour: BridgeBehaviour) {
         appendFileSync(path, data, 'utf8');
       },
       existsSync,
-      readdirSync,
-      statSync,
+      readdirSync(path: string) {
+        count.readdir++;
+        return readdirSync(path);
+      },
+      statSync(path: string) {
+        count.stat++;
+        return statSync(path);
+      },
       removeSync(path: string) {
         rmSync(path, { force: true, recursive: true });
       },
@@ -82,18 +97,24 @@ function makeStudioApi(behaviour: BridgeBehaviour) {
   };
 }
 
-function withApi(behaviour: BridgeBehaviour): HostFs {
-  (globalThis as { window?: unknown }).window = { studio_api: makeStudioApi(behaviour) };
+function withApi(behaviour: BridgeBehaviour, count?: Crossings): HostFs {
+  (globalThis as { window?: unknown }).window = { studio_api: makeStudioApi(behaviour, count) };
   return HostFs.fromWindow();
 }
 
 const tempRoots: string[] = [];
 
-/** A minimal TyranoBuilder project holding a copy of the sample. */
-function makeProject(): string {
+/** A TyranoBuilder project with no SpriteStudio sources in it yet. */
+function makeEmptyProject(): string {
   const root = mkdtempSync(nodePath.join(tmpdir(), 'ss-tb-poc-'));
   tempRoots.push(root);
   mkdirSync(nodePath.join(root, 'data/scenario'), { recursive: true });
+  return root;
+}
+
+/** A minimal TyranoBuilder project holding a copy of the sample. */
+function makeProject(): string {
+  const root = makeEmptyProject();
   cpSync(SAMPLE, nodePath.join(root, 'SpriteStudio_Source/Ringo'), { recursive: true });
   return root;
 }
@@ -105,6 +126,18 @@ function importerFor(root: string, fs: HostFs, log: string[]): AutoImporter {
     wasmPath: WASM,
     log: (line) => log.push(line),
   });
+}
+
+/** Files plus directories under `dir` — one `stat` each is what a walk costs. */
+function countEntries(dir: string): number {
+  let total = 0;
+  for (const name of readdirSync(dir)) {
+    if (name.startsWith('.') || name === 'Thumbs.db') continue;
+    total++;
+    const full = nodePath.join(dir, name);
+    if (statSync(full).isDirectory()) total += countEntries(full);
+  }
+  return total;
 }
 
 afterAll(() => {
@@ -240,6 +273,108 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     expect(existsSync(nodePath.join(root, '.ss_import_state.json'))).toBe(true);
   });
 
+  it('reconverts an animation edit that leaves the .sspj untouched', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+    expect((await importer.runOnce()).skipped).toEqual(['Ringo']);
+
+    // What a SpriteStudio save actually looks like: only the file that changed
+    // is written, so the manifest keeps its old date. Keying off the `.sspj`
+    // would miss this, which is why the whole folder is walked.
+    const ssae = nodePath.join(root, 'SpriteStudio_Source/Ringo/Ringo.ssae');
+    const future = new Date(Date.now() + 10_000);
+    utimesSync(ssae, future, future);
+    const sspj = nodePath.join(root, 'SpriteStudio_Source/Ringo/Ringo.sspj');
+    const sspjBefore = statSync(sspj).mtimeMs;
+
+    expect((await importer.runOnce()).converted.map((c) => c.name)).toEqual(['Ringo']);
+    expect(statSync(sspj).mtimeMs).toBe(sspjBefore);
+  });
+
+  it('ignores dot entries when dating the sources', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+
+    // A `.git` checkout beside the sources is newer than everything, and its
+    // contents are not themselves dot-prefixed. Counting it would reconvert on
+    // every project open, forever.
+    const git = nodePath.join(root, 'SpriteStudio_Source/.git');
+    mkdirSync(git, { recursive: true });
+    const future = new Date(Date.now() + 86_400_000);
+    writeFileSync(nodePath.join(git, 'HEAD'), 'ref: refs/heads/main\n', 'utf8');
+    utimesSync(nodePath.join(git, 'HEAD'), future, future);
+
+    expect((await importer.runOnce()).skipped).toEqual(['Ringo']);
+  });
+
+  it('rebuilds the one pack a Reconvert names, fresh marker or not', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+    expect((await importer.runOnce()).skipped).toEqual(['Ringo']);
+
+    // Nothing on disk changed: the point of the button is to convert anyway.
+    const run = await importer.reconvertPack('others/ssdata/Ringo/Ringo.ssab');
+    expect(run?.failed).toEqual([]);
+    expect(run?.converted.map((c) => c.name)).toEqual(['Ringo']);
+    expect(run?.skipped).toEqual([]);
+
+    // And the pass after it is an ordinary one again — the forced run
+    // re-records what it covered rather than leaving the state forgotten.
+    expect((await importer.runOnce()).skipped).toEqual(['Ringo']);
+  });
+
+  it('declines to Reconvert a pack it did not produce', async () => {
+    const root = makeProject();
+    const fs = withApi('faithful');
+    const importer = importerFor(root, fs, []);
+    await importer.runOnce();
+
+    // A pack the author put in `data/` by hand: no `.sspj` to go back to, and
+    // silently converting something else would be worse than saying so.
+    const hand = nodePath.join(root, 'data/image/scene1');
+    mkdirSync(hand, { recursive: true });
+    cpSync(
+      nodePath.join(root, 'data/others/ssdata/Ringo/Ringo.ssab'),
+      nodePath.join(hand, 'Copy.ssab'),
+    );
+
+    expect(await importer.reconvertPack('image/scene1/Copy.ssab')).toBeNull();
+    expect(await importer.reconvertPack('https://example.com/Boss.ssab')).toBeNull();
+    expect(await importer.reconvertPack('')).toBeNull();
+  });
+
+  it('reports an empty run when the Reconvert target has lost its source', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+
+    rmSync(nodePath.join(root, 'SpriteStudio_Source/Ringo'), { recursive: true, force: true });
+
+    const run = await importer.reconvertPack('others/ssdata/Ringo/Ringo.ssab');
+    expect(run?.empty).toBe(true);
+    expect(run?.failed).toEqual([]);
+  });
+
+  it('rebuilds a pack whose record came from a different converter build', async () => {
+    const root = makeProject();
+    const fs = withApi('faithful');
+    await importerFor(root, fs, []).runOnce();
+
+    // What a plugin update looks like from the state file's side. Nothing else
+    // rebuilds a pack whose sources have not moved.
+    const statePath = nodePath.join(root, '.ss_import_state.json');
+    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    state.packs.Ringo.converter = 'some-older-build';
+    writeFileSync(statePath, JSON.stringify(state), 'utf8');
+
+    const after = importerFor(root, fs, []);
+    expect((await after.runOnce()).converted.map((c) => c.name)).toEqual(['Ringo']);
+    expect((await after.runOnce()).skipped).toEqual(['Ringo']);
+  });
+
   it('reconverts when the output is deleted but the state survives', async () => {
     const root = makeProject();
     const importer = importerFor(root, withApi('faithful'), []);
@@ -258,5 +393,42 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     const run = await importer.runOnce();
     expect(run.empty).toBe(true);
     expect(run.failed).toEqual([]);
+  });
+
+  it('costs one stat per source entry on a pass that changes nothing', async () => {
+    const root = makeProject();
+    const count: Crossings = { stat: 0, readdir: 0 };
+    const importer = importerFor(root, withApi('faithful', count), []);
+    await importer.runOnce();
+
+    const sourceEntries = countEntries(nodePath.join(root, 'SpriteStudio_Source'));
+    count.stat = 0;
+    count.readdir = 0;
+    expect((await importer.runOnce()).skipped).toEqual(['Ringo']);
+
+    // Every one of these is a synchronous hop across the contextBridge on the
+    // editor's UI thread, so the count is the point. One walk of the sources,
+    // and for the output nothing beyond a shallow "is there anything here":
+    // finding the projects and dating them used to be separate traversals,
+    // statting each source file three times over, and the output tree was
+    // walked in full — copied textures and all — on top of that.
+    expect(count.stat).toBe(sourceEntries);
+    expect(count.readdir).toBeLessThan(sourceEntries);
+  });
+
+  it('serialises passes that overlap', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+
+    // Project open and a Reconvert click are independent callers wanting
+    // different work done; they must not convert into the same output folder
+    // at the same time, and neither may be handed the other's answer.
+    const [plain, forced] = await Promise.all([
+      importer.runOnce(),
+      importer.reconvertPack('others/ssdata/Ringo/Ringo.ssab'),
+    ]);
+    expect(plain.skipped).toEqual(['Ringo']);
+    expect(forced?.converted.map((c) => c.name)).toEqual(['Ringo']);
   });
 });

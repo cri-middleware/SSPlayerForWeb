@@ -9,9 +9,25 @@ they ship in one plugin folder, so a change to the tags usually touches both.
 
 ## What is done
 
-- **Auto-import.** `SpriteStudio_Source/**/*.sspj` → `data/others/ssdata/`, on
-  project open and then on a 3 s poll while the editor is open. Skips a project
-  whose sources are older than its last successful import.
+- **Auto-import.** `SpriteStudio_Source/**/*.sspj` → `data/others/ssdata/`, once
+  per project open. Skips a project whose sources are older than its last
+  successful import — newest mtime across the project folder against a value
+  recorded in `.ss_import_state.json`, which is
+  [SSPlayerForRenPy](../../../SSPlayerForRenPy)'s `ss_renpy/import_marker.py`
+  rule. The folder and not the `.sspj`, because SpriteStudio writes only the
+  files a save changed: an edited animation moves its `.ssae` and leaves the
+  manifest alone.
+- **Reconvert.** A momentary tick box on `[ss_new]`'s inspector, rebuilding the
+  one pack that component's `storage` names — per-asset, like
+  SSPlayerForGodot's inspector button, and forced, because the author pressing
+  it has already decided the pack is wrong. This is the only way to refresh a
+  pack without reopening the project; an earlier revision watched the window's
+  focus events instead, and that was dropped to keep the family of players
+  behaving the same way.
+- **Converter-version invalidation.** `PackState.converter` had been recorded
+  since the first release and never read, so a plugin update shipping a new
+  converter never reached packs whose sources had not moved. A project open now
+  rebuilds those.
 - **Components.** Seventeen of the runtime's twenty-three `[ss_*]` tags, with
   packs, animations and player names as dropdowns rather than text fields.
 - **`.tbp` packaging**, installed from the editor's own plugin dialog.
@@ -30,17 +46,24 @@ conversion, the palette, preview, and save/load.
   not a timeline step, and restore is automatic.) Until then those tags are
   written with the builder's own TyranoScript-code component.
 - **Conversion off the UI thread.** The wasm call is synchronous: 78 ms for one
-  sample, but a first pass over a folder of them blocks the editor for as long as
-  it takes. Converting one project per poll would bound that to a single project
-  without a Worker's costs — a second wasm instance, the payload crossing
-  `postMessage`, and another file in `data/`.
-- **The 3 s poll costs more than the conversion.** `latestSourceMtime` walks the
-  whole source tree and `stat`s **every file**, and each of those calls crosses
-  the `contextBridge` synchronously — so a project with a few hundred textures
-  pays that every three seconds whether or not anything changed. Cheapest wins,
-  in order: filter the walk to the extensions that can actually trigger a
-  reconversion (`.sspj` / `.ssae` / `.ssce` / images), and back the interval off
-  after a run of quiet passes rather than polling at one rate forever.
+  sample, but a pass over a folder of them blocks the editor for as long as it
+  takes. A Worker is the fix, and its costs are the reason it has not happened
+  yet — a second wasm instance, the payload crossing `postMessage`, and another
+  file in `data/`. Less pressing now that a pass only runs on project open or on
+  an explicit Reconvert, both moments where the author expects to wait.
+- **A new `.sspj` needs the project reopened.** Reconvert is hosted on a
+  component, and a component cannot point at a pack that does not exist yet, so
+  a project dropped in while the builder is open has nowhere to press.
+  Documented as a limitation; the fix would be a Reconvert reachable without a
+  component. The plugin manager panel is the only candidate surface — whether
+  `.plugin_text` is rendered with `.html()` (injectable) or `.text()` (not) is
+  unresolved, `window.js` being obfuscated.
+- **`type: 'PreviewButton'` instead of a momentary `Check`.** The host has a
+  real button param — `js/app/component/default.js:1149` uses one — which would
+  read better than a tick box that unticks itself. Untried because the built-in
+  uses go through `bound_type: 'camera'`, so whether it will call an arbitrary
+  `onChange` is unknown and `js/app/param/param.js` is obfuscated. It is a
+  one-line swap to find out on a running builder.
 - **`listPacks()` walks the whole of `data/` on every dropdown render**, over the
   same bridge, while `listAnimations()` right next to it is already cached by
   mtime and size. Give the pack scan the same treatment.
