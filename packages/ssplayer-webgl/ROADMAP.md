@@ -28,6 +28,21 @@ work (see *Blocked on SpriteStudio-SDK* below).
 *   [x] Fragment `highp` precision detection with `mediump` fallback.
 *   [x] Ad-friendly context attributes and zero-GC hot path (VBO/scratch pooling, `maxDPR` clamp).
 
+## Shared with the other renderer packages
+
+*   [ ] **Event extraction exists three times.** `pollEvents` plus
+    `dispatchUserData` / `dispatchSignals` / `dispatchAudios` — the FlatBuffer
+    walk over the current animation's events table — is written out here, in
+    `ssplayer-pixi` and in `ssplayer-rmmz`, differing only in whether
+    `partName` is typed `string` or `string | null`. Keeping events out of core
+    was a deliberate call made when there were two copies of it; with three, and
+    with the part-following bookkeeping since moved into core
+    (`SSPartFollower`), it is worth revisiting. The seam is the same one that
+    worked there: core owns the walk, each renderer keeps the dispatch timing,
+    which is the part that genuinely differs (a ticker here, `renderFrame` in
+    pixi, the host sprite's `update()` in rmmz). **Revisit the decision before
+    writing any code** — it is recorded, not accidental.
+
 ## Verification & Release Process
 
 *   [ ] **Emulated blend-mode verification** — confirm the

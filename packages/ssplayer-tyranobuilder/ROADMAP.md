@@ -34,6 +34,16 @@ conversion, the palette, preview, and save/load.
   it takes. Converting one project per poll would bound that to a single project
   without a Worker's costs — a second wasm instance, the payload crossing
   `postMessage`, and another file in `data/`.
+- **The 3 s poll costs more than the conversion.** `latestSourceMtime` walks the
+  whole source tree and `stat`s **every file**, and each of those calls crosses
+  the `contextBridge` synchronously — so a project with a few hundred textures
+  pays that every three seconds whether or not anything changed. Cheapest wins,
+  in order: filter the walk to the extensions that can actually trigger a
+  reconversion (`.sspj` / `.ssae` / `.ssce` / images), and back the interval off
+  after a run of quiet passes rather than polling at one rate forever.
+- **`listPacks()` walks the whole of `data/` on every dropdown render**, over the
+  same bridge, while `listAnimations()` right next to it is already cached by
+  mtime and size. Give the pack scan the same treatment.
 - **Windows.** Untested, and `pack-tbp.mjs` shells out to `zip`, so a release
   cannot currently be cut from a Windows machine.
 - **A sample builder project**, and a submission to plugin.tyrano.jp.
