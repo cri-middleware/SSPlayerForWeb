@@ -54,8 +54,9 @@ it back when it's coherent, so `main` stays deployable.
 There is **no `develop` branch here** — and that's intentional. Packages are
 versioned **independently** (via [Changesets](https://github.com/changesets/changesets)),
 so there is no single "promote develop → main = the release" moment that a
-Git-Flow `develop` branch would model; a release is simply merging the accumulated
-**Version Packages** PR. Add a changeset to any PR that should trigger a version
+Git-Flow `develop` branch would model; a release is simply a maintainer running the
+**Release** workflow on `main` once the accumulated changesets are worth shipping.
+Add a changeset to any PR that should trigger a version
 bump. Note this differs from other SpriteStudio repositories (e.g. the
 lockstep-versioned SDK, which uses a `develop` branch): the branch model follows
 the versioning model, not the other way around.
@@ -154,7 +155,8 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 **`develop` ブランチは設けていません**（意図的です）。パッケージは
 [Changesets](https://github.com/changesets/changesets) で**独立にバージョニング**しており、
 Git-Flow の `develop` が表す「develop→main 昇格＝リリース」という単一の瞬間が存在しません。
-リリースは、蓄積された **Version Packages PR をマージすること**そのものです。バージョンを
+リリースは、蓄積された changeset が出せる状態になった時点でメンテナが `main` 上で
+**Release ワークフローを実行すること**そのものです。バージョンを
 上げたい PR には changeset を1枚添えてください。この点は他の SpriteStudio リポジトリ
 （例: lockstep でバージョンを統一し `develop` 運用の SDK）とは異なります — **ブランチモデルは
 バージョニングモデルに従う**、という方針です。
