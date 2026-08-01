@@ -23,6 +23,7 @@ Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) a
 
 - [**Documentation site (hosted)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 live after the first release
 - [**Documentation (English)**](./docs/index.md) · [**日本語ドキュメント**](./docs/ja/index.md)
+- [**SpriteStudio Docs (portal)**](https://cri-middleware.github.io/SpriteStudio-Docs/) — the SDK and every official player in one place — 🚧 live after the first release
 
 ### Quick Links
 - [Installation](./docs/setup/install.md)
