@@ -5,26 +5,15 @@ name: Deploy Pages
 # TyranoScript project (tyrano) — from GitHub Pages as a single site. Deployed via
 # the artifact method — no gh-pages branch.
 #
-# The docs + demo site is decoupled from package releases (independent Changesets
-# versioning has no single release moment) AND from individual pushes (main is
-# merged to often; a full rebuild — every ssconverter schema version + all examples
-# — is too heavy to run per merge). Instead it rebuilds once a week on a schedule,
-# on a published release, or on manual dispatch. The site is docs/demos, so being
-# up to a week stale is harmless; use "Run workflow" for an immediate refresh.
+# A published release or a manual dispatch rebuilds the site, and nothing else does
+# — the same trigger pair every sibling repository uses. A full rebuild (every
+# ssconverter schema version + all examples) is far too heavy to run per merge, and
+# the Release workflow cuts the plugin GitHub Releases, so `release: published`
+# already fires after a release. Use "Run workflow" for an immediate refresh — e.g.
+# a docs fix that should not wait for the next release.
 on:
-  schedule:
-    # Weekly, Monday 15:00 UTC (Monday 00:00 JST).
-    - cron: '0 15 * * 1'
   release:
     types: [published]
-  # After the Release workflow finishes on main, rebuild the site so the docs and
-  # CDN examples reflect the just-published versions. Release now also cuts the
-  # private-plugin GitHub Releases, so the `release: published` trigger above can
-  # fire too; both paths are fine — `concurrency: pages` serializes and dedups the
-  # rebuilds.
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
   workflow_dispatch:
 
 # Least-privilege: the build job only needs to read the repo; the Pages write /
@@ -40,9 +29,6 @@ concurrency:
 
 jobs:
   build:
-    # For the workflow_run trigger, only rebuild when the Release run succeeded;
-    # the other triggers (schedule, release, manual) always proceed.
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (with SpriteStudio-SDK submodule)
