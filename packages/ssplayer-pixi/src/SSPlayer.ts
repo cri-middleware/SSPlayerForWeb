@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -89,14 +89,29 @@ interface MaskCoverage {
     count: number;
 }
 
-// Mask inherited by an instance-part child from its parent (09_mask.ja.md §3-2-2).
-// A masked instance part clips its WHOLE referenced sub-animation against the
-// parent's coverage, judged once by the instance part's own draw rank and
-// visible_inside_mask polarity (single level — the sub-anime is one target).
+// Mask context an instance part hands to the sub-animation it calls
+// (09_mask.ja.md §2-6 / §3-2-2). The caller's settings do NOT replace the
+// callee's — they COMPOSE: `mask_influence` with AND, `visible_inside_mask`
+// with OR. Every part in the sub-animation then resolves its own role against
+// the composed value, so a caller can never silently discard what a callee part
+// asked for (nor the other way round). Because each level passes an already
+// composed value down, nesting chains with no extra bookkeeping.
+//
+// A fallback of the shape "the callee wins if it has its own setting, otherwise
+// inherit the caller's" is NOT equivalent to either operator and disagrees with
+// SpriteStudio 7.5 in both directions — that was the defect this replaced.
 interface InheritedMask {
-    cov: MaskCoverage; // the parent context's coverage (same player-local space as the child's composited positions)
-    rank: number;      // the instance part's rank in the parent draw order
-    mode: number;      // the instance part's visible_inside_mask polarity (1 = inside, 0 = outside)
+    // Ancestor coverage the sub-animation clips against, or null when no mask
+    // reaches it (the child then falls back to its own coverage, if it has one).
+    cov: MaskCoverage | null;
+    // Rank of the instance part in the draw order of whoever OWNS `cov`. The
+    // scope test (§2-1) is judged at the instance part's slot, not the child
+    // part's, because that is where the sub-animation sits in the caller.
+    rank: number;
+    // Composed caller-chain values. `influence: false` is absorbing: once a
+    // caller is not a mask target, nothing below it is either (§2-6).
+    influence: boolean;
+    visibleInside: boolean;
 }
 
 export class SSPlayer extends Container {
@@ -1040,10 +1055,26 @@ export class SSPlayer extends Container {
             }
         }
 
-        // When this context is a masked instance child, every drawn part is
-        // clipped by the inherited (parent) coverage instead of this context's
-        // own; otherwise parts use this context's own coverage per-part (§3-2-2).
-        const effCov = inheritedMask ? inheritedMask.cov : cov;
+        // Composed mask context from the caller chain (§2-6). The root identity
+        // is influence = true / visibleInside = false, which makes every part of
+        // a top-level animation evaluate exactly by its own flags.
+        const ctxInfluence = inheritedMask ? inheritedMask.influence : ROOT_MASK_INFLUENCE;
+        const ctxVisibleInside = inheritedMask ? inheritedMask.visibleInside : ROOT_VISIBLE_INSIDE;
+
+        // Coverage this context's parts clip against. An ancestor's coverage
+        // wins over our own when one reaches here, because a sub-animation is
+        // drawn into the caller's coverage space. When the composed influence is
+        // false the AND has already settled the whole subtree as non-target, so
+        // nothing here clips at all.
+        //
+        // Known limitation: a child that BOTH inherits coverage and owns masks
+        // of its own keeps only the inherited one — the replay samples a single
+        // coverage texture. Composing two would need a second sampler.
+        const effCov = ctxInfluence ? (inheritedMask?.cov ?? cov) : null;
+
+        /** Polarity for one part: the caller chain's OR its own (§2-4 / §2-6). */
+        const polarityOf = (partIdx: number): number =>
+            composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0) ? 1 : 0;
 
         const drawBatchesLength = frameData.drawBatchesLength();
         for (let i = 0; i < drawBatchesLength; i++) {
@@ -1070,10 +1101,20 @@ export class SSPlayer extends Container {
                     const child = player.getInstanceChild(partIdx);
                     if (!child || !child.visible) continue;
 
+                    // Caller side of the §2-6 composition, resolved BEFORE the
+                    // child builds anything so the child can settle its own
+                    // parts' roles itself and we never patch its output after
+                    // the fact. mask_write deliberately takes no part: writing
+                    // your own mask is a local fact, not something descendants
+                    // inherit (that the part is itself a target is unaffected).
+                    const instFlags = maskFlags ? maskFlags[partIdx] : 0;
+                    const instInfluence = composeMaskInfluence(ctxInfluence, instFlags);
+                    const instVisibleInside = composeVisibleInside(ctxVisibleInside, instFlags);
+
                     // Coverage is deferred this frame (see maskDeferred): a mask
                     // target instance part would draw its whole sub-animation
                     // unclipped, so hold it back instead.
-                    if (maskDeferred && maskFlags && (maskFlags[partIdx] & 0x04) !== 0) continue;
+                    if (maskDeferred && instInfluence) continue;
 
                     const childFrame = child.player.runtimeManager.context.get_frame_no();
                     const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
@@ -1082,17 +1123,18 @@ export class SSPlayer extends Container {
                     manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
                     const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
 
-                    // §3-2-2 instance mask inheritance: if this context produced
-                    // coverage and the instance part is a mask target
-                    // (mask_influence, bit 0x04), the whole sub-animation is
-                    // clipped by THIS coverage, judged by the instance part's own
-                    // rank and visible_inside_mask polarity (single level). The
-                    // child's composited positions are already in this coverage's
-                    // space, so its parts can sample `cov` directly.
-                    const childInherited: InheritedMask | null =
-                        (cov && maskFlags && (maskFlags[partIdx] & 0x04) !== 0)
-                            ? { cov, rank: startRank + c, mode: (maskFlags[partIdx] & 0x01) !== 0 ? 1 : 0 }
-                            : null;
+                    // §3-2-2 instance mask inheritance. The child's composited
+                    // positions are already in this coverage's space, so its
+                    // parts sample `effCov` directly; the scope test stays at
+                    // the rank that owns that coverage, which is this instance
+                    // part's own rank unless we are ourselves a sub-animation
+                    // clipping against an ancestor's.
+                    const childInherited: InheritedMask = {
+                        cov: effCov,
+                        rank: inheritedMask ? inheritedMask.rank : startRank + c,
+                        influence: instInfluence,
+                        visibleInside: instVisibleInside,
+                    };
                     this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha, childInherited);
 
                     // The child's getFrameData()/recursion may have grown WASM
@@ -1150,12 +1192,14 @@ export class SSPlayer extends Container {
             const invTexW = 1.0 / texture.width;
             const invTexH = 1.0 / texture.height;
             
-            // Parts in this batch are clipped by the mask when the runtime set
-            // FLAG_MASK_INFLUENCE (0x01) and this context produced coverage, or
-            // unconditionally when this whole context is a masked instance child
-            // (inherited mask — §3-2-2). Masked parts use a separate pool
-            // (carrying aMaskUV) and shader.
-            const masked = inheritedMask !== null || (cov !== null && (batch.flags() & 0x01) !== 0);
+            // Parts in this batch are clipped when coverage reaches them AND the
+            // runtime set the batch's FLAG_MASK_INFLUENCE (0x01). That flag is
+            // the parts' own mask_influence (batches are keyed by it), so this
+            // conjunction IS the §2-6 AND: `effCov` already carries the caller
+            // chain's half, and a sub-animation part that opted out is not
+            // clipped even though its caller was a mask target. Masked parts use
+            // a separate pool (carrying aMaskUV) and shader.
+            const masked = effCov !== null && (batch.flags() & 0x01) !== 0;
 
             if (kind === DrawBatchKind.Normal) {
                 for (let c = 0; c < count; c++) {
@@ -1196,7 +1240,7 @@ export class SSPlayer extends Container {
 
                     this.finishPart(mesh, 5, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
-                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        polarityOf(partIdx),
                         effCov, texture, blendMode, parentAlpha, ssShader);
                 }
             } else if (kind === DrawBatchKind.Shape) {
@@ -1235,7 +1279,7 @@ export class SSPlayer extends Container {
 
                     this.finishPart(mesh, numVerts, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
-                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        polarityOf(partIdx),
                         effCov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Mesh) {
@@ -1279,7 +1323,7 @@ export class SSPlayer extends Container {
 
                     this.finishPart(mesh, pCount, masked,
                         inheritedMask ? inheritedMask.rank : startRank + c,
-                        inheritedMask ? inheritedMask.mode : ((maskFlags && (maskFlags[partIdx] & 0x01) !== 0) ? 1 : 0),
+                        polarityOf(partIdx),
                         effCov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Effect) {

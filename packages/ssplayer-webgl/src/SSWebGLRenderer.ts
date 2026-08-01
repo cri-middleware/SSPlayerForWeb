@@ -1,4 +1,4 @@
-import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, ssRuntime } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, ssRuntime, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
@@ -28,6 +28,25 @@ export const MASK_PLANE_COUNTER = 0x7F; // INCR/DECR writers (mask_influence 0):
 /** Stencil write mask for one op — each op owns exactly one plane (§3-1-4). */
 export function maskPlaneForOp(gl: WebGLRenderingContext | WebGL2RenderingContext, op: number): number {
   return op === gl.INVERT ? MASK_PLANE_PARITY : MASK_PLANE_COUNTER;
+}
+
+/**
+ * Mask context an instance part hands to the sub-animation it calls (§2-6).
+ * The caller's settings do not replace the callee's — they COMPOSE:
+ * `mask_influence` with AND, `visible_inside_mask` with OR. Passing the already
+ * composed value down lets each sub-animation resolve its own parts, so nesting
+ * chains for free and the caller never has to patch the callee's output.
+ *
+ * `mask_write` is deliberately absent: writing your own mask is a local fact,
+ * not something descendants inherit.
+ */
+interface InheritedStencilMask {
+  /** An ancestor's coverage stands in the stencil for the whole recursion. */
+  active: boolean;
+  /** Composed mask_influence. False is absorbing — the subtree is never a target. */
+  influence: boolean;
+  /** Composed visible_inside_mask polarity. */
+  visibleInside: boolean;
 }
 
 export class SSWebGLRenderer {
@@ -403,8 +422,14 @@ export class SSWebGLRenderer {
    * contamination). Sub-animation-internal masks are therefore not applied — a
    * documented limitation of the single-stencil path (the pixi coverage method,
    * with a per-context coverage texture, is the general solution).
+   *
+   * `inherited` carries the caller chain's composed mask context (§2-6). A child
+   * applies it per part rather than the caller wrapping the whole recursion in
+   * one stencil test: the AND means a sub-animation part that opted out is not
+   * clipped even when its caller was a target, which a single enclosing test
+   * cannot express.
    */
-  private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, maskingAllowed: boolean = true): void {
+  private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, maskingAllowed: boolean = true, inherited: InheritedStencilMask | null = null): void {
     if (!player.animationName) return;
 
     const gl = this.gl;
@@ -457,6 +482,14 @@ export class SSWebGLRenderer {
       if (maskWriterCount > 0) this._prewritePureMasks(player, resourceManager, fd, gb);
     }
 
+    // Caller chain's composed mask context (§2-6). Root identity: influence
+    // true / visibleInside false, so a top-level animation evaluates every part
+    // by its own flags alone. `inheritedActive` folds in the AND, so a subtree
+    // whose caller opted out clips nothing regardless of the ancestor coverage.
+    const ctxInfluence = inherited ? inherited.influence : ROOT_MASK_INFLUENCE;
+    const ctxVisibleInside = inherited ? inherited.visibleInside : ROOT_VISIBLE_INSIDE;
+    const inheritedActive = !!inherited?.active && ctxInfluence;
+
     const batchesLen = fd.drawBatchesLength();
     for (let i = 0; i < batchesLen; i++) {
       const b = fd.drawBatches(i, this._scratchBatch);
@@ -505,12 +538,19 @@ export class SSWebGLRenderer {
       const count = b.count();
 
       // Masked content (FLAG_MASK_INFLUENCE, 0x01): clip each part against the
-      // current stencil coverage (§2-4 polarity per part). Handled per-part (not
-      // batched), so skip the batched build/draw. Only when the context has active
-      // mask writers — otherwise mask_count == 0 and content draws unclipped.
-      if (this._stencilSupported && maskWriterCount > 0 && (b.flags() & 0x01) !== 0 &&
-          (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape)) {
-        this.drawMaskedContent(player, resourceManager, b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts);
+      // stencil coverage (§2-4 polarity per part). Handled per-part (not batched),
+      // so skip the batched build/draw. The coverage is either this context's own
+      // (we planned writers) or an ancestor's standing across an instance
+      // recursion; the batch flag is the parts' own mask_influence, so requiring
+      // it alongside ctxInfluence is the §2-6 AND. Without either coverage the
+      // content draws unclipped.
+      const batchInfluence = (b.flags() & 0x01) !== 0;
+      const isContentKind = kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape;
+      if (this._stencilSupported && isContentKind && batchInfluence && ctxInfluence &&
+          (maskWriterCount > 0 || inheritedActive)) {
+        // Only a context that owns writers may advance the cursor; a child has no
+        // plan of its own and the caller already positioned the coverage.
+        this.drawMaskedContent(player, resourceManager, b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts, maskWriterCount > 0, ctxVisibleInside);
         continue;
       }
 
@@ -629,10 +669,13 @@ export class SSWebGLRenderer {
         // against the coverage. Effect batches are unbatchable (one effect part each),
         // so the whole batch shares startRank's rank + polarity. Bring the coverage to
         // that rank, then keep the stencil test on for every quad draw below.
-        const effectMasked = this._stencilSupported && maskWriterCount > 0 && (b.flags() & 0x01) !== 0;
+        const effectMasked = this._stencilSupported && batchInfluence && ctxInfluence &&
+                             (maskWriterCount > 0 || inheritedActive);
         if (effectMasked) {
-          this.syncMasksTo(startRank, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
-          const visInside = !!(maskFlags && (maskFlags[drawOrder[startRank]] & 0x01) !== 0);
+          if (maskWriterCount > 0) {
+            this.syncMasksTo(startRank, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
+          }
+          const visInside = composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[drawOrder[startRank]] : 0);
           gl.enable(gl.STENCIL_TEST);
           gl.stencilMask(0x00);
           gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
@@ -761,32 +804,33 @@ export class SSWebGLRenderer {
           player.runtimeManager.getWorldMatrix2D(partIdx, this.scratchMatrix);
           const composed = GeometryBuilder.composeAffine(transform, this.scratchMatrix, child.parentMatrix);
 
-          // §3-2-2 instance mask inheritance: when the instance part is a masked target
-          // (mask_influence, flag 0x04), the WHOLE referenced sub-animation is clipped by
-          // this context's coverage, judged once by the instance part's own rank +
-          // visible_inside polarity. The stencil is a screen-space buffer, so simply
-          // leaving the test enabled across the child recursion clips every child draw —
-          // no per-child coverage UV needed (unlike the pixi coverage method). The child
-          // renders with maskingAllowed=false (stencilMask 0 → it can't disturb coverage).
-          const instMasked = this._stencilSupported && maskWriterCount > 0 && !!(maskFlags && (maskFlags[partIdx] & 0x04) !== 0);
-          if (instMasked) {
+          // §2-6 composition, resolved on the caller side and handed down, so the
+          // sub-animation settles its own parts' roles and we never patch its
+          // output afterwards. mask_write takes no part in it.
+          const instFlags = maskFlags ? maskFlags[partIdx] : 0;
+          const instInfluence = composeMaskInfluence(ctxInfluence, instFlags);
+          const instVisibleInside = composeVisibleInside(ctxVisibleInside, instFlags);
+
+          // Coverage reaching the sub-animation: ours, brought up to the instance
+          // part's rank (§2-1 — the sub-anime sits at that slot in our draw
+          // order), or an ancestor's already standing in the stencil. Being
+          // screen-space, it clips the child's draws with no per-child UV.
+          const coverageReachesChild = this._stencilSupported && instInfluence &&
+                                       (maskWriterCount > 0 || inheritedActive);
+          if (coverageReachesChild && maskWriterCount > 0) {
             this.syncMasksTo(startRank + c, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
-            const visInside = !!(maskFlags && (maskFlags[partIdx] & 0x01) !== 0);
-            gl.enable(gl.STENCIL_TEST);
-            gl.stencilMask(0x00);
-            gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-            gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
           }
 
           // Re-render child. maskingAllowed=false: children don't touch the shared
-          // stencil, so the parent's mask coverage and cursor survive the recursion
-          // (and any instMasked stencil test above clips the whole child sub-anime).
-          this._renderContext(child.player, resourceManager, composed, false);
-
-          if (instMasked) {
-            gl.disable(gl.STENCIL_TEST);
-            gl.stencilMask(0xFF);
-          }
+          // stencil, so the parent's mask coverage and cursor survive the
+          // recursion. The child enables the test itself, per part, with the
+          // composed polarity — one test wrapped around the whole recursion would
+          // clip sub-animation parts that opted out of masking.
+          this._renderContext(child.player, resourceManager, composed, false, {
+            active: coverageReachesChild,
+            influence: instInfluence,
+            visibleInside: instVisibleInside,
+          });
 
           // Re-fetch WASM views in case the child's rendering grew WASM memory —
           // a grow detaches the ArrayBuffer these views point into, and the next
@@ -1160,7 +1204,8 @@ export class SSWebGLRenderer {
     b: DrawBatch, kind: number, drawOrder: Uint16Array, fd: FrameData, gb: GeometryBuilder,
     invW: number, invH: number, maskFlags: Uint8Array | null,
     texInfo: { tex: WebGLTexture; width: number; height: number } | null | undefined,
-    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+    meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array,
+    advanceCoverage: boolean, ctxVisibleInside: boolean
   ): void {
     const gl = this.gl;
     const pcp = this.partsColorProgram;
@@ -1176,7 +1221,11 @@ export class SSWebGLRenderer {
 
       // Bring the coverage up to this part's rank. This may switch to the mask
       // program and rebind textures, so re-establish the content draw state below.
-      this.syncMasksTo(startRank + c, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
+      // Skipped when clipping against an ancestor's coverage: this context owns
+      // no plan, and the caller already positioned it at the instance part's rank.
+      if (advanceCoverage) {
+        this.syncMasksTo(startRank + c, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
+      }
       gl.useProgram(pcp.program);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texInfo ? texInfo.tex : this.getWhiteTexture(gl));
@@ -1186,7 +1235,9 @@ export class SSWebGLRenderer {
       if (iCount === 0) continue;
       this.uploadPart(this._builtVerts, iCount);
 
-      const visInside = !!(maskFlags && (maskFlags[partIdx] & 0x01) !== 0);
+      // §2-6 OR: a caller that asked for "inside" wins for everything below it,
+      // otherwise the part decides for itself (§2-4).
+      const visInside = composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0);
       gl.enable(gl.STENCIL_TEST);
       gl.stencilMask(0x00); // content never modifies the stencil
       gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
