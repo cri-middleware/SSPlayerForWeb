@@ -236,20 +236,21 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         if (this._prepared) return this._prepared;
 
         const run = (async () => {
-            try {
-                await this.loadTextures();
-                await this.loadInstancePacks();
-                this._resourcesReady = true;
-                // Sounds are equally pack-scoped; preload them here too when a
-                // manager is already attached, so `load()` covers audio as well.
-                await this.preloadSounds();
-            } catch (e) {
-                // Don't let one failed attempt poison every later setAnimation.
-                if (this._prepared === run) this._prepared = null;
-                throw e;
-            }
+            await this.loadTextures();
+            await this.loadInstancePacks();
+            this._resourcesReady = true;
+            // Sounds are equally pack-scoped; preload them here too when a
+            // manager is already attached, so `load()` covers audio as well.
+            await this.preloadSounds();
         })();
         this._prepared = run;
+        // Don't let one failed attempt poison every later setAnimation. This
+        // handler is attached before the caller's, so the slot is already
+        // cleared by the time an awaiting caller sees the rejection; `run`
+        // itself still rejects for them (the derived promise is dropped).
+        run.catch(() => {
+            if (this._prepared === run) this._prepared = null;
+        });
         return run;
     }
 
