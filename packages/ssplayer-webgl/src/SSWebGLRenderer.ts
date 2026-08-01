@@ -4,6 +4,32 @@ import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
 import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
+// Stencil bit planes for mask writers (09_mask.ja.md §3-1-4). INVERT and
+// INCR/DECR are each self-inverse but do NOT commute, so letting them share bits
+// makes the coverage of an overlap depend on the order the writers were drawn,
+// and leaves residue that the cancelling pass can never take back to 0.
+// Splitting the WRITE mask per op keeps each plane closed: a stencil write is
+// `new = (op(old) & writeMask) | (old & ~writeMask)`, so the counter's carry and
+// borrow land outside its mask and are dropped. That is also why the counter
+// must use the *_WRAP ops — the carry that saturating INCR/DECR would clamp is
+// exactly the bit being discarded, so wrapping is what keeps the plane correct.
+//
+// The TEST side deliberately keeps reading both planes (`!= 0` over the full
+// byte), which is their union — the specified coverage when writers of differing
+// mask_influence overlap. The renderer already claimed all 8 bits before this
+// split, so its footprint against other stencil users is unchanged.
+//
+// The counter can hold 127 overlapping writers while MaskPlanner caps a context
+// at MAX_MASK_WRITERS (24), so it cannot wrap in practice — unlike ForUnity,
+// which had to fit inside URP's 4 reserved bits and lives with a limit of 7.
+export const MASK_PLANE_PARITY = 0x80;  // INVERT writers (mask_influence 1): parity, no overlap limit
+export const MASK_PLANE_COUNTER = 0x7F; // INCR/DECR writers (mask_influence 0): up to 127 overlaps
+
+/** Stencil write mask for one op — each op owns exactly one plane (§3-1-4). */
+export function maskPlaneForOp(gl: WebGLRenderingContext | WebGL2RenderingContext, op: number): number {
+  return op === gl.INVERT ? MASK_PLANE_PARITY : MASK_PLANE_COUNTER;
+}
+
 export class SSWebGLRenderer {
   public gl: WebGLRenderingContext | WebGL2RenderingContext;
   // Assigned in _createGLResources() (constructor + context restore).
@@ -1007,6 +1033,9 @@ export class SSWebGLRenderer {
     const texInfo = this.bindMaskTexture(mp, resourceManager, p.textureHash[w] >>> 0);
     if (mp.uThreshold) gl.uniform1f(mp.uThreshold, p.threshold[w]);
     gl.stencilOp(gl.KEEP, gl.KEEP, stencilOp);
+    // Confine this op to its own bit plane (§3-1-4). Set per writer because a
+    // single pass interleaves both ops as the planner ordered them.
+    gl.stencilMask(maskPlaneForOp(gl, stencilOp));
 
     const invW = texInfo ? 1.0 / texInfo.width : 1.0;
     const invH = texInfo ? 1.0 / texInfo.height : 1.0;
@@ -1030,7 +1059,8 @@ export class SSWebGLRenderer {
     if (mp.uTransform) gl.uniformMatrix3fv(mp.uTransform, false, this.transformMatrix3);
     gl.enable(gl.STENCIL_TEST);
     gl.colorMask(false, false, false, false);
-    gl.stencilMask(0xFF);
+    // The write mask is NOT set here: it is per-writer, derived from that
+    // writer's op by _writePlannedWriter (§3-1-4 bit planes).
     gl.stencilFunc(gl.ALWAYS, 0, 0xFF);
     gl.activeTexture(gl.TEXTURE0);
   }
@@ -1059,10 +1089,9 @@ export class SSWebGLRenderer {
    * (which scope FORWARD) are NOT pre-written — syncMasksTo adds them at their rank.
    * Writers come from maskPlanner (already planned by the caller).
    *
-   * Limitation: overlapping writers that mix increment and invert ops can't be
-   * reproduced exactly by a single stencil value (INCR saturates at 255, and the ops
-   * don't commute), so such overlaps are approximate; the coverage-bitmap method
-   * (ssplayer-pixi) is exact there.
+   * Overlapping writers that mix the increment and invert ops are exact: the two
+   * ops write disjoint bit planes (§3-1-4), so neither the ordering nor the
+   * cancellation of one can disturb the other.
    */
   private _prewritePureMasks(
     player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager,
@@ -1078,7 +1107,7 @@ export class SSWebGLRenderer {
     this.beginMaskWrite(mp);
     for (let w = 0; w < p.count; w++) {
       if (p.isClipping[w] !== 0) continue; // clipping added at its own rank (syncMasksTo)
-      this._writePlannedWriter(mp, resourceManager, w, fd, gb, p.opInvert[w] !== 0 ? gl.INVERT : gl.INCR, meshVOff, meshIOff, shapeVertexCounts);
+      this._writePlannedWriter(mp, resourceManager, w, fd, gb, p.opInvert[w] !== 0 ? gl.INVERT : gl.INCR_WRAP, meshVOff, meshIOff, shapeVertexCounts);
     }
     this.endMaskWrite();
   }
@@ -1087,7 +1116,8 @@ export class SSWebGLRenderer {
    * Advance the stencil coverage to the scope for content at `rank`: for every planned
    * writer with `rank < rank` not yet processed (maskCursor), apply its transition —
    * clipping writers are ADDED (forward scope begins), pure writers REMOVED (backward
-   * scope ended). Removal uses the inverse op (INVERT is self-inverse; INCR → DECR).
+   * scope ended). Removal uses the inverse op (INVERT is self-inverse; INCR_WRAP →
+   * DECR_WRAP — the wrapping pair is exact within the counter plane, §3-1-4).
    * Only switches to the mask program when there is work; restores the parts-color
    * program (and disables the stencil test) on return, so the caller must re-establish
    * its own draw state afterwards.
@@ -1107,8 +1137,8 @@ export class SSWebGLRenderer {
       const w = this._maskCursor;
       const opInvert = p.opInvert[w] !== 0;
       const op = p.isClipping[w] !== 0
-        ? (opInvert ? gl.INVERT : gl.INCR)   // clipping: forward scope begins → add
-        : (opInvert ? gl.INVERT : gl.DECR);  // pure: backward scope ended → remove
+        ? (opInvert ? gl.INVERT : gl.INCR_WRAP)   // clipping: forward scope begins → add
+        : (opInvert ? gl.INVERT : gl.DECR_WRAP);  // pure: backward scope ended → remove
       this._writePlannedWriter(mp, resourceManager, w, fd, gb, op, meshVOff, meshIOff, shapeVertexCounts);
       this._maskCursor++;
     }

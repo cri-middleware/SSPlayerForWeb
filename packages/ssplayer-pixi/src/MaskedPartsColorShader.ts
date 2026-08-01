@@ -12,23 +12,29 @@
 // Per-context uniforms (one mask group): uMaskMeta[i] = (drawRank, bit,
 // opInvert, isClipping) for each of uMaskCount writers, and the coverage
 // texture (uMaskTexture, sampled NEAREST). The replay walks the writers in
-// draw order, reconstructs the stencil (increment / invert ops) honouring each
-// writer's scope, then keeps the fragment iff (stencil != 0) == visibleInside.
+// draw order, reconstructs the coverage (increment / invert ops) honouring each
+// writer's scope, then keeps the fragment iff (covered) == visibleInside.
 // Outside the coverage bbox a fragment is treated as "no writer" (kept unless
 // visibleInside).
+//
+// The two ops are accumulated SEPARATELY (09_mask.ja.md §3-1-4): invert and
+// increment/decrement are each self-inverse but do not commute, so folding both
+// into one accumulator makes a mixed overlap depend on writer order. Unlike the
+// GPU-stencil path there is no bit budget to divide here — these are shader
+// locals — so the two planes cost nothing and carry no overlap limit.
 
 // Uses only float arithmetic (no integer / bit-wise operators) so it compiles
 // on WebGL1 (GLSL ES 1.00) as well as WebGL2 — bit extraction is done with
-// pow/mod/floor, and the 8-bit stencil increment/invert with float math
-// (~x & 0xFF == 255 - x for x in [0,255]).
+// pow/mod/floor, and the parity plane toggles with 1.0 - x instead of a xor.
 const MASKED_GLSL_REPLAY = `
     bool maskPasses(vec4 cov, vec2 cuv, float thisRank, float visInside) {
-        float count = floor(uMaskCount + 0.5);
-        if (count < 0.5) return true;
+        float writerCount = floor(uMaskCount + 0.5);
+        if (writerCount < 0.5) return true;
         if (cuv.x < 0.0 || cuv.x > 1.0 || cuv.y < 0.0 || cuv.y > 1.0) return visInside <= 0.5;
-        float stencil = 0.0;
+        float parity = 0.0;  // invert writers (mask_influence 1): odd overlap covers
+        float counter = 0.0; // increment writers (mask_influence 0): any overlap covers
         for (int i = 0; i < 24; i++) {
-            if (float(i) >= count) break;
+            if (float(i) >= writerCount) break;
             vec4 m = uMaskMeta[i];
             bool active = (m.w > 0.5) ? (thisRank > m.x) : (thisRank < m.x);
             if (!active) continue;
@@ -39,10 +45,10 @@ const MASKED_GLSL_REPLAY = `
             float bitpos = bit - chan * 8.0;
             float bitSet = mod(floor(byteV / pow(2.0, bitpos)), 2.0);
             if (bitSet < 0.5) continue;
-            if (m.z > 0.5) stencil = 255.0 - stencil;     // invert (8-bit)
-            else stencil = mod(stencil + 1.0, 256.0);     // increment
+            if (m.z > 0.5) parity = 1.0 - parity;  // invert
+            else counter += 1.0;                   // increment
         }
-        bool masked = stencil >= 0.5;
+        bool masked = (parity > 0.5) || (counter > 0.5); // union of both planes
         return masked == (visInside > 0.5);
     }
 `;
@@ -207,13 +213,16 @@ struct VertexOutput {
   @location(3) vMaskUV: vec4<f32>,
 }
 
+// Mirrors MASKED_GLSL_REPLAY, including the §3-1-4 split of the invert and
+// increment ops into two independent accumulators.
 fn maskPasses(cov: vec4<f32>, cuv: vec2<f32>, thisRank: f32, visInside: f32) -> bool {
-  let count = i32(maskUniforms.uMaskCount + 0.5);
-  if (count == 0) { return true; }
+  let writerCount = i32(maskUniforms.uMaskCount + 0.5);
+  if (writerCount == 0) { return true; }
   if (cuv.x < 0.0 || cuv.x > 1.0 || cuv.y < 0.0 || cuv.y > 1.0) { return visInside <= 0.5; }
-  var stencil: i32 = 0;
+  var parity: i32 = 0;  // invert writers (mask_influence 1): odd overlap covers
+  var counter: i32 = 0; // increment writers (mask_influence 0): any overlap covers
   for (var i: i32 = 0; i < 24; i = i + 1) {
-    if (i >= count) { break; }
+    if (i >= writerCount) { break; }
     let m = maskUniforms.uMaskMeta[i];
     let isClip = m.w > 0.5;
     // "active" is a reserved word in WGSL, hence inScope. The comparisons are
@@ -226,10 +235,10 @@ fn maskPasses(cov: vec4<f32>, cuv: vec2<f32>, thisRank: f32, visInside: f32) -> 
     let byteV = i32(cval * 255.0 + 0.5);
     let shift = u32(bit - chan * 8);
     if (((byteV >> shift) & 1) == 0) { continue; }
-    if (m.z > 0.5) { stencil = (~stencil) & 255; }
-    else { stencil = (stencil + 1) & 255; }
+    if (m.z > 0.5) { parity = parity ^ 1; }
+    else { counter = counter + 1; }
   }
-  let masked = stencil != 0;
+  let masked = (parity != 0) || (counter != 0); // union of both planes
   return masked == (visInside > 0.5);
 }
 
