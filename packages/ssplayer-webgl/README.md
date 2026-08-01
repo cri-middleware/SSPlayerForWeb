@@ -12,6 +12,10 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 
 > **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
+the `<ss-player>` element running in your browser; drop your own `.ssab` file onto the
+page to play it (🚧 live once the first release is published).
+
 ## ✨ Why SpriteStudio with plain WebGL?
 
 - **Drop it in with a single HTML tag.** The built-in **`<ss-player>` custom

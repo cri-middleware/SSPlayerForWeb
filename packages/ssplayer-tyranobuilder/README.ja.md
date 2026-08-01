@@ -14,6 +14,10 @@ SpriteStudio のプロジェクトをフォルダに置いておくと、プロ�
 > を使ってください（同じ `[ss_*]` タグを TyranoScript に追加します）。
 > **ステータス:** beta。
 
+▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
+エディタ用プラグイン自体はブラウザで動かせませんが、これは同梱しているランタイムと
+同じもので、TyranoScript のサンプルで動かしています（🚧 初回リリース後に公開）。
+
 ## インストール
 
 [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) から

@@ -12,6 +12,10 @@
 
 > **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
+▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
+`<ss-player>` 要素をブラウザで動かせます。手元の `.ssab` をページにドラッグ&ドロップして
+再生することもできます（🚧 初回リリース後に公開）。
+
 ## ✨ なぜ素の WebGL で SpriteStudio なのか?
 
 - **HTML タグ 1 つでドロップイン。** 組み込みの **`<ss-player>` カスタム要素** は

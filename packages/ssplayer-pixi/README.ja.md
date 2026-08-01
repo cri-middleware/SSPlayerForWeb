@@ -10,6 +10,14 @@
 
 > **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
+▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
+`.ssab` を再生する PixiJS v8 アプリ。手元のファイルをドラッグ&ドロップして再生できます
+（🚧 初回リリース後に公開）。
+
+🎨 **[パーツ上書きデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** —
+実行時にパーツ単位で色 / セル / 表示を上書きするサンプル
+（ソースは `examples/override-example`）。
+
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
 
 ## ✨ なぜ PixiJS で SpriteStudio を使うのか？
