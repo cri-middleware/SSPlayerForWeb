@@ -62,7 +62,7 @@ SSPlayer / SSPlayer          ← 呼び出すファサード（再生・イベ�
 [`SSPartFollowOptions`](/api/@spritestudio/ssplayer-core/interfaces/SSPartFollowOptions.md)、
 [`SSDecomposedTransform`](/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform.md)、
 PixiJS ではさらに
-[`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/interfaces/SSPartAttachment.md)。
+[`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/type-aliases/SSPartAttachment.md)。
 
 **再生系の enum。**
 `setPlaybackDirection` の 2 引数が

@@ -60,7 +60,7 @@ currently emits". Stay on the facade unless you are writing a renderer.
 **Part tracking** — see [Part tracking](/customize/part-following).
 [`SSPartFollowOptions`](/api/@spritestudio/ssplayer-core/interfaces/SSPartFollowOptions.md),
 [`SSDecomposedTransform`](/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform.md), and
-on PixiJS also [`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/interfaces/SSPartAttachment.md).
+on PixiJS also [`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/type-aliases/SSPartAttachment.md).
 
 **Playback enums.**
 [`WebPlaybackDirection`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackDirection.md) and
