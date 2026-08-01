@@ -10,6 +10,10 @@ Engine-agnostic WebAssembly core that converts OPTPiX SpriteStudio 7 projects (`
 
 > **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** —
+[`ssconverter-web`] is this core running in the browser; drop a `.sspj` in to see what
+it produces (🚧 live once the first release is published).
+
 This package is the wasm build of the Rust [`libssconverter`] crate plus a small
 ergonomic TypeScript layer. It has **no filesystem or DOM dependencies** — bytes
 in, bytes out — so the same core runs in the browser, Node, a Worker, or an edge

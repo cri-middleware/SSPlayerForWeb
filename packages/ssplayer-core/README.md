@@ -14,6 +14,12 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 
 > **Just want to render animations?** Pick a renderer from the [package table](../../README.md#-which-package-should-i-use) — you don't use `core` directly.
 
+▶️ See this core driving a renderer:
+**[WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** ·
+**[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
+both are thin drawing layers over the same WASM playback core (🚧 live once the first
+release is published).
+
 This package is for the two audiences who do:
 
 - **Renderer authors** — porting the Player to a new engine by building a renderer binding on top of `core`. Jump straight to [Building a renderer on top](#building-a-renderer-on-top).

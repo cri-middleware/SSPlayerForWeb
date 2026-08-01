@@ -15,6 +15,10 @@ dropdowns alongside your other assets.
 > which adds the same `[ss_*]` tags to TyranoScript.
 > **Status:** beta.
 
+▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
+the editor plugin itself can't run in a browser, but this is the same runtime it
+embeds, driven by a TyranoScript sample (🚧 live after the first release).
+
 ## Install
 
 Download `ssplayer.tbp` from the
