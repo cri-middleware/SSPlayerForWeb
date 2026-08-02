@@ -276,6 +276,52 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public set loopCount(value: number) {
     this.internalPlayer.setLoop(value);
   }
+
+  /**
+   * Mirror the drawn animation horizontally.
+   *
+   * Not the same as `player.scale.x = -1`. This mirrors only what we draw; our
+   * Container transform is untouched, so targets attached with
+   * {@link attachToPart} — and anything else MZ has parented onto us — are not
+   * mirrored along with the artwork. They still follow the mirrored pose,
+   * because {@link getPartTransform} reports it. Use `scale.x` when you do want
+   * the whole subtree mirrored.
+   */
+  public get flipX(): boolean {
+    return this.internalPlayer.flipX;
+  }
+  public set flipX(value: boolean) {
+    this.internalPlayer.flipX = value;
+  }
+
+  /** Mirror the drawn animation vertically. See {@link flipX}. */
+  public get flipY(): boolean {
+    return this.internalPlayer.flipY;
+  }
+  public set flipY(value: boolean) {
+    this.internalPlayer.flipY = value;
+  }
+
+  /**
+   * Shift the drawn animation horizontally, in animation-local pixels, without
+   * moving this Container — the artwork sits off its authored origin while our
+   * position keeps marking the logical spot. Applied after {@link flipX}, so
+   * flipping does not mirror the offset itself.
+   */
+  public get offsetX(): number {
+    return this.internalPlayer.offsetX;
+  }
+  public set offsetX(value: number) {
+    this.internalPlayer.offsetX = value;
+  }
+
+  /** Shift the drawn animation vertically (Y-down). See {@link offsetX}. */
+  public get offsetY(): number {
+    return this.internalPlayer.offsetY;
+  }
+  public set offsetY(value: number) {
+    this.internalPlayer.offsetY = value;
+  }
   public get audioManager(): IAudioManager | null {
     return this.internalPlayer.audioManager;
   }

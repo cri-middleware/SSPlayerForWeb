@@ -266,7 +266,56 @@ export class SSPlayer extends Container {
     public set speedScale(speed: number) {
         this.internalPlayer.setSpeed(speed);
     }
-    
+
+    /**
+     * Mirror the drawn animation horizontally.
+     *
+     * This is deliberately not the same as `player.scale.x = -1`. It mirrors what
+     * this player draws and nothing else: our own Container transform is
+     * untouched, so targets attached with {@link attachToPart} — and any other
+     * child a host has parented onto us — are not mirrored along with the
+     * artwork. They still FOLLOW the mirrored pose, because
+     * {@link getPartTransform} reports it.
+     *
+     * Reach for `scale.x` instead when you do want the whole subtree mirrored.
+     */
+    public get flipX(): boolean {
+        return this.internalPlayer.flipX;
+    }
+    public set flipX(value: boolean) {
+        this.internalPlayer.flipX = value;
+    }
+
+    /** Mirror the drawn animation vertically. See {@link flipX}. */
+    public get flipY(): boolean {
+        return this.internalPlayer.flipY;
+    }
+    public set flipY(value: boolean) {
+        this.internalPlayer.flipY = value;
+    }
+
+    /**
+     * Shift the drawn animation horizontally, in animation-local pixels, without
+     * moving this Container — so the artwork can sit off its authored origin
+     * while our own position keeps marking the logical spot. Applied after
+     * {@link flipX}, so flipping does not mirror the offset itself.
+     */
+    public get offsetX(): number {
+        return this.internalPlayer.offsetX;
+    }
+    public set offsetX(value: number) {
+        this.internalPlayer.offsetX = value;
+    }
+
+    /** Shift the drawn animation vertically (Y-down). See {@link offsetX}. */
+    public get offsetY(): number {
+        return this.internalPlayer.offsetY;
+    }
+    public set offsetY(value: number) {
+        this.internalPlayer.offsetY = value;
+    }
+
+
     private getPartsColorShader(texture: Texture): Shader {
         let shader = this.partsColorShaders.get(texture);
         if (!shader) {
@@ -973,14 +1022,18 @@ export class SSPlayer extends Container {
         this.removeChildren();
         this.addChild(this.debugText);
 
-        // The root animation renders with no parent transform and full alpha;
-        // instance-part children recurse through here with their accumulated
-        // transform and alpha.
+        // The root animation renders under the player's root transform (flip /
+        // offset — null unless one is set) at full alpha; instance-part children
+        // recurse through here with their accumulated transform and alpha, so
+        // they inherit it through the composition rather than re-applying it.
+        // Folding it in here rather than onto our own Container keeps it off the
+        // attachment layer: a followed target is placed from getPartTransform,
+        // which composes the same affine itself.
         this.renderContext(
             this.internalPlayer,
             frameData,
             frameNo,
-            null,
+            this.internalPlayer.getRootAffine(),
             1.0
         );
 

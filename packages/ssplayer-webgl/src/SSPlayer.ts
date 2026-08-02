@@ -498,6 +498,37 @@ export class SSPlayer {
   }
 
   /**
+   * Mirror the drawn animation horizontally.
+   *
+   * Distinct from `setTransform({ scaleX: -1 })` in two ways worth knowing.
+   * `setTransform` REPLACES the whole placement (anything you omit goes back to
+   * its default), so a later `setTransform` call would drop a flip expressed
+   * that way; this survives. And it applies underneath the placement, in the
+   * animation's own space, so it composes with — rather than fights — whatever
+   * scale and rotation are set.
+   */
+  public get flipX(): boolean { return this.internalPlayer.flipX; }
+  public set flipX(v: boolean) { this.internalPlayer.flipX = v; }
+
+  /** Mirror the drawn animation vertically. See {@link flipX}. */
+  public get flipY(): boolean { return this.internalPlayer.flipY; }
+  public set flipY(v: boolean) { this.internalPlayer.flipY = v; }
+
+  /**
+   * Shift the drawn animation horizontally, in **animation-local pixels**, which
+   * is not the same unit as {@link setTransform}'s `x`: this rides under the
+   * placement, so it is scaled and rotated by it, and it nudges the artwork off
+   * its authored origin rather than moving the player. Applied after
+   * {@link flipX}, so flipping does not mirror the offset itself.
+   */
+  public get offsetX(): number { return this.internalPlayer.offsetX; }
+  public set offsetX(v: number) { this.internalPlayer.offsetX = v; }
+
+  /** Shift the drawn animation vertically (Y-down). See {@link offsetX}. */
+  public get offsetY(): number { return this.internalPlayer.offsetY; }
+  public set offsetY(v: number) { this.internalPlayer.offsetY = v; }
+
+  /**
    * @internal The affine the renderer wants, in drawing-buffer pixels:
    * `[m00, m01, m10, m11, tx, ty]` = translate(boxCentre + xy) × rotate × scale,
    * matching GeometryBuilder.composeAffine. Rebuilt per frame because the box can

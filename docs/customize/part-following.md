@@ -38,7 +38,7 @@ player.detachFromPart(sword);
 |---|---|
 | `attachToPart(part, target, options?)` | Makes the target follow the part. Returns an `SSPartAttachment` (a handle carrying `target` and `detach()`). **PixiJS / MZ only** |
 | `detachFromPart(target)` | Stops following for that `target`. **PixiJS / MZ only** |
-| `getPartTransform(part, out?)` | The part's transform for the current frame, as a 2D affine `[m00, m01, m10, m11, tx, ty]`. `null` if the part is unknown |
+| `getPartTransform(part, out?)` | The part's transform for the current frame, as a 2D affine `[m00, m01, m10, m11, tx, ty]`, with the player's `flipX` / `flipY` / `offsetX` / `offsetY` applied. `null` if the part is unknown |
 | `isPartHidden(part)` | Whether the part is hidden on the current frame. `null` if the part is unknown |
 | `onFrame(cb)` | Fires on each advanced frame, after the world matrices are final. Returns an unsubscribe function (`Unsubscribe`) |
 | `findPartIndex(partName)` | Part index, or `-1` if it isn't in the current animation |
@@ -62,6 +62,26 @@ Every `part` argument takes either a **part name** or a **part index** (`number 
 When all three axes (`position` / `rotation` / `scale`) are on, the affine is applied as-is, so **skew and flip are reproduced exactly**. When only some are on, the affine is decomposed into TRS (translate × rotate × scale) and only the enabled axes are written; the target keeps its own value for the rest.
 
 > The decomposition assumes a TRS composition with no skew. Following a skewed part on a subset of axes is therefore an approximation — enable all three axes, or use the raw affine transformation matrix from `getPartTransform()`, when it has to be exact.
+
+## Combining it with flip (`flipX` / `flipY`)
+
+The player's [flip and offset](/usage/basic#flip-and-offset) work with following rather than against it. `getPartTransform()` reports the part's mirrored pose, so **a target stays pinned to its part across a flip**.
+
+With the default of all three axes on, the affine is written as-is and **the match is exact, mirroring included** — which also means **the target's own artwork is mirrored** (the mirror arrives as a negative scale). That is usually what you want from something meant to match the part exactly, but text or an asymmetric icon on the target will come out backwards.
+
+To keep the target upright, either:
+
+- turn `scale: false` off — at the cost of the 180-degree residual described below, or
+- wrap the target in one `Container`: follow with the outer one, put the artwork in the inner one, and cancel the mirror there with `scale.x = -1`.
+
+Under the default options this is the same result `player.scale.x = -1` would give, so the flip is no advantage here. Where it does pay off is `addAsChild: false` — see below.
+
+> **With `scale: false`, `flipX` leaves a 180-degree difference in the orientation** (`flipY` does not). A mirror cannot be expressed as a rotation — only as a negative scale — so it never reaches a target whose scale is not driven. The two axes differ because `decomposePartAffine()` puts the sign on the Y axis when it splits a mirror into rotation plus negative scale; a horizontal mirror needs an extra 180-degree rotation to fit that form, and it is the rotation that keeps it.
+> **The position is exact regardless of the determinant.**
+
+`flipX` / `flipY` are not the only way a part ends up mirrored: a part or an ancestor carrying a negative scale in SpriteStudio is mirrored without any flip at all. And the two **multiply, so an even number of them cancels** — flipping an already-mirrored part brings the determinant back to **positive**. Never infer the sign from "the flip is on"; read the determinant of the matrix in hand when you need to know.
+
+**`addAsChild: false` is where the flip earns its keep.** Because it is folded into the geometry rather than onto the player's display object, the affine this reports carries it, so a target living outside the player lands correctly with no extra work — as long as it shares the player's coordinate space. Mirror with `player.scale.x = -1` instead and the reported affine knows nothing about it, so every consumer outside the player's own subtree (that target, a DOM overlay, a hitbox) is left at the unmirrored position until the host applies the mirror itself.
 
 ## Timing and accuracy
 
