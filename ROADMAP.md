@@ -45,9 +45,16 @@ describes and the official players implement, but this one does not yet.
         `null` reloads the original from the `.ssab` definition (looking in `cellmaps` and then
         `external_textures`, as `SSPlayerForGodot`'s `set_cellmap_texture` does).
 
-*   [ ] **Flip** (`flipH` / `flipV`)
-    Mirror playback horizontally / vertically. Available on `SSPlayerForGodot`; no equivalent
-    here, so hosts mirror the whole display object instead. *Low priority.*
+*   [x] **Flip / offset** (`flipX` / `flipY` / `offsetX` / `offsetY`) — *done*
+    Mirror or shift what the player draws without touching the host display object, so anything
+    parented to it — including part-following targets — stays put. Available on every player.
+    *   *Naming*: `flipX` / `flipY` rather than `SSPlayerForGodot`'s `flip_h` / `flip_v`, and
+        scalar `offsetX` / `offsetY` rather than a `Vector2` — each engine in its own idiom, as
+        `SSPlayerForUnity` also does (`FlipX` / `FlipY`, after `SpriteRenderer`).
+    *   *Not exposed*: TyranoScript / TyranoBuilder tags. `[ss_pos]` would need matching
+        attributes **and** the save/load bridge would have to persist them, or a restored save
+        would silently drop the flip.
+    See [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic).
 
 *   [ ] **`getPartNames()`**
     Return every part name in one call. Today a caller has to walk `getPartsCount()` and resolve

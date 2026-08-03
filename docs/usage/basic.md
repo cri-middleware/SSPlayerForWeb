@@ -54,6 +54,47 @@ player.frameSkipEnabled = false;                       // stop skipping frames; 
 
 `startFrame` / `endFrame` / `totalFrames` all follow the section once one is set.
 
+## Flip and offset
+
+```ts
+player.flipX = true;        // mirror horizontally
+player.flipY = true;        // mirror vertically
+player.offsetX = 20;        // shift the drawing (animation-local pixels)
+player.offsetY = -10;
+```
+
+All four change **only what this player draws** — the display object's own transform is untouched.
+
+```ts
+// Face the way we are moving.
+player.flipX = velocityX < 0;
+```
+
+`player.scale.x = -1` (or `setTransform({ scaleX: -1 })` on WebGL) mirrors the artwork just as well.
+What differs is **who knows the player was mirrored**.
+
+| | `flipX` | `scale.x = -1` |
+|---|---|---|
+| The animation's artwork | mirrored | mirrored |
+| What `getPartTransform()` returns | **includes the flip** — where the part is actually drawn | does not; the flip lives on the display object |
+| The player's `scale` | stays free to mean size | means size *and* facing, so combining it with scaling needs the sign applied by hand |
+| Children parented onto the player (an MZ nameplate, …) | **left alone** | mirrored too |
+
+The value of `flipX` is that **things outside the player do not have to know about the flip**: a DOM overlay, a hitbox coordinate, an object in another container, a target from `attachToPart(..., { addAsChild: false })` — each of them lands correctly just by reading `getPartTransform()`. With `scale.x = -1` the host has to re-apply the mirror to every one of them.
+
+Conversely, for `attachToPart()` under its default options **there is no visible difference**. All three axes are driven by default, so either way the target sits on the mirrored part and the target's own artwork is mirrored with it (see [part tracking](/customize/part-following)).
+
+> **PixiJS note**: `SSPlayer` (PixiJS) rebuilds its own children every frame, so anything a host adds with `player.addChild()` is gone on the next one. Put it beside the player as a sibling, or use `attachToPart()`. The RPG Maker MZ player draws through raw GL instead and has no such restriction, so it keeps host children.
+
+Notes:
+
+- **The offset is applied after the flip** (`p' = S*p + O`), so turning `flipX` on does not send the offset the other way.
+- The unit is **animation-local pixels**. It rides under the display object's transform, so scaling the player scales the offset with it. This is not the same as WebGL's `setTransform({ x, y })`, which moves the player itself.
+- An instance part's child animation inherits the parent's flip through the hierarchy. There is no need to set it on the child (and doing so has no effect).
+- It is included in what `getPartTransform()` reports — see [part tracking](/customize/part-following).
+
+There are no TyranoScript / TyranoBuilder tags for these; reach the player from script instead.
+
 ## Part lookup
 
 ```ts

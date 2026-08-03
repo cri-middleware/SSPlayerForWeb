@@ -117,6 +117,10 @@ export class SSWebGLRenderer {
   private _whiteTex: WebGLTexture | null = null;
 
   private scratchMatrix = new Float32Array(6);
+  // The caller's transform with the player's root affine (flip / offset) folded
+  // in. Kept apart from scratchMatrix, which the instance-child loop overwrites
+  // per child while this has to stay valid for the whole call.
+  private rootedTransform = new Float32Array(6);
   // Reused FlatBuffer accessor so the batch loop allocates nothing in steady state
   // (re-`__init`s into this instead of `new`-ing per call).
   private _scratchBatch = new DrawBatch();
@@ -400,7 +404,18 @@ export class SSWebGLRenderer {
     // (including instance children, which share the same buffers/program).
     if (this._vao) this.bindVAO(this._vao);
 
-    this._renderContext(player, resourceManager, transform);
+    // Fold in the player's root transform (flip / offset), if it has one. It
+    // belongs UNDER the caller's transform — it mirrors/shifts the animation
+    // within its own space, leaving where the caller placed the player alone —
+    // and it has to ride on `transform` rather than the geometry so that
+    // instance children, which compose against it, inherit it too. Untouched
+    // players get null here and the call is exactly what it was before.
+    const rootAffine = player.getRootAffine();
+    const rootedTransform = rootAffine
+      ? GeometryBuilder.composeAffine(transform, rootAffine, this.rootedTransform)
+      : transform;
+
+    this._renderContext(player, resourceManager, rootedTransform);
 
     if (this._vao) {
       // Leave the VAO intact for next frame; just unbind for isolation. Disabling

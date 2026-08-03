@@ -5,6 +5,7 @@ import { IResourceManager } from './IResourceManager.js';
 import { IAudioManager } from './IAudioManager.js';
 import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
 import { InstancePackProvider, resolveInstancePacks } from './PackResolver.js';
+import { GeometryBuilder } from './GeometryBuilder.js';
 
 export interface EffectChildState {
     slot: EffectSlotHandle;
@@ -867,6 +868,92 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.getCellNames(cellmapName);
     }
 
+    // --- Root transform (flip / offset) ----------------------------------
+    //
+    // Mirror or shift what this player DRAWS, without touching the host object's
+    // own transform — so anything parented to it (part-following targets, a DOM
+    // overlay, the host's own children) stays where it is. Negating a container's
+    // scale.x mirrors the artwork too, but drags all of that along with it; these
+    // do not, which is the whole reason they live here rather than being left to
+    // the host's transform.
+    //
+    // All three resolve into ONE affine, {@link getRootAffine}, and that single
+    // affine is the only thing downstream reads. It has two consumers that MUST
+    // agree: the renderer folds it into the geometry (as the root context's
+    // parent matrix, or into the draw transform), and {@link getPartTransform}
+    // composes it into what it reports. If the geometry moved and the part
+    // transform did not, every attached object would detach the moment the
+    // player was flipped.
+    //
+    // Top level only: an instance-part child inherits this through the composed
+    // parent matrix its caller hands down, so the child's own root affine is
+    // never read and setting it on a child player does nothing.
+
+    private _flipX: boolean = false;
+    private _flipY: boolean = false;
+    private _offsetX: number = 0;
+    private _offsetY: number = 0;
+    // [m00, m01, m10, m11, tx, ty] = scale(±1, ±1) followed by translate(offset),
+    // i.e. p' = S*p + O — the same order Godot's Transform2D root and Unity's
+    // RootScale/RootOffset use. Rebuilt on write; writes are rare, reads are
+    // per-frame. Allocated on first write, so a player that never flips or
+    // offsets carries no buffer at all. m01/m10 are never written: a flip is a
+    // mirror, never a rotation or a skew, so they stay at the zeros they start
+    // as.
+    private _rootAffine: Float32Array | null = null;
+    // False while the affine is the identity, so an untouched player hands the
+    // renderer a null parent matrix and the hot path costs exactly what it did
+    // before this existed.
+    private _rootAffineActive: boolean = false;
+
+    private updateRootAffine(): void {
+        const a = (this._rootAffine ??= new Float32Array(6));
+        a[0] = this._flipX ? -1 : 1;
+        a[3] = this._flipY ? -1 : 1;
+        a[4] = this._offsetX;
+        a[5] = this._offsetY;
+        this._rootAffineActive =
+            this._flipX || this._flipY || this._offsetX !== 0 || this._offsetY !== 0;
+    }
+
+    /**
+     * Mirror the drawn animation horizontally. Only this player's own drawing is
+     * mirrored — the host object's transform, and anything parented to it, are
+     * left alone. Part-following targets follow the mirrored pose.
+     */
+    public get flipX(): boolean { return this._flipX; }
+    public set flipX(v: boolean) { this._flipX = v; this.updateRootAffine(); }
+
+    /** Mirror the drawn animation vertically. See {@link flipX}. */
+    public get flipY(): boolean { return this._flipY; }
+    public set flipY(v: boolean) { this._flipY = v; this.updateRootAffine(); }
+
+    /**
+     * Shift the drawn animation horizontally, in animation-local pixels, without
+     * moving the host object — useful for nudging artwork off its authored origin
+     * while the host keeps marking the logical position. Applied after
+     * {@link flipX}, so it is not itself mirrored.
+     */
+    public get offsetX(): number { return this._offsetX; }
+    public set offsetX(v: number) { this._offsetX = v; this.updateRootAffine(); }
+
+    /** Shift the drawn animation vertically (Y-down). See {@link offsetX}. */
+    public get offsetY(): number { return this._offsetY; }
+    public set offsetY(v: number) { this._offsetY = v; this.updateRootAffine(); }
+
+    /**
+     * {@link flipX} / {@link flipY} / {@link offsetX} / {@link offsetY} resolved
+     * into one 2D affine `[m00, m01, m10, m11, tx, ty]`, or **null** when they
+     * are all at their defaults.
+     *
+     * The returned array is this player's live buffer — read it, do not retain
+     * or mutate it. Renderers compose it as the root context's parent matrix (or
+     * into the draw transform); nothing else should apply it, or it lands twice.
+     */
+    public getRootAffine(): Float32Array | null {
+        return this._rootAffineActive ? this._rootAffine : null;
+    }
+
     // --- Part following (transform read-out) -----------------------------
     //
     // Read a part's current-frame transform so an external object can follow it
@@ -885,11 +972,21 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * the frame the last update()/setFrame() produced; the matrix is computed
      * for every part regardless of `hide`, so a hidden part still reports where
      * it would be.
+     *
+     * {@link flipX} / {@link flipY} / {@link offsetX} / {@link offsetY} are
+     * included: this reports where the part is actually drawn, so a follower
+     * stays pinned to it across a flip.
      */
     public getPartTransform(part: number | string, out?: Float32Array): Float32Array | null {
         const index = this.resolveKnownPartIndex(part);
         if (index < 0) return null;
-        return this.runtimeManager.getWorldMatrix2D(index, out);
+        const m = this.runtimeManager.getWorldMatrix2D(index, out);
+        // The same root affine the renderer folds into the geometry — the two
+        // must not drift apart (see the root-transform section above).
+        // composeAffine reads both operands into locals before it writes, so
+        // composing in place over `m` is safe.
+        const root = this.getRootAffine();
+        return root ? GeometryBuilder.composeAffine(root, m, m) : m;
     }
 
     /**
