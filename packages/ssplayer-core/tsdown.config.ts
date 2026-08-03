@@ -4,6 +4,9 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: 'esm',
   dts: true,
+  alias: {
+    flatbuffers: 'flatbuffers/mjs/flatbuffers.js',
+  },
   outputOptions: {
     entryFileNames: '[name].js',
     chunkFileNames: '[name].js',
