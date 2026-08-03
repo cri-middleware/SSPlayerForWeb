@@ -121,3 +121,7 @@ For details on the three paths (`SSConverterGUI` / `ssconverter-web` / `ssconver
 ::: tip Coming from an older player?
 Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.
 :::
+
+## Related links
+
+- [SpriteStudio Docs](https://cri-middleware.github.io/SpriteStudio-Docs/) — the documentation portal for the SDK and its official players.
