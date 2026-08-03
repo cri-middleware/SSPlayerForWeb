@@ -124,3 +124,9 @@ graph LR
 ::: tip 旧プレイヤーからの移行をお探しの方へ
 旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
 :::
+
+## 関連リポジトリ
+
+- [SpriteStudio Docs](https://cri-middleware.github.io/SpriteStudio-Docs/) — SDK と公式 Player のドキュメントポータル。
+- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — `libssruntime` / `libssconverter` を提供する SDK 本体。
+- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — Player を介さず `.sspj` を変換するデスクトップ GUI。
