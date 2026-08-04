@@ -72,10 +72,6 @@ export default withMermaid({
       lang: 'en',
       themeConfig: {
         outline: { level: [2, 3], label: 'On this page' },
-        editLink: {
-          pattern: `${GITHUB}/edit/main/docs/:path`,
-          text: 'Edit this page',
-        },
         nav: [
           { text: 'Setup', link: '/setup/install' },
           { text: 'Usage', link: '/usage/basic' },
@@ -148,10 +144,6 @@ export default withMermaid({
       description: 'SpriteStudio 7 のアニメーションをブラウザーで再生するプレイヤー（WebAssembly + PixiJS / WebGL）',
       themeConfig: {
         outline: { level: [2, 3], label: '目次' },
-        editLink: {
-          pattern: `${GITHUB}/edit/main/docs/:path`,
-          text: 'このページを編集',
-        },
         nav: [
           { text: 'はじめに', link: '/ja/setup/install' },
           { text: '使い方', link: '/ja/usage/basic' },
