@@ -2,6 +2,11 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const GITHUB = 'https://github.com/cri-middleware/SSPlayerForWeb'
 
+// Canonical production origin, used only for `og:url`. Deliberately not derived from
+// `base` below: that is '/' during local dev, and a card must always advertise the
+// published address rather than wherever the page happened to be built.
+const SITE_URL = 'https://cri-middleware.github.io/SSPlayerForWeb'
+
 // English is the default (root) locale; Japanese lives under /ja/. The API
 // reference (docs/api/, TypeDoc-generated) is language-neutral and shared by both
 // locales at /api/.
@@ -24,10 +29,40 @@ export default withMermaid({
   // VitePress build has no --base CLI flag.
   base: process.env.DOCS_BASE || '/',
 
+  // Open Graph / Twitter Card metadata. VitePress emits none of it on its own, so a link
+  // shared into Slack, X, or Discord previews as a bare URL. Built per page from the title
+  // and description VitePress has already resolved (frontmatter > locale > site), which is
+  // also how the ja pages get Japanese cards without a second code path.
+  //
+  // No og:image: there is no SpriteStudio artwork in this repository to point at, and
+  // `summary_large_image` without one renders as nothing. Add the file under docs/public/
+  // and switch the card type when artwork exists.
+  transformHead({ pageData, siteData, title, description }) {
+    const path = pageData.relativePath
+      .replace(/(^|\/)index\.md$/, '$1')
+      .replace(/\.md$/, '')
+    return [
+      ['meta', { property: 'og:type', content: 'website' }],
+      ['meta', { property: 'og:site_name', content: siteData.title }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { property: 'og:url', content: `${SITE_URL}/${path}` }],
+      ['meta', { property: 'og:locale', content: pageData.relativePath.startsWith('ja/') ? 'ja_JP' : 'en_US' }],
+      ['meta', { name: 'twitter:card', content: 'summary' }],
+      // Keep in sync with the X account linked from the sibling docs sites.
+      ['meta', { name: 'twitter:site', content: '@spritestudio' }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: description }],
+    ]
+  },
+
   // Shared across locales.
   themeConfig: {
     search: { provider: 'local' },
-    socialLinks: [{ icon: 'github', link: GITHUB }],
+    socialLinks: [
+      { icon: 'github', link: GITHUB },
+      { icon: 'x', link: 'https://x.com/spritestudio' },
+    ],
   },
 
   locales: {
@@ -108,6 +143,9 @@ export default withMermaid({
       label: '日本語',
       lang: 'ja',
       link: '/ja/',
+      // Feeds <meta name="description"> and the Open Graph tags on every ja page; without
+      // it they inherit the top-level English description.
+      description: 'SpriteStudio 7 のアニメーションをブラウザーで再生するプレイヤー（WebAssembly + PixiJS / WebGL）',
       themeConfig: {
         outline: { level: [2, 3], label: '目次' },
         editLink: {
