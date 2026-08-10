@@ -15,9 +15,9 @@
     "@spritestudio/ssplayer-webgl": "workspace:*"
   },
   "devDependencies": {
-    "terser": "^5.49.0",
+    "terser": "^5.49.2",
     "typescript": "^7.0.2",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vite-plugin-compression": "^0.5.1",
     "vitest": "^4.1.10"
   }

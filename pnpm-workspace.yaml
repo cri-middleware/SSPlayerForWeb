@@ -6,4 +6,4 @@ allowBuilds:
   esbuild: true
   puppeteer: true
 minimumReleaseAgeExclude:
-  - tsdown@0.22.11
+  - tsdown@0.22.14
