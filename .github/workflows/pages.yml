@@ -85,11 +85,17 @@ jobs:
       - name: Compute site base path
         run: echo "SITE_BASE=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
 
-      # docs (VitePress): base is env-driven (config.mts reads DOCS_BASE).
+      # docs (VitePress): scripts/build-docs.sh is what a contributor runs, so the
+      # docs build is spelled out in one place — TypeDoc, then VitePress, with
+      # base passed through as DOCS_BASE (config.mts reads it). Nothing builds the
+      # docs on a pull request, so there is no PR run to catch CI and the scripts
+      # drifting apart.
+      #
+      # Its companion scripts/prepare-docs.sh is deliberately *not* used here: it
+      # is `pnpm install` + `download:wasm`, which this job already ran above for
+      # the packages, the examples and the converter — not for the docs alone.
       - name: Build docs
-        env:
-          DOCS_BASE: ${{ env.SITE_BASE }}
-        run: pnpm --filter=docs run build
+        run: ./scripts/build-docs.sh base="$SITE_BASE"
 
       # examples: base is injected via vite's --base CLI (configs left untouched).
       - name: Build examples
