@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, BlendType, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, BlendType, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, ssRuntime, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -126,12 +126,22 @@ export class SSPlayer extends Container {
 
     // Reused per-frame scratch so the render hot path allocates nothing: a
     // zero-copy raw reader for the FlatBuffers struct vectors (bypasses the
-    // per-element accessors — 07_render_loop.ja.md §2) and a transient 2D affine
-    // for an instance part's own world matrix before composition. The raw reader
-    // is bound via its `*Of(frameData, …)` helpers at each read so it stays
-    // correct across instance-child recursion (which rebinds it) and re-fetches.
+    // per-element accessors — 07_render_loop.ja.md §2), a reused DrawBatch
+    // accessor, and a transient 2D affine for an instance part's own world matrix
+    // before composition. The raw reader is bound via its `*Of(frameData, …)`
+    // helpers at each read so it stays correct across instance-child recursion
+    // (which rebinds it) and re-fetches.
     private readonly _raw = new FrameDataRaw();
+    private readonly _scratchBatch = new DrawBatch();
+    // Same for the effect plan's draw commands and a part's `SHDR` attribute.
+    private readonly _scratchCmd = new ssRuntime.EffectDrawCommand();
+    private readonly _scratchShaderAttr = new ssRuntime.PartAttributeShader();
     private readonly scratchInstMat = new Float32Array(6);
+
+    // Pooled InheritedMask, one per instance-recursion depth (a child holds its own
+    // while ours stays live up the stack) — see inheritedAtDepth.
+    private readonly _inheritedPool: InheritedMask[] = [];
+    private _depth = 0;
 
     // Reused per-frame scratch for effect draw-call batching: a pooled list of the
     // current Effect batch's particle draw commands (descriptors), greedily merged
@@ -411,7 +421,7 @@ export class SSPlayer extends Container {
         invTexW: number,
         invTexH: number
     ): Shader | null {
-        const attr = frameData.shaders(shaderIdx);
+        const attr = frameData.shaders(shaderIdx, this._scratchShaderAttr);
         if (!attr) return null;
         const shader = this.acquireSsShader(attr.idHash(), texture);
         if (!shader) return null;
@@ -1022,6 +1032,8 @@ export class SSPlayer extends Container {
         this.removeChildren();
         this.addChild(this.debugText);
 
+        this._depth = 0;
+
         // The root animation renders under the player's root transform (flip /
         // offset — null unless one is set) at full alpha; instance-part children
         // recurse through here with their accumulated transform and alpha, so
@@ -1044,6 +1056,16 @@ export class SSPlayer extends Container {
             this.addChild(this._attachmentLayer);
             this._follower.update();
         }
+    }
+
+    /** The pooled InheritedMask for one recursion depth, grown on demand. */
+    private inheritedAtDepth(depth: number): InheritedMask {
+        let m = this._inheritedPool[depth];
+        if (!m) {
+            m = { cov: null, rank: 0, influence: ROOT_MASK_INFLUENCE, visibleInside: ROOT_VISIBLE_INSIDE };
+            this._inheritedPool[depth] = m;
+        }
+        return m;
     }
 
     /**
@@ -1131,15 +1153,20 @@ export class SSPlayer extends Container {
 
         const drawBatchesLength = frameData.drawBatchesLength();
         for (let i = 0; i < drawBatchesLength; i++) {
-            const batch = frameData.drawBatches(i);
+            const batch = frameData.drawBatches(i, this._scratchBatch);
             if (!batch) continue;
 
+            // Every field up front: the instance recursion below re-points the
+            // shared _scratchBatch, so `batch` must not be read after it.
             const kind = batch.kind();
-            // DrawBatchKind.Mask is consumed by the coverage pre-pass above.
-            if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect && kind !== DrawBatchKind.Instance) continue;
-
             const startRank = batch.startRank();
             const count = batch.count();
+            const flags = batch.flags();
+            const textureHash = batch.textureHash();
+            const batchBlend = batch.blendType();
+
+            // DrawBatchKind.Mask is consumed by the coverage pre-pass above.
+            if (kind !== DrawBatchKind.Normal && kind !== DrawBatchKind.Mesh && kind !== DrawBatchKind.Shape && kind !== DrawBatchKind.Effect && kind !== DrawBatchKind.Instance) continue;
             if (count === 0) continue;
 
             // Instance batches carry no texture/blend of their own — each is a
@@ -1182,13 +1209,16 @@ export class SSPlayer extends Container {
                     // the rank that owns that coverage, which is this instance
                     // part's own rank unless we are ourselves a sub-animation
                     // clipping against an ancestor's.
-                    const childInherited: InheritedMask = {
-                        cov: effCov,
-                        rank: inheritedMask ? inheritedMask.rank : startRank + c,
-                        influence: instInfluence,
-                        visibleInside: instVisibleInside,
-                    };
+                    const childInherited = this.inheritedAtDepth(this._depth);
+                    childInherited.cov = effCov;
+                    childInherited.rank = inheritedMask ? inheritedMask.rank : startRank + c;
+                    childInherited.influence = instInfluence;
+                    childInherited.visibleInside = instVisibleInside;
+                    // The child holds this slot for its whole render, so it must
+                    // hand out a different one to ITS children.
+                    this._depth++;
                     this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha, childInherited);
+                    this._depth--;
 
                     // The child's getFrameData()/recursion may have grown WASM
                     // memory and detached our frameData/drawOrder views. Re-derive
@@ -1211,9 +1241,8 @@ export class SSPlayer extends Container {
             // batch would have had clipped are held back rather than drawn
             // unclipped. Same predicate as `masked` below, so exactly the parts
             // the mask governs are the ones that wait for it.
-            if (maskDeferred && (batch.flags() & 0x01) !== 0) continue;
+            if (maskDeferred && (flags & 0x01) !== 0) continue;
 
-            const textureHash = batch.textureHash();
             // Effect batches (and root/null parts) carry textureHash 0; their real
             // texture is resolved per draw command, so avoid the missing-asset warning.
             const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE) : Texture.WHITE;
@@ -1225,7 +1254,7 @@ export class SSPlayer extends Container {
             // SSBlendModes.ts. This ensures 100% parity with the fixed-function
             // GPU blend equations used in ssplayer-webgl across both WebGL and WebGPU.
             let blendMode: any = SS_MIX_BLEND;
-            switch (batch.blendType()) {
+            switch (batchBlend) {
                 case BlendType.Mix: blendMode = SS_MIX_BLEND; break;
                 case BlendType.Mul: blendMode = SS_MUL_BLEND; break;
                 case BlendType.Add: blendMode = SS_ADD_BLEND; break;
@@ -1252,7 +1281,7 @@ export class SSPlayer extends Container {
             // chain's half, and a sub-animation part that opted out is not
             // clipped even though its caller was a mask target. Masked parts use
             // a separate pool (carrying aMaskUV) and shader.
-            const masked = effCov !== null && (batch.flags() & 0x01) !== 0;
+            const masked = effCov !== null && (flags & 0x01) !== 0;
 
             if (kind === DrawBatchKind.Normal) {
                 for (let c = 0; c < count; c++) {
@@ -1402,7 +1431,7 @@ export class SSPlayer extends Container {
 
                     const cmdCount = plan.commandsLength();
                     for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
-                        const cmd = plan.commands(cmdIdx);
+                        const cmd = plan.commands(cmdIdx, this._scratchCmd);
                         if (!cmd) continue;
                         const quadCount = cmd.quadCount();
                         if (quadCount === 0) continue;

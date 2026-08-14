@@ -91,6 +91,8 @@ export class SSWebGLRenderer {
   // limit; UNSIGNED_SHORT when 32-bit indices are unavailable. Set in the constructor.
   private indexType!: number;
   private _uint32Index = false;
+  // WebGL2 takes (srcData, usage, srcOffset, length) on bufferData — see uploadRange.
+  private _isWebGL2 = false;
   // VAO handle + WebGL1 extension. When supported, the attribute layout is recorded
   // once and bound per frame in a single call; null → per-context attrib rebind.
   private _vao: WebGLVertexArrayObject | null = null;
@@ -146,6 +148,13 @@ export class SSWebGLRenderer {
   // Reused shader-attribute accessor + param scratch (GC-zero hot path, §6/§9).
   private _scratchShader = new ssRuntime.PartAttributeShader();
   private _ssParams = new Float32Array(8);
+  // Reused effect-command accessor — same reason as _scratchBatch.
+  private _scratchCmd = new ssRuntime.EffectDrawCommand();
+
+  // Pooled InheritedStencilMask, one per recursion depth (a child holds its own
+  // while ours stays live up the stack) — see inheritedAtDepth.
+  private _inheritedPool: InheritedStencilMask[] = [];
+  private _depth = 0;
 
   // Normal has 12 indices
   private normalIndices = new Uint16Array([
@@ -168,6 +177,7 @@ export class SSWebGLRenderer {
     // (large particle effects / meshes) render correctly instead of silently
     // wrapping the 16-bit index range.
     const isWebGL2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
+    this._isWebGL2 = isWebGL2;
     this._uint32Index = isWebGL2 || !!gl.getExtension('OES_element_index_uint');
     this.indexType = this._uint32Index ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
     if (this._uint32Index) this.batchIndices = new Uint32Array(512 * 3);
@@ -239,6 +249,30 @@ export class SSWebGLRenderer {
   private bindVAO(vao: WebGLVertexArrayObject | null): void {
     if (this._vaoExt) this._vaoExt.bindVertexArrayOES(vao);
     else (this.gl as WebGL2RenderingContext).bindVertexArray(vao);
+  }
+
+  /** The pooled InheritedStencilMask for one recursion depth, grown on demand. */
+  private inheritedAtDepth(depth: number): InheritedStencilMask {
+    let m = this._inheritedPool[depth];
+    if (!m) {
+      m = { active: false, influence: false, visibleInside: false };
+      this._inheritedPool[depth] = m;
+    }
+    return m;
+  }
+
+  /**
+   * `bufferData` the first `length` elements of an (oversized) batch buffer into the
+   * currently bound `target`. WebGL2 takes the range directly; WebGL1 has only the
+   * 3-argument form and still pays a `subarray` view per upload.
+   */
+  private uploadRange(target: number, src: Float32Array | Uint16Array | Uint32Array, length: number): void {
+    const gl = this.gl;
+    if (this._isWebGL2) {
+      (gl as WebGL2RenderingContext).bufferData(target, src, gl.DYNAMIC_DRAW, 0, length);
+    } else {
+      gl.bufferData(target, src.subarray(0, length), gl.DYNAMIC_DRAW);
+    }
   }
 
   private ensureBatchCapacity(vCount: number, iCount: number) {
@@ -415,6 +449,7 @@ export class SSWebGLRenderer {
       ? GeometryBuilder.composeAffine(transform, rootAffine, this.rootedTransform)
       : transform;
 
+    this._depth = 0;
     this._renderContext(player, resourceManager, rootedTransform);
 
     if (this._vao) {
@@ -560,6 +595,9 @@ export class SSWebGLRenderer {
       // it alongside ctxInfluence is the §2-6 AND. Without either coverage the
       // content draws unclipped.
       const batchInfluence = (b.flags() & 0x01) !== 0;
+      // Last read out of `b`: the instance recursion below re-points the shared
+      // _scratchBatch, so the draw at the end of the loop must not read it again.
+      const batchBlend = b.blendType();
       const isContentKind = kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape;
       if (this._stencilSupported && isContentKind && batchInfluence && ctxInfluence &&
           (maskWriterCount > 0 || inheritedActive)) {
@@ -616,16 +654,14 @@ export class SSWebGLRenderer {
         // consistent with totalVerts/totalIndices (draw_as_mask parts draw no colour).
         if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
 
+        // Each part writes straight into the shared buffers at (vOffset, iOffset);
+        // the GeometryBuilder rebases its indices by vOffset itself.
         if (kind === DrawBatchKind.Normal) {
           const vCount = 5;
           const iCount = 12;
 
-          const subPos = this.batchPos.subarray(vOffset * 2, (vOffset + vCount) * 2);
-          const subUv = this.batchUv.subarray(vOffset * 2, (vOffset + vCount) * 2);
-          const subColor = this.batchColor.subarray(vOffset * 4, (vOffset + vCount) * 4);
-          const subVarg = this.batchVarg.subarray(vOffset * 4, (vOffset + vCount) * 4);
-
-          gb.buildNormal(partIdx, fd, invW, invH, subPos, subUv, subColor, subVarg);
+          gb.buildNormal(partIdx, fd, invW, invH,
+            this.batchPos, this.batchUv, this.batchColor, this.batchVarg, vOffset);
 
           for (let j = 0; j < 12; j++) {
             this.batchIndices[iOffset + j] = this.normalIndices[j] + vOffset;
@@ -639,19 +675,9 @@ export class SSWebGLRenderer {
           const iCount = meshIOff[partIdx + 1] - meshIOff[partIdx];
           if (vCount === 0 || iCount === 0) continue;
 
-          const subPos = this.batchPos.subarray(vOffset * 2, (vOffset + vCount) * 2);
-          const subUv = this.batchUv.subarray(vOffset * 2, (vOffset + vCount) * 2);
-          const subColor = this.batchColor.subarray(vOffset * 4, (vOffset + vCount) * 4);
-          const subVarg = this.batchVarg.subarray(vOffset * 4, (vOffset + vCount) * 4);
-          // We use the main buffer view to build the mesh indices, which will be 0-based
-          const subIndices = this.batchIndices.subarray(iOffset, iOffset + iCount);
-
-          gb.buildMesh(partIdx, fd, vCount, iCount, invW, invH, subPos, subUv, subColor, subVarg, subIndices);
-
-          // Shift indices by vOffset for this batch
-          for (let j = 0; j < iCount; j++) {
-            this.batchIndices[iOffset + j] += vOffset;
-          }
+          gb.buildMesh(partIdx, fd, vCount, iCount, invW, invH,
+            this.batchPos, this.batchUv, this.batchColor, this.batchVarg, this.batchIndices,
+            vOffset, iOffset);
 
           vOffset += vCount;
           iOffset += iCount;
@@ -661,18 +687,9 @@ export class SSWebGLRenderer {
           if (vCount < 3) continue;   // matches the pre-count skip above
           const iCount = (vCount - 2) * 3;
 
-          const subPos = this.batchPos.subarray(vOffset * 2, (vOffset + vCount) * 2);
-          const subUv = this.batchUv.subarray(vOffset * 2, (vOffset + vCount) * 2);
-          const subColor = this.batchColor.subarray(vOffset * 4, (vOffset + vCount) * 4);
-          const subVarg = this.batchVarg.subarray(vOffset * 4, (vOffset + vCount) * 4);
-          const subIndices = this.batchIndices.subarray(iOffset, iOffset + iCount);
-
-          gb.buildShape(partIdx, fd, vCount, invW, invH, subPos, subUv, subColor, subVarg, subIndices);
-
-          // Shift indices by vOffset
-          for (let j = 0; j < iCount; j++) {
-            this.batchIndices[iOffset + j] += vOffset;
-          }
+          gb.buildShape(partIdx, fd, vCount, invW, invH,
+            this.batchPos, this.batchUv, this.batchColor, this.batchVarg, this.batchIndices,
+            vOffset, iOffset);
 
           vOffset += vCount;
           iOffset += iCount;
@@ -708,7 +725,7 @@ export class SSWebGLRenderer {
 
           const cmdCount = plan.commandsLength();
           for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
-            const cmd = plan.commands(cmdIdx);
+            const cmd = plan.commands(cmdIdx, this._scratchCmd);
             if (!cmd) continue;
             const quadCount = cmd.quadCount();
             if (quadCount === 0) continue;
@@ -783,14 +800,14 @@ export class SSWebGLRenderer {
           gl.blendEquationSeparate(gl.FUNC_ADD, gl.FUNC_ADD);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-          gl.bufferData(gl.ARRAY_BUFFER, this.batchPos.subarray(0, pCount * 2), gl.DYNAMIC_DRAW);
+          this.uploadRange(gl.ARRAY_BUFFER, this.batchPos, pCount * 2);
           gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
-          gl.bufferData(gl.ARRAY_BUFFER, this.batchUv.subarray(0, pCount * 2), gl.DYNAMIC_DRAW);
+          this.uploadRange(gl.ARRAY_BUFFER, this.batchUv, pCount * 2);
           gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-          gl.bufferData(gl.ARRAY_BUFFER, this.batchColor.subarray(0, pCount * 4), gl.DYNAMIC_DRAW);
+          this.uploadRange(gl.ARRAY_BUFFER, this.batchColor, pCount * 4);
 
           gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices.subarray(0, iCount), gl.DYNAMIC_DRAW);
+          this.uploadRange(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices, iCount);
           gl.drawElements(gl.TRIANGLES, iCount, this.indexType, 0);
 
           // Restore the aVarg array for the next parts batch.
@@ -841,11 +858,15 @@ export class SSWebGLRenderer {
           // recursion. The child enables the test itself, per part, with the
           // composed polarity — one test wrapped around the whole recursion would
           // clip sub-animation parts that opted out of masking.
-          this._renderContext(child.player, resourceManager, composed, false, {
-            active: coverageReachesChild,
-            influence: instInfluence,
-            visibleInside: instVisibleInside,
-          });
+          const childInherited = this.inheritedAtDepth(this._depth);
+          childInherited.active = coverageReachesChild;
+          childInherited.influence = instInfluence;
+          childInherited.visibleInside = instVisibleInside;
+          // The child holds this slot for its whole render, so it must hand out a
+          // different one to ITS children.
+          this._depth++;
+          this._renderContext(child.player, resourceManager, composed, false, childInherited);
+          this._depth--;
 
           // Re-fetch WASM views in case the child's rendering grew WASM memory —
           // a grow detaches the ArrayBuffer these views point into, and the next
@@ -873,19 +894,19 @@ export class SSWebGLRenderer {
       }
 
       if (totalIndices > 0 && kind !== DrawBatchKind.Effect && kind !== DrawBatchKind.Instance) {
-        this.applyBlend(b.blendType());
+        this.applyBlend(batchBlend);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.batchPos.subarray(0, totalVerts * 2), gl.DYNAMIC_DRAW);
+        this.uploadRange(gl.ARRAY_BUFFER, this.batchPos, totalVerts * 2);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.batchUv.subarray(0, totalVerts * 2), gl.DYNAMIC_DRAW);
+        this.uploadRange(gl.ARRAY_BUFFER, this.batchUv, totalVerts * 2);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.batchColor.subarray(0, totalVerts * 4), gl.DYNAMIC_DRAW);
+        this.uploadRange(gl.ARRAY_BUFFER, this.batchColor, totalVerts * 4);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vargBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.batchVarg.subarray(0, totalVerts * 4), gl.DYNAMIC_DRAW);
+        this.uploadRange(gl.ARRAY_BUFFER, this.batchVarg, totalVerts * 4);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices.subarray(0, totalIndices), gl.DYNAMIC_DRAW);
+        this.uploadRange(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices, totalIndices);
         gl.drawElements(gl.TRIANGLES, totalIndices, this.indexType, 0);
       }
     }
@@ -922,18 +943,14 @@ export class SSWebGLRenderer {
     if (vCount <= 0 || iCount <= 0) { this._builtVerts = 0; return 0; }
 
     this.ensureBatchCapacity(vCount, iCount);
-    const subPos = this.batchPos.subarray(0, vCount * 2);
-    const subUv = this.batchUv.subarray(0, vCount * 2);
-    const subColor = this.batchColor.subarray(0, vCount * 4);
-    const subVarg = this.batchVarg.subarray(0, vCount * 4);
-
+    // One part per draw, so offsets are 0 and the shared buffers go over whole.
     if (kind === DrawBatchKind.Normal) {
-      gb.buildNormal(partIdx, fd, invW, invH, subPos, subUv, subColor, subVarg);
+      gb.buildNormal(partIdx, fd, invW, invH, this.batchPos, this.batchUv, this.batchColor, this.batchVarg);
       for (let j = 0; j < 12; j++) this.batchIndices[j] = this.normalIndices[j];
     } else if (kind === DrawBatchKind.Mesh) {
-      gb.buildMesh(partIdx, fd, vCount, iCount, invW, invH, subPos, subUv, subColor, subVarg, this.batchIndices.subarray(0, iCount));
+      gb.buildMesh(partIdx, fd, vCount, iCount, invW, invH, this.batchPos, this.batchUv, this.batchColor, this.batchVarg, this.batchIndices);
     } else {
-      gb.buildShape(partIdx, fd, vCount, invW, invH, subPos, subUv, subColor, subVarg, this.batchIndices.subarray(0, iCount));
+      gb.buildShape(partIdx, fd, vCount, invW, invH, this.batchPos, this.batchUv, this.batchColor, this.batchVarg, this.batchIndices);
     }
     this._builtVerts = vCount;
     return iCount;
@@ -943,15 +960,15 @@ export class SSWebGLRenderer {
   private uploadPart(vCount: number, iCount: number): void {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.batchPos.subarray(0, vCount * 2), gl.DYNAMIC_DRAW);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchPos, vCount * 2);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.batchUv.subarray(0, vCount * 2), gl.DYNAMIC_DRAW);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchUv, vCount * 2);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.batchColor.subarray(0, vCount * 4), gl.DYNAMIC_DRAW);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchColor, vCount * 4);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vargBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.batchVarg.subarray(0, vCount * 4), gl.DYNAMIC_DRAW);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchVarg, vCount * 4);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices.subarray(0, iCount), gl.DYNAMIC_DRAW);
+    this.uploadRange(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices, iCount);
   }
 
   /**

@@ -212,14 +212,35 @@ export class SSPlayer {
    * centre origin — so a player is centred in its box with no host maths.
    */
   public get box(): SSPlayerBox {
-    if (this._box) return this._box;
-    const { width, height } = this.surface.drawingBufferSize;
-    return { x: 0, y: 0, w: width, h: height };
+    // A copy: `_box` is written in place by setBox (every frame, under SSOverlay),
+    // so a host holding the live object would see it mutate — and `player.box =
+    // saved` would become a self-assignment that restores nothing.
+    return { x: this.boxX, y: this.boxY, w: this.boxW, h: this.boxH };
   }
 
   public set box(v: SSPlayerBox) {
-    this._box = { x: v.x, y: v.y, w: v.w, h: v.h };
+    this.setBox(v.x, v.y, v.w, v.h);
   }
+
+  /** Set destination rectangle in place without allocating a box object. */
+  public setBox(x: number, y: number, w: number, h: number): void {
+    if (this._box) {
+      this._box.x = x;
+      this._box.y = y;
+      this._box.w = w;
+      this._box.h = h;
+    } else {
+      this._box = { x, y, w, h };
+    }
+  }
+
+  // Allocation-free reads of the resolved box for the per-frame callers
+  // (renderTransform, the Surface's scissor), which the `box` getter is not.
+  // `surface.canvas`, not `surface.drawingBufferSize` — that allocates too.
+  /** @internal */ public get boxX(): number { return this._box ? this._box.x : 0; }
+  /** @internal */ public get boxY(): number { return this._box ? this._box.y : 0; }
+  /** @internal */ public get boxW(): number { return this._box ? this._box.w : this.surface.canvas.width; }
+  /** @internal */ public get boxH(): number { return this._box ? this._box.h : this.surface.canvas.height; }
 
   /** Revert to tracking the whole surface. */
   public resetBox(): void {
@@ -537,14 +558,13 @@ export class SSPlayer {
   public renderTransform(): Float32Array {
     const cos = Math.cos(this._rotation);
     const sin = Math.sin(this._rotation);
-    const box = this.box;
     const m = this._matrix;
     m[0] = cos * this._scaleX;   // m00
     m[1] = -sin * this._scaleY;  // m01
     m[2] = sin * this._scaleX;   // m10
     m[3] = cos * this._scaleY;   // m11
-    m[4] = box.x + box.w / 2 + this._x; // tx
-    m[5] = box.y + box.h / 2 + this._y; // ty
+    m[4] = this.boxX + this.boxW / 2 + this._x; // tx
+    m[5] = this.boxY + this.boxH / 2 + this._y; // ty
     return m;
   }
 
