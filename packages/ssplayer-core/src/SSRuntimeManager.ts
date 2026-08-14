@@ -182,6 +182,7 @@ export class SSRuntimeManager {
     // nothing, and auto-invalidates on memory growth (detach-safe by
     // construction). See WasmViewCache.
     private readonly viewCache = new WasmViewCache(getWasmMemory);
+    private readonly _scratchFrameData = new FrameData();
 
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
@@ -748,6 +749,11 @@ export class SSRuntimeManager {
         this.context.set_coordinate_system(system);
     }
 
+    /**
+     * The runtime's frame data for `frame`, as a zero-copy FlatBuffer view over
+     * WASM memory. The returned object is a per-manager scratch re-pointed on every
+     * call: don't retain it, and don't hold two at once.
+     */
     public getFrameData(frame: number): FrameData | null {
         if (this.currentAnimationIndex < 0) return null;
         try {
@@ -766,7 +772,7 @@ export class SSRuntimeManager {
             
             const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
             const bb = new flatbuffers.ByteBuffer(buf);
-            return FrameData.getRootAsFrameData(bb);
+            return FrameData.getRootAsFrameData(bb, this._scratchFrameData);
         } catch (e) {
             console.error(`WASM get_frame_data error at frame ${frame}:`, e);
             return null;

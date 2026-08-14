@@ -271,14 +271,15 @@ export class SSSurface {
       // opt-in per player.
       const clipped = player.clip || player.backdrop !== null;
       if (clipped) {
-        const box = player.box;
+        // Components, not `player.box` — that getter allocates.
+        const bx = player.boxX, by = player.boxY, bw = player.boxW, bh = player.boxH;
         gl.enable(gl.SCISSOR_TEST);
         // Scissor is Y-up from the bottom-left; boxes are Y-down from the top-left.
         gl.scissor(
-          Math.round(box.x),
-          Math.round(this.canvas.height - (box.y + box.h)),
-          Math.max(0, Math.round(box.w)),
-          Math.max(0, Math.round(box.h)),
+          Math.round(bx),
+          Math.round(this.canvas.height - (by + bh)),
+          Math.max(0, Math.round(bw)),
+          Math.max(0, Math.round(bh)),
         );
       }
       if (player.backdrop !== null) {

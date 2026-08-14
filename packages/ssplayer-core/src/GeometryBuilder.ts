@@ -36,6 +36,18 @@ export class GeometryBuilder {
     private readonly _cornerColors = new Float32Array(20); // [LT,RT,LB,RB,center] × [r,g,b,a]
     private readonly _cornerRates = new Float32Array(5);
 
+    // Cached views over EffectDrawPlan's FlatBuffer vectors so multiple commands
+    // slicing the same plan don't reallocate TypedArrays on each buildEffectCommand call.
+    // Safe because getEffectDrawPlan() mints a fresh ByteBuffer per call; if that is
+    // ever pooled, this must compare the vector lengths too.
+    private _planBb: unknown = null;
+    private _planBbPos = -1;
+    private _planBuffer: ArrayBufferLike | null = null;
+    private _planVerts: Float32Array | null = null;
+    private _planUvs: Float32Array | null = null;
+    private _planColors: Float32Array | null = null;
+    private _planIndices: Int32Array | null = null;
+
     constructor(runtimeManager: SSRuntimeManager) {
         this.runtimeManager = runtimeManager;
     }
@@ -98,6 +110,9 @@ export class GeometryBuilder {
 
     /**
      * Builds geometry for a Normal part.
+     *
+     * `vertexOffset` packs several parts into one shared buffer, as in
+     * {@link buildEffectCommand}.
      */
     public buildNormal(
         partIdx: number,
@@ -107,7 +122,8 @@ export class GeometryBuilder {
         outPositions: Float32Array,
         outUvs: Float32Array,
         outColors: Float32Array,
-        outCustom0: Float32Array
+        outCustom0: Float32Array,
+        vertexOffset: number = 0
     ): void {
         const srcBase = partIdx * 10;
         const raw = this._raw.bind(frameData);
@@ -156,37 +172,39 @@ export class GeometryBuilder {
 
         const pm = this.parentMatrix;
         for (let j = 0; j < 5; j++) {
+            const ov = vertexOffset + j;
             const wx = this.worldPositions[srcBase + j * 2];
             const wy = this.worldPositions[srcBase + j * 2 + 1];
             if (pm) {
-                outPositions[j * 2] = pm[0] * wx + pm[1] * wy + pm[4];
-                outPositions[j * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+                outPositions[ov * 2] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[ov * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
             } else {
-                outPositions[j * 2] = wx;
-                outPositions[j * 2 + 1] = wy;
+                outPositions[ov * 2] = wx;
+                outPositions[ov * 2 + 1] = wy;
             }
-            outUvs[j * 2] = uvData[srcBase + j * 2] * invTexW;
-            outUvs[j * 2 + 1] = uvData[srcBase + j * 2 + 1] * invTexH;
+            outUvs[ov * 2] = uvData[srcBase + j * 2] * invTexW;
+            outUvs[ov * 2 + 1] = uvData[srcBase + j * 2 + 1] * invTexH;
 
             if (hasPc) {
                 const cb = j * 4;
-                outColors[j * 4 + 0] = colors[cb + 0];
-                outColors[j * 4 + 1] = colors[cb + 1];
-                outColors[j * 4 + 2] = colors[cb + 2];
-                outColors[j * 4 + 3] = colors[cb + 3];
-                outCustom0[j * 4 + 0] = rates[j];
-                outCustom0[j * 4 + 1] = mixF;
-                outCustom0[j * 4 + 2] = mulF;
-                outCustom0[j * 4 + 3] = addF;
+                outColors[ov * 4 + 0] = colors[cb + 0];
+                outColors[ov * 4 + 1] = colors[cb + 1];
+                outColors[ov * 4 + 2] = colors[cb + 2];
+                outColors[ov * 4 + 3] = colors[cb + 3];
+                outCustom0[ov * 4 + 0] = rates[j];
+                outCustom0[ov * 4 + 1] = mixF;
+                outCustom0[ov * 4 + 2] = mulF;
+                outCustom0[ov * 4 + 3] = addF;
             } else {
-                outColors[j * 4 + 0] = 1.0; outColors[j * 4 + 1] = 1.0; outColors[j * 4 + 2] = 1.0; outColors[j * 4 + 3] = stateAlpha;
-                outCustom0[j * 4 + 0] = 1.0; outCustom0[j * 4 + 1] = 0; outCustom0[j * 4 + 2] = 1.0; outCustom0[j * 4 + 3] = 0;
+                outColors[ov * 4 + 0] = 1.0; outColors[ov * 4 + 1] = 1.0; outColors[ov * 4 + 2] = 1.0; outColors[ov * 4 + 3] = stateAlpha;
+                outCustom0[ov * 4 + 0] = 1.0; outCustom0[ov * 4 + 1] = 0; outCustom0[ov * 4 + 2] = 1.0; outCustom0[ov * 4 + 3] = 0;
             }
         }
     }
 
     /**
-     * Builds geometry for a Shape part.
+     * Builds geometry for a Shape part. `vertexOffset` / `indexOffset` pack
+     * several parts into one shared buffer; indices are rebased by `vertexOffset`.
      */
     public buildShape(
         partIdx: number,
@@ -198,7 +216,9 @@ export class GeometryBuilder {
         outUvs: Float32Array,
         outColors: Float32Array,
         outCustom0: Float32Array,
-        outIndices: Uint32Array | Uint16Array
+        outIndices: Uint32Array | Uint16Array,
+        vertexOffset: number = 0,
+        indexOffset: number = 0
     ): void {
         const shapeVertices = this.runtimeManager.getShapeVertices();
         const shapeVertexBoxCoords = this.runtimeManager.getShapeVertexBoxCoords();
@@ -258,6 +278,7 @@ export class GeometryBuilder {
         const pm = this.parentMatrix;
 
         for (let v = 0; v < numVerts; v++) {
+            const ov = vertexOffset + v;
             const vx = shapeVertices[srcBase + v * 2 + 0];
             const vy = shapeVertices[srcBase + v * 2 + 1];
             const fx = shapeVertexBoxCoords[srcBase + v * 2 + 0];
@@ -285,11 +306,11 @@ export class GeometryBuilder {
             const wx = m00 * vx + m01 * vy + tx;
             const wy = m10 * vx + m11 * vy + ty;
             if (pm) {
-                outPositions[v * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
-                outPositions[v * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+                outPositions[ov * 2 + 0] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[ov * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
             } else {
-                outPositions[v * 2 + 0] = wx;
-                outPositions[v * 2 + 1] = wy;
+                outPositions[ov * 2 + 0] = wx;
+                outPositions[ov * 2 + 1] = wy;
             }
 
             if (hasCell) {
@@ -304,35 +325,36 @@ export class GeometryBuilder {
                 const bottomU = blU + (brU - blU) * fx;
                 const bottomV = blV + (brV - blV) * fx;
                 
-                outUvs[v * 2 + 0] = (topU + (bottomU - topU) * fy) * invTexW;
-                outUvs[v * 2 + 1] = (topV + (bottomV - topV) * fy) * invTexH;
+                outUvs[ov * 2 + 0] = (topU + (bottomU - topU) * fy) * invTexW;
+                outUvs[ov * 2 + 1] = (topV + (bottomV - topV) * fy) * invTexH;
             } else {
-                outUvs[v * 2 + 0] = 0.5;
-                outUvs[v * 2 + 1] = 0.5;
+                outUvs[ov * 2 + 0] = 0.5;
+                outUvs[ov * 2 + 1] = 0.5;
             }
-            
-            outColors[v * 4 + 0] = cr_;
-            outColors[v * 4 + 1] = cg;
-            outColors[v * 4 + 2] = cb;
-            outColors[v * 4 + 3] = ca;
 
-            outCustom0[v * 4 + 0] = mixRate;
-            outCustom0[v * 4 + 1] = shapeMixF;
-            outCustom0[v * 4 + 2] = shapeMulF;
-            outCustom0[v * 4 + 3] = shapeAddF;
+            outColors[ov * 4 + 0] = cr_;
+            outColors[ov * 4 + 1] = cg;
+            outColors[ov * 4 + 2] = cb;
+            outColors[ov * 4 + 3] = ca;
+
+            outCustom0[ov * 4 + 0] = mixRate;
+            outCustom0[ov * 4 + 1] = shapeMixF;
+            outCustom0[ov * 4 + 2] = shapeMulF;
+            outCustom0[ov * 4 + 3] = shapeAddF;
         }
 
         // Triangle Fan
-        let indexCursor = 0;
+        let indexCursor = indexOffset;
         for (let j = 1; j < numVerts - 1; j++) {
-            outIndices[indexCursor++] = 0;
-            outIndices[indexCursor++] = j;
-            outIndices[indexCursor++] = j + 1;
+            outIndices[indexCursor++] = vertexOffset;
+            outIndices[indexCursor++] = vertexOffset + j;
+            outIndices[indexCursor++] = vertexOffset + j + 1;
         }
     }
 
     /**
-     * Builds geometry for a Skinned Mesh part.
+     * Builds geometry for a Skinned Mesh part. `vertexOffset` / `indexOffset` pack
+     * several parts into one shared buffer; indices are rebased by `vertexOffset`.
      */
     public buildMesh(
         partIdx: number,
@@ -345,7 +367,9 @@ export class GeometryBuilder {
         outUvs: Float32Array,
         outColors: Float32Array,
         outCustom0: Float32Array,
-        outIndices: Uint32Array | Uint16Array
+        outIndices: Uint32Array | Uint16Array,
+        vertexOffset: number = 0,
+        indexOffset: number = 0
     ): void {
         const meshVx = this.runtimeManager.getMeshVerticesX();
         const meshVy = this.runtimeManager.getMeshVerticesY();
@@ -385,34 +409,35 @@ export class GeometryBuilder {
 
         const pm = this.parentMatrix;
         for (let v = 0; v < pCount; v++) {
+            const ov = vertexOffset + v;
             const wx = meshVx[v0 + v];
             const wy = meshVy[v0 + v];
             if (pm) {
-                outPositions[v * 2] = pm[0] * wx + pm[1] * wy + pm[4];
-                outPositions[v * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
+                outPositions[ov * 2] = pm[0] * wx + pm[1] * wy + pm[4];
+                outPositions[ov * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
             } else {
-                outPositions[v * 2] = wx;
-                outPositions[v * 2 + 1] = wy;
+                outPositions[ov * 2] = wx;
+                outPositions[ov * 2 + 1] = wy;
             }
-            outUvs[v * 2] = meshUv[(v0 + v) * 2] * invTexW;
-            outUvs[v * 2 + 1] = meshUv[(v0 + v) * 2 + 1] * invTexH;
+            outUvs[ov * 2] = meshUv[(v0 + v) * 2] * invTexW;
+            outUvs[ov * 2 + 1] = meshUv[(v0 + v) * 2 + 1] * invTexH;
 
             if (hasPc) {
-                outColors[v * 4 + 0] = pcR;
-                outColors[v * 4 + 1] = pcG;
-                outColors[v * 4 + 2] = pcB;
-                outColors[v * 4 + 3] = pcA;
-                outCustom0[v * 4 + 0] = pc_rate;
-                outCustom0[v * 4 + 1] = meshMixF;
-                outCustom0[v * 4 + 2] = meshMulF;
-                outCustom0[v * 4 + 3] = meshAddF;
+                outColors[ov * 4 + 0] = pcR;
+                outColors[ov * 4 + 1] = pcG;
+                outColors[ov * 4 + 2] = pcB;
+                outColors[ov * 4 + 3] = pcA;
+                outCustom0[ov * 4 + 0] = pc_rate;
+                outCustom0[ov * 4 + 1] = meshMixF;
+                outCustom0[ov * 4 + 2] = meshMulF;
+                outCustom0[ov * 4 + 3] = meshAddF;
             } else {
-                outColors[v * 4 + 0] = 1.0; outColors[v * 4 + 1] = 1.0; outColors[v * 4 + 2] = 1.0; outColors[v * 4 + 3] = stateAlpha;
-                outCustom0[v * 4 + 0] = 1.0; outCustom0[v * 4 + 1] = 0; outCustom0[v * 4 + 2] = 1.0; outCustom0[v * 4 + 3] = 0;
+                outColors[ov * 4 + 0] = 1.0; outColors[ov * 4 + 1] = 1.0; outColors[ov * 4 + 2] = 1.0; outColors[ov * 4 + 3] = stateAlpha;
+                outCustom0[ov * 4 + 0] = 1.0; outCustom0[ov * 4 + 1] = 0; outCustom0[ov * 4 + 2] = 1.0; outCustom0[ov * 4 + 3] = 0;
             }
         }
         for (let j = 0; j < iCount; j++) {
-            outIndices[j] = meshIdx[i0 + j];
+            outIndices[indexOffset + j] = meshIdx[i0 + j] + vertexOffset;
         }
     }
 
@@ -447,10 +472,25 @@ export class GeometryBuilder {
         indexOffset: number = 0,
         partAlpha: number = 1
     ): void {
-        const planVerts = plan.vertsArray();
-        const planUvs = plan.uvsArray();
-        const planColors = plan.colorsArray();
-        const planIndices = plan.indicesArray();
+        const bb = plan.bb;
+        const bbPos = plan.bb_pos;
+        const bytes = bb ? bb.bytes() : null;
+        const buffer = bytes ? bytes.buffer : null;
+
+        if (!this._planVerts || this._planBb !== bb || this._planBbPos !== bbPos || this._planBuffer !== buffer) {
+            this._planBb = bb;
+            this._planBbPos = bbPos;
+            this._planBuffer = buffer;
+            this._planVerts = plan.vertsArray();
+            this._planUvs = plan.uvsArray();
+            this._planColors = plan.colorsArray();
+            this._planIndices = plan.indicesArray();
+        }
+
+        const planVerts = this._planVerts;
+        const planUvs = this._planUvs;
+        const planColors = this._planColors;
+        const planIndices = this._planIndices;
         if (!planVerts || !planUvs || !planColors || !planIndices) return;
 
         const matrices = this.runtimeManager.getWorldMatrices();

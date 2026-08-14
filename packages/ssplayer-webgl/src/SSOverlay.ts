@@ -75,6 +75,7 @@ export class SSOverlay {
   public readonly canvas: HTMLCanvasElement;
 
   private readonly entries = new Map<SSPlayer, HTMLElement>();
+  private readonly computedStyles = new WeakMap<HTMLElement, CSSStyleDeclaration>();
   private readonly io: IntersectionObserver | null;
   private readonly onResize: () => void;
   // Declared with the other fields so it exists before the constructor's first
@@ -175,6 +176,19 @@ export class SSOverlay {
     return () => this._resizeListeners.delete(listener);
   }
 
+  /**
+   * `getComputedStyle` for `el`, cached. The declaration it returns is live, so one
+   * lookup per element serves every frame.
+   */
+  private computedStyleOf(el: HTMLElement): CSSStyleDeclaration {
+    let s = this.computedStyles.get(el);
+    if (!s) {
+      s = getComputedStyle(el);
+      this.computedStyles.set(el, s);
+    }
+    return s;
+  }
+
   private resize(): void {
     const rect = this.canvas.getBoundingClientRect();
     this.surface.resize(Math.max(1, rect.width), Math.max(1, rect.height));
@@ -203,24 +217,26 @@ export class SSOverlay {
       const origin = this.canvas.getBoundingClientRect();
       const dpr = this.canvas.width / Math.max(1, origin.width);
       const followOpacity = this.options.followOpacity ?? false;
-      for (const [player, el] of this.entries) {
-        if (!player.visible) continue;
+      // forEach, not `for (const [player, el] of …)`: destructuring a Map entry
+      // allocates the [k, v] pair per element per frame.
+      this.entries.forEach((el, player) => {
+        if (!player.visible) return;
         const r = el.getBoundingClientRect();
-        player.box = {
-          x: (r.left - origin.left) * dpr,
-          y: (r.top - origin.top) * dpr,
-          w: r.width * dpr,
-          h: r.height * dpr,
-        };
+        player.setBox(
+          (r.left - origin.left) * dpr,
+          (r.top - origin.top) * dpr,
+          r.width * dpr,
+          r.height * dpr,
+        );
         if (followOpacity) {
           // Computed, not inline: this has to see the value a CSS transition or a
           // host engine's own animation is currently on, not the one an author
           // typed. Reading it here keeps the animation fading in step with the
           // element rather than a frame behind it.
-          const opacity = Number.parseFloat(getComputedStyle(el).opacity);
+          const opacity = Number.parseFloat(this.computedStyleOf(el).opacity);
           player.alpha = Number.isFinite(opacity) ? opacity : 1;
         }
-      }
+      });
 
       for (const player of this.entries.keys()) {
         if (player.visible) player.update(delta);
