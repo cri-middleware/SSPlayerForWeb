@@ -12,14 +12,18 @@ export default defineConfig(({ command }) => {
                      (pkg.devDependencies && pkg.devDependencies['pixi.js']) ||
                      '^8.0.0';
   const pixiVersion = rawVersion.replace(/[\^~]/g, '');
-  const pixiUrl = `https://cdn.jsdelivr.net/npm/pixi.js@${pixiVersion}/+esm`;
+  // pixi's OWN prebuilt ESM, not jsdelivr's `/+esm` — see the same line in
+  // pixi-example/vite.config.ts: the `/+esm` re-bundle silently draws nothing.
+  const pixiUrl = `https://cdn.jsdelivr.net/npm/pixi.js@${pixiVersion}/dist/pixi.mjs`;
 
   return {
     build: {
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: true,
+          // console.log only -- see the same block in pixi-example: dropping
+          // console.error/warn hides the player's own asset-loading failures.
+          drop_console: ['log'],
           drop_debugger: true,
         },
       },

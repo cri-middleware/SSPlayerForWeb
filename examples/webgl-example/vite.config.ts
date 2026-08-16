@@ -16,7 +16,12 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        // console.log only. `drop_console: true` also swallows console.error and
+        // console.warn -- including the player's own "failed to load texture" /
+        // "failed to load SSAB" reporting, which is exactly what someone whose
+        // asset does not show up needs to see. An example that hides the one
+        // clue it has is worse than a noisy one. (Array form: terser >= 5.16.)
+        drop_console: ['log'],
         drop_debugger: true,
       },
     },

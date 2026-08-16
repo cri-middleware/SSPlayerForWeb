@@ -10,14 +10,25 @@ export default defineConfig(({ command }) => {
                      (pkg.devDependencies && pkg.devDependencies['pixi.js']) || 
                      '^8.0.0';
   const pixiVersion = rawVersion.replace(/[\^~]/g, '');
-  const pixiUrl = `https://cdn.jsdelivr.net/npm/pixi.js@${pixiVersion}/+esm`;
+  // pixi's OWN prebuilt ESM, not jsdelivr's `/+esm`. `/+esm` is jsdelivr
+  // re-bundling the package itself, and that re-bundle drops render-pipe
+  // registrations PixiJS performs as module side effects: the scene graph, the
+  // textures and the ticker all look correct, `renderer.render()` runs every
+  // frame, and not one pixel is drawn — with no error anywhere. `dist/pixi.mjs`
+  // is what the package ships and is what CDN consumers should load.
+  const pixiUrl = `https://cdn.jsdelivr.net/npm/pixi.js@${pixiVersion}/dist/pixi.mjs`;
 
   return {
     build: {
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: true,
+          // console.log only. `drop_console: true` also swallows console.error
+          // and console.warn -- including PixiResourceManager's "Failed to load
+          // texture", which is exactly what someone whose asset does not show up
+          // needs to see. An example that hides the one clue it has is worse
+          // than a noisy one. (Array form: terser >= 5.16.)
+          drop_console: ['log'],
           drop_debugger: true,
         },
       },
