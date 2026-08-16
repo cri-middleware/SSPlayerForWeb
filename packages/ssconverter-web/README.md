@@ -1,15 +1,14 @@
 [**English**](./README.md) | [**日本語**](./README.ja.md)
 
-# ssconverter-web
+# @spritestudio/ssconverter-web
 
 Convert SpriteStudio project files (`.sspj`) into the runtime binary format
 (`.ssab`) the players load — in your browser or from the command line.
 
 > **Who this is for:** you have a SpriteStudio project (`.sspj`) and need the
 > runtime `.ssab` — convert it via a drag-and-drop browser tool or a scriptable CLI.
-> **Status:** alpha, private — **not on npm**. The only way to get
-> it today is to build from source (clone the monorepo — see
-> [Get the tool](#get-the-tool) below).
+> **Status:** beta. Not an npm package — the browser tool is hosted on GitHub Pages
+> and the CLI ships with the monorepo (see [Get the tool](#get-the-tool) below).
 > **Not what you need?** → [ssconverter-core](../ssconverter-core) — the
 > environment-agnostic converter engine to embed in your own app.
 
@@ -22,15 +21,18 @@ Both modes run the **same** `.sspj → .ssab` conversion — pick by workflow:
 | | **Browser tool** | **CLI** |
 |---|---|---|
 | Best for | one-off conversions, non-technical users | **developers**: scripting, CI, batch jobs |
-| How | start a local dev server, drag/drop the `.sspj` project **folder**, download the `.ssab` | `node scripts/cli.js -o ./out project.sspj` |
+| How | open the hosted page, drag/drop the `.sspj` project **folder**, download the `.ssab` | `node scripts/cli.js -o ./out project.sspj` |
 | Output | ZIP download from the browser | files written to an output directory |
-| Jump to | [Browser tool](#browser-tool-dev-server) | [CLI](#cli) |
+| Jump to | [Browser tool](#browser-tool) | [CLI](#cli) |
 
 ## Get the tool
 
-This package is unpublished (private, not on npm), so there is no installer and no
-release ZIP yet — a ZIP will be attached to GitHub Releases once the first release
-ships. Until then, obtain it by cloning the monorepo and installing once:
+The **browser tool** needs nothing installed — open
+**[ssconverter-web (hosted)](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)**
+(🚧 live after the first release).
+
+The **CLI** — and serving the browser tool from source — needs the monorepo cloned
+and installed once:
 
 ```bash
 git clone https://github.com/cri-middleware/SSPlayerForWeb.git
@@ -43,20 +45,20 @@ pnpm run download:wasm   # fetch the pre-built converter WASM (no toolchain need
 `wasm/ssconverter_bg.wasm`, which is **not tracked in git**. Run it once; then use
 either mode below (all commands are run from the repo root).
 
-## Browser tool (dev server)
+## Browser tool
 
-Once the first release ships, the browser tool is hosted on GitHub Pages at
-**<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** (🚧 live after the
-first release). Until then there is no hosted page, so run it locally with a Vite
-**dev server**:
+Hosted on GitHub Pages at
+**[/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)**
+(🚧 live after the first release). From a clone, a Vite **dev server** serves the same
+tool at the URL it prints:
 
 ```bash
-pnpm --filter ssconverter-web dev
+pnpm --filter @spritestudio/ssconverter-web dev
 ```
 
-Open the printed URL, drop the **folder** containing your `.sspj` project into the page, and download the
-converted `.ssab`. Best for a quick one-off or a non-technical user — no command
-line beyond starting the server.
+Drop the **folder** containing your `.sspj` project into the page, and download the
+converted `.ssab`. Best for a quick one-off or a non-technical user — no command line
+involved.
 
 ## CLI
 
@@ -75,9 +77,9 @@ generated `.ssab` (plus any referenced textures) into the output directory.
 Usage: node scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>
 ```
 
-> The package declares a bin, `ssconverter-web-cli` (→ `scripts/cli.js`). It is
-> **not** linked onto your `PATH` because the package is private / unpublished
-> (nothing runs `npm install -g`), so invoke the script by path as shown above.
+> The package declares a bin, `ssconverter-web-cli` (→ `scripts/cli.js`), but nothing
+> links it onto your `PATH` — it is a workspace-only package, so no `npm install -g`
+> ever runs for it. Invoke the script by path as shown above.
 
 ## How this compares to the native SDK tools
 

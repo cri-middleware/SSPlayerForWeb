@@ -14,7 +14,7 @@
 
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | 未公開（現状はソースからビルドしてローカル起動。公開後は GitHub Pages でホスト 🚧） |
+| [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧 初回リリースの公開後に有効） |
 | [`SSConverterGUI`](#ssconvertergui-デスクトップguiツール) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 | [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-ライブラリ-自作アプリへの組み込み) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
@@ -26,11 +26,9 @@
 ブラウザ上で `.sspj` プロジェクトを変換し、結果を **ZIP** でダウンロードする
 ツールです。WASM 版コンバータをそのままブラウザで実行します。
 
-::: warning このパッケージは未公開です
-`ssconverter-web` はまだ公開しておらず、npm には配布していません。現状は
-リポジトリを取得してローカルのビルドから起動する必要があります。公開後は
-ブラウザツールを GitHub Pages 上、このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧）でホストする予定です。同梱の Node CLI は開発者向けのツールです。
-:::
+このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>）
+でホストしているため、インストールは不要です（🚧 初回リリースの公開後に有効になります）。
+同梱の Node CLI は開発者向けのツールです。
 
 ::: warning 対応ブラウザ
 フォルダ選択に **File System Access API**（`showDirectoryPicker` / ディレクトリの
@@ -40,10 +38,11 @@
 
 ### 手順
 
-1. 開発サーバーを起動します。
+1. <a href="../../ssconverter/" target="_blank" rel="noreferrer">コンバータ</a>を開きます。
+   リポジトリを clone している場合は、以下でも同じツールを起動できます。
 
    ```bash
-   pnpm --filter ssconverter-web dev
+   pnpm --filter @spritestudio/ssconverter-web dev
    ```
 
 2. **プロジェクトフォルダ**をドロップ領域にドラッグ＆ドロップするか、`Browse...`

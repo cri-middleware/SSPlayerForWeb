@@ -60,7 +60,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#ソースからビルドする) | **alpha** |
 | `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#ソースからビルドする) | beta |
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#ソースからビルドする) | beta |
-| `ssconverter-web` | 未公開 — ローカルビルドで実行 | — |
+| `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI | beta |
 
 ## RPG ツクール MZ（alpha）
 

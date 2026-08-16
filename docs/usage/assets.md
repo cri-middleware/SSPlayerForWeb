@@ -14,7 +14,7 @@ want to embed conversion itself into your own app, use the library
 
 | Tool | Best for | Getting it |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Unpublished (build from source and run locally for now; will be hosted on GitHub Pages once released 🚧) |
+| [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> (🚧 live once the first release is published) |
 | [`SSConverterGUI`](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
 | [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core@beta` |
@@ -26,13 +26,10 @@ For the overall flow, see the [overview diagram on the home page](/#overview-fro
 A tool that converts a `.sspj` project in the browser and downloads the result as a
 **ZIP**. It runs the WASM build of the converter directly in the browser.
 
-::: warning This package is not published yet
-`ssconverter-web` is not published and is not available on npm. For now you have to
-check out the repository and run it from a local build. Once released, the browser
-tool will be hosted on GitHub Pages, beside these docs at
-<a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧.
-The bundled Node CLI is a developer tool.
-:::
+It is hosted beside these docs at
+<a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>, so there is
+nothing to install (🚧 live once the first release is published). The bundled Node CLI
+is a developer tool.
 
 ::: warning Supported browsers
 Folder selection uses the **File System Access API** (`showDirectoryPicker` /
@@ -42,10 +39,11 @@ required. It does not work in Firefox / Safari.
 
 ### Steps
 
-1. Start the dev server.
+1. Open <a href="../ssconverter/" target="_blank" rel="noreferrer">the converter</a>.
+   From a clone of the repository, this serves the same tool:
 
    ```bash
-   pnpm --filter ssconverter-web dev
+   pnpm --filter @spritestudio/ssconverter-web dev
    ```
 
 2. Drag and drop a **project folder** onto the drop zone, or pick one with `Browse...`.
