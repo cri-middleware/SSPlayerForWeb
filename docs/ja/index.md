@@ -31,16 +31,22 @@ features:
     linkText: コントリビューション
 ---
 
+<script setup>
+// See the English index.md for why these are withBase + raw <a>, not markdown
+// links to cri-middleware.github.io.
+import { withBase } from 'vitepress'
+</script>
+
 ## ブラウザで試す
 
 インストール不要、すべてブラウザ上で動作します（🚧 初回リリースの公開後に有効になります）:
 
-- 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
-- ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — `<ss-player>` Web コンポーネント
-- ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け
-- ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（alpha）
-- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — ヴィジュアルノベルのシーン（beta）
-- 🎨 **[パーツ上書きサンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — 実行時の色 / セル / 表示の上書き（PixiJS）
+- 🛠️ **<a :href="withBase('/ssconverter/')" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
+- ▶️ **<a :href="withBase('/examples/webgl/')" target="_blank" rel="noreferrer">単体 WebGL サンプル</a>** — `<ss-player>` Web コンポーネント
+- ▶️ **<a :href="withBase('/examples/pixi/')" target="_blank" rel="noreferrer">PixiJS サンプル</a>** — PixiJS v8 アプリ向け
+- ▶️ **<a :href="withBase('/examples/rmmz/')" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト（alpha）
+- ▶️ **<a :href="withBase('/examples/tyranoscript/')" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン（beta）
+- 🎨 **<a :href="withBase('/examples/override/')" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
 
 ## このドキュメントの読み方
 

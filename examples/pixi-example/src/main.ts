@@ -6,9 +6,16 @@ import { DropLoader } from './loader/DropLoader.js';
 import { extractAnimationNames } from './utils/ssabExtractor.js';
 
 // The deploy nests each SS project's output under public/<project>/ (ssconverter
-// `--stem-dir`): Ringo's assets live in /Ringo/, everything else comes from the
-// `overall` test project in /overall/. Map a bare sample filename to its URL.
-const ssabUrl = (name: string) => '/' + (name.startsWith('Ringo') ? 'Ringo/' : 'overall/') + name;
+// `--stem-dir`): Ringo's assets live in Ringo/, everything else comes from the
+// `overall` test project in overall/. Map a bare sample filename to its URL.
+//
+// Resolved against the page, not written as a root-absolute '/Ringo/...', so
+// this works both at the dev-server root and under the /examples/pixi/ subpath
+// the Pages build is served from -- vite's --base rewrites HTML references and
+// imported assets, never a string literal like this one. (override-example
+// resolves its one asset the same way.)
+const ssabUrl = (name: string) =>
+    new URL((name.startsWith('Ringo') ? 'Ringo/' : 'overall/') + name, document.baseURI).href;
 
 async function main() {
     await SSPlayer.initialize();
