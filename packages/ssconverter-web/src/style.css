@@ -82,6 +82,18 @@ body {
   background: rgba(79, 70, 229, 0.05);
 }
 
+/* No File System Access API here, so dropping a folder cannot work -- say so
+   by look as well as in the log, and stop the hover from promising otherwise. */
+.drop-zone.unavailable {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.drop-zone.unavailable:hover {
+  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .drop-zone-icon {
   font-size: 3rem;
   margin-bottom: 1rem;

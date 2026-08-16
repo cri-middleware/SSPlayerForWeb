@@ -423,9 +423,15 @@ Write-Host "${APP}: done -> $OUT  (base $($opts.base))"
 if ($SKIP.Count -gt 0) {
     Write-Host "${APP}: partial site -- stages skipped: $($SKIP -join ' ')"
 }
+# --bind, and localhost in the URL, are not decoration: ssconverter-web reads
+# the project folder through the File System Access API, which exists only in a
+# secure context -- over plain http that means localhost / 127.0.0.1 / [::1] and
+# nothing else. Served on the default bind, `python -m http.server` advertises
+# itself as http://0.0.0.0:8080/ (or http://[::]:8080/), and a site opened at
+# that URL cannot pick a folder at all.
 if ($opts.base -eq "/") {
     Write-Host "${APP}: preview it:"
-    Write-Host "  python -m http.server 8080 --directory `"$OUT`""
+    Write-Host "  python -m http.server 8080 --bind 127.0.0.1 --directory `"$OUT`""
     Write-Host "  start http://localhost:8080/"
 } else {
     # Every asset URL starts with base, so serving $OUT itself 404s. Hang it off
@@ -436,6 +442,8 @@ if ($opts.base -eq "/") {
     Write-Host "${APP}: preview it:"
     Write-Host "  New-Item -ItemType Directory -Force `"$(Split-Path -Parent $link)`" | Out-Null"
     Write-Host "  New-Item -ItemType Junction -Path `"$link`" -Target `"$OUT`" | Out-Null"
-    Write-Host "  python -m http.server 8080 --directory .pages-preview"
+    Write-Host "  python -m http.server 8080 --bind 127.0.0.1 --directory .pages-preview"
     Write-Host "  start http://localhost:8080$($opts.base)"
+    Write-Host "${APP}: open it as localhost, not as the http://[::]:8080/ the server prints:"
+    Write-Host "${APP}: ssconverter-web needs a secure context to read a project folder."
 }

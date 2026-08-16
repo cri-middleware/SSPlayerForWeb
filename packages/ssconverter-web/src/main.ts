@@ -95,6 +95,41 @@ appVersionDisplay.textContent = `${pkg.name} Version: ${pkg.version}`;
 
 const chkEmbedded = document.getElementById('chkEmbedded') as HTMLInputElement;
 
+// Reading the input folder is the one thing here that needs the File System
+// Access API, and that API is secure-context only: over plain http it exists
+// on localhost / 127.0.0.1 / [::1] and nowhere else. A local preview served as
+// http://[::]:8080 or http://<lan-ip>:8080 -- the URL `python -m http.server`
+// prints, among others -- is NOT a secure context, and the two entry points
+// fail there in different ways:
+//
+//   showDirectoryPicker            absent, so calling it throws TypeError
+//   DataTransferItem.getAsFileSystemHandle
+//                                  PRESENT, and calling it takes the tab down
+//                                  with it -- the browser process rejects the
+//                                  IPC and kills the renderer
+//                                  (RESULT_CODE_KILLED_BAD_MESSAGE)
+//
+// So the guard has to be the context, not the presence of the method: a
+// `typeof handle.getAsFileSystemHandle === 'function'` check passes and then
+// crashes the tab. Checked once here and consulted by both entry points.
+const canPickFolders =
+    window.isSecureContext &&
+    typeof (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker === 'function';
+
+function logNoFolderAccess() {
+    if (!window.isSecureContext) {
+        log(
+            `Error: opening a folder needs a secure context, and this page is ${location.origin}. ` +
+            'Serve it over https, or open it as localhost / 127.0.0.1 / [::1].',
+        );
+    } else {
+        log(
+            'Error: this browser has no File System Access API, which this tool needs to read a ' +
+            'project folder. Chrome or Edge can do it.',
+        );
+    }
+}
+
 let isWasmReady = false;
 let inDirHandle: FileSystemDirectoryHandle | null = null;
 let sourceFiles: Map<string, File> = new Map();
@@ -225,6 +260,10 @@ async function handleInputDirectory(handle: FileSystemDirectoryHandle) {
 }
 
 btnSelectIn.addEventListener('click', async () => {
+    if (!canPickFolders) {
+        logNoFolderAccess();
+        return;
+    }
     try {
         // @ts-ignore
         const handle = await window.showDirectoryPicker({ mode: 'read' });
@@ -335,14 +374,25 @@ dropZoneIn.addEventListener('drop', async (e) => {
     dropZoneIn.classList.remove('dragover');
     if (!isWasmReady) return;
     
+    // Before touching the item: calling getAsFileSystemHandle() here on an
+    // insecure origin kills the tab outright.
+    if (!canPickFolders) {
+        logNoFolderAccess();
+        return;
+    }
+
     const items = e.dataTransfer?.items;
     if (items && items.length > 0) {
-        // @ts-ignore
-        const item = items[0].getAsFileSystemHandle ? await items[0].getAsFileSystemHandle() : null;
-        if (item && item.kind === 'directory') {
-            await handleInputDirectory(item as FileSystemDirectoryHandle);
-        } else {
-            log('Please drop a directory, not a file.');
+        try {
+            // @ts-ignore
+            const item = await items[0].getAsFileSystemHandle();
+            if (item && item.kind === 'directory') {
+                await handleInputDirectory(item as FileSystemDirectoryHandle);
+            } else {
+                log('Please drop a directory, not a file.');
+            }
+        } catch (e: any) {
+            log(`Error: ${e.message || e}`);
         }
     }
 });
@@ -374,4 +424,13 @@ btnClearLog.addEventListener('click', () => {
 });
 
 // Boot
+// Say it up front rather than on the first click: nothing here can read a
+// folder without the File System Access API, so a reader who cannot use it
+// should learn that before picking a project, not after.
+if (!canPickFolders) {
+    btnSelectIn.disabled = true;
+    dropZoneIn.classList.add('unavailable');
+    inDirDisplay.placeholder = 'Folder access unavailable — see the log below';
+    logNoFolderAccess();
+}
 initWasm();
