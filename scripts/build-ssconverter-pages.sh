@@ -120,12 +120,15 @@ fetch_wasm() {
 build_from() {
   local src="$1" schema="$2" sdk="$3"
   fetch_wasm "$src" "$sdk"
+  # Filtered by PATH, not by package name: $src may be a worktree of an old `ref`
+  # from versions.json, and a package name can be renamed between then and now
+  # (ssconverter-web was) while its directory stays put.
   # ssconverter-web imports the engine from @spritestudio/ssconverter-core (its
   # dist + bundled wasm), so build the core against this version's wasm first.
-  pnpm -C "$src" --filter=@spritestudio/ssconverter-core build
+  pnpm -C "$src" --filter=./packages/ssconverter-core build
   # Build with a per-version base so assets resolve under /<repo>/ssconverter/<schema>/.
-  pnpm -C "$src" --filter=ssconverter-web exec tsc
-  pnpm -C "$src" --filter=ssconverter-web exec vite build --base="${SITE_BASE}ssconverter/${schema}/"
+  pnpm -C "$src" --filter=./packages/ssconverter-web exec tsc
+  pnpm -C "$src" --filter=./packages/ssconverter-web exec vite build --base="${SITE_BASE}ssconverter/${schema}/"
   local dest="$OUT/ssconverter/$schema"
   rm -rf "$dest"
   mkdir -p "$dest"

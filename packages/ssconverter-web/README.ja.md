@@ -1,6 +1,6 @@
 [**English**](./README.md) | [**日本語**](./README.ja.md)
 
-# ssconverter-web
+# @spritestudio/ssconverter-web
 
 SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤーが読み込むランタイム
 バイナリ形式（`.ssab`）へ変換します。ブラウザでも、コマンドラインでも実行できます。
@@ -8,9 +8,8 @@ SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤー
 > **対象読者:** SpriteStudio のプロジェクト（`.sspj`）を持っていて、ランタイム用の
 > `.ssab` が必要な方 — ドラッグ＆ドロップのブラウザツール、またはスクリプト可能な
 > CLI で変換できます。
-> **ステータス:** alpha・private（**npm 未公開**）。現状、入手する唯一の
-> 方法はソースからのビルドです（monorepo を clone してください。下記
-> [ツールの入手](#ツールの入手)を参照）。
+> **ステータス:** beta。npm パッケージではありません — ブラウザツールは GitHub Pages で
+> ホストし、CLI は monorepo に同梱しています（下記[ツールの入手](#ツールの入手)を参照）。
 > **目的が違う場合:** → [ssconverter-core](../ssconverter-core) — 自作アプリに
 > 組み込むための、環境非依存の変換エンジンです。
 
@@ -23,15 +22,18 @@ SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤー
 | | **ブラウザツール** | **CLI** |
 |---|---|---|
 | 向いている用途 | 単発の変換、非技術者 | **開発者**: スクリプト、CI、バッチ処理 |
-| 方法 | ローカル開発サーバーを起動し、`.sspj` プロジェクトが入ったフォルダをドロップして `.ssab` をダウンロード | `node scripts/cli.js -o ./out project.sspj` |
+| 方法 | ホスト版のページを開き、`.sspj` プロジェクトが入ったフォルダをドロップして `.ssab` をダウンロード | `node scripts/cli.js -o ./out project.sspj` |
 | 出力 | ブラウザからの ZIP ダウンロード | 出力ディレクトリへのファイル書き出し |
-| 参照先 | [ブラウザツール](#ブラウザツール開発サーバー) | [CLI](#cli) |
+| 参照先 | [ブラウザツール](#ブラウザツール) | [CLI](#cli) |
 
 ## ツールの入手
 
-本パッケージは未公開（private・npm 未公開）のため、インストーラーもリリース ZIP も
-まだありません（ZIP は最初のリリースが出た時点で GitHub Releases に添付されます）。
-それまでは、monorepo を clone して一度インストールすることで入手します。
+**ブラウザツール**はインストール不要です。
+**[ssconverter-web（ホスト版）](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)**
+を開いてください（🚧 初回リリース後に公開）。
+
+**CLI**（およびブラウザツールをソースから起動する場合）は、monorepo を clone して
+一度インストールする必要があります。
 
 ```bash
 git clone https://github.com/cri-middleware/SSPlayerForWeb.git
@@ -45,19 +47,19 @@ pnpm run download:wasm   # ビルド済みの変換 WASM を取得（ツール�
 一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリ
 ルートで実行します）。
 
-## ブラウザツール（開発サーバー）
+## ブラウザツール
 
-初回リリース後は、ブラウザツールを GitHub Pages でホスティングします
-（🚧 予定 URL: **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** ・初回リリース後に公開）。
-それまではホスティング済みのページが無いため、ローカルの Vite **開発サーバー**を起動して実行します。
+GitHub Pages の **[/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)**
+でホストしています（🚧 初回リリース後に公開）。clone 済みであれば、Vite **開発サーバー**
+でも同じツールを起動できます（表示された URL を開いてください）。
 
 ```bash
-pnpm --filter ssconverter-web dev
+pnpm --filter @spritestudio/ssconverter-web dev
 ```
 
-表示された URL を開き、`.sspj` プロジェクトが入ったフォルダをページにドロップして、変換された
-`.ssab` をダウンロードします。単発の変換や非技術者に最適です — サーバーを起動する
-以外にコマンドライン操作は不要です。
+`.sspj` プロジェクトが入ったフォルダをページにドロップして、変換された
+`.ssab` をダウンロードします。単発の変換や非技術者に最適です — コマンドライン操作は
+不要です。
 
 ## CLI
 
@@ -77,7 +79,7 @@ Usage: node scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--ste
 ```
 
 > 本パッケージは bin（`ssconverter-web-cli` → `scripts/cli.js`）を宣言していますが、
-> private / 未公開のため（`npm install -g` されることがないため）`PATH` には
+> workspace 専用パッケージで `npm install -g` されることがないため、`PATH` には
 > リンクされません。したがって上記のようにスクリプトをパス指定で実行してください。
 
 ## ネイティブ版 SDK ツールとの比較

@@ -154,13 +154,16 @@ function Build-Version {
     param([string] $Src, [string] $Schema, [string] $Sdk)
 
     Get-VersionWasm $Src $Sdk
+    # Filtered by PATH, not by package name: $Src may be a worktree of an old `ref`
+    # from versions.json, and a package name can be renamed between then and now
+    # (ssconverter-web was) while its directory stays put.
     # ssconverter-web imports the engine from @spritestudio/ssconverter-core (its
     # dist + bundled wasm), so build the core against this version's wasm first.
-    Invoke-Checked "ssconverter-core build ($Schema)" { & pnpm -C $Src --filter=@spritestudio/ssconverter-core build }
+    Invoke-Checked "ssconverter-core build ($Schema)" { & pnpm -C $Src --filter=./packages/ssconverter-core build }
     # Build with a per-version base so assets resolve under /<repo>/ssconverter/<schema>/.
-    Invoke-Checked "ssconverter-web tsc ($Schema)" { & pnpm -C $Src --filter=ssconverter-web exec tsc }
+    Invoke-Checked "ssconverter-web tsc ($Schema)" { & pnpm -C $Src --filter=./packages/ssconverter-web exec tsc }
     Invoke-Checked "ssconverter-web vite build ($Schema)" {
-        & pnpm -C $Src --filter=ssconverter-web exec vite build --base="$($SITE_BASE)ssconverter/$Schema/"
+        & pnpm -C $Src --filter=./packages/ssconverter-web exec vite build --base="$($SITE_BASE)ssconverter/$Schema/"
     }
 
     $dest = Join-Path $OUT "ssconverter/$Schema"
