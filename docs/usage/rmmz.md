@@ -1,5 +1,8 @@
 # RPG Maker MZ
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
 ::: warning Alpha
 `@spritestudio/ssplayer-rmmz` is an **alpha** (`7.0.0-alpha.1`). The
 package is **private and not published on npm**. Its rendering is built on
@@ -15,7 +18,7 @@ This plugin plays **SpriteStudio 7** (`.ssab`) animations in **RPG Maker MZ**. B
 the animation is drawn straight into MZ's PixiJS v5 renderer, it sits in the correct
 Z-order with your characters and pictures.
 
-▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — run
+▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">Live demo</a>** — run
 the bundled sample MZ project in your browser (goes live once the first release is
 published 🚧).
 

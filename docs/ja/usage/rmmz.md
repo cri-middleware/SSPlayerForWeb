@@ -1,5 +1,8 @@
 # RPG ツクール MZ で使う
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
 ::: warning アルファ版
 `@spritestudio/ssplayer-rmmz` は **アルファ版**（`7.0.0-alpha.1`）です。パッケージは
 **private で、npm には公開されていません**。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
@@ -14,7 +17,7 @@
 アニメーションを再生できます。アニメーションは MZ の PixiJS v5 レンダラーへ直接描画されるため、
 キャラクターやピクチャと正しい Z 順で重なります。
 
-▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
+▶️ **<a href="../../examples/rmmz/" target="_blank" rel="noreferrer">ライブデモ</a>** —
 同梱のサンプル MZ プロジェクトをブラウザーで実行できます（最初のリリース公開後に有効化されます 🚧）。
 
 ## しくみ

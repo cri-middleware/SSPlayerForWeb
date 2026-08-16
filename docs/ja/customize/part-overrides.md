@@ -1,10 +1,13 @@
 # パーツ制御（表示 / セル / 色）
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
 パーツ単位のランタイムオーバーライドは、「このパーツを**今**この色に / このセルに / 非表示に」とスクリプトから指示する機能です。オーバーライドはキーフレームやアニメーションのブレンドよりも優先されるので、アニメーションと取り合いになりません。
 
 `SSPlayer`（PixiJS・WebGL の両バックエンド）の両方で、同じメソッド名で使えます。
 
-▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — 色 / 表示 / セルの 3 種類を順に切り替えるサンプル（ソースは `examples/override-example`）
+▶️ **<a href="../../examples/override/" target="_blank" rel="noreferrer">ライブデモ</a>** — 色 / 表示 / セルの 3 種類を順に切り替えるサンプル（ソースは `examples/override-example`）
 
 ## 基本的な使い方
 

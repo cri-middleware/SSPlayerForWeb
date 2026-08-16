@@ -31,22 +31,19 @@ features:
     linkText: コントリビューション
 ---
 
-<script setup>
-// See the English index.md for why these are withBase + raw <a>, not markdown
-// links to cri-middleware.github.io.
-import { withBase } from 'vitepress'
-</script>
+<!-- See the English index.md for why these are relative paths on a raw <a>,
+     not markdown links to cri-middleware.github.io. -->
 
 ## ブラウザで試す
 
 インストール不要、すべてブラウザ上で動作します（🚧 初回リリースの公開後に有効になります）:
 
-- 🛠️ **<a :href="withBase('/ssconverter/')" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
-- ▶️ **<a :href="withBase('/examples/webgl/')" target="_blank" rel="noreferrer">単体 WebGL サンプル</a>** — `<ss-player>` Web コンポーネント
-- ▶️ **<a :href="withBase('/examples/pixi/')" target="_blank" rel="noreferrer">PixiJS サンプル</a>** — PixiJS v8 アプリ向け
-- ▶️ **<a :href="withBase('/examples/rmmz/')" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト（alpha）
-- ▶️ **<a :href="withBase('/examples/tyranoscript/')" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン（beta）
-- 🎨 **<a :href="withBase('/examples/override/')" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
+- 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
+- ▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">単体 WebGL サンプル</a>** — `<ss-player>` Web コンポーネント
+- ▶️ **<a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS サンプル</a>** — PixiJS v8 アプリ向け
+- ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト（alpha）
+- ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン（beta）
+- 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
 
 ## このドキュメントの読み方
 

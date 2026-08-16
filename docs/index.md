@@ -31,31 +31,30 @@ features:
     linkText: Contributing
 ---
 
-<script setup>
-// The converter and the examples are built beside this site, not by VitePress
-// (pages.yml -> scripts/build-pages.sh assembles them around it), so they are
-// linked through withBase rather than by absolute URL: a hardcoded
-// cri-middleware.github.io link is wrong on every other deployment of this
-// site -- a local `scripts/build-pages.sh` preview, a fork's Pages.
-//
-// Raw <a> rather than markdown links, deliberately, for two reasons: VitePress
-// checks markdown links against its own pages and would fail the build over
-// these (they are not pages of this site), and its router would try to resolve
-// them client-side and land on the 404 page. target="_blank" keeps the reader's
-// place in the docs, which is what you want for a demo anyway.
-import { withBase } from 'vitepress'
-</script>
+<!-- The converter and the examples are built beside this site, not by VitePress
+     (pages.yml -> scripts/build-pages.sh assembles them around it), so they are
+     linked by relative path rather than by absolute URL: a hardcoded
+     cri-middleware.github.io link is wrong on every other deployment of this
+     site -- a local `scripts/build-pages.sh` preview, a fork's Pages. VitePress
+     URLs mirror the file tree, so the number of `../` is simply this file's
+     directory depth.
+
+     Raw <a> rather than markdown links, deliberately, for two reasons: VitePress
+     checks markdown links against its own pages and would fail the build over
+     these (they are not pages of this site), and its router would try to resolve
+     them client-side and land on the 404 page. target="_blank" both keeps the
+     reader's place in the docs and is what stops the router intercepting. -->
 
 ## Try it live
 
 No install — these run entirely in your browser (🚧 live once the first release is published):
 
-- 🛠️ **<a :href="withBase('/ssconverter/')" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser (start here)
-- ▶️ **<a :href="withBase('/examples/webgl/')" target="_blank" rel="noreferrer">Standalone WebGL example</a>** — the `<ss-player>` Web Component
-- ▶️ **<a :href="withBase('/examples/pixi/')" target="_blank" rel="noreferrer">PixiJS example</a>** — for PixiJS v8 apps
-- ▶️ **<a :href="withBase('/examples/rmmz/')" target="_blank" rel="noreferrer">RPG Maker MZ example</a>** — a sample MZ project (alpha)
-- ▶️ **<a :href="withBase('/examples/tyranoscript/')" target="_blank" rel="noreferrer">TyranoScript example</a>** — a visual-novel scene (beta)
-- 🎨 **<a :href="withBase('/examples/override/')" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
+- 🛠️ **<a href="./ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser (start here)
+- ▶️ **<a href="./examples/webgl/" target="_blank" rel="noreferrer">Standalone WebGL example</a>** — the `<ss-player>` Web Component
+- ▶️ **<a href="./examples/pixi/" target="_blank" rel="noreferrer">PixiJS example</a>** — for PixiJS v8 apps
+- ▶️ **<a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ example</a>** — a sample MZ project (alpha)
+- ▶️ **<a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript example</a>** — a visual-novel scene (beta)
+- 🎨 **<a href="./examples/override/" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
 
 ## How to read these docs
 

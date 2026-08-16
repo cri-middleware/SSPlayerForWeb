@@ -1,5 +1,8 @@
 # Preparing assets (.sspj → .ssab)
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
 The player does not play SpriteStudio's `.sspj` directly; it plays **`.ssab`**, a
 parse-free runtime binary. A converter reads the `.sspj` and its referenced files
 (`.ssae` / `.ssee` / `.ssqe` / `.ssce`) and produces `.ssab` (animations) plus, when
@@ -26,9 +29,9 @@ A tool that converts a `.sspj` project in the browser and downloads the result a
 ::: warning This package is not published yet
 `ssconverter-web` is not published and is not available on npm. For now you have to
 check out the repository and run it from a local build. Once released, the browser
-tool will be hosted on GitHub Pages
-(<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/> 🚧). The bundled Node
-CLI is a developer tool.
+tool will be hosted on GitHub Pages, beside these docs at
+<a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧.
+The bundled Node CLI is a developer tool.
 :::
 
 ::: warning Supported browsers
