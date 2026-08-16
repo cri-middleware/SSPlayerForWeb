@@ -2,6 +2,13 @@
 
 `SSPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/ja/setup/quickstart) を参照してください。
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../../examples/webgl/" target="_blank" rel="noreferrer">WebGL デモ</a>** ·
+**<a href="../../examples/pixi/" target="_blank" rel="noreferrer">PixiJS デモ</a>** —
+このページの API が動いている状態をバックエンド別に見られます。どちらも `.ssab` のドロップ再生に対応しています（最初のリリース公開後に有効化されます 🚧）。
+
 ## 読み込みとアニメーション選択
 
 ```ts

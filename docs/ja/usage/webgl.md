@@ -2,6 +2,12 @@
 
 `@spritestudio/ssplayer-webgl` は、外部のレンダリングエンジン（PixiJS など）に依存しない単体の WebGL 1/2 レンダラーです。依存関係やファイルサイズを抑えたい構成に向いており、広告バナーやシンプルな Web ページにそのまま組み込めます。フレームワークを使わないドロップイン用途を想定しています。
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../../examples/webgl/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+フレームワークなしのページで `<ss-player>` を動かす例です。`.ssab` をドロップすれば手元のデータも再生できます（最初のリリース公開後に有効化されます 🚧）。
+
 ## インストール
 
 npm で公開されています。

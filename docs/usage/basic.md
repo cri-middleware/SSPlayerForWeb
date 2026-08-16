@@ -2,6 +2,14 @@
 
 This page collects the playback-control API shared by `SSPlayer` (both the WebGL and PixiJS v8 backends). Most of the API is common to both. For the minimal load-and-play steps, see the [Quick start](/setup/quickstart).
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">WebGL demo</a>** ·
+**<a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS demo</a>** — this API on a
+running player, one per backend; both play a `.ssab` dropped onto the page (they go live once
+the first release is published 🚧).
+
 ## Loading and selecting an animation
 
 ```ts

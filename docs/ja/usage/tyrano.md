@@ -13,6 +13,12 @@
 （`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤーに載る
 実際の `<canvas>` なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+`[ss_*]` タグだけで組んだヴィジュアルノベルのシーンです（最初のリリース公開後に有効化されます 🚧）。
+
 ::: tip ティラノビルダーで制作する場合
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。ランタイムは同じで、タグを
 書く代わりにコンポーネントパレットから配置でき、`.sspj` の変換も自動で行われます。このページの

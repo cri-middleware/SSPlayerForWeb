@@ -15,6 +15,13 @@ writing `[ss_*]` tags in your scenario — no coding required. Each animation is
 `<canvas>` mounted on a Tyrano layer, so it sits in the normal layer stack alongside
 characters, backgrounds, and messages.
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — a
+visual-novel scene driven entirely by `[ss_*]` tags (goes live once the first release is
+published 🚧).
+
 ::: tip Building in TyranoBuilder?
 See [TyranoBuilder](/usage/tyranobuilder) instead. It is the same runtime, reached from the
 component palette rather than by writing tags, and it converts your `.sspj` for you. The tag
