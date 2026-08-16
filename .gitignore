@@ -829,3 +829,8 @@ packages/ssconverter-core/wasm/
 
 # Ignore test assets in public
 public/
+
+# Local GitHub Pages build (scripts/build-pages.sh, and the symlink root it
+# suggests for previewing a site built for /<repo>/)
+/_site/
+/.pages-preview/

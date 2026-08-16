@@ -48,81 +48,20 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # wasm is not tracked in git. Fetch the runtime/converter wasm for the
-      # version in SDK_VERSION.txt — needed to build the packages and examples.
-      # (Each ssconverter schema version's wasm is re-fetched per-version later
-      # by build-ssconverter-pages.sh based on versions.json.)
-      - name: Download SDK WASM (runtime + converter)
-        run: pnpm run download:wasm
-
-      - name: Build packages
-        run: pnpm run build
-
-      # Generate the .ssab assets the examples load, from the SpriteStudio-SDK
-      # test projects.
-      - name: Generate example assets
-        run: pnpm run deploy-examples
-
-      # rmmz-example is a static RPG Maker MZ project (no bundler). Sync the built
-      # plugin + no-SIMD runtime wasm into its js/plugins/ (deploy-examples already
-      # produced the .ssab under SampleProject/spritestudio/).
-      - name: Sync rmmz-example plugin
-        run: pnpm --filter rmmz-example run sync:plugin
-
-      # tyranoscript-example is a static TyranoScript project. Fetch the (git-ignored)
-      # engine (index.html + tyrano/ + data/system/) pinned by TYRANO_VERSION.txt,
-      # then sync the built plugin + runtime wasm into its plugin folder.
-      # (deploy-examples already placed the Ringo .ssab under data/others/ssdata/.)
-      - name: Fetch TyranoScript engine
-        run: pnpm --filter tyranoscript-example run fetch:engine
-      - name: Sync tyranoscript-example plugin
-        run: pnpm --filter tyranoscript-example run sync:plugin
-
-      # Pages base path (a project site is served under /<repo>/).
-      - name: Compute site base path
-        run: echo "SITE_BASE=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
-
-      # docs (VitePress): scripts/build-docs.sh is what a contributor runs, so the
-      # docs build is spelled out in one place — TypeDoc, then VitePress, with
-      # base passed through as DOCS_BASE (config.mts reads it). Nothing builds the
-      # docs on a pull request, so there is no PR run to catch CI and the scripts
-      # drifting apart.
+      # Everything that produces a file lives in scripts/build-pages.sh — the
+      # dependencies, the wasm, the packages, the example assets, the docs, the
+      # examples, every ssconverter schema version, and the _site assembly. A
+      # contributor runs the same script to build the whole site locally
+      # (`scripts/build-pages.sh --help`), so CI and a local build cannot drift.
+      # That matters more here than anywhere else in this repo: nothing builds
+      # the site on a pull request, so there is no PR run to catch the two
+      # falling out of step.
       #
-      # Its companion scripts/prepare-docs.sh is deliberately *not* used here: it
-      # is `pnpm install` + `download:wasm`, which this job already ran above for
-      # the packages, the examples and the converter — not for the docs alone.
-      - name: Build docs
-        run: ./scripts/build-docs.sh base="$SITE_BASE"
-
-      # examples: base is injected via vite's --base CLI (configs left untouched).
-      - name: Build examples
-        run: |
-          pnpm --filter=pixi-example exec vite build --base="${SITE_BASE}examples/pixi/"
-          pnpm --filter=webgl-example exec vite build --base="${SITE_BASE}examples/webgl/"
-          pnpm --filter=override-example exec vite build --base="${SITE_BASE}examples/override/"
-
-      # ssconverter-web: build every schema version from versions.json into
-      # _site/ssconverter/<schema>/.
-      - name: Build ssconverter-web (all schema versions)
-        run: bash scripts/build-ssconverter-pages.sh _site
-
-      # Collect the outputs into _site (docs at the root, the rest under subpaths).
-      - name: Assemble site
-        run: |
-          mkdir -p _site
-          cp -R docs/.vitepress/dist/. _site/
-          mkdir -p _site/examples/pixi  && cp -R examples/pixi-example/dist/.  _site/examples/pixi/
-          mkdir -p _site/examples/webgl && cp -R examples/webgl-example/dist/. _site/examples/webgl/
-          mkdir -p _site/examples/override && cp -R examples/override-example/dist/. _site/examples/override/
-          # rmmz-example: copy the static MZ project as-is (relative paths, so it
-          # runs fine under the /examples/rmmz/ subpath — no base rewrite needed).
-          mkdir -p _site/examples/rmmz  && cp -R examples/rmmz-example/SampleProject/. _site/examples/rmmz/
-          # tyranoscript-example: copy the static TyranoScript project (engine + data,
-          # relative paths) as-is under /examples/tyranoscript/.
-          mkdir -p _site/examples/tyranoscript && cp -R examples/tyranoscript-example/index.html examples/tyranoscript-example/tyrano examples/tyranoscript-example/data _site/examples/tyranoscript/
+      # base is the Pages base path — a project site is served under /<repo>/.
+      - name: Build site
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: ./scripts/build-pages.sh base="/$REPO_NAME/" out=_site
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
