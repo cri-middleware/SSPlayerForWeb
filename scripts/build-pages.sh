@@ -408,9 +408,15 @@ echo "$APP: done -> $OUT  (base $BASE)"
 if [ -n "$SKIP" ]; then
   echo "$APP: partial site -- stages skipped: $SKIP"
 fi
+# --bind, and localhost in the URL, are not decoration: ssconverter-web reads
+# the project folder through the File System Access API, which exists only in a
+# secure context -- over plain http that means localhost / 127.0.0.1 / [::1] and
+# nothing else. Served on the default bind, `python3 -m http.server` advertises
+# itself as http://0.0.0.0:8080/ (or http://[::]:8080/), and a site opened at
+# that URL cannot pick a folder at all.
 if [ "$BASE" = "/" ]; then
   echo "$APP: preview it:"
-  echo "  python3 -m http.server 8080 --directory \"$OUT\""
+  echo "  python3 -m http.server 8080 --bind 127.0.0.1 --directory \"$OUT\""
   echo "  open http://localhost:8080/"
 else
   # Every asset URL starts with $BASE, so serving $OUT itself 404s. Hang it off
@@ -419,6 +425,8 @@ else
   echo "$APP: built for $BASE, so serving $OUT directly 404s on its assets."
   echo "$APP: preview it:"
   echo "  mkdir -p \"$(dirname "$PREVIEW_LINK")\" && ln -sfn \"$OUT\" \"$PREVIEW_LINK\""
-  echo "  python3 -m http.server 8080 --directory .pages-preview"
+  echo "  python3 -m http.server 8080 --bind 127.0.0.1 --directory .pages-preview"
   echo "  open http://localhost:8080$BASE"
+  echo "$APP: open it as localhost, not as the http://[::]:8080/ the server prints:"
+  echo "$APP: ssconverter-web needs a secure context to read a project folder."
 fi
