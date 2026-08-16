@@ -16,6 +16,13 @@ it for you — on every save, while you keep working.
 Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
 animations as `[ss_*]` tags.
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — the
+TyranoScript sample scene. There is no separate Builder demo because it is the same runtime:
+what the components place is what you see here (goes live once the first release is published 🚧).
+
 ## One plugin, two halves
 
 `ssplayer.tbp` installs a single plugin folder holding both sides of the integration:

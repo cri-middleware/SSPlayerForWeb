@@ -5,6 +5,13 @@ an external rendering engine such as PixiJS. It suits setups that want to keep
 dependencies and file size low — ad banners, simple web pages — and drops straight into
 frameworkless pages.
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">Live demo</a>** — the
+`<ss-player>` Web Component in a frameworkless page; drop a `.ssab` onto it to play your
+own (goes live once the first release is published 🚧).
+
 ## Install
 
 It is published on npm.

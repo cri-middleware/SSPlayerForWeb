@@ -4,6 +4,17 @@
 It uses **Direct Drawing (batch rendering)** to draw large numbers of characters
 together.
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../examples/pixi/" target="_blank" rel="noreferrer">Live demo</a>** — a PixiJS
+v8 app playing several animations; drop a `.ssab` onto it to play your own (goes live once
+the first release is published 🚧).
+
+🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">Part override demo</a>** —
+the same renderer swapping a part's colour, cell and visibility at runtime (see
+[Part control](/customize/part-overrides)).
+
 ## Install
 
 ```bash

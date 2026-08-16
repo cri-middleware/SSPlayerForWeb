@@ -16,6 +16,12 @@
 シナリオを手書きする場合は [TyranoScript で使う](/ja/usage/tyrano) を参照してください。同じアニメを
 `[ss_*]` タグで扱えます。
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
+▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+TyranoScript 版のサンプルシーンです。ランタイムは同じなのでビルダー専用のデモはありません。コンポーネントで配置した結果もここと同じ見た目になります（最初のリリース公開後に有効化されます 🚧）。
+
 ## プラグインの構成
 
 `ssplayer.tbp` は、両方の役割を持つ 1 つのプラグインフォルダをインストールします。
