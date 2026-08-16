@@ -1,10 +1,13 @@
 # Part control (visibility / cell / color)
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
 Per-part runtime overrides let a script say "make this part this colour / this cell / hidden **now**". An override wins over both the keyframes and the animation blending, so it never fights the animation.
 
 The same method names are available on `SSPlayer` (both the PixiJS and WebGL backends).
 
-▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — cycles through the colour, visibility and cell overrides (source in `examples/override-example`)
+▶️ **<a href="../examples/override/" target="_blank" rel="noreferrer">Live demo</a>** — cycles through the colour, visibility and cell overrides (source in `examples/override-example`)
 
 ## Basic usage
 

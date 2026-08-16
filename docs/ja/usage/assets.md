@@ -1,5 +1,8 @@
 # アセットの準備（.sspj → .ssab）
 
+<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
+     docs/index.md for why. -->
+
 プレイヤーが再生するのは SpriteStudio の `.sspj` ではなく、パース不要の
 ランタイムバイナリ **`.ssab`** です。変換ツールは `.sspj` と参照ファイル
 （`.ssae` / `.ssee` / `.ssqe` / `.ssce`）を解析し、`.ssab`（アニメーション）と
@@ -26,8 +29,7 @@
 ::: warning このパッケージは未公開です
 `ssconverter-web` はまだ公開しておらず、npm には配布していません。現状は
 リポジトリを取得してローカルのビルドから起動する必要があります。公開後は
-ブラウザツールを GitHub Pages（<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/> 🚧）
-でホストする予定です。同梱の Node CLI は開発者向けのツールです。
+ブラウザツールを GitHub Pages 上、このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧）でホストする予定です。同梱の Node CLI は開発者向けのツールです。
 :::
 
 ::: warning 対応ブラウザ
