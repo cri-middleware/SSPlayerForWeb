@@ -701,7 +701,7 @@ try {
         # packages. The release rewrites them right after the bump; a mismatch
         # HERE means the tree's own snippets already disagree with the tree's own
         # versions, which the release would carry straight through.
-        if ((Invoke-Tolerant { & node (Join-Path $ROOT_DIR "scripts/sync-doc-versions.mjs") --check }) -ne 0) {
+        if ((Invoke-Tolerant { & pnpm run check:docs }) -ne 0) {
             Add-Failure "the version pins in the docs/READMEs/examples disagree with package.json (run 'pnpm run sync:docs')"
         }
 
@@ -754,5 +754,5 @@ Write-Host "                GitHub Releases -- it runs the .sh twin to build the
 if (@(Get-ChildItem (Join-Path $OUT "npm") -Filter "*.tgz" -File -ErrorAction SilentlyContinue).Count -gt 0) {
     Write-Host ""
     Write-Host "${APP}: try a tarball before shipping it -- install it into a scratch project:"
-    Write-Host "  npm install $OUT/npm/<name>.tgz"
+    Write-Host "  pnpm add $OUT/npm/<name>.tgz   (npm / yarn take the same file)"
 }

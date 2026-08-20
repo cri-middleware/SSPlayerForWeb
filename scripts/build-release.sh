@@ -677,7 +677,7 @@ if [ "$VERIFY" = "yes" ]; then
   # The release rewrites them right after the bump; a mismatch HERE means the
   # tree's own snippets already disagree with the tree's own versions, which the
   # release would carry straight through.
-  if ! node "$ROOT_DIR/scripts/sync-doc-versions.mjs" --check > /dev/null 2>&1; then
+  if ! pnpm run check:docs > /dev/null 2>&1; then
     fail "the version pins in the docs/READMEs/examples disagree with package.json (run 'pnpm run sync:docs')"
   fi
 
@@ -710,5 +710,5 @@ echo "                GitHub Releases -- it runs this script to build them"
 if [ -d "$OUT/npm" ] && [ -n "$(find "$OUT/npm" -name '*.tgz' 2>/dev/null | head -n 1)" ]; then
   echo ""
   echo "$APP: try a tarball before shipping it -- install it into a scratch project:"
-  echo "  npm install $OUT/npm/<name>.tgz"
+  echo "  pnpm add $OUT/npm/<name>.tgz   (npm / yarn take the same file)"
 fi
