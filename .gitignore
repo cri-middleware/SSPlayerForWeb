@@ -834,3 +834,7 @@ public/
 # suggests for previewing a site built for /<repo>/)
 /_site/
 /.pages-preview/
+
+# Local release build (scripts/build-release.sh) -- the npm tarballs and plugin
+# archives a release would upload, built to be looked at, not committed.
+/release-dist/

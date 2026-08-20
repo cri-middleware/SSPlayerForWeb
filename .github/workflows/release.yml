@@ -19,12 +19,14 @@ name: Release
 #   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyranoscript /
 #                         ssplayer-tyranobuilder) are
 #                         never on npm, so GitHub Releases are their only channel.
-#                         changeset does not tag private packages: pack each plugin
-#                         whose current-version Release does not exist yet and cut
-#                         one Release per plugin, tagged `<pkg>@<version>`
-#                         (prerelease when the version contains a `-`). Already
-#                         released -> skipped, so re-runs and deferred plugin
-#                         releases are safe.
+#                         scripts/build-release.sh -- the same script a maintainer
+#                         runs locally to look the assets over first -- packs them
+#                         and checks them, and names them in release-dist/
+#                         manifest.json. changeset does not tag private packages,
+#                         so this cuts one Release per plugin off that manifest,
+#                         tagged `<pkg>@<version>` (prerelease when the version
+#                         contains a `-`). Already released -> skipped, so re-runs
+#                         and deferred plugin releases are safe.
 #
 # Common cases: defaults (true/true) = full release. release_plugins=false ships
 # npm only (cut the plugin Releases later with publish_npm=false + release_plugins
@@ -168,49 +170,64 @@ jobs:
           # --- GitHub Releases channel (private plugins) --------------------------
           # Never on npm, so GitHub Releases are their only distribution channel.
           if [ "$RELEASE_PLUGINS" = "true" ]; then
-            # Plugins are packed from build outputs; make sure they exist even when
-            # the npm half was skipped or was a no-op.
-            if [ "$built" = "0" ]; then
-              pnpm run download:wasm
-              pnpm run build
-            fi
+            # The assets come from scripts/build-release.sh -- the same script a
+            # maintainer runs locally before dispatching this -- so what is
+            # uploaded here and what they looked at first cannot be different
+            # files. It also brings the checks that only a finished archive can
+            # show, none of which anything else in this workflow would catch:
+            # the RPG Maker MZ plugin carrying the no-SIMD runtime (MZ's NW.js
+            # cannot load a simd128 wasm), ssplayer.tbp keeping its exact name
+            # and its single top-level folder (the builder derives the plugin id
+            # from the filename, so a renamed one installs nothing), the
+            # TyranoScript readme with its version actually substituted.
+            #
+            # The plugins are packed from build outputs, so the wasm + build
+            # stages run unless the npm half above already did them.
+            # install/test/npm are always skipped: the dependencies are
+            # installed above, the tests gated this run before anything was
+            # versioned, and npm goes out through `changeset publish`, which
+            # packs from the workspace itself and could not use a tarball.
+            skip_stages="install,test,npm"
+            if [ "$built" = "1" ]; then skip_stages="install,wasm,build,test,npm"; fi
+            ./scripts/build-release.sh "skip=$skip_stages"
+
             release_sha="$(git rev-parse HEAD)"
-            # changeset does not tag private packages. Cut one Release per plugin
-            # whose current-version Release is absent; already released -> skip, so
-            # re-runs and deferred plugin releases stay idempotent.
-            # $3 is the artifact path under packages/<dir>/, with %v standing in
-            # for the version. Most plugins carry it in the filename; the
-            # TyranoBuilder one cannot (see below), so the tag is what dates it.
-            release_plugin() {
-              local pkg="$1" dir="$2" pattern="$3"
-              local version tag artifact prerelease
-              version="$(node -p "require('./packages/${dir}/package.json').version")"
+
+            # changeset does not tag private packages, so the Releases are cut
+            # here. Which plugins exist, at which versions, under which file
+            # names, all comes from the manifest that build-release.sh just
+            # wrote -- the names live in that script and nowhere else, so adding
+            # a plugin needs no change to this workflow.
+            plugin_count="$(jq -r '.plugins | length' release-dist/manifest.json)"
+            if [ "$plugin_count" = "0" ]; then
+              echo "::error::release-dist/manifest.json lists no plugins — nothing to release."
+              exit 1
+            fi
+
+            # One Release per plugin whose current-version Release is absent;
+            # already released -> skip, so re-runs and deferred plugin releases
+            # stay idempotent. Read through a process substitution rather than a
+            # pipe, so the loop runs in this shell and a failing `gh` here fails
+            # the job.
+            while IFS=$'\t' read -r pkg version file; do
               tag="${pkg}@${version}"
               if gh release view "$tag" >/dev/null 2>&1; then
                 echo "::notice::${tag} already released — skipping."
-                return 0
+                continue
               fi
-              pnpm --filter "$pkg" run pack
-              artifact="packages/${dir}/${pattern//%v/$version}"
               prerelease=""
               case "$version" in *-*) prerelease="--prerelease";; esac
               # --draft: 添付物と自動生成ノートが揃った状態を人間が確認してから
               # GitHub UI で公開する。draft は `gh release view` から見えるので、
               # 上の重複チェックは draft のままでも効き、再実行しても二重に作らない。
-              gh release create "$tag" "$artifact" \
+              gh release create "$tag" "release-dist/$file" \
                 --target "$release_sha" \
                 --title "${pkg} ${version}" \
                 --generate-notes \
                 --draft \
                 $prerelease
               echo "::notice::Drafted ${tag} — publish it from the Releases page."
-            }
-            release_plugin "@spritestudio/ssplayer-rmmz"   ssplayer-rmmz   'dist/pack/ssplayer-rmmz-plugin-%v.zip'
-            release_plugin "@spritestudio/ssplayer-tyranoscript" ssplayer-tyranoscript 'dist/pack/ssplayer-tyranoscript-plugin-%v.zip'
-            # ssplayer.tbp keeps that exact name on purpose: TyranoBuilder derives
-            # the plugin id from the filename and then looks for <id>/<id>.builder.js
-            # inside the archive, so `ssplayer-1.2.0.tbp` would install nothing.
-            release_plugin "@spritestudio/ssplayer-tyranobuilder" ssplayer-tyranobuilder 'dist/pack/ssplayer.tbp'
+            done < <(jq -r '.plugins[] | [.package, .version, .file] | @tsv' release-dist/manifest.json)
           else
             echo "::notice::release_plugins=false — skipping plugin GitHub Releases."
           fi
