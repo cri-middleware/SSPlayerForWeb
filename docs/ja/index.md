@@ -16,17 +16,20 @@ hero:
       text: GitHub
       link: https://github.com/cri-middleware/SSPlayerForWeb
 
+# 3 枚のカードがサイトの地図です（サイドバーの並び順と同じ）。どこまで読めば
+# 目的に届くかをカード自身が語るので、「読み方」の表は不要になりました。
+# See the English index.md for the same note.
 features:
   - title: まず動かす
-    details: パッケージを入れて .ssab を読み込み、数行で再生。「はじめに」→「使い方」→「API リファレンス」は写経すればそのまま動きます。
+    details: パッケージを入れて .ssab を読み込み、数行で再生。「はじめに」→「使い方」→「API リファレンス」を順に読めば、そこまでで動くところに届きます。以降は読まなくても構いません。
     link: /ja/setup/install
     linkText: はじめに
   - title: 作り込む
-    details: イベント処理、パーツ制御、シェーダー、パフォーマンス調整。少し工夫して表現を作り込みます。
+    details: イベントとユーザーデータ、パーツ制御、シェーダー、パフォーマンス調整。素の再生では表現が足りないときに読むのが「カスタマイズ」です。
     link: /ja/customize/events
     linkText: カスタマイズ
   - title: 拡張・貢献する
-    details: 全体構成を理解した上で core や WASM / FFI を拡張・貢献します。設計原則とビルド手順は CONTRIBUTING を参照。
+    details: 全体構成を理解した上で core や WASM / FFI を拡張・貢献します。設計原則とビルド手順は CONTRIBUTING を参照してください。
     link: https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md
     linkText: コントリビューション
 ---
@@ -41,21 +44,9 @@ features:
 - 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
 - ▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">単体 WebGL サンプル</a>** — `<ss-player>` Web コンポーネント
 - ▶️ **<a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS サンプル</a>** — PixiJS v8 アプリ向け
-- ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト（alpha）
-- ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン（beta）
+- ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト
+- ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン
 - 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
-
-## このドキュメントの読み方
-
-読者を 3 段階に分けて構成しています。**手前だけ読めば目的を達成できる**ように、上から順に踏み込む内容になっています。
-
-[[toc]]
-
-| 読者 | ゴール | 読むところ |
-|---|---|---|
-| **利用ユーザー** | とにかく動かす | 「はじめに」→「使い方」→「API リファレンス」 |
-| **カスタマイズユーザー** | 表現を作り込む | 上記 +「カスタマイズ」 |
-| **SDK / Player 開発者** | 内部を拡張・貢献する | 上記 + CONTRIBUTING |
 
 ## 概要（.sspj → 描画まで）
 
@@ -118,11 +109,11 @@ graph LR
 **ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（非公開・npm 未公開。
 プラグインとして導入します）:
 
-| パッケージ | 用途 | 状態 |
-|---|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 | alpha |
-| [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) | **TyranoScript**（ノベルエンジン）向けプラグインです。 | beta |
-| [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder) | **ティラノビルダー** 向けプラグインです。同じアニメをコンポーネントパレットから配置でき、変換もエディタ内で行えます。 | beta |
+| パッケージ | 用途 |
+|---|---|
+| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 |
+| [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) | **TyranoScript**（ノベルエンジン）向けプラグインです。 |
+| [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder) | **ティラノビルダー** 向けプラグインです。同じアニメをコンポーネントパレットから配置でき、変換もエディタ内で行えます。 |
 
 ::: tip 旧プレイヤーからの移行をお探しの方へ
 旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
