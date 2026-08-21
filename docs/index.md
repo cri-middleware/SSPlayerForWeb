@@ -16,17 +16,20 @@ hero:
       text: GitHub
       link: https://github.com/cri-middleware/SSPlayerForWeb
 
+# The three cards are the map of the site, in the order the sidebar is ordered:
+# each one says who stops here and what it costs, so the docs need no separate
+# "how to read these docs" table to explain themselves.
 features:
   - title: Get it running
-    details: Install a package, load a .ssab, and play it in a few lines. "Getting started" → "Usage" → "API reference" work as-is if you follow them along.
+    details: Install a package, load a .ssab, and play it in a few lines. Read "Getting started" → "Usage" → "API reference" in that order and you have a working player. Nothing below is needed to get there.
     link: /setup/install
     linkText: Getting started
   - title: Build it out
-    details: Event handling, part control, shaders, and performance tuning — a little extra effort to craft the look you want.
+    details: Events and user data, part control, shaders, performance tuning. "Customize" is where you go once plain playback is not quite the expression you want.
     link: /customize/events
     linkText: Customize
   - title: Extend & contribute
-    details: Understand the whole picture, then extend or contribute to the core and the WASM / FFI layer. See CONTRIBUTING for design principles and build steps.
+    details: Understand the whole picture, then extend or contribute to the core and the WASM / FFI layer. CONTRIBUTING has the design principles and the build steps.
     link: https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md
     linkText: Contributing
 ---
@@ -52,21 +55,9 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - 🛠️ **<a href="./ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser (start here)
 - ▶️ **<a href="./examples/webgl/" target="_blank" rel="noreferrer">Standalone WebGL example</a>** — the `<ss-player>` Web Component
 - ▶️ **<a href="./examples/pixi/" target="_blank" rel="noreferrer">PixiJS example</a>** — for PixiJS v8 apps
-- ▶️ **<a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ example</a>** — a sample MZ project (alpha)
-- ▶️ **<a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript example</a>** — a visual-novel scene (beta)
+- ▶️ **<a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ example</a>** — a sample MZ project
+- ▶️ **<a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript example</a>** — a visual-novel scene
 - 🎨 **<a href="./examples/override/" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
-
-## How to read these docs
-
-The docs are organized as a gradient: the earlier sections alone are enough to reach a working result, and each later section digs a little deeper.
-
-[[toc]]
-
-| You want to | Goal | Where to read |
-|---|---|---|
-| **Just use it** | Get something running | "Getting started" → "Usage" → "API reference" |
-| **Customize it** | Craft the look | The above + "Customize" |
-| **Extend the SDK / player** | Change or contribute to the internals | The above + CONTRIBUTING |
 
 ## Overview (.sspj → on screen)
 
@@ -126,11 +117,11 @@ For details on the three paths (`SSConverterGUI` / `ssconverter-web` / `ssconver
 **Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, private and not on npm
 (you install them as plugin bundles):
 
-| Package | What it's for | Status |
-|---|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | Renderer / plugin for **RPG Maker MZ**. | alpha |
-| [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) | Plugin for **TyranoScript** (visual-novel engine). | beta |
-| [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) | Plugin for **TyranoBuilder** — the same animations from its component palette, with in-editor conversion. | beta |
+| Package | What it's for |
+|---|---|
+| [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | Renderer / plugin for **RPG Maker MZ**. |
+| [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) | Plugin for **TyranoScript** (visual-novel engine). |
+| [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) | Plugin for **TyranoBuilder** — the same animations from its component palette, with in-editor conversion. |
 
 ::: tip Coming from an older player?
 Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.

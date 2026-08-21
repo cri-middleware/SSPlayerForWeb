@@ -18,9 +18,9 @@
 プラグイン機構で読み込む **IIFE バンドル**として提供されます（npm からインストールするのではなく
 プラグインとして利用）:
 
-- **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— **alpha**。[RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
-- **TyranoScript**（`@spritestudio/ssplayer-tyranoscript`）— beta。[TyranoScript で使う](/ja/usage/tyrano) を参照。
-- **ティラノビルダー**（`@spritestudio/ssplayer-tyranobuilder`）— beta。`.tbp` として配布されます。[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照。
+- **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
+- **TyranoScript**（`@spritestudio/ssplayer-tyranoscript`）— [TyranoScript で使う](/ja/usage/tyrano) を参照。
+- **ティラノビルダー**（`@spritestudio/ssplayer-tyranobuilder`）— `.tbp` として配布されます。[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照。
 
 それぞれの未対応範囲は [制約と適用範囲](/ja/limitations) にまとめてあります。
 :::

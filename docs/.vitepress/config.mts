@@ -7,6 +7,20 @@ const GITHUB = 'https://github.com/cri-middleware/SSPlayerForWeb'
 // published address rather than wherever the page happened to be built.
 const SITE_URL = 'https://cri-middleware.github.io/SSPlayerForWeb'
 
+// The nav's Demo menu points at ssconverter-web and the examples, which are built
+// *beside* this site rather than by VitePress (pages.yml -> scripts/build-pages.sh
+// assembles them around it), so they are not pages of this site. Two consequences,
+// both handled here:
+//   - the link stays base-relative and is left to VitePress's withBase(), so it is
+//     correct on every deployment of the site (the project Pages site, a fork, a
+//     root-served `base=/` preview) instead of hardcoding one origin;
+//   - `target: '_blank'` is what stops the SPA router from intercepting the click
+//     and landing on the 404 page -- the same reason index.md links them with raw
+//     <a target="_blank"> tags.
+// They therefore 404 under a docs-only `vitepress dev`: the targets exist only in a
+// full `scripts/build-pages.sh` build.
+const demo = (text: string, link: string) => ({ text, link, target: '_blank', rel: 'noreferrer' })
+
 // English is the default (root) locale; Japanese lives under /ja/. The API
 // reference (docs/api/, TypeDoc-generated) is language-neutral and shared by both
 // locales at /api/.
@@ -14,7 +28,7 @@ const SITE_URL = 'https://cri-middleware.github.io/SSPlayerForWeb'
 // The sidebar is ordered as a difficulty gradient — reader personas are the
 // design driver but are intentionally NOT surfaced as section labels. Reading
 // top-to-bottom, the effort required rises naturally:
-//   1. Setup / Usage / API  … copy-paste and it runs
+//   1. Getting started / Usage / API  … copy-paste and it runs
 //   2. Customize            … a little effort to polish expression
 //   3. Development           … understand the whole, then touch core / WASM
 export default withMermaid({
@@ -73,15 +87,30 @@ export default withMermaid({
       themeConfig: {
         outline: { level: [2, 3], label: 'On this page' },
         nav: [
-          { text: 'Setup', link: '/setup/install' },
+          { text: 'Getting started', link: '/setup/install' },
           { text: 'Usage', link: '/usage/basic' },
           { text: 'Customize', link: '/customize/events' },
           { text: 'API', link: '/api-guide' },
-          { text: 'ROADMAP', link: `${GITHUB}/blob/main/ROADMAP.md` },
+          {
+            text: 'Demo',
+            items: [
+              demo('ssconverter-web (.sspj → .ssab)', '/ssconverter/'),
+              {
+                text: 'Examples',
+                items: [
+                  demo('WebGL (ss-player)', '/examples/webgl/'),
+                  demo('PixiJS', '/examples/pixi/'),
+                  demo('Part override', '/examples/override/'),
+                  demo('RPG Maker MZ', '/examples/rmmz/'),
+                  demo('TyranoScript', '/examples/tyranoscript/'),
+                ],
+              },
+            ],
+          },
         ],
         sidebar: [
           {
-            text: 'Setup',
+            text: 'Getting started',
             items: [
               { text: 'Installation', link: '/setup/install' },
               { text: 'Quick Start', link: '/setup/quickstart' },
@@ -94,7 +123,7 @@ export default withMermaid({
               { text: 'Preparing assets (.sspj → .ssab)', link: '/usage/assets' },
               { text: 'WebGL & Web Components', link: '/usage/webgl' },
               { text: 'PixiJS', link: '/usage/pixi' },
-              { text: 'RPG Maker MZ (alpha)', link: '/usage/rmmz' },
+              { text: 'RPG Maker MZ', link: '/usage/rmmz' },
               { text: 'TyranoScript', link: '/usage/tyrano' },
               { text: 'TyranoBuilder', link: '/usage/tyranobuilder' },
               { text: 'Migrating from SS6Player', link: '/migration_from_ss6' },
@@ -149,7 +178,24 @@ export default withMermaid({
           { text: '使い方', link: '/ja/usage/basic' },
           { text: 'カスタマイズ', link: '/ja/customize/events' },
           { text: 'API', link: '/ja/api-guide' },
-          { text: 'ROADMAP', link: `${GITHUB}/blob/main/ROADMAP.md` },
+          // The demos themselves are language-neutral (one build, linked from both
+          // locales); only the labels differ.
+          {
+            text: 'デモ',
+            items: [
+              demo('ssconverter-web（.sspj → .ssab）', '/ssconverter/'),
+              {
+                text: 'サンプル',
+                items: [
+                  demo('WebGL（ss-player）', '/examples/webgl/'),
+                  demo('PixiJS', '/examples/pixi/'),
+                  demo('パーツ上書き', '/examples/override/'),
+                  demo('RPG ツクール MZ', '/examples/rmmz/'),
+                  demo('TyranoScript', '/examples/tyranoscript/'),
+                ],
+              },
+            ],
+          },
         ],
         sidebar: [
           {
@@ -166,7 +212,7 @@ export default withMermaid({
               { text: 'アセットの準備（.sspj → .ssab）', link: '/ja/usage/assets' },
               { text: 'WebGL・Web Components で使う', link: '/ja/usage/webgl' },
               { text: 'PixiJS で使う', link: '/ja/usage/pixi' },
-              { text: 'RPG ツクール MZ で使う（alpha）', link: '/ja/usage/rmmz' },
+              { text: 'RPG ツクール MZ で使う', link: '/ja/usage/rmmz' },
               { text: 'TyranoScript で使う', link: '/ja/usage/tyrano' },
               { text: 'ティラノビルダーで使う', link: '/ja/usage/tyranobuilder' },
               { text: 'SS6Player からの移行', link: '/ja/migration_from_ss6' },
