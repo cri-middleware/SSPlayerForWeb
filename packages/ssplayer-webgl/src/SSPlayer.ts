@@ -573,12 +573,13 @@ export class SSPlayer {
   /** @internal Advance the timeline and drain its events. Driven by the Surface. */
   public update(deltaMs: number): void {
     if (!this._isLive) return;
-    // While paused, internalPlayer.update() still advances `independent` slots but
-    // does NOT move the timeline, so no events are passed and no frame is reached —
-    // skip polling and the per-frame listeners then.
-    const pausing = this.internalPlayer.isPausing;
+    // internalPlayer.update() moves the timeline only while playing and not held;
+    // otherwise it still advances `independent` slots, but passes no events and
+    // reaches no frame — so skip polling and the per-frame listeners then. Read
+    // the condition before the update, since the update can change it.
+    const advancing = this.internalPlayer.isPlaying && !this.internalPlayer.isPausing;
     this.internalPlayer.update(deltaMs);
-    if (pausing) return;
+    if (!advancing) return;
 
     // Drain the events accumulated by this update (user-data / signal / audio +
     // animation end/loop) right away, while the runtime's passed-event buffer is
