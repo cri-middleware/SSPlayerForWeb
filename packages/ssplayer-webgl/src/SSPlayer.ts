@@ -17,6 +17,11 @@ import type { SSSurface } from './SSSurface.js';
 export interface SSUserDataEvent {
   partIndex: number;
   partName: string | null;
+  /**
+   * The frame the key is authored on — not necessarily the frame it was
+   * noticed on, since one tick can step across several.
+   */
+  frameNo: number;
   integer?: number;
   str?: string;
   /** User-data rectangle as authored (left/top/right/bottom). */
@@ -33,6 +38,11 @@ export interface SSUserDataEvent {
 export interface SSSignalEvent {
   partIndex: number;
   partName: string | null;
+  /**
+   * The frame the key is authored on — not necessarily the frame it was
+   * noticed on, since one tick can step across several.
+   */
+  frameNo: number;
   active: boolean;
   commandId: string | null;
   params: Record<string, boolean | number | string>;
@@ -47,6 +57,11 @@ export interface SSSignalEvent {
 export interface SSAudioEvent {
   partIndex: number;
   partName: string | null;
+  /**
+   * The frame the key is authored on — not necessarily the frame it was
+   * noticed on, since one tick can step across several.
+   */
+  frameNo: number;
   soundListNameHash: number;
   soundNameHash: number;
   soundName: string | null;
@@ -800,7 +815,7 @@ export class SSPlayer {
       const val = user?.value();
       if (!user || !val) continue;
       const partIndex = user.partIndex();
-      const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex) };
+      const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex), frameNo: events.frameIndex() };
       const intEntry = val.integer();
       if (intEntry) ev.integer = intEntry.value();
       const str = val.str();
@@ -852,6 +867,7 @@ export class SSPlayer {
       const ev: SSSignalEvent = {
         partIndex,
         partName: mgr.getPartName(partIndex),
+        frameNo: events.frameIndex(),
         active: true,
         commandId: val.commandId(),
         params,
@@ -871,6 +887,7 @@ export class SSPlayer {
       const ev: SSAudioEvent = {
         partIndex,
         partName: mgr.getPartName(partIndex),
+        frameNo: events.frameIndex(),
         soundListNameHash: val.soundListNameHash(),
         soundNameHash: val.soundNameHash(),
         soundName: val.soundName(),
