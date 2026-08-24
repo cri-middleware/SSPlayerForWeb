@@ -478,8 +478,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Starts the animation playback.
-     * @param startFrame The frame to start playing from. -1 means play from the current frame.
+     * Starts the animation playback from the head of its section, re-arming the
+     * loop count.
+     *
+     * **Not a resume**: `-1` heads out from the section start (its end when the
+     * direction is backward) rather than carrying on from the playhead. Pass
+     * `getFrameNo()` to play on from where it stands, and {@link resume} to lift
+     * a hold.
+     * @param startFrame The frame to start playing from. -1 means from the start of the section.
      */
     public play(startFrame: number = -1) {
         if (startFrame >= 0) {
@@ -521,21 +527,25 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Pauses the playback.
+     * Holds playback on the current frame.
+     *
+     * Idempotent, and ignored while nothing is playing. `isPlaying` stays true
+     * while held — a pause is a hold, not a stop — so `isPausing` is what tells
+     * the two apart.
      */
     public pause() {
-        if (!this.runtimeManager.context.is_pausing()) {
-            this.runtimeManager.context.pause();
-        }
+        this.runtimeManager.context.pause();
     }
 
     /**
-     * Resumes the playback from a paused state.
+     * Lifts a {@link pause}, carrying on from the same frame.
+     *
+     * Idempotent, and a no-op on a stopped animation: starting one is
+     * {@link play}'s job, and `play` heads out to the section start rather than
+     * carrying on.
      */
     public resume() {
-        if (this.runtimeManager.context.is_pausing()) {
-            this.runtimeManager.context.pause(); // pause() in WASM toggles the state
-        }
+        this.runtimeManager.context.resume();
     }
 
     public stop() {
