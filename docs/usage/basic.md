@@ -21,8 +21,9 @@ player.setAnimation(name);  // select an animation (WebGL and PixiJS alike)
 player.animationName;       // current animation name
 ```
 
-Playback settings are properties, not arguments — set `loopCount`, `speedScale` and the rest after
-selecting the animation (see [Playback control](#playback-control)).
+Playback settings are properties, not arguments — set `loopCount`, `speedScale` and the rest
+(see [Playback control](#playback-control)). They are yours rather than the animation's, so they
+hold across a `setAnimation`: a `loopCount` of 3 still means three cycles after a switch.
 
 `setAnimation` is synchronous: `load()` brings in everything the `.ssab` needs — those assets belong to
 the pack, not to one animation — so switching is only a runtime reset, with no loading to wait for.
@@ -47,7 +48,7 @@ player.fps;                 // frame rate (get / set)
 player.totalFrames;         // frames in the current playback range
 player.startFrame;          // first frame of the range
 player.endFrame;            // last frame of the range
-player.loopCount;           // configured loop count (-1 = infinite)
+player.loopCount;           // configured loop count (-1 = infinite; 0 asks for the same)
 player.animationName;       // the animation currently set up
 player.subFrameEnabled;     // sub-frame interpolation (on by default; smooth in slow motion / high-refresh)
 ```

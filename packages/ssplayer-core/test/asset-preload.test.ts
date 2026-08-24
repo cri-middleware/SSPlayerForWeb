@@ -19,7 +19,7 @@ function makePlayer(rm: unknown) {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const player = Object.create(InternalPlayerBase.prototype) as any;
     player.runtimeManager = {
-        context: { get_ssab_buf: () => 0, get_ssab_len: () => 0, stop: () => {} },
+        context: { get_ssab_buf: () => 0, get_ssab_len: () => 0, stop: () => {}, set_loop: () => {} },
         setupAnimation: vi.fn(),
         getInstanceParts: () => [],
         getEffectParts: () => [],
@@ -40,6 +40,8 @@ function makePlayer(rm: unknown) {
     player._catchUpPending = false;
     player._isChildPlayer = false;
     player._audioManager = null;
+    // Object.create skips the constructor, so the field initializers with it.
+    player._loopCount = -1;
     return player as InternalPlayerBase<never> & Record<string, any>;
     /* eslint-enable @typescript-eslint/no-explicit-any */
 }

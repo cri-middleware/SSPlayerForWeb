@@ -20,8 +20,9 @@ player.setAnimation(name);  // アニメーションを選択（WebGL / PixiJS �
 player.animationName;       // 現在のアニメーション名
 ```
 
-再生設定は引数ではなくプロパティです。`loopCount` や `speedScale` などはアニメーション選択後に
-設定してください（[再生制御](#再生制御)）。
+再生設定は引数ではなくプロパティです（[再生制御](#再生制御)）。これらはアニメーションではなく
+呼び出し側のものなので、`setAnimation` を跨いで保持されます。`loopCount = 3` は切り替え後も
+3 回のままです。
 
 `setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので
 `load()` で全て読み込まれ、切り替えはランタイムのリセットのみ — 待つべき読み込みはありません。
@@ -46,7 +47,7 @@ player.fps;                 // フレームレート（get / set）
 player.totalFrames;         // 現在の再生範囲のフレーム数
 player.startFrame;          // 範囲の開始フレーム
 player.endFrame;            // 範囲の終了フレーム
-player.loopCount;           // 設定したループ回数（-1 = 無限）
+player.loopCount;           // 設定したループ回数（-1 = 無限。0 も無限を意味します）
 player.animationName;       // 現在設定されているアニメーション名
 player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー再生や高リフレッシュで滑らか）
 ```
