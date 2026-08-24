@@ -321,9 +321,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
 
-        // The previous animation's sounds are not this animation's business.
-        this._audioManager?.stopAll?.();
-
         this.setupInstanceChildren();
         this.setupEffectChildren();
 
@@ -499,10 +496,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
         // Restarting playback should also reset independent slots (effects and
         // instances). Reset them IN PLACE: rebuilding the children here
-        // (setupInstanceChildren) would destroy every child player, and a child's
-        // destroy() runs stop() against the audioManager it SHARES with this
-        // player — silently cutting the parent's own sound on every replay — as
-        // well as invalidating any player the host took from getInstanceChild().
+        // (setupInstanceChildren) would destroy every child player, invalidating
+        // any player the host took from getInstanceChild().
         this.resetInstanceSlots();
         this.setupEffectChildren();
     }
@@ -554,9 +549,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public stop() {
         this.runtimeManager.context.stop();
-        if (this.audioManager && this.audioManager.stopAll) {
-            this.audioManager.stopAll();
-        }
     }
 
     /**
@@ -1120,6 +1112,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._destroyed = true;
 
         this.stop();
+
+        // Teardown is the one thing that does stop sound: there is no player left
+        // to own the voices. A child player shares the manager with its parent, so
+        // only the owner may sweep it.
+        if (!this._isChildPlayer) this._audioManager?.stopAll?.();
 
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
