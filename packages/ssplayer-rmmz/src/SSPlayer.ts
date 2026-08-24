@@ -44,6 +44,11 @@ export type SSPartAttachment = SSPartAttachmentOf<PixiContainer>;
 export interface SSUserDataEvent {
   partIndex: number;
   partName: string;
+  /**
+   * The frame the key is authored on — not necessarily the frame it was
+   * noticed on, since one tick can step across several.
+   */
+  frameNo: number;
   integer?: number;
   str?: string;
   rect?: { x1: number; y1: number; x2: number; y2: number };
@@ -52,6 +57,11 @@ export interface SSUserDataEvent {
 export interface SSSignalEvent {
   partIndex: number;
   partName: string;
+  /**
+   * The frame the key is authored on — not necessarily the frame it was
+   * noticed on, since one tick can step across several.
+   */
+  frameNo: number;
   active: boolean;
   commandId: number;
   params: Record<string, boolean | number | string>;
@@ -59,6 +69,11 @@ export interface SSSignalEvent {
 export interface SSAudioEvent {
   partIndex: number;
   partName: string;
+  /**
+   * The frame the key is authored on — not necessarily the frame it was
+   * noticed on, since one tick can step across several.
+   */
+  frameNo: number;
   soundListNameHash: number;
   soundNameHash: number;
   soundName: string | null;
@@ -527,7 +542,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       const val = user?.value();
       if (!user || !val) continue;
       const partIndex = user.partIndex();
-      const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex) ?? '' };
+      const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex) ?? '', frameNo: events.frameIndex() };
       const intEntry = val.integer();
       if (intEntry) ev.integer = intEntry.value();
       const str = val.str();
@@ -585,6 +600,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
         cb({
           partIndex,
           partName: mgr.getPartName(partIndex) ?? '',
+        frameNo: events.frameIndex(),
           active: true,
           commandId: Number(val.commandId() ?? 0),
           params,
@@ -605,6 +621,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
         cb({
           partIndex,
           partName: mgr.getPartName(partIndex) ?? '',
+        frameNo: events.frameIndex(),
           soundListNameHash: val.soundListNameHash(),
           soundNameHash: val.soundNameHash(),
           soundName: val.soundName(),
