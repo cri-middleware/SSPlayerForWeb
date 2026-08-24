@@ -33,7 +33,7 @@ the pack, not to one animation — so switching is only a runtime reset, with no
 player.play();              // start playback (pass a startFrame as an argument)
 player.pause();             // pause
 player.resume();            // resume
-player.stop();              // stop
+player.stop();              // stop — the playhead stays where it stands (play() rewinds)
 ```
 
 ## Frame and speed

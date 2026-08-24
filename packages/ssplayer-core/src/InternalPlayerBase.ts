@@ -548,6 +548,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this.runtimeManager.context.resume();
     }
 
+    /**
+     * Ends playback. The playhead **stays where it stands** — nothing rewinds, so
+     * the renderer keeps drawing the frame it stopped on. `play()` is what returns
+     * to the head; `setFrameNo()` seeks anywhere else.
+     */
     public stop() {
         this.runtimeManager.context.stop();
         if (this.audioManager && this.audioManager.stopAll) {

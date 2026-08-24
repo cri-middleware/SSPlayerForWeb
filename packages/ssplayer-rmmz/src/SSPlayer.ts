@@ -215,6 +215,11 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public resume(): void {
     this.internalPlayer.resume();
   }
+  /**
+   * Ends playback. The playhead **stays where it stands** — nothing rewinds, so
+   * the sprite keeps drawing the frame it stopped on. `play()` is what returns
+   * to the head; `setFrameNo()` seeks anywhere else.
+   */
   public stop(): void {
     this.internalPlayer.stop();
   }
