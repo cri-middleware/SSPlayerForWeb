@@ -29,7 +29,6 @@ export interface InstanceChildState<T> {
 export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public runtimeManager: SSRuntimeManager;
     private _audioManager: IAudioManager | null = null;
-    private _speedRate: number = 1.0;
     private _prevFinished: boolean = false;
     private _resourceManager: IResourceManager | null = null;
     private _ssabUrl: string = '';
@@ -641,12 +640,18 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     public setSpeed(speed: number) {
-        this._speedRate = speed;
         this.runtimeManager.context.set_animation_speed(speed);
     }
 
+    /**
+     * The playback speed in effect, as a multiple of the frame rate.
+     *
+     * Read from the runtime rather than from a copy of what was last set: the
+     * runtime clamps a zero or negative rate to a stop, so a cache would report
+     * the `-1.0` that was asked for while playback is actually held at `0.0`.
+     */
     public getSpeed(): number {
-        return this._speedRate;
+        return this.runtimeManager.context.get_animation_speed();
     }
 
     
