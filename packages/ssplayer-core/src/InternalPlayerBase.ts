@@ -29,6 +29,11 @@ export interface InstanceChildState<T> {
 export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public runtimeManager: SSRuntimeManager;
     private _audioManager: IAudioManager | null = null;
+    // The caller's own loop count, not a copy of the runtime's. The runtime
+    // resets the count on every transition (it is per-animation there), so
+    // without this a `setAnimation` would silently turn a configured
+    // `loopCount = 3` back into looping forever.
+    private _loopCount: number = -1;
     private _prevFinished: boolean = false;
     private _resourceManager: IResourceManager | null = null;
     private _ssabUrl: string = '';
@@ -320,6 +325,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public setAnimation(animationName: string): void {
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
+        // Per-transition in the runtime, so the caller's count has to go back on
+        // after every switch. Speed, frame skip and the playback direction all
+        // survive setup on their own and need nothing here.
+        this.runtimeManager.context.set_loop(this._loopCount);
 
         this.setupInstanceChildren();
         this.setupEffectChildren();
@@ -725,10 +734,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.context.get_playback_style();
     }
 
+    /**
+     * How many times to play: `n` cycles then stop, `-1` loops forever, and `0`
+     * asks for the same as `-1` rather than "no cycles".
+     *
+     * Kept across a `setAnimation`, because it is the caller's configuration
+     * rather than the animation's.
+     */
     public setLoop(count: number) {
+        this._loopCount = count;
         this.runtimeManager.context.set_loop(count);
     }
 
+    /**
+     * The count in force. Read from the runtime, so it is the *normalized*
+     * value: ask for `0` and this reads back `-1`, the infinite sentinel.
+     */
     public getLoop(): number {
         return this.runtimeManager.context.get_loops();
     }
