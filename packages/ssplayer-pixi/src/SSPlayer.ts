@@ -581,6 +581,11 @@ export class SSPlayer extends Container {
         this.internalPlayer.pause();
     }
 
+    /**
+     * Ends playback. The playhead **stays where it stands** — nothing rewinds, so
+     * the sprite keeps drawing the frame it stopped on. `play()` is what returns
+     * to the head; `setFrameNo()` seeks anywhere else.
+     */
     public stop() {
         this.internalPlayer.stop();
     }

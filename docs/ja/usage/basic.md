@@ -32,7 +32,7 @@ player.animationName;       // 現在のアニメーション名
 player.play();              // 再生開始（引数で startFrame を指定可）
 player.pause();             // 一時停止
 player.resume();            // 再開
-player.stop();              // 停止
+player.stop();              // 停止 — 再生ヘッドはその場に留まる（先頭に戻すのは play()）
 ```
 
 ## フレーム・速度
