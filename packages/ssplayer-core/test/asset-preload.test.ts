@@ -19,7 +19,7 @@ function makePlayer(rm: unknown) {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const player = Object.create(InternalPlayerBase.prototype) as any;
     player.runtimeManager = {
-        context: { get_ssab_buf: () => 0, get_ssab_len: () => 0 },
+        context: { get_ssab_buf: () => 0, get_ssab_len: () => 0, stop: () => {} },
         setupAnimation: vi.fn(),
         getInstanceParts: () => [],
         getEffectParts: () => [],
@@ -124,9 +124,12 @@ describe('sound preloading', () => {
 
         player.setAnimation('idle');
         player.setAnimation('walk');
+        player.stop();
         expect(first.preload).toHaveBeenCalledTimes(1);
-        // Every switch still stops what the previous animation was playing.
-        expect(first.stopAll).toHaveBeenCalledTimes(2);
+        // And neither a switch nor a stop touches the previous animation's sound:
+        // what has started outlives the playback that triggered it. Only destroy()
+        // sweeps the manager.
+        expect(first.stopAll).not.toHaveBeenCalled();
 
         // A manager attached later still gets its own preload.
         const second = { preload: vi.fn().mockResolvedValue(undefined), stopAll: vi.fn() };

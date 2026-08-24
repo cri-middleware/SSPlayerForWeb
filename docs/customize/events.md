@@ -35,6 +35,15 @@ sound from your app.
 player.audioManager = myAudioManager; // IAudioManager implementation
 ```
 
+A sound that has started **outlives the playback that triggered it**. `pause()`,
+`stop()` and a `setAnimation()` switch all leave it running — they end the
+*animation*, not the sound. Only `destroy()` sweeps the manager, because after it
+there is no player left to own the voices. SpriteStudio has no infinite loop
+(`loopNum` is a play count), so every sound ends on its own; if one outlasts its
+animation, that is the animation data's business.
+
+Call `player.audioManager?.stopAll?.()` yourself wherever you do want silence.
+
 ## Behavior when seeking
 
 When you seek, events between the start frame and the target frame are scanned. If
