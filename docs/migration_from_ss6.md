@@ -54,13 +54,13 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | Dedicated methods removed |
 | `loop` (get/set, `-1` = infinite) | `loopCount` (get/set, `-1` = infinite) | Set it after `setAnimation` |
 | `SetAnimationSpeed(rate)` (negative = reverse) | `speedScale` (get/set, negative = reverse) | Speed multiplier |
-| `SetAnimationFramerate(fps)` (deprecated) | `fps` (get/set) | Absolute fps |
+| `SetAnimationFramerate(fps)` (deprecated) | `frameRate` (get/set) | Absolute fps |
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | Loop split out to `loopCount` |
 | (no direct ping-pong control) | `setPlaybackDirection(dir, style)` | Forward/Backward × Normal/PingPong |
 | `SetAlpha(alpha)` | `player.alpha` (Pixi standard) | Use the standard `Container` property |
 | `GetPartIndexFromName(name)` | `findPartIndex(name)` | `-1` when the part is unknown |
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | Same names |
-| `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `fps` | |
+| `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `frameRate` | |
 
 ```ts
 // SS6Player: reverse at 2× over frames 10–30
@@ -116,9 +116,9 @@ the shape differ:
 |---|---|---|
 | `SetPartVisible` / `SetPartVisibleByIndex` | `setPartVisibilityOverride(part, hide, cascade?)` | `hide = false` reverts to the animation; `cascade` hides descendants too |
 | `SetPartCell` / `SetPartCellByIndex` | `setPartCellOverride(part, cellmapName, cellName, priority?)` | Resolved when set, so an unknown cell-map / cell name fails immediately |
-| `SetPartTint` / `SetPartTintByIndex` | `setPartColorOverride(part, blendOp, rgba, priority?)` | Colour is a packed `0xRRGGBBAA` number; `setPartColorOverrideCorners()` sets a gradient |
+| `SetPartTint` / `SetPartTintByIndex` | `setPartColorOverride(part, rgba, blendOp?, priority?)` | Colour is a packed `0xRRGGBBAA` number; `setPartColorOverrideCorners()` sets a gradient |
 | (new) | `clearPartColorOverride` / `clearPartCellOverride` / `clearPartVisibilityOverride` / `clearAllPartOverrides` | Clear one override, or every override on the player |
-| (new) | `getCellMapNames()` / `getCellNames(cellmapName)` | List what a cell override can target |
+| (new) | `getCellmapNames()` / `getCellNames(cellmapName)` | List what a cell override can target |
 
 ```ts
 import { SSBlendOp } from '@spritestudio/ssplayer-pixi';
@@ -128,7 +128,7 @@ import { SSBlendOp } from '@spritestudio/ssplayer-pixi';
 //   player.SetPartVisible('body', false);
 
 // This version: name or index, and each call returns false if it was rejected
-player.setPartColorOverride('body', SSBlendOp.Mul, 0xff0000ff);
+player.setPartColorOverride('body', 0xff0000ff, SSBlendOp.Mul);
 player.setPartVisibilityOverride('body', true);
 ```
 

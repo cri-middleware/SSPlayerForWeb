@@ -43,7 +43,7 @@ player.frame;               // 現在フレーム（get / set）
 player.speedScale = 1.5;    // 再生速度倍率
 player.isPlaying;           // 再生中か
 player.isPausing;           // 一時停止中か
-player.fps;                 // フレームレート（get / set）
+player.frameRate;                 // フレームレート（get / set）
 player.totalFrames;         // 現在の再生範囲のフレーム数
 player.startFrame;          // 範囲の開始フレーム
 player.endFrame;            // 範囲の終了フレーム

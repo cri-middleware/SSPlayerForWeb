@@ -628,7 +628,33 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const finished = ctx.is_finished();
         const rising = finished && !this._prevFinished;
         this._prevFinished = finished;
+        this._justLooped = looped;
+        this._justFinished = rising;
         return { looped, finished: rising };
+    }
+
+    private _justLooped = false;
+    private _justFinished = false;
+
+    /**
+     * Whether the last {@link pollPlaybackEvents} saw a loop boundary crossed.
+     *
+     * A **pulse**, not a state: it describes the tick that just ran and is
+     * replaced by the next one. Read from the copy the poll took rather than
+     * from the live runtime, which clears its own flag at the top of every
+     * update — reading that directly is how a caller loses the edge.
+     */
+    public get justLooped(): boolean {
+        return this._justLooped;
+    }
+
+    /**
+     * Whether the last {@link pollPlaybackEvents} saw playback complete — the
+     * rising edge of the sticky finished state, so it is true for exactly one
+     * tick. Distinct from `is_finished`, which stays true.
+     */
+    public get justFinished(): boolean {
+        return this._justFinished;
     }
 
     /**
@@ -679,7 +705,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.context.is_playing_forward();
     }
 
-    public setSpeed(speed: number) {
+    public setSpeedScale(speed: number) {
         this.runtimeManager.context.set_animation_speed(speed);
     }
 
@@ -690,7 +716,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * runtime clamps a zero or negative rate to a stop, so a cache would report
      * the `-1.0` that was asked for while playback is actually held at `0.0`.
      */
-    public getSpeed(): number {
+    public getSpeedScale(): number {
         return this.runtimeManager.context.get_animation_speed();
     }
 
@@ -780,7 +806,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * Kept across a `setAnimation`, because it is the caller's configuration
      * rather than the animation's.
      */
-    public setLoop(count: number) {
+    public setLoopCount(count: number) {
         this._loopCount = count;
         this.runtimeManager.context.set_loop(count);
     }
@@ -789,15 +815,15 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * The count in force. Read from the runtime, so it is the *normalized*
      * value: ask for `0` and this reads back `-1`, the infinite sentinel.
      */
-    public getLoop(): number {
+    public getLoopCount(): number {
         return this.runtimeManager.context.get_loops();
     }
 
-    public setSkipFrames(skip: boolean) {
+    public setFrameSkipEnabled(skip: boolean) {
         this.runtimeManager.context.set_skip_frames(skip);
     }
 
-    public isSkipFrames(): boolean {
+    public isFrameSkipEnabled(): boolean {
         return this.runtimeManager.context.get_skip_frames();
     }
 
@@ -855,11 +881,15 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *
      * Applies to Normal parts only. Other part types silently ignore it — the
      * call still returns true, so success does not mean the part changed.
+     *
+     * The colour comes first and `blendOp` trails with a default, which is the
+     * family's order (SDK: `20_design/40_api_conventions`). The C ABI puts the
+     * blend first; this face deliberately does not.
      */
     public setPartColorOverride(
         part: number | string,
-        blendOp: SSBlendOp,
         rgba: number,
+        blendOp: SSBlendOp = SSBlendOp.Mix,
         priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
     ): boolean {
         const index = this.resolvePartIndex(part);
@@ -875,8 +905,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public setPartColorOverrideCorners(
         part: number | string,
-        blendOp: SSBlendOp,
         corners: readonly [number, number, number, number],
+        blendOp: SSBlendOp = SSBlendOp.Mix,
         priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
     ): boolean {
         const index = this.resolvePartIndex(part);
@@ -896,7 +926,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * Make a part draw a different cell, named by its cell map (without the
      * `.ssce` extension) and cell name. The names are resolved once, here, so an
      * unresolvable cell returns false immediately rather than failing per frame;
-     * empty names revert the part to the animation. See getCellMapNames /
+     * empty names revert the part to the animation. See getCellmapNames /
      * getCellNames for the valid targets.
      *
      * Applies to Normal and mask parts only. Swapping in a cell from another
@@ -931,8 +961,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * Cell-map names in the bound SSAB (no `.ssce` extension) — the namespace
      * {@link setPartCellOverride} takes.
      */
-    public getCellMapNames(): string[] {
-        return this.runtimeManager.getCellMapNames();
+    public getCellmapNames(): string[] {
+        return this.runtimeManager.getCellmapNames();
     }
 
     /** Cell names inside `cellmapName`, empty if that map isn't in this SSAB. */

@@ -15,7 +15,7 @@ The same method names are available on `SSPlayer` (both the PixiJS and WebGL bac
 import { SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-pixi';
 
 // Tint a part red (multiply). Applies to Normal (image) parts.
-player.setPartColorOverride('body', SSBlendOp.Mul, 0xff0000ff);
+player.setPartColorOverride('body', 0xff0000ff, SSBlendOp.Mul);
 
 // Draw a different cell (the cell-map name carries no ".ssce" extension).
 player.setPartCellOverride('body', 'Ringo', 'effect3');
@@ -33,13 +33,13 @@ player.clearAllPartOverrides();
 | Method | Description |
 |---|---|
 | `findPartIndex(partName)` | Part index, or `-1` if it isn't in the current animation |
-| `setPartColorOverride(part, blendOp, rgba, priority?)` | Colour override (one value applied to all four corners) |
-| `setPartColorOverrideCorners(part, blendOp, corners, priority?)` | Four corners individually, for a gradient |
+| `setPartColorOverride(part, rgba, blendOp?, priority?)` | Colour override (one value applied to all four corners) |
+| `setPartColorOverrideCorners(part, corners, blendOp?, priority?)` | Four corners individually, for a gradient |
 | `setPartCellOverride(part, cellmapName, cellName, priority?)` | Draw a different cell |
 | `setPartVisibilityOverride(part, hide, cascade?)` | Force-hide (`hide = false` reverts to the animation) |
 | `clearPartColorOverride` / `clearPartCellOverride` / `clearPartVisibilityOverride` | Clear one override on one part |
 | `clearAllPartOverrides()` | Clear every override on that player |
-| `getCellMapNames()` / `getCellNames(cellmapName)` | List the cell-map / cell names a cell override can target |
+| `getCellmapNames()` / `getCellNames(cellmapName)` | List the cell-map / cell names a cell override can target |
 
 Every `part` argument takes either a **part name** or a **part index** (`number | string`). Each method returns `false` when the part is unknown or the runtime rejected the call.
 
@@ -50,7 +50,7 @@ Every `part` argument takes either a **part name** or a **part index** (`number 
 The names a cell override can target are listed by the player itself:
 
 ```ts
-player.getCellMapNames();          // → ["Ringo", ...]
+player.getCellmapNames();          // → ["Ringo", ...]
 player.getCellNames('Ringo');      // → ["effect3", ...]
 ```
 
@@ -59,15 +59,15 @@ player.getCellNames('Ringo');      // → ["effect3", ...]
 Colours are passed as a number packed **`0xRRGGBBAA`** — the exact form the runtime takes.
 
 ```ts
-player.setPartColorOverride('body', SSBlendOp.Mix, 0x0033ffbf);  // translucent blue
+player.setPartColorOverride('body', 0x0033ffbf, SSBlendOp.Mix);  // translucent blue
 
 // Four corners are given in the order left-top, right-top, left-bottom, right-bottom.
-player.setPartColorOverrideCorners('body', SSBlendOp.Mix, [
+player.setPartColorOverrideCorners('body', [
   0xff0000ff, // left-top
   0x00ff00ff, // right-top
   0x0000ffff, // left-bottom
   0xffffffff, // right-bottom
-]);
+], SSBlendOp.Mix);
 ```
 
 > **Do not apply alpha twice**: the alpha you pass is pre-multiplied with the part's composed alpha by the runtime, exactly as an authored Parts Color is. Do not multiply in `player.alpha` (or similar) yourself.

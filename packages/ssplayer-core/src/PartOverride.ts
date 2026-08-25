@@ -67,7 +67,7 @@ export type SSPartOverride =
  * stays engine-agnostic.
  */
 export interface SSPartOverrideTarget {
-    setPartColorOverride(part: number | string, blendOp: SSBlendOp, rgba: number, priority: SSOverridePriority): boolean;
+    setPartColorOverride(part: number | string, rgba: number, blendOp: SSBlendOp, priority: SSOverridePriority): boolean;
     setPartCellOverride(part: number | string, cellmapName: string, cellName: string, priority: SSOverridePriority): boolean;
     setPartVisibilityOverride(part: number | string, hide: boolean, cascade: boolean): boolean;
 }
@@ -120,7 +120,7 @@ export function applyPartOverrides(target: SSPartOverrideTarget, list: SSPartOve
         let applied = false;
         switch (o.kind) {
             case 'color':
-                applied = target.setPartColorOverride(o.part, o.blendOp, o.rgba, o.priority);
+                applied = target.setPartColorOverride(o.part, o.rgba, o.blendOp, o.priority);
                 break;
             case 'cell':
                 applied = target.setPartCellOverride(o.part, o.cellmap, o.cell, o.priority);

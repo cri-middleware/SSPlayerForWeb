@@ -50,7 +50,7 @@ JavaScript から制御する場合は、対象の DOM 要素を取得して `pl
 ```js
 const el = document.querySelector('ss-player');
 await el.ready;
-el.player.setPartColorOverride('apple', 0 /* Mix */, 0x0033ffbf);
+el.player.setPartColorOverride('apple', 0x0033ffbf);
 ```
 
 パーツ変換の読み出しも同じ経路です。このプレイヤーはシーングラフを持たないため、パーツへの追従は `onFrame()` から `el.player.getPartTransform()` を読んで自前の要素を配置する形になります。詳しくは [パーツトラッキング](/ja/customize/part-following) を参照してください。

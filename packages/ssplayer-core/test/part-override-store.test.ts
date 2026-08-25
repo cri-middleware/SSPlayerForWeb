@@ -101,7 +101,7 @@ describe('applyPartOverrides', () => {
         const { target, calls } = makeTarget();
         applyPartOverrides(target, [color('apple'), cell('apple'), hidden('heta')]);
         expect(calls.map(c => c.fn)).toEqual(['color', 'cell', 'visibility']);
-        expect(calls[0].args).toEqual(['apple', SSBlendOp.Mix, 0xff0000ff, SSOverridePriority.HoldUntilNextAnimation]);
+        expect(calls[0].args).toEqual(['apple', 0xff0000ff, SSBlendOp.Mix, SSOverridePriority.HoldUntilNextAnimation]);
         expect(calls[1].args).toEqual(['apple', 'Ringo', 'effect3', SSOverridePriority.HoldUntilNextAnimation]);
         expect(calls[2].args).toEqual(['heta', true, false]);
     });
