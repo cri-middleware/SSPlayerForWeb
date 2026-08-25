@@ -640,6 +640,23 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.context.is_pausing();
     }
 
+    /**
+     * Whether the playhead is currently walking forwards.
+     *
+     * The *instantaneous heading*, not the configured direction: a ping-pong on
+     * its return leg reads false while {@link getPlaybackDirection} still reads
+     * Forward. It is what an audio backend gates on — SpriteStudio has no
+     * reverse audio (SDK: 10_introduction/20_limitations) — mirroring the Godot
+     * and Unity players' `is_playing_forward`.
+     *
+     * Note this says nothing about {@link getSpeed}: the runtime clamps a zero
+     * or negative rate to a stop rather than to reverse playback, so the speed
+     * can never flip the heading and does not belong in a gate built on this.
+     */
+    public get isPlayingForward(): boolean {
+        return this.runtimeManager.context.is_playing_forward();
+    }
+
     public setSpeed(speed: number) {
         this.runtimeManager.context.set_animation_speed(speed);
     }

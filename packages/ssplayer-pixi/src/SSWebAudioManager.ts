@@ -73,10 +73,16 @@ export class SSWebAudioManager implements IAudioManager {
     /**
      * Automatically binds to the SSPlayer's audio events and plays sounds accordingly.
      * Returns an unsubscribe function if you need to unbind later.
+     *
+     * Sounds only while the playhead walks **forwards**: SpriteStudio has no
+     * reverse audio (SDK: 10_introduction/20_limitations), and playing the keys
+     * a backward or ping-pong-return leg crosses would be a different sound
+     * from the one that was authored. The player still reports every key it
+     * crosses — the gate belongs here, on the playing, not on the reporting.
      */
     public bindToPlayer(player: SSPlayer): () => void {
         return player.onAudio((e: SSAudioEvent) => {
-            if (e.soundName) {
+            if (e.soundName && player.isPlayingForward) {
                 this.play(e.soundName, e.loopNum, e.partIndex);
             }
         });

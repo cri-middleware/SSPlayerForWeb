@@ -647,6 +647,19 @@ export class SSPlayer extends Container {
         return this.internalPlayer.isPausing;
     }
 
+    /**
+     * Whether the playhead is walking forwards right now — the instantaneous
+     * heading, so a ping-pong on its return leg reads false while
+     * {@link getPlaybackDirection} still reads Forward.
+     *
+     * Gate an audio backend on this: SpriteStudio has no reverse audio, so
+     * {@link onAudio} still reports every key it crosses (as the Godot and Unity
+     * players do) and it is the *playing* that has to be suppressed.
+     */
+    public get isPlayingForward(): boolean {
+        return this.internalPlayer.isPlayingForward;
+    }
+
     public setAnimationSection(startFrame: number, endFrame: number) {
         this.internalPlayer.setAnimationSection(startFrame, endFrame);
     }
@@ -894,12 +907,14 @@ export class SSPlayer extends Container {
             if (!events) continue;
             if (this._userDataListeners.size > 0) this.dispatchUserData(events);
             if (this._signalListeners.size > 0) this.dispatchSignals(events);
-            
-            // Only play audio if we are effectively playing forward.
-            // is_playing_forward() handles the Forward/Backward/PingPong direction state,
-            // while speedScale handles user-level time reversal.
-            const isPlayingForward = (ctx.is_playing_forward() === (this.speedScale >= 0));
-            if (this._audioListeners.size > 0 && isPlayingForward) {
+
+            // Audio keys are reported whichever way the playhead is walking — the
+            // observation channel is not the playback. SpriteStudio has no reverse
+            // audio, so it is the backend that gates on `isPlayingForward`
+            // (SSWebAudioManager.bindToPlayer does), exactly as the Godot and Unity
+            // players do. Suppressing the event instead used to hide the key from
+            // hosts doing something other than playing a sound with it.
+            if (this._audioListeners.size > 0) {
                 this.dispatchAudios(events);
             }
         }

@@ -187,14 +187,6 @@ export class SSPlayer {
    */
   public visible = true;
 
-  private _isPlaying = false;
-  // Whether the player is live at all — set by play()/resume(), cleared by stop().
-  // A PAUSED player stays live (`_isPlaying` false, `_isLive` true) so update()
-  // keeps being forwarded: the core advances `independent` effect / instance slots
-  // on the real delta while the timeline is frozen. Gating update() on `_isPlaying`
-  // alone would freeze those too.
-  private _isLive = false;
-
   private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
   private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
   private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
@@ -406,21 +398,31 @@ export class SSPlayer {
 
   // --- Playback -------------------------------------------------------------
 
+  // --- Transport ---
+  //
+  // Four distinct verbs, passed straight through to the core (and so to the
+  // runtime, which owns the state machine). Nothing is mirrored on this object:
+  // a copy of "am I playing" is exactly what drifts from the runtime the first
+  // time a call is a no-op there — `resume()` on a stopped animation being the
+  // one that used to leave this player reporting itself as playing forever.
+
+  /** Head-out: rewinds to the section start (or `startFrame`) and re-arms the loop count. */
   public play(startFrame?: number): void {
     this.internalPlayer.play(startFrame);
-    this._isPlaying = true;
-    this._isLive = true;
   }
 
+  /** Holds playback in place. Idempotent, and ignored while nothing is playing. */
   public pause(): void {
     this.internalPlayer.pause();
-    this._isPlaying = false;
   }
 
+  /**
+   * Lifts a {@link pause}, carrying on from the same frame. Idempotent, and a
+   * no-op on a stopped animation — starting one is {@link play}'s job, and it
+   * rewinds.
+   */
   public resume(): void {
     this.internalPlayer.resume();
-    this._isPlaying = true;
-    this._isLive = true;
   }
 
   /**
@@ -430,8 +432,6 @@ export class SSPlayer {
    */
   public stop(): void {
     this.internalPlayer.stop();
-    this._isPlaying = false;
-    this._isLive = false;
   }
 
   public get frame(): number { return this.internalPlayer.getFrameNo(); }
@@ -455,10 +455,31 @@ export class SSPlayer {
   /** The animation currently set up, or `''` before the first `setAnimation`. */
   public get animationName(): string { return this.internalPlayer.animationName; }
 
-  public get isPlaying(): boolean { return this._isPlaying; }
+  /**
+   * Whether a playback session is live — **true while paused as well**, since a
+   * pause is a hold rather than a stop. `isPlaying && !isPausing` is "currently
+   * advancing"; {@link isPausing} is what tells the two apart.
+   *
+   * False before the first {@link play} and after {@link stop}, and false again
+   * once a finite loop count runs out (the runtime parks the playhead on the
+   * final frame and ends the session — {@link onAnimationEnd} is what reports
+   * that, since `!isPlaying` cannot tell a completion from a `stop()`).
+   */
+  public get isPlaying(): boolean { return this.internalPlayer.isPlaying; }
 
   /** Whether playback is paused (as opposed to stopped or never started). */
   public get isPausing(): boolean { return this.internalPlayer.isPausing; }
+
+  /**
+   * Whether the playhead is walking forwards right now — the instantaneous
+   * heading, so a ping-pong on its return leg reads false while
+   * {@link getPlaybackDirection} still reads Forward.
+   *
+   * Gate an audio backend on this: SpriteStudio has no reverse audio, so
+   * {@link onAudio} still reports every key it crosses (as the Godot and Unity
+   * players do) and it is the *playing* that has to be suppressed.
+   */
+  public get isPlayingForward(): boolean { return this.internalPlayer.isPlayingForward; }
 
   public get speedScale(): number { return this.internalPlayer.getSpeed(); }
   public set speedScale(v: number) { this.internalPlayer.setSpeed(v); }
@@ -592,12 +613,16 @@ export class SSPlayer {
 
   /** @internal Advance the timeline and drain its events. Driven by the Surface. */
   public update(deltaMs: number): void {
-    if (!this._isLive) return;
+    // A held player is still live — the core advances `independent` effect /
+    // instance slots on the real delta while the timeline is frozen — so this
+    // gates on `isPlaying` (true across a pause) and not on "advancing". A
+    // stopped one advances nothing at all, so it can be skipped outright.
+    if (!this.internalPlayer.isPlaying) return;
     // internalPlayer.update() moves the timeline only while playing and not held;
     // otherwise it still advances `independent` slots, but passes no events and
     // reaches no frame — so skip polling and the per-frame listeners then. Read
     // the condition before the update, since the update can change it.
-    const advancing = this.internalPlayer.isPlaying && !this.internalPlayer.isPausing;
+    const advancing = !this.internalPlayer.isPausing;
     this.internalPlayer.update(deltaMs);
     if (!advancing) return;
 
@@ -791,10 +816,6 @@ export class SSPlayer {
     const anim = this.internalPlayer.runtimeManager.getCurrentAnimationData();
     if (!anim) return;
 
-    // is_playing_forward() handles the Forward/Backward/PingPong direction state;
-    // getSpeed() handles user-level time reversal. Audio only plays going forward.
-    const isPlayingForward = (ctx.is_playing_forward() === (this.internalPlayer.getSpeed() >= 0));
-
     for (let i = 0; i < count; i++) {
       // get_passed_event_index returns the index into this animation's per-frame
       // events table (single-source playback: always primary).
@@ -803,7 +824,13 @@ export class SSPlayer {
       if (!events) continue;
       if (this._userDataListeners.size > 0) this.dispatchUserData(events);
       if (this._signalListeners.size > 0) this.dispatchSignals(events);
-      if (this._audioListeners.size > 0 && isPlayingForward) this.dispatchAudios(events);
+      // Audio keys are reported whichever way the playhead is walking — the
+      // observation channel is not the playback. SpriteStudio has no reverse
+      // audio, so it is the backend that gates on {@link isPlayingForward}
+      // (SSWebAudioManager.bindToPlayer does), exactly as the Godot and Unity
+      // players do. Suppressing the event instead used to hide the key from
+      // hosts doing something other than playing a sound with it.
+      if (this._audioListeners.size > 0) this.dispatchAudios(events);
     }
   }
 

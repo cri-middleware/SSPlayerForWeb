@@ -97,11 +97,15 @@ export class TyranoAudioManager implements IAudioManager {
    * Attach to a player: set it as the player's audio manager (so `setAnimation`
    * preloads through us) and play each `onAudio` event. Returns the `onAudio`
    * unsubscribe. Call BEFORE `setAnimation`.
+   *
+   * Sounds only while the playhead walks **forwards**: SpriteStudio has no
+   * reverse audio (SDK: 10_introduction/20_limitations). The player reports
+   * every key it crosses either way — the gate belongs here, on the playing.
    */
   bindToPlayer(player: SSPlayer): Unsubscribe {
     player.audioManager = this;
     return player.onAudio((e) => {
-      if (e.soundName) this.play(e.soundName, e.loopNum);
+      if (e.soundName && player.isPlayingForward) this.play(e.soundName, e.loopNum);
     });
   }
 }
