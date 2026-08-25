@@ -54,13 +54,13 @@ player.play();
 | `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | 専用メソッドは廃止 |
 | `loop`（get/set, `-1`=無限） | `loopCount`（get/set, `-1`=無限） | `setAnimation` の後に設定 |
 | `SetAnimationSpeed(rate)`（負値で逆再生） | `speedScale`（get/set, 負値で逆再生） | 倍率指定 |
-| `SetAnimationFramerate(fps)`（非推奨） | `fps`（get/set） | 絶対 fps 指定 |
+| `SetAnimationFramerate(fps)`（非推奨） | `frameRate`（get/set） | 絶対 fps 指定 |
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | ループは `loopCount` に分離 |
 | （往復再生の直接指定なし） | `setPlaybackDirection(dir, style)` | Forward/Backward × Normal/PingPong |
 | `SetAlpha(alpha)` | `player.alpha`（Pixi 標準） | `Container` の標準プロパティを利用 |
 | `GetPartIndexFromName(name)` | `findPartIndex(name)` | 不明なパーツは `-1` |
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | 同名 |
-| `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `fps` | |
+| `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `frameRate` | |
 
 ```ts
 // SS6Player: 2倍速で逆再生、区間 10〜30 フレーム
@@ -116,9 +116,9 @@ SS6Player のパーツ単位のセッターは、Override Layer API として**�
 |---|---|---|
 | `SetPartVisible` / `SetPartVisibleByIndex` | `setPartVisibilityOverride(part, hide, cascade?)` | `hide = false` でアニメーション側に戻ります。`cascade` で子孫も非表示 |
 | `SetPartCell` / `SetPartCellByIndex` | `setPartCellOverride(part, cellmapName, cellName, priority?)` | 設定時に解決するため、存在しないセルマップ名 / セル名はその場で失敗します |
-| `SetPartTint` / `SetPartTintByIndex` | `setPartColorOverride(part, blendOp, rgba, priority?)` | 色は `0xRRGGBBAA` にパックした数値。グラデーションは `setPartColorOverrideCorners()` |
+| `SetPartTint` / `SetPartTintByIndex` | `setPartColorOverride(part, rgba, blendOp?, priority?)` | 色は `0xRRGGBBAA` にパックした数値。グラデーションは `setPartColorOverrideCorners()` |
 | （新規） | `clearPartColorOverride` / `clearPartCellOverride` / `clearPartVisibilityOverride` / `clearAllPartOverrides` | 個別、またはそのプレイヤーの全上書きを解除 |
-| （新規） | `getCellMapNames()` / `getCellNames(cellmapName)` | セル上書きで指定できる名前の一覧 |
+| （新規） | `getCellmapNames()` / `getCellNames(cellmapName)` | セル上書きで指定できる名前の一覧 |
 
 ```ts
 import { SSBlendOp } from '@spritestudio/ssplayer-pixi';
@@ -128,7 +128,7 @@ import { SSBlendOp } from '@spritestudio/ssplayer-pixi';
 //   player.SetPartVisible('body', false);
 
 // 本バージョン: 名前でもインデックスでも指定でき、拒否された場合は false が返ります
-player.setPartColorOverride('body', SSBlendOp.Mul, 0xff0000ff);
+player.setPartColorOverride('body', 0xff0000ff, SSBlendOp.Mul);
 player.setPartVisibilityOverride('body', true);
 ```
 

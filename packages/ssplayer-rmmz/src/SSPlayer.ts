@@ -272,15 +272,24 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public get totalFrames(): number {
     return this.internalPlayer.getTotalFrames();
   }
-  public get fps(): number {
+  public get frameRate(): number {
     return this.internalPlayer.getFrameRate();
   }
-  public set fps(value: number) {
+  public set frameRate(value: number) {
     this.internalPlayer.setFrameRate(value);
   }
   public get isPlaying(): boolean {
     return this.internalPlayer.isPlaying;
   }
+  /**
+   * Whether the last {@link update} crossed a loop boundary. A **pulse**, true
+   * only inside the tick that crossed — take {@link onAnimationLoop} instead if
+   * you would rather have it delivered than polled.
+   */
+  public get justLooped(): boolean {
+    return this.internalPlayer.justLooped;
+  }
+
   public get isPausing(): boolean {
     return this.internalPlayer.isPausing;
   }
@@ -295,16 +304,16 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     return this.internalPlayer.isPlayingForward;
   }
   public get speedScale(): number {
-    return this.internalPlayer.getSpeed();
+    return this.internalPlayer.getSpeedScale();
   }
   public set speedScale(speed: number) {
-    this.internalPlayer.setSpeed(speed);
+    this.internalPlayer.setSpeedScale(speed);
   }
   public get loopCount(): number {
-    return this.internalPlayer.getLoop();
+    return this.internalPlayer.getLoopCount();
   }
   public set loopCount(value: number) {
-    this.internalPlayer.setLoop(value);
+    this.internalPlayer.setLoopCount(value);
   }
 
   /**
@@ -388,21 +397,21 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   /** Override a Normal part's colour with a single `0xRRGGBBAA` value (all four corners). */
   public setPartColorOverride(
     part: number | string,
-    blendOp: SSBlendOp,
     rgba: number,
+    blendOp: SSBlendOp = SSBlendOp.Mix,
     priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
   ): boolean {
-    return this.internalPlayer.setPartColorOverride(part, blendOp, rgba, priority);
+    return this.internalPlayer.setPartColorOverride(part, rgba, blendOp, priority);
   }
 
   /** Override a Normal part's colour with four `0xRRGGBBAA` corners (left-top, right-top, left-bottom, right-bottom). */
   public setPartColorOverrideCorners(
     part: number | string,
-    blendOp: SSBlendOp,
     corners: readonly [number, number, number, number],
+    blendOp: SSBlendOp = SSBlendOp.Mix,
     priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
   ): boolean {
-    return this.internalPlayer.setPartColorOverrideCorners(part, blendOp, corners, priority);
+    return this.internalPlayer.setPartColorOverrideCorners(part, corners, blendOp, priority);
   }
 
   /** Clear a part's colour override (revert it to the animation). */
@@ -431,8 +440,8 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   /** Cell-map names in the loaded .ssab (for discovering cell-override targets). */
-  public getCellMapNames(): string[] {
-    return this.internalPlayer.getCellMapNames();
+  public getCellmapNames(): string[] {
+    return this.internalPlayer.getCellmapNames();
   }
 
   /** Cell names in the named cell map (for discovering cell-override targets). */

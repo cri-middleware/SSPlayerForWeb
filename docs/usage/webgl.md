@@ -59,7 +59,7 @@ per-part overrides — is reached through `el.player`, the `SSPlayer` underneath
 ```js
 const el = document.querySelector('ss-player');
 await el.ready;
-el.player.setPartColorOverride('apple', 0 /* Mix */, 0x0033ffbf);
+el.player.setPartColorOverride('apple', 0x0033ffbf);
 ```
 
 The part-transform read-out is reached the same way. This player has no scene graph, so

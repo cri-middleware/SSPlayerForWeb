@@ -13,7 +13,7 @@
 //   setPartVisibilityOverride(part, hide, cascade = false)
 //   setPartCellOverride(part, cellmapName, cellName, priority = HoldUntilNextAnimation)
 //   clearAllPartOverrides()
-// Cell targets can be discovered from the player: getCellMapNames() / getCellNames(cellmap).
+// Cell targets can be discovered from the player: getCellmapNames() / getCellNames(cellmap).
 
 import { Application } from 'pixi.js';
 import { SSPlayer, SSBlendOp } from '@spritestudio/ssplayer-pixi';
@@ -90,7 +90,7 @@ async function main() {
 async function runDemo(player: SSPlayer) {
     // Discover what the loaded SSAB offers. Handy as a reference in the console,
     // and the cell override needs a cell-map name to address a cell by.
-    const cellmaps = player.getCellMapNames();
+    const cellmaps = player.getCellmapNames();
     if (cellmaps.length === 0) {
         fail('No cell map in the loaded SSAB — nothing to demo.');
         return;

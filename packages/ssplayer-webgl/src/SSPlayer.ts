@@ -449,8 +449,8 @@ export class SSPlayer {
   public get endFrame(): number { return this.internalPlayer.getAnimationSectionEnd(); }
 
   /** Playback rate in frames per second. Defaults to the animation's authored fps. */
-  public get fps(): number { return this.internalPlayer.getFrameRate(); }
-  public set fps(v: number) { this.internalPlayer.setFrameRate(v); }
+  public get frameRate(): number { return this.internalPlayer.getFrameRate(); }
+  public set frameRate(v: number) { this.internalPlayer.setFrameRate(v); }
 
   /** The animation currently set up, or `''` before the first `setAnimation`. */
   public get animationName(): string { return this.internalPlayer.animationName; }
@@ -468,6 +468,15 @@ export class SSPlayer {
   public get isPlaying(): boolean { return this.internalPlayer.isPlaying; }
 
   /** Whether playback is paused (as opposed to stopped or never started). */
+  /**
+   * Whether the last {@link update} crossed a loop boundary. A **pulse**, true
+   * only inside the tick that crossed — take {@link onAnimationLoop} instead if
+   * you would rather have it delivered than polled.
+   */
+  public get justLooped(): boolean {
+    return this.internalPlayer.justLooped;
+  }
+
   public get isPausing(): boolean { return this.internalPlayer.isPausing; }
 
   /**
@@ -481,8 +490,8 @@ export class SSPlayer {
    */
   public get isPlayingForward(): boolean { return this.internalPlayer.isPlayingForward; }
 
-  public get speedScale(): number { return this.internalPlayer.getSpeed(); }
-  public set speedScale(v: number) { this.internalPlayer.setSpeed(v); }
+  public get speedScale(): number { return this.internalPlayer.getSpeedScale(); }
+  public set speedScale(v: number) { this.internalPlayer.setSpeedScale(v); }
 
   /**
    * How many times the animation plays: `-1` for forever, `n > 0` for n times.
@@ -496,8 +505,8 @@ export class SSPlayer {
    * every frame when `wanted` is `0` (it reads back as `-1`), and an animation
    * whose budget is reset every frame never finishes.
    */
-  public get loopCount(): number { return this.internalPlayer.getLoop(); }
-  public set loopCount(v: number) { this.internalPlayer.setLoop(v); }
+  public get loopCount(): number { return this.internalPlayer.getLoopCount(); }
+  public set loopCount(v: number) { this.internalPlayer.setLoopCount(v); }
 
   /** URL the loaded pack came from; empty for packs bound as bytes without one. */
   public get ssabUrl(): string { return this.internalPlayer.ssabUrl; }
@@ -511,8 +520,8 @@ export class SSPlayer {
    * interpolation is off too — otherwise the timeline still advances by
    * fractional amounts and the timing drifts.
    */
-  public get frameSkipEnabled(): boolean { return this.internalPlayer.isSkipFrames(); }
-  public set frameSkipEnabled(v: boolean) { this.internalPlayer.setSkipFrames(v); }
+  public get frameSkipEnabled(): boolean { return this.internalPlayer.isFrameSkipEnabled(); }
+  public set frameSkipEnabled(v: boolean) { this.internalPlayer.setFrameSkipEnabled(v); }
 
   /**
    * Limit playback to `[startFrame, endFrame]`. This narrows the range every
@@ -675,21 +684,21 @@ export class SSPlayer {
   /** Override a Normal part's colour with a single `0xRRGGBBAA` value (all four corners). */
   public setPartColorOverride(
     part: number | string,
-    blendOp: SSBlendOp,
     rgba: number,
+    blendOp: SSBlendOp = SSBlendOp.Mix,
     priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
   ): boolean {
-    return this.internalPlayer.setPartColorOverride(part, blendOp, rgba, priority);
+    return this.internalPlayer.setPartColorOverride(part, rgba, blendOp, priority);
   }
 
   /** Override a Normal part's colour with four `0xRRGGBBAA` corners (left-top, right-top, left-bottom, right-bottom). */
   public setPartColorOverrideCorners(
     part: number | string,
-    blendOp: SSBlendOp,
     corners: readonly [number, number, number, number],
+    blendOp: SSBlendOp = SSBlendOp.Mix,
     priority: SSOverridePriority = SSOverridePriority.HoldUntilNextAnimation,
   ): boolean {
-    return this.internalPlayer.setPartColorOverrideCorners(part, blendOp, corners, priority);
+    return this.internalPlayer.setPartColorOverrideCorners(part, corners, blendOp, priority);
   }
 
   /** Clear a part's colour override (revert it to the animation). */
@@ -718,8 +727,8 @@ export class SSPlayer {
   }
 
   /** Cell-map names in the loaded .ssab (for discovering cell-override targets). */
-  public getCellMapNames(): string[] {
-    return this.internalPlayer.getCellMapNames();
+  public getCellmapNames(): string[] {
+    return this.internalPlayer.getCellmapNames();
   }
 
   /** Cell names in the named cell map (for discovering cell-override targets). */

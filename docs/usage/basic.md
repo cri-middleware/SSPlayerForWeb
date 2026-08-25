@@ -44,7 +44,7 @@ player.frame;               // current frame (get / set)
 player.speedScale = 1.5;    // playback speed multiplier
 player.isPlaying;           // whether playback is running
 player.isPausing;           // whether playback is paused
-player.fps;                 // frame rate (get / set)
+player.frameRate;                 // frame rate (get / set)
 player.totalFrames;         // frames in the current playback range
 player.startFrame;          // first frame of the range
 player.endFrame;            // last frame of the range

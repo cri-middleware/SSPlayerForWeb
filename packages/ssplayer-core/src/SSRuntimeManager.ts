@@ -392,7 +392,7 @@ export class SSRuntimeManager {
      * Cell-map names in the bound SSAB (table order, no `.ssce` extension) —
      * the cell-override target namespace. Empty before a resource is bound.
      */
-    public getCellMapNames(): string[] {
+    public getCellmapNames(): string[] {
         if (!this.resource) return [];
         const ptr = this.context.get_ssab_buf();
         const len = this.context.get_ssab_len();
@@ -403,7 +403,7 @@ export class SSRuntimeManager {
 
     /**
      * Cell names inside `cellmapName` in the bound SSAB (empty if that map isn't
-     * in this SSAB). Pair with {@link getCellMapNames} to discover the valid
+     * in this SSAB). Pair with {@link getCellmapNames} to discover the valid
      * targets of a cell override.
      */
     public getCellNames(cellmapName: string): string[] {

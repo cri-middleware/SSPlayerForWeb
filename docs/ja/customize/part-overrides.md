@@ -15,7 +15,7 @@
 import { SSBlendOp, SSOverridePriority } from '@spritestudio/ssplayer-pixi';
 
 // パーツを赤く着色（乗算）。通常（画像）パーツに適用されます。
-player.setPartColorOverride('body', SSBlendOp.Mul, 0xff0000ff);
+player.setPartColorOverride('body', 0xff0000ff, SSBlendOp.Mul);
 
 // 別のセルを描画させる（セルマップ名は ".ssce" を付けずに指定）。
 player.setPartCellOverride('body', 'Ringo', 'effect3');
@@ -33,13 +33,13 @@ player.clearAllPartOverrides();
 | メソッド | 説明 |
 |---|---|
 | `findPartIndex(partName)` | パーツインデックス。現在のアニメーションに無ければ `-1` |
-| `setPartColorOverride(part, blendOp, rgba, priority?)` | パーツカラーオーバーライド（単色を 4 隅すべてに適用） |
-| `setPartColorOverrideCorners(part, blendOp, corners, priority?)` | 4 隅を個別に指定（グラデーション） |
+| `setPartColorOverride(part, rgba, blendOp?, priority?)` | パーツカラーオーバーライド（単色を 4 隅すべてに適用） |
+| `setPartColorOverrideCorners(part, corners, blendOp?, priority?)` | 4 隅を個別に指定（グラデーション） |
 | `setPartCellOverride(part, cellmapName, cellName, priority?)` | 別のセルで描画する |
 | `setPartVisibilityOverride(part, hide, cascade?)` | 強制非表示（`hide = false` でアニメーションに戻す） |
 | `clearPartColorOverride` / `clearPartCellOverride` / `clearPartVisibilityOverride` | 1 パーツの 1 オーバーライドを解除 |
 | `clearAllPartOverrides()` | そのプレイヤーの全オーバーライドを解除 |
-| `getCellMapNames()` / `getCellNames(cellmapName)` | セルオーバーライドに指定できるセルマップ名 / セル名の列挙 |
+| `getCellmapNames()` / `getCellNames(cellmapName)` | セルオーバーライドに指定できるセルマップ名 / セル名の列挙 |
 
 各メソッドの `part` は**パーツ名**と**パーツインデックス**のどちらでも渡せます（`number | string`）。パーツが不明な場合やランタイムが受け付けなかった場合は `false` を返します。
 
@@ -50,7 +50,7 @@ player.clearAllPartOverrides();
 セルオーバーライドに指定できる名前は、プレイヤーから列挙できます。
 
 ```ts
-player.getCellMapNames();          // → ["Ringo", ...]
+player.getCellmapNames();          // → ["Ringo", ...]
 player.getCellNames('Ringo');      // → ["effect3", ...]
 ```
 
@@ -59,15 +59,15 @@ player.getCellNames('Ringo');      // → ["effect3", ...]
 色は **`0xRRGGBBAA` にパックした数値**で渡します。ランタイムが受け取る形式そのままです。
 
 ```ts
-player.setPartColorOverride('body', SSBlendOp.Mix, 0x0033ffbf);  // 半透明の青
+player.setPartColorOverride('body', 0x0033ffbf, SSBlendOp.Mix);  // 半透明の青
 
 // 4 隅を個別に指定する場合の順序は「左上・右上・左下・右下」です。
-player.setPartColorOverrideCorners('body', SSBlendOp.Mix, [
+player.setPartColorOverrideCorners('body', [
   0xff0000ff, // 左上
   0x00ff00ff, // 右上
   0x0000ffff, // 左下
   0xffffffff, // 右下
-]);
+], SSBlendOp.Mix);
 ```
 
 > **アルファを二重に適用しないでください**: 指定した色のアルファは、そのパーツの合成済みアルファとランタイム側で自動的に pre-multiply されます。オーサリングされたパーツカラーとまったく同じ規則なので、`player.alpha` などを自前で掛け合わせないでください。

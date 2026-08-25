@@ -94,14 +94,20 @@ describe('visibility override', () => {
 describe('colour override', () => {
     it('passes the packed RGBA through and defaults to HoldUntilNextAnimation', () => {
         const { player, calls } = makePlayer();
-        player.setPartColorOverride(1, SSBlendOp.Mul, 0xff0000ff);
+        player.setPartColorOverride(1, 0xff0000ff, SSBlendOp.Mul);
         expect(calls[0].args).toEqual([1, SSBlendOp.Mul, 0xff0000ff, SSOverridePriority.HoldUntilNextAnimation]);
+    });
+
+    it('defaults the blend to Mix when it is left out', () => {
+        const { player, calls } = makePlayer();
+        player.setPartColorOverride(1, 0xff0000ff);
+        expect(calls[0].args[1]).toBe(SSBlendOp.Mix);
     });
 
     it('normalises a colour written as a negative int32 to its unsigned value', () => {
         const { player, calls } = makePlayer();
         // 0xFF0000FF authored as a signed literal — the runtime takes a u32.
-        player.setPartColorOverride(1, SSBlendOp.Mix, -16776961);
+        player.setPartColorOverride(1, -16776961, SSBlendOp.Mix);
         expect(calls[0].args[2]).toBe(0xff0000ff);
     });
 
@@ -109,8 +115,8 @@ describe('colour override', () => {
         const { player, calls } = makePlayer();
         player.setPartColorOverrideCorners(
             1,
-            SSBlendOp.Mix,
             [0x11111111, 0x22222222, 0x33333333, 0x44444444],
+            SSBlendOp.Mix,
             SSOverridePriority.Permanent,
         );
         expect(calls[0].args[2]).toEqual(new Uint32Array([0x11111111, 0x22222222, 0x33333333, 0x44444444]));

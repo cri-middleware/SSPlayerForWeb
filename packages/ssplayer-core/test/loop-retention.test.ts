@@ -57,12 +57,12 @@ describe('the loop count is the caller\'s, not the animation\'s', () => {
     it('goes back on after every setAnimation', () => {
         const { player, set_loop } = makePlayer();
 
-        player.setLoop(3);
+        player.setLoopCount(3);
         expect(set_loop).toHaveBeenLastCalledWith(3);
 
         player.setAnimation('walk');
         expect(set_loop).toHaveBeenLastCalledWith(3);
-        expect(player.getLoop()).toBe(3);
+        expect(player.getLoopCount()).toBe(3);
 
         player.setAnimation('idle');
         expect(set_loop).toHaveBeenLastCalledWith(3);
@@ -73,17 +73,17 @@ describe('the loop count is the caller\'s, not the animation\'s', () => {
 
         player.setAnimation('walk');
         expect(set_loop).toHaveBeenLastCalledWith(-1);
-        expect(player.getLoop()).toBe(-1);
+        expect(player.getLoopCount()).toBe(-1);
     });
 
     it('reads back a zero as the infinite it asked for', () => {
         const { player } = makePlayer();
 
-        player.setLoop(0);
-        expect(player.getLoop()).toBe(-1);
+        player.setLoopCount(0);
+        expect(player.getLoopCount()).toBe(-1);
 
         // And the zero is what carries, so it still means infinite next time.
         player.setAnimation('walk');
-        expect(player.getLoop()).toBe(-1);
+        expect(player.getLoopCount()).toBe(-1);
     });
 });

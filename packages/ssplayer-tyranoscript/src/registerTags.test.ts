@@ -762,7 +762,7 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#0033FFBF' }, h.nextOrder);
 
     // Defaults: blend="mix" (0), priority="anime" (HoldUntilNextAnimation = 1).
-    expect(p.setPartColorOverride).toHaveBeenCalledWith('apple', 0, 0x0033ffbf, 1);
+    expect(p.setPartColorOverride).toHaveBeenCalledWith('apple', 0x0033ffbf, 0, 1);
     expect(savedSlot(h).chr.overrides).toEqual([
       { kind: 'color', part: 'apple', blendOp: 0, rgba: 0x0033ffbf, priority: 1 },
     ]);
@@ -773,10 +773,10 @@ describe('registerSSTags', () => {
     const p = FakeSSPlayer.instances[0];
 
     await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#F00', blend: 'mul', priority: 'permanent' }, h.nextOrder);
-    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 1, 0xff0000ff, 2);
+    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 0xff0000ff, 1, 2);
 
     await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '#F00', blend: '3', priority: '0' }, h.nextOrder);
-    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 3, 0xff0000ff, 0);
+    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 0xff0000ff, 3, 0);
   });
 
   it('ss_part_color leaves the player alone when the colour cannot be read', async () => {
@@ -1107,7 +1107,7 @@ describe('registerSSTags', () => {
     // A second player was built; it must carry the overrides the first one had.
     const restored = FakeSSPlayer.instances[1];
     expect(restored).toBeDefined();
-    expect(restored.setPartColorOverride).toHaveBeenCalledWith('apple', 0, 0x0033ffff, 2);
+    expect(restored.setPartColorOverride).toHaveBeenCalledWith('apple', 0x0033ffff, 0, 2);
     expect(restored.setPartVisibilityOverride).toHaveBeenCalledWith('heta', true, false);
   });
 });
