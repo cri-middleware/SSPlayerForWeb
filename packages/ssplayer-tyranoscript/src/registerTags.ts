@@ -985,7 +985,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         return;
       }
       const { player } = entry;
-      if (!player.isPlaying) {
+      // "Not advancing", not "not live": `isPlaying` stays true across a pause
+      // (a pause is a hold, not a stop), and a held player's animation-end
+      // listener can never fire — so waiting on one would block the scenario
+      // until something else resumed it.
+      if (!player.isPlaying || player.isPausing) {
         nextOrder();
         return;
       }

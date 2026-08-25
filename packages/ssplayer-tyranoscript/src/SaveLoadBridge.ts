@@ -105,7 +105,10 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       y: meta.y,
       scale: meta.scale,
       loop: meta.loop,
-      playing: player.isPlaying,
+      // "Was it advancing", which is what the restore replays: it calls
+      // `play()` for true and `pause()` for false, and `isPlaying` alone stays
+      // true across a pause — so a paused sprite would come back running.
+      playing: player.isPlaying && !player.isPausing,
       frame: player.frame,
       visible: meta.visible,
       zindex: meta.zindex,

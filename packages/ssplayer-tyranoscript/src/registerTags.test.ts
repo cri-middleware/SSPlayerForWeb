@@ -18,6 +18,9 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
 
   class FakePlayer {
     _playing = false;
+    // The instantaneous heading, which the audio manager gates playback on
+    // (SpriteStudio has no reverse audio). Forward unless a test says otherwise.
+    _playingForward = true;
     _endListeners = new Set<() => void>();
     _loopListeners = new Set<() => void>();
     _frameListeners = new Set<(frame: number) => void>();
@@ -41,10 +44,15 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2']);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
-    play = vi.fn(() => { this._playing = true; });
-    pause = vi.fn(() => { this._playing = false; });
-    resume = vi.fn(() => { this._playing = true; });
-    stop = vi.fn(() => { this._playing = false; });
+    // The runtime's three states, as the real player reports them: a pause is a
+    // hold, so `isPlaying` stays true across one and `isPausing` is what tells
+    // "held" from "stopped". A fake that folded the two into one flag would let
+    // the adapter's paused/stopped handling drift without a test noticing.
+    _pausing = false;
+    play = vi.fn(() => { this._playing = true; this._pausing = false; });
+    pause = vi.fn(() => { if (this._playing) this._pausing = true; });
+    resume = vi.fn(() => { this._pausing = false; });
+    stop = vi.fn(() => { this._playing = false; this._pausing = false; });
     destroy = vi.fn();
     // Part overrides: the real player returns false when the runtime rejects a
     // call; the fake accepts everything so the adapter's own bookkeeping is what
@@ -57,6 +65,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     clearPartVisibilityOverride = vi.fn(() => true);
     clearAllPartOverrides = vi.fn(() => true);
     get isPlaying() { return this._playing; }
+    get isPausing() { return this._pausing; }
+    get isPlayingForward() { return this._playingForward; }
     onAnimationEnd(cb: () => void) { this._endListeners.add(cb); return () => this._endListeners.delete(cb); }
     onAnimationLoop(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
     onFrame(cb: (frame: number) => void) { this._frameListeners.add(cb); return () => this._frameListeners.delete(cb); }
@@ -727,6 +737,14 @@ describe('registerSSTags', () => {
 
     p._fireAudio({ soundName: 'bgm_loop', loopNum: 0 }); // 0 → loop
     expect(played[1]).toEqual({ src: ['data/sound/bgm_loop.ogg'], loop: true });
+
+    // Reverse (or a ping-pong return leg): the player still reports the key —
+    // it is an observation channel — but nothing sounds, because SpriteStudio
+    // has no reverse audio and the gate lives on the playing, not the report.
+    p._playingForward = false;
+    p._fireAudio({ soundName: 'attack_se', loopNum: 1 });
+    expect(played).toHaveLength(2);
+    p._playingForward = true;
 
     vi.unstubAllGlobals();
   });
