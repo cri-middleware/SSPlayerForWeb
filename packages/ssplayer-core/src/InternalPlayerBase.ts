@@ -158,6 +158,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._instancePackResources.clear();
         this._ssabResource = new SSABResource(buffer);
         this.runtimeManager.bindResource(this._ssabResource);
+        // Nothing is set up on the new pack, whatever was set up on the old one.
+        // Without this, `setAnimation` would take a name that merely *matches*
+        // the previous pack's selection for "already selected" and skip the
+        // setup the new pack still needs — leaving it bound but unplayable.
+        this._animationName = '';
         // A new pack means new assets: re-arm the one-shot load.
         this._prepared = null;
         this._resourcesReady = false;
@@ -320,9 +325,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * yet still switches immediately (the runtime needs no textures to set up an
      * animation; the renderer simply has nothing to draw with until they land)
      * and the load is started in the background.
+     *
+     * **Selecting the animation already selected does nothing at all.** It is a
+     * switch, so with nothing to switch to it costs nothing and disturbs
+     * nothing: the playhead stays, the instance tree is not rebuilt, and the
+     * override layer survives. This is what every Player in the family does, and
+     * it is what lets a state machine call `setAnimation(state.clip)` every frame
+     * without thinking about it. To *restart* the animation call {@link play},
+     * which heads out; to drop the overrides call
+     * {@link clearAllPartOverrides}; to drop a playback section set one covering
+     * the whole animation.
      * @param animationName The name of the animation to set.
      */
     public setAnimation(animationName: string): void {
+        // Cleared by bindResource, so "the same name" can never mean a name that
+        // belongs to a pack this player no longer has bound.
+        if (animationName === this._animationName) return;
         this.runtimeManager.setupAnimation(animationName);
         this._animationName = animationName;
         // Per-transition in the runtime, so the caller's count has to go back on
@@ -439,6 +457,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
         this._ssabResource = resource;
         this.runtimeManager.bindResource(resource);
+        // As in bindResource: nothing is set up on the pack just bound. The
+        // caller (setupInstanceChildren) assigns the child's animation itself
+        // right after, so this only matters for a child rebound to another pack.
+        this._animationName = '';
         this._texturePaths = []; // Handled by parent
         // The parent loaded this pack's textures and resolved its instance packs
         // before creating us, so we are ready by construction: without this a
