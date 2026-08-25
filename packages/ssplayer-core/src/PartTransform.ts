@@ -34,7 +34,12 @@ export interface SSPartFollowOptions {
     position?: boolean;
     /** Drive the target's rotation from the part. Default true. */
     rotation?: boolean;
-    /** Drive the target's scale from the part. Default true. */
+    /**
+     * Drive the target's scale from the part. **Default false**: a follower is
+     * placed *at* the part, not *sized by* it, and a health bar or a name plate
+     * stretching with a breathing animation is rarely what was wanted. Turn it
+     * on for something that is part of the artwork — a weapon in a hand.
+     */
     scale?: boolean;
     /**
      * What to do on frames the part is hidden: `'follow'` keeps tracking it
@@ -186,7 +191,7 @@ export class SSPartFollower<T> {
             target,
             position: options.position ?? true,
             rotation: options.rotation ?? true,
-            scale: options.scale ?? true,
+            scale: options.scale ?? false,
             onHide: options.onHide ?? 'follow',
             addedAsChild,
             autoHidden: false,
