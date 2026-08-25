@@ -68,11 +68,13 @@ describe('SSPartFollower', () => {
         const f = new SSPartFollower<Target>(source, host);
         const t = target('sword');
 
-        f.attach('hand', t);
+        f.attach('hand', t, { scale: true });
         expect(t.parented).toBe(true);
 
         f.update();
         // All three axes on → the exact affine, so skew and mirroring survive.
+        // `scale` has to be asked for: it is off by default, because a follower
+        // is placed at the part rather than sized by it.
         expect(t.affine).toEqual(at(10, 20));
         expect(t.decomposed).toBeNull();
     });
@@ -82,7 +84,7 @@ describe('SSPartFollower', () => {
         const f = new SSPartFollower<Target>(source, host);
         const t = target('sword');
 
-        f.attach('hand', t, { rotation: false });
+        f.attach('hand', t, { rotation: false, scale: true });
         f.update();
 
         expect(t.affine).toBeNull();
@@ -102,7 +104,8 @@ describe('SSPartFollower', () => {
         source.add('muzzle', 7, at(1, 2));
         f.update();
         expect(t.visible).toBe(true);
-        expect(t.affine).toEqual(at(1, 2));
+        expect(t.decomposed?.x).toBe(1);
+        expect(t.decomposed?.y).toBe(2);
     });
 
     it('only hides for a hidden part when asked to, and keeps following otherwise', () => {
@@ -118,7 +121,8 @@ describe('SSPartFollower', () => {
         hide.update();
 
         expect(a.visible).toBe(true);
-        expect(a.affine).toEqual(at(5, 5));
+        expect(a.decomposed?.x).toBe(5);
+        expect(a.decomposed?.y).toBe(5);
         expect(b.visible).toBe(false);
     });
 
@@ -155,7 +159,8 @@ describe('SSPartFollower', () => {
         expect(f.size).toBe(1);
 
         f.update();
-        expect(t.affine).toEqual(at(2, 2)); // the newer part won
+        expect(t.decomposed?.x).toBe(2);
+        expect(t.decomposed?.y).toBe(2); // the newer part won
     });
 
     it('detachAll clears everything, so teardown leaves no target hidden or parented', () => {
@@ -183,7 +188,8 @@ describe('SSPartFollower', () => {
         expect(t.parented).toBe(false);
 
         f.update();
-        expect(t.affine).toEqual(at(3, 4)); // still driven, just not re-parented
+        expect(t.decomposed?.x).toBe(3);
+        expect(t.decomposed?.y).toBe(4); // still driven, just not re-parented
         f.detach(t);
         expect(t.parented).toBe(false);
     });
@@ -196,6 +202,7 @@ describe('SSPartFollower', () => {
         f.attach(9, t);
         f.update();
 
-        expect(t.affine).toEqual(at(7, 8));
+        expect(t.decomposed?.x).toBe(7);
+        expect(t.decomposed?.y).toBe(8);
     });
 });

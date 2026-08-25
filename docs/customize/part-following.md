@@ -55,7 +55,7 @@ Every `part` argument takes either a **part name** or a **part index** (`number 
 |---|---|---|
 | `position` | `true` | Drive the target's position |
 | `rotation` | `true` | Drive the target's rotation |
-| `scale` | `true` | Drive the target's scale |
+| `scale` | `false` | Drive the target's scale. **Off by default** — a follower is placed *at* the part, not sized by it |
 | `onHide` | `'follow'` | Behaviour on frames where the part is hidden. `'follow'` (keep following) / `'hide'` (hide the target too) |
 | `addAsChild` | `true` | Parent the target under the player. As a child it inherits the player's own transform through the hierarchy and lands exactly on the part |
 

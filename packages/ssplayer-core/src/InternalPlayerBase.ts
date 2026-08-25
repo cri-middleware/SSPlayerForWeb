@@ -333,8 +333,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * it is what lets a state machine call `setAnimation(state.clip)` every frame
      * without thinking about it. To *restart* the animation call {@link play},
      * which heads out; to drop the overrides call
-     * {@link clearAllPartOverrides}; to drop a playback section set one covering
-     * the whole animation.
+     * {@link clearAllPartOverrides}.
+     *
+     * A playback section is not among the things that survive: a *real* switch
+     * resets it, because frame numbers mean nothing against a different
+     * animation. Call {@link setAnimationSection} again after each switch.
      * @param animationName The name of the animation to set.
      */
     public setAnimation(animationName: string): void {
