@@ -23,7 +23,7 @@
 
 - [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 初回リリース後に公開
 - [**日本語ドキュメント**](./docs/ja/index.md) · [**English docs**](./docs/index.md)
-- [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/) — SDK と全公式 Player の入口 — 🚧 初回リリース後に公開
+- [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player の入口 — 🚧 初回リリース後に公開
 
 ### クイックリンク (日本語)
 - [インストール](./docs/ja/setup/install.md)
