@@ -93,8 +93,8 @@ player.loopCount = -1;               // ループ回数は分離
 | SS6Player | 本バージョン | ペイロード |
 |---|---|---|
 | `SetUserDataCalback(fn)` | `onUserData(listener)` | `SSUserDataEvent`（int/string/rect/point + partIndex/partName） |
-| `SetPlayEndCallback(fn)` | `onAnimationEnd(listener)` | なし（指定したループ回数をすべて再生し終えたときに発火。無限ループでは発火しない） |
-| （なし・新規） | `onAnimationLoop(listener)` | なし（ループ境界ごと） |
+| `SetPlayEndCallback(fn)` | `onAnimationFinished(listener)` | なし（指定したループ回数をすべて再生し終えたときに発火。無限ループでは発火しない） |
+| （なし・新規） | `onAnimationLooped(listener)` | なし（ループ境界ごと） |
 | （なし・新規） | `onSignal(listener)` | `SSSignalEvent`（commandId + パラメータ） |
 | （なし・新規） | `onAudio(listener)` | `SSAudioEvent`（サウンドキュー） |
 
@@ -107,7 +107,7 @@ player.loopCount = -1;               // ループ回数は分離
 const off = player.onUserData((e) => {
   if (e.partName === 'attack') { /* ... */ }
 });
-player.onAnimationEnd(() => { /* 終了時 */ });
+player.onAnimationFinished(() => { /* 終了時 */ });
 // ...
 off(); // 解除
 ```

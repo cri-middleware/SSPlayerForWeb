@@ -12,16 +12,22 @@ const off = player.onUserData((e) => {
 player.onSignal((e) => console.log('signal', e.commandId, e.partName));
 player.onAudio((e) => playSound(e.soundName ?? e.soundNameHash, e.loopNum));
 
-player.onAnimationEnd(() => console.log('finished'));
-player.onAnimationLoop(() => console.log('looped'));
+player.onAnimationStarted(() => console.log('started'));
+player.onAnimationFinished(() => console.log('finished'));
+player.onAnimationLooped(() => console.log('looped'));
 
 off(); // unsubscribe
 ```
 
-`onAnimationEnd` / `onAnimationLoop` are derived from playback state. User data,
-signals, and sounds are fired frame-by-frame by the runtime.
+`onAnimationStarted` / `onAnimationFinished` / `onAnimationLooped` are derived from
+playback state. User data, signals, and sounds are fired frame-by-frame by the
+runtime.
 
-`onAnimationEnd` is the **edge** — it fires once, on the tick playback completed.
+`onAnimationStarted` fires when playback **heads out** — a `play()`, including one
+the `autoplay` attribute or a host script issued rather than your own code. A
+`resume()` does not fire it: lifting a pause carries on, it does not start.
+
+`onAnimationFinished` is the **edge** — it fires once, on the tick playback completed.
 If what you want is the standing state, read `player.isFinished`: it latches on
 completion and stays true until the next `play()` / `setAnimation()`, so a caller
 that was not subscribed when the edge went by can still ask whether the run is

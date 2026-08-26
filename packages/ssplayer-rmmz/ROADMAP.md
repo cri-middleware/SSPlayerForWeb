@@ -100,7 +100,7 @@ Still unverified:
 Three defects, each reproduced in real MZ before the fix and re-run after:
 
 - **A pending `playSSOnce` revert outlived the command that superseded it.**
-  `onAnimationEnd` is a player-level event, so the queued return-to-base fired at
+  `onAnimationFinished` is a player-level event, so the queued return-to-base fired at
   the end of *whatever* was playing by then: `playSSOnce` followed by
   `changeSSAnimation` to a finite animation snapped back to the old base as soon
   as the new animation ended. The follow-up listener now lives on the live

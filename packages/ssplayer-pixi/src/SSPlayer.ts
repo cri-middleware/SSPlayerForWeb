@@ -172,8 +172,9 @@ export class SSPlayer extends Container {
     private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
     private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
     private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
-    private readonly _animEndListeners = new Set<() => void>();
-    private readonly _animLoopListeners = new Set<() => void>();
+    private readonly _animStartedListeners = new Set<() => void>();
+    private readonly _animFinishedListeners = new Set<() => void>();
+    private readonly _animLoopedListeners = new Set<() => void>();
     private readonly _frameListeners = new Set<(frame: number) => void>();
 
     // --- Part following (part-following) ---
@@ -590,6 +591,7 @@ export class SSPlayer extends Container {
 
     public play(startFrame: number = -1) {
         this.internalPlayer.play(startFrame);
+        this._animStartedListeners.forEach(cb => cb());
     }
 
     public pause() {
@@ -645,7 +647,7 @@ export class SSPlayer extends Container {
 
     /**
      * Whether the last {@link update} crossed a loop boundary. A **pulse**, true
-     * only inside the tick that crossed — take {@link onAnimationLoop} instead if
+     * only inside the tick that crossed — take {@link onAnimationLooped} instead if
      * you would rather have it delivered than polled.
      */
     public get justLooped(): boolean {
@@ -663,7 +665,7 @@ export class SSPlayer extends Container {
      * the next {@link play} or {@link setAnimation}. Never true under an
      * infinite loop count, and **not raised by {@link stop}** — so unlike
      * `!isPlaying` it tells a run that ended on its own apart from one that was
-     * stopped. Take {@link onAnimationEnd} for the one-shot edge.
+     * stopped. Take {@link onAnimationFinished} for the one-shot edge.
      */
     public get isFinished(): boolean {
         return this.internalPlayer.isFinished;
@@ -849,16 +851,26 @@ export class SSPlayer extends Container {
         return () => { this._audioListeners.delete(listener); };
     }
 
+    /**
+     * Fires when playback heads out — a `play()`, including one an autoplay or a
+     * host script issued rather than the caller. Not a resume: lifting a pause
+     * carries on, it does not start.
+     */
+    public onAnimationStarted(listener: () => void): Unsubscribe {
+        this._animStartedListeners.add(listener);
+        return () => { this._animStartedListeners.delete(listener); };
+    }
+
     /** Fires once every configured loop has played. Never under an infinite loop count, nor on stop(). */
-    public onAnimationEnd(listener: () => void): Unsubscribe {
-        this._animEndListeners.add(listener);
-        return () => { this._animEndListeners.delete(listener); };
+    public onAnimationFinished(listener: () => void): Unsubscribe {
+        this._animFinishedListeners.add(listener);
+        return () => { this._animFinishedListeners.delete(listener); };
     }
 
     /** Fires on each loop boundary crossing. */
-    public onAnimationLoop(listener: () => void): Unsubscribe {
-        this._animLoopListeners.add(listener);
-        return () => { this._animLoopListeners.delete(listener); };
+    public onAnimationLooped(listener: () => void): Unsubscribe {
+        this._animLoopedListeners.add(listener);
+        return () => { this._animLoopedListeners.delete(listener); };
     }
 
     /**
@@ -907,11 +919,11 @@ export class SSPlayer extends Container {
         const ctx = this.internalPlayer.runtimeManager.context;
 
         const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
-        if (finished && this._animEndListeners.size > 0) {
-            this._animEndListeners.forEach(cb => cb());
+        if (finished && this._animFinishedListeners.size > 0) {
+            this._animFinishedListeners.forEach(cb => cb());
         }
-        if (looped && this._animLoopListeners.size > 0) {
-            this._animLoopListeners.forEach(cb => cb());
+        if (looped && this._animLoopedListeners.size > 0) {
+            this._animLoopedListeners.forEach(cb => cb());
         }
 
         const count = ctx.get_passed_event_count();

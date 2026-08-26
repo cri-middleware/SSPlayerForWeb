@@ -207,7 +207,7 @@ function boot(): void {
     // having it fire afterwards and clobber whatever is playing by then.
     armLiveChain(
       pictureId,
-      player.onAnimationEnd(() => {
+      player.onAnimationFinished(() => {
         clearLiveChain(pictureId);
         revert();
       }),
@@ -254,7 +254,7 @@ function boot(): void {
       if (!isLast) {
         armLiveChain(
           pictureId,
-          player.onAnimationEnd(() => {
+          player.onAnimationFinished(() => {
             clearLiveChain(pictureId);
             i += 1;
             step();

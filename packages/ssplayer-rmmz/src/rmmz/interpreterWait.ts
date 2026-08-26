@@ -4,7 +4,7 @@
 // the tracked picture's animation finishes.
 //
 // Intended for a finite loop count (1, or any n > 0). An infinite loop never
-// fires onAnimationEnd, so waiting on one would block the event forever -- note
+// fires onAnimationFinished, so waiting on one would block the event forever -- note
 // that loopCount 0 is a synonym for infinite, not "play once".
 
 import { getLiveStatus } from './liveRegistry.js';

@@ -67,8 +67,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     get isPlaying() { return this._playing; }
     get isPausing() { return this._pausing; }
     get isPlayingForward() { return this._playingForward; }
-    onAnimationEnd(cb: () => void) { this._endListeners.add(cb); return () => this._endListeners.delete(cb); }
-    onAnimationLoop(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
+    onAnimationFinished(cb: () => void) { this._endListeners.add(cb); return () => this._endListeners.delete(cb); }
+    onAnimationLooped(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
     onFrame(cb: (frame: number) => void) { this._frameListeners.add(cb); return () => this._frameListeners.delete(cb); }
     onAudio(cb: (e: unknown) => void) { this._audioListeners.add(cb); return () => this._audioListeners.delete(cb); }
     _fireEnd() { for (const cb of [...this._endListeners]) cb(); }
