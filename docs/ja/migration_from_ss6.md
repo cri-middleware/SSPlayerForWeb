@@ -53,7 +53,7 @@ player.play();
 | `SetFrame(frame)` | `frame`（get/set） | シーク。サブフレーム可 |
 | `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | 専用メソッドは廃止 |
 | `loop`（get/set, `-1`=無限） | `loopCount`（get/set, `-1`=無限） | `setAnimation` の後に設定 |
-| `SetAnimationSpeed(rate)`（負値で逆再生） | `speedScale`（get/set, 負値で逆再生） | 倍率指定 |
+| `SetAnimationSpeed(rate)`（負値で逆再生） | `speedScale`（get/set） | 倍率指定。**負値では逆再生しなくなりました** —— 下記参照 |
 | `SetAnimationFramerate(fps)`（非推奨） | `frameRate`（get/set） | 絶対 fps 指定 |
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | ループは `loopCount` に分離 |
 | （往復再生の直接指定なし） | `setPlaybackDirection(dir, style)` | Forward/Backward × Normal/PingPong |
@@ -62,13 +62,25 @@ player.play();
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | 同名 |
 | `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `frameRate` | |
 
+### `speedScale` に負値を渡しても逆再生しません
+
+表の中で唯一、黙って挙動が変わる項目なので明記します。SS6Player は
+`SetAnimationSpeed(-2.0)` で逆再生しました。本バージョンではランタイムが `0` 以下の
+レートを**停止**にクランプします。再生ヘッドはその場で止まり、`speedScale` は実際に
+なった値である `0` を返し、意図と違うことを示すものは何も出ません。向きを変えるのは
+`setPlaybackDirection` の役目です。別の操作に分かれているおかげで両者を組み合わせられるので、
+逆再生しながら速度を落とす／上げることもできます。
+
 ```ts
+import { WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-pixi';
+
 // SS6Player: 2倍速で逆再生、区間 10〜30 フレーム
 //   player.SetAnimationSpeed(-2.0);
 //   player.SetAnimationSection(10, 30, 0);
 
 // 本バージョン:
-player.speedScale = -2.0;            // 負値で逆再生
+player.setPlaybackDirection(WebPlaybackDirection.Backward, WebPlaybackStyle.Normal);
+player.speedScale = 2.0;             // 大きさだけ。負値にすると停止してしまう
 player.setAnimationSection(10, 30);  // 区間指定
 player.loopCount = -1;               // ループ回数は分離
 ```
