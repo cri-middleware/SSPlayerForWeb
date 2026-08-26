@@ -293,6 +293,19 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public get isPausing(): boolean {
     return this.internalPlayer.isPausing;
   }
+
+  /**
+   * Whether every configured loop has played.
+   *
+   * A **state**, not a pulse: it latches on completion and stays true until
+   * the next {@link play} or {@link setAnimation}. Never true under an
+   * infinite loop count, and **not raised by {@link stop}** — so unlike
+   * `!isPlaying` it tells a run that ended on its own apart from one that was
+   * stopped. Take {@link onAnimationEnd} for the one-shot edge.
+   */
+  public get isFinished(): boolean {
+    return this.internalPlayer.isFinished;
+  }
   /**
    * Whether the playhead is walking forwards right now — the instantaneous
    * heading, so a ping-pong on its return leg reads false while the configured

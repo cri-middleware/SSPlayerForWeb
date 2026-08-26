@@ -43,6 +43,8 @@ player.frame;               // 現在フレーム（get / set）
 player.speedScale = 1.5;    // 再生速度倍率
 player.isPlaying;           // 再生中か
 player.isPausing;           // 一時停止中か
+player.isFinished;          // 設定したループを全て再生し終えたか。次の play() / setAnimation() まで貼り付き、
+                            // 無限ループでは立たず、stop() でも立たない（＝自然に終わったのか止めたのかを区別できる）
 player.frameRate;                 // フレームレート（get / set）
 player.totalFrames;         // 現在の再生範囲のフレーム数
 player.startFrame;          // 範囲の開始フレーム

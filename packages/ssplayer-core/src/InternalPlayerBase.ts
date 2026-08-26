@@ -692,6 +692,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
+     * Whether every configured loop has played.
+     *
+     * A **state**, not a pulse: it latches when playback completes and stays
+     * true until the next {@link play} or {@link setAnimation}. Never true under
+     * an infinite loop count, and **not raised by {@link stop}** — a commanded
+     * stop is not a completion, which is what makes this readable as "the run
+     * ended on its own" where `!isPlaying` cannot tell the two apart.
+     *
+     * For a one-shot notification take the edge instead — {@link justFinished},
+     * or the player's own animation-end listener.
+     */
+    public get isFinished(): boolean {
+        return this.runtimeManager.context.is_finished();
+    }
+
+    /**
      * Whether the playhead is currently walking forwards.
      *
      * The *instantaneous heading*, not the configured direction: a ping-pong on
