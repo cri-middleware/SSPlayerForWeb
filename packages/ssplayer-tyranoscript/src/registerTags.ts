@@ -1191,7 +1191,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       else entry.player.pause();
       // After play/pause: starting playback rewinds, so seeking first would be
       // undone. A save written before frames were recorded has no frame.
-      if (typeof s.frame === 'number') entry.player.frame = s.frame;
+      if (typeof s.frame === 'number') entry.player.frameNo = s.frame;
       // Re-arm the follow-up only for a player that is actually running;
       // a paused one would sit on a listener that can never fire.
       if (s.next && s.playing) armChain(entry, persist);

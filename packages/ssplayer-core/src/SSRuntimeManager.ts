@@ -434,6 +434,18 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Part names in part-index order, empty before an animation is set up.
+     *
+     * A part authored without a name reads as the empty string rather than
+     * being skipped, so the list stays index-aligned with the parts table and
+     * with the `partIndex` every event carries.
+     */
+    public getPartNames(): string[] {
+        const names = this.partNames;
+        return names ? names.map((n) => n ?? '') : [];
+    }
+
+    /**
      * Returns the total number of parts in the current animation.
      */
     public getPartsCount(): number {

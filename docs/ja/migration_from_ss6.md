@@ -50,8 +50,8 @@ player.play();
 | `Setup(pack, anime)` / コンストラクタ引数 | `setAnimation(name)` | パック名不要。アニメ名のみ |
 | `Play(frameNo?)` | `play(startFrame = -1)` | `-1` は現在フレームから |
 | `Pause()` / `Resume()` / `Stop()` | `pause()` / `resume()` / `stop()` | |
-| `SetFrame(frame)` | `frame`（get/set） | シーク。サブフレーム可 |
-| `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | 専用メソッドは廃止 |
+| `SetFrame(frame)` | `frameNo`（get/set） | シーク。サブフレーム可 |
+| `NextFrame()` / `PrevFrame()` | `frameNo = frameNo ± 1` | 専用メソッドは廃止 |
 | `loop`（get/set, `-1`=無限） | `loopCount`（get/set, `-1`=無限） | `setAnimation` の後に設定 |
 | `SetAnimationSpeed(rate)`（負値で逆再生） | `speedScale`（get/set） | 倍率指定。**負値では逆再生しなくなりました** —— 下記参照 |
 | `SetAnimationFramerate(fps)`（非推奨） | `frameRate`（get/set） | 絶対 fps 指定 |
@@ -147,7 +147,7 @@ player.setPartVisibilityOverride('body', true);
 パーツ照会 API は従来どおりです。
 
 ```ts
-player.getPartsCount();               // パーツ数
+player.getPartNames();               // パーツ名の一覧（パーツ index 順。length が個数）
 player.findPartIndex('body');  // パーツ名 → インデックス（不明なら -1）
 ```
 

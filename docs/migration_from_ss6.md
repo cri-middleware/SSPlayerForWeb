@@ -50,8 +50,8 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | `Setup(pack, anime)` / constructor args | `setAnimation(name)` | No pack name; anime name only |
 | `Play(frameNo?)` | `play(startFrame = -1)` | `-1` = from current frame |
 | `Pause()` / `Resume()` / `Stop()` | `pause()` / `resume()` / `stop()` | |
-| `SetFrame(frame)` | `frame` (get/set) | Seek; subframe-capable |
-| `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | Dedicated methods removed |
+| `SetFrame(frame)` | `frameNo` (get/set) | Seek; subframe-capable |
+| `NextFrame()` / `PrevFrame()` | `frameNo = frameNo ± 1` | Dedicated methods removed |
 | `loop` (get/set, `-1` = infinite) | `loopCount` (get/set, `-1` = infinite) | Set it after `setAnimation` |
 | `SetAnimationSpeed(rate)` (negative = reverse) | `speedScale` (get/set) | Speed multiplier. **A negative rate no longer reverses** — see below |
 | `SetAnimationFramerate(fps)` (deprecated) | `frameRate` (get/set) | Absolute fps |
@@ -60,7 +60,7 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | `SetAlpha(alpha)` | `player.alpha` (Pixi standard) | Use the standard `Container` property |
 | `GetPartIndexFromName(name)` | `findPartIndex(name)` | `-1` when the part is unknown |
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | Same names |
-| `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `frameRate` | |
+| `frameNo` / `totalFrame` / `fps` | `frameNo` / `totalFrames` / `frameRate` | Same name for the playhead |
 
 ### A negative `speedScale` no longer reverses
 
@@ -148,7 +148,7 @@ player.setPartVisibilityOverride('body', true);
 The part-query APIs are unchanged:
 
 ```ts
-player.getPartsCount();        // number of parts
+player.getPartNames();        // part names, in part-index order (length = the count)
 player.findPartIndex('body');  // part name → index (-1 if unknown)
 ```
 

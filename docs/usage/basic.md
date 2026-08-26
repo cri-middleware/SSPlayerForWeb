@@ -40,7 +40,7 @@ player.stop();              // stop — the playhead stays where it stands (play
 ## Frame and speed
 
 ```ts
-player.frame;               // current frame (get / set)
+player.frameNo;             // current frame, fractional (get / set)
 player.speedScale = 1.5;    // playback speed multiplier
 player.isPlaying;           // whether playback is running
 player.isPausing;           // whether playback is paused
@@ -110,7 +110,7 @@ There are no TyranoScript / TyranoBuilder tags for these; reach the player from 
 ## Part lookup
 
 ```ts
-player.getPartsCount();          // number of parts
+player.getPartNames();          // number of parts
 player.findPartIndex('body');    // name → index (-1 if unknown)
 ```
 

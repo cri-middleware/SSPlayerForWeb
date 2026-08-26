@@ -103,7 +103,7 @@ Following is driven after that frame's world matrices are final, so the target u
 
 Following rides on the playback drive.
 
-- **Stopped (`stop()`)** — `SSPlayer` (PixiJS / MZ) early-returns out of `update()`, so **both the following and `onFrame` stop**. Seeking with `player.frame` while stopped does not update the following either.
+- **Stopped (`stop()`)** — `SSPlayer` (PixiJS / MZ) early-returns out of `update()`, so **both the following and `onFrame` stop**. Seeking with `player.frameNo` while stopped does not update the following either.
 - **Paused (`pause()`)** — `SSPlayer` (PixiJS / MZ) keeps both the following and `onFrame` running. `SSPlayer` (WebGL) does not fire `onFrame`.
 
 ## Following by hand (the pull API)

@@ -169,7 +169,7 @@ CDN 経由）ではバンドラが行う自動パス解決が効きません。�
 ```ts
 player.play(startFrame?);  player.pause();  player.resume();  player.stop();
 
-player.frame;                       // get/set the current frame
+player.frameNo;                       // get/set the current frame
 player.speedScale = 1.5;            // playback speed multiplier
 player.loopCount;                   // 設定したループ回数（-1 = 無限）
 player.totalFrames; player.startFrame; player.endFrame; player.fps;
@@ -177,7 +177,7 @@ player.isPlaying; player.isPausing;
 
 player.setAnimationSection(start, end);
 player.setPlaybackDirection(direction, style);
-player.getPartsCount();
+player.getPartNames();
 player.getPartIndexFromName('body');
 ```
 

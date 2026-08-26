@@ -109,7 +109,7 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       // `play()` for true and `pause()` for false, and `isPlaying` alone stays
       // true across a pause — so a paused sprite would come back running.
       playing: player.isPlaying && !player.isPausing,
-      frame: player.frame,
+      frame: player.frameNo,
       visible: meta.visible,
       zindex: meta.zindex,
       next: meta.next,

@@ -32,7 +32,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _loopWrites: number[] = [];
     get loopCount() { return this._loopWrites[this._loopWrites.length - 1] ?? -1; }
     set loopCount(v: number) { this._loopWrites.push(v); }
-    frame = 0;
+    frameNo = 0;
     order = 0;
     alpha = 1;
     // The overlay drives this from the element rect; tests only need the size,
@@ -581,7 +581,7 @@ describe('registerSSTags', () => {
   it('restores the frame the save was taken on', async () => {
     const h = await withPlayer();
     const [live] = FakeSSPlayer.instances;
-    live.frame = 42;
+    live.frameNo = 42;
 
     // The engine announces a save before it clones `stat`; that is when the
     // frame has to reach the mirror.
@@ -592,7 +592,7 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_restore, {}, h.nextOrder);
 
     const [rebuilt] = FakeSSPlayer.instances;
-    expect(rebuilt.frame).toBe(42);
+    expect(rebuilt.frameNo).toBe(42);
     // Seeking has to happen after play(), which rewinds.
     expect(rebuilt.play).toHaveBeenCalled();
   });
