@@ -581,6 +581,17 @@ export class SSPlayer extends Container {
      * Playback settings are separate properties — set {@link loopCount} after
      * this, the way the Godot / Unity players do it.
      */
+    /**
+     * Every animation in the bound pack, in the order the `.ssab` lists them.
+     *
+     * The names {@link setAnimation} takes, so a host can check one before
+     * calling rather than finding out at play time. Read out of the pack when it
+     * is bound, so this costs no second read of the `.ssab`.
+     */
+    public getAnimationNames(): readonly string[] {
+        return this.internalPlayer.animationNames;
+    }
+
     public setAnimation(animationName: string): void {
         this.internalPlayer.setAnimation(animationName);
     }
@@ -690,6 +701,16 @@ export class SSPlayer extends Container {
 
     public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle) {
         this.internalPlayer.setPlaybackDirection(direction, style);
+    }
+
+    /** The configured heading — not the instantaneous one, which is {@link isPlayingForward}. */
+    public getPlaybackDirection(): WebPlaybackDirection {
+        return this.internalPlayer.getPlaybackDirection();
+    }
+
+    /** What the playhead does at the far end of the section. */
+    public getPlaybackStyle(): WebPlaybackStyle {
+        return this.internalPlayer.getPlaybackStyle();
     }
 
     public get loopCount(): number {
