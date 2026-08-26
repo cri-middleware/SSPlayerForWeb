@@ -39,7 +39,7 @@ player.stop();              // 停止 — 再生ヘッドはその場に留ま�
 ## フレーム・速度
 
 ```ts
-player.frame;               // 現在フレーム（get / set）
+player.frameNo;             // 現在フレーム。小数（get / set）
 player.speedScale = 1.5;    // 再生速度倍率
 player.isPlaying;           // 再生中か
 player.isPausing;           // 一時停止中か
@@ -109,7 +109,7 @@ TyranoScript / TyranoBuilder のタグは用意していません。スクリプ
 ## パーツ照会
 
 ```ts
-player.getPartsCount();          // パーツ数
+player.getPartNames();          // パーツ数
 player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
 

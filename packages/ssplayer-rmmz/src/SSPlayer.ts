@@ -265,10 +265,10 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public get animationName(): string {
     return this.internalPlayer.animationName;
   }
-  public get frame(): number {
+  public get frameNo(): number {
     return this.internalPlayer.getFrameNo();
   }
-  public set frame(value: number) {
+  public set frameNo(value: number) {
     this.internalPlayer.setFrame(value);
   }
   public get totalFrames(): number {
@@ -455,6 +455,17 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   /** Cell-map names in the loaded .ssab (for discovering cell-override targets). */
+  /**
+   * Part names in part-index order, empty before an animation is set up.
+   *
+   * A part authored without a name reads as the empty string, so the list stays
+   * aligned with the `partIndex` every event carries. `length` is the part
+   * count — there is no separate accessor for it.
+   */
+  public getPartNames(): string[] {
+    return this.internalPlayer.getPartNames();
+  }
+
   public getCellmapNames(): string[] {
     return this.internalPlayer.getCellmapNames();
   }

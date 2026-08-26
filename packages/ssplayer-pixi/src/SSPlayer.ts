@@ -611,11 +611,11 @@ export class SSPlayer extends Container {
         this.internalPlayer.resume();
     }
 
-    public get frame(): number {
+    public get frameNo(): number {
         return this.internalPlayer.getFrameNo();
     }
 
-    public set frame(value: number) {
+    public set frameNo(value: number) {
         this.internalPlayer.setFrame(value);
     }
 
@@ -708,8 +708,15 @@ export class SSPlayer extends Container {
         this.internalPlayer.setFrameSkipEnabled(value);
     }
 
-    public getPartsCount(): number {
-        return this.internalPlayer.runtimeManager.getPartsCount();
+    /**
+     * Part names in part-index order, empty before an animation is set up.
+     *
+     * A part authored without a name reads as the empty string, so the list
+     * stays aligned with the `partIndex` every event carries. `length` is the
+     * part count — there is no separate accessor for it.
+     */
+    public getPartNames(): string[] {
+        return this.internalPlayer.getPartNames();
     }
 
     // --- Part following: transform read-out ---

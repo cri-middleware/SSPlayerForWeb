@@ -436,8 +436,8 @@ export class SSPlayer {
     this.internalPlayer.stop();
   }
 
-  public get frame(): number { return this.internalPlayer.getFrameNo(); }
-  public set frame(v: number) { this.internalPlayer.setFrame(v); }
+  public get frameNo(): number { return this.internalPlayer.getFrameNo(); }
+  public set frameNo(v: number) { this.internalPlayer.setFrame(v); }
 
   /** Frames in the current playback range, inclusive of both ends. */
   public get totalFrames(): number { return this.internalPlayer.getTotalFrames(); }
@@ -680,8 +680,15 @@ export class SSPlayer {
   }
 
   /** Number of parts in the current animation; indices run `0 .. count - 1`. */
-  public getPartsCount(): number {
-    return this.internalPlayer.runtimeManager.getPartsCount();
+  /**
+   * Part names in part-index order, empty before an animation is set up.
+   *
+   * A part authored without a name reads as the empty string, so the list stays
+   * aligned with the `partIndex` every event carries. `length` is the part
+   * count — there is no separate accessor for it.
+   */
+  public getPartNames(): string[] {
+    return this.internalPlayer.getPartNames();
   }
 
   /** Force-hide a part (or revert it to the animation), optionally cascading to its descendants. */

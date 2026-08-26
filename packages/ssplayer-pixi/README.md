@@ -167,7 +167,7 @@ A runnable copy of both is in [`examples/cdn`](../../examples/cdn/).
 ```ts
 player.play(startFrame?);  player.pause();  player.resume();  player.stop();
 
-player.frame;                       // get/set the current frame
+player.frameNo;                       // get/set the current frame
 player.speedScale = 1.5;            // playback speed multiplier
 player.loopCount;                   // configured loop count (-1 = infinite)
 player.totalFrames; player.startFrame; player.endFrame; player.fps;
@@ -175,7 +175,7 @@ player.isPlaying; player.isPausing;
 
 player.setAnimationSection(start, end);
 player.setPlaybackDirection(direction, style);
-player.getPartsCount();
+player.getPartNames();
 player.getPartIndexFromName('body');
 ```
 

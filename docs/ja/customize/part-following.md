@@ -114,7 +114,7 @@ player.detachFromPart(sword);
 
 追従は再生の駆動に乗って動きます。
 
-- **停止中（`stop()`）** — `SSPlayer`（PixiJS / MZ）は `update()` が早期 return するため、**追従も `onFrame` も止まります**。停止したまま `player.frame` でシークしても追従は更新されません。
+- **停止中（`stop()`）** — `SSPlayer`（PixiJS / MZ）は `update()` が早期 return するため、**追従も `onFrame` も止まります**。停止したまま `player.frameNo` でシークしても追従は更新されません。
 - **一時停止中（`pause()`）** — `SSPlayer`（PixiJS / MZ）は追従・`onFrame` とも継続します。`SSPlayer`（WebGL）は `onFrame` を発火しません。
 
 ## 手動で追従する（プル API）

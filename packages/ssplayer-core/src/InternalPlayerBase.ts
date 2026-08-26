@@ -980,6 +980,17 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * Cell-map names in the bound SSAB (no `.ssce` extension) — the namespace
      * {@link setPartCellOverride} takes.
      */
+    /**
+     * Part names in part-index order, empty before an animation is set up.
+     *
+     * A part authored without a name reads as the empty string, so the list
+     * stays aligned with the `partIndex` every event carries — which is what
+     * turns one back into something a human reads. `length` is the part count.
+     */
+    public getPartNames(): string[] {
+        return this.runtimeManager.getPartNames();
+    }
+
     public getCellmapNames(): string[] {
         return this.runtimeManager.getCellmapNames();
     }
