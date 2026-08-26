@@ -53,7 +53,7 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | `SetFrame(frame)` | `frame` (get/set) | Seek; subframe-capable |
 | `NextFrame()` / `PrevFrame()` | `frame = frame ± 1` | Dedicated methods removed |
 | `loop` (get/set, `-1` = infinite) | `loopCount` (get/set, `-1` = infinite) | Set it after `setAnimation` |
-| `SetAnimationSpeed(rate)` (negative = reverse) | `speedScale` (get/set, negative = reverse) | Speed multiplier |
+| `SetAnimationSpeed(rate)` (negative = reverse) | `speedScale` (get/set) | Speed multiplier. **A negative rate no longer reverses** — see below |
 | `SetAnimationFramerate(fps)` (deprecated) | `frameRate` (get/set) | Absolute fps |
 | `SetAnimationSection(s, e, loops)` | `setAnimationSection(s, e)` | Loop split out to `loopCount` |
 | (no direct ping-pong control) | `setPlaybackDirection(dir, style)` | Forward/Backward × Normal/PingPong |
@@ -62,13 +62,26 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | Same names |
 | `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `frameRate` | |
 
+### A negative `speedScale` no longer reverses
+
+This is the one behaviour change in the table that is silent, so it is worth
+calling out: SS6Player reversed on `SetAnimationSpeed(-2.0)`. Here the runtime
+clamps a zero or negative rate to a **stop** — the playhead freezes in place,
+`speedScale` reads back as the `0` it became, and nothing indicates the request
+was for something else. Reversing is `setPlaybackDirection`'s job — and being a
+separate control is what lets the two compose, so a backward clip can still be
+slowed down or sped up.
+
 ```ts
+import { WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-pixi';
+
 // SS6Player: reverse at 2× over frames 10–30
 //   player.SetAnimationSpeed(-2.0);
 //   player.SetAnimationSection(10, 30, 0);
 
 // This version:
-player.speedScale = -2.0;            // negative = reverse
+player.setPlaybackDirection(WebPlaybackDirection.Backward, WebPlaybackStyle.Normal);
+player.speedScale = 2.0;             // magnitude only — a negative one would stop it
 player.setAnimationSection(10, 30);  // section
 player.loopCount = -1;               // loop count is separate
 ```
