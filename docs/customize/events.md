@@ -21,6 +21,13 @@ off(); // unsubscribe
 `onAnimationEnd` / `onAnimationLoop` are derived from playback state. User data,
 signals, and sounds are fired frame-by-frame by the runtime.
 
+`onAnimationEnd` is the **edge** — it fires once, on the tick playback completed.
+If what you want is the standing state, read `player.isFinished`: it latches on
+completion and stays true until the next `play()` / `setAnimation()`, so a caller
+that was not subscribed when the edge went by can still ask whether the run is
+over. Neither is raised by `stop()`, which is what separates them from
+`!isPlaying`.
+
 Each of those three carries `partIndex`, `partName` and **`frameNo`** — the frame
 its key is *authored* on, which is not necessarily the frame it was noticed on.
 One tick can step across several frames and fires every key in between, so the

@@ -44,6 +44,9 @@ player.frame;               // current frame (get / set)
 player.speedScale = 1.5;    // playback speed multiplier
 player.isPlaying;           // whether playback is running
 player.isPausing;           // whether playback is paused
+player.isFinished;          // whether every configured loop has played — sticky until the next play()/setAnimation(),
+                            // never true on an infinite loop, and NOT raised by stop(), so it tells a run that ended
+                            // on its own apart from one you stopped
 player.frameRate;                 // frame rate (get / set)
 player.totalFrames;         // frames in the current playback range
 player.startFrame;          // first frame of the range
