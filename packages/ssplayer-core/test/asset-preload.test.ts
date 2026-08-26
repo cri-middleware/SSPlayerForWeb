@@ -66,7 +66,7 @@ describe('asset loading is per-pack, not per-animation', () => {
         const returned = player.setAnimation('walk');
 
         expect(returned).toBeUndefined();
-        expect(player.animationName).toBe('walk');
+        expect(player.currentAnimation).toBe('walk');
     });
 
     it('switches immediately on an unprepared pack and loads it in the background', async () => {
@@ -74,7 +74,7 @@ describe('asset loading is per-pack, not per-animation', () => {
         const player = makePlayer(makeResourceManager(loadTexture));
 
         player.setAnimation('idle');
-        expect(player.animationName).toBe('idle'); // switched, textures or not
+        expect(player.currentAnimation).toBe('idle'); // switched, textures or not
 
         await player.prepareResources(); // the same load the switch kicked off
         expect(loadTexture).toHaveBeenCalledTimes(1);
