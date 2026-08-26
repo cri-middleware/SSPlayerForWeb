@@ -18,7 +18,7 @@ await player.load(ssabUrl); // textures, instance packs and sounds load from the
 
 ```ts
 player.setAnimation(name);  // select an animation (WebGL and PixiJS alike)
-player.animationName;       // current animation name
+player.currentAnimation;       // current animation name
 ```
 
 Playback settings are properties, not arguments — set `loopCount`, `speedScale` and the rest
@@ -52,7 +52,7 @@ player.totalFrames;         // frames in the current playback range
 player.startFrame;          // first frame of the range
 player.endFrame;            // last frame of the range
 player.loopCount;           // configured loop count (-1 = infinite; 0 asks for the same)
-player.animationName;       // the animation currently set up
+player.currentAnimation;       // the animation currently set up
 player.subFrameEnabled;     // sub-frame interpolation (on by default; smooth in slow motion / high-refresh)
 ```
 

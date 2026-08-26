@@ -262,8 +262,8 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
 
   // --- Accessors ---
 
-  public get animationName(): string {
-    return this.internalPlayer.animationName;
+  public get currentAnimation(): string {
+    return this.internalPlayer.currentAnimation;
   }
   public get frameNo(): number {
     return this.internalPlayer.getFrameNo();
@@ -731,7 +731,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // and inside renderAdvanced when filters/masks are present — so MZ screen
   // effects wrap us correctly). We forward to the registered ObjectRenderer.
   protected _render(renderer: Renderer): void {
-    if (!this.internalPlayer.animationName) return;
+    if (!this.internalPlayer.currentAnimation) return;
     const objectRenderer = (renderer as any).plugins?.[SSPLAYER_PLUGIN_NAME];
     if (!objectRenderer) return;
     (renderer as any).batch.setObjectRenderer(objectRenderer);

@@ -407,7 +407,7 @@ export class SSWebGLRenderer {
     flipY = false,
     tint?: ArrayLike<number> | null,
   ): void {
-    if (!player.animationName) return;
+    if (!player.currentAnimation) return;
 
     // Latch the player tint for this whole call (see _tint). Omitted → identity,
     // which is what every caller before per-player alpha existed relied on.
@@ -480,7 +480,7 @@ export class SSWebGLRenderer {
    * cannot express.
    */
   private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, maskingAllowed: boolean = true, inherited: InheritedStencilMask | null = null): void {
-    if (!player.animationName) return;
+    if (!player.currentAnimation) return;
 
     const gl = this.gl;
     const frameNo = player.getFrameNo();

@@ -596,8 +596,8 @@ export class SSPlayer extends Container {
         this.internalPlayer.setAnimation(animationName);
     }
 
-    public get animationName(): string {
-        return this.internalPlayer.animationName;
+    public get currentAnimation(): string {
+        return this.internalPlayer.currentAnimation;
     }
 
     public play(startFrame: number = -1) {

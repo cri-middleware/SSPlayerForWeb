@@ -81,7 +81,7 @@ describe('selecting the animation already selected', () => {
         player.setAnimation('walk');
         player.setAnimation('walk');
         expect(setupAnimation).toHaveBeenCalledTimes(1);
-        expect(player.animationName).toBe('walk');
+        expect(player.currentAnimation).toBe('walk');
     });
 
     it('still switches when the name actually changes, and back again', () => {
@@ -105,11 +105,11 @@ describe('selecting the animation already selected', () => {
         // too. Nothing is set up on it yet, so the switch has to happen — the
         // name matching what the PREVIOUS pack had selected means nothing.
         player.bindResource(new Uint8Array([0x53, 0x53, 0x41, 0x42]));
-        expect(player.animationName).toBe('');
+        expect(player.currentAnimation).toBe('');
 
         player.setAnimation('walk');
         expect(setupAnimation).toHaveBeenCalledTimes(2);
-        expect(player.animationName).toBe('walk');
+        expect(player.currentAnimation).toBe('walk');
     });
 
     it('sets up again after a shared pack is rebound under the same name', () => {
@@ -117,7 +117,7 @@ describe('selecting the animation already selected', () => {
 
         player.setAnimation('walk');
         player.bindSharedResource({ destroy: vi.fn() } as never);
-        expect(player.animationName).toBe('');
+        expect(player.currentAnimation).toBe('');
 
         player.setAnimation('walk');
         expect(setupAnimation).toHaveBeenCalledTimes(2);

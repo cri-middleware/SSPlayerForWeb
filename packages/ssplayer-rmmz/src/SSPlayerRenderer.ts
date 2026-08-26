@@ -41,7 +41,7 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
 
   public render(player: SSPlayer): void {
     const ip = player.internalPlayer;
-    if (!ip.animationName) return;
+    if (!ip.currentAnimation) return;
 
     const renderer = this.renderer as unknown as Renderer & {
       gl: GL;

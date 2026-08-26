@@ -59,7 +59,7 @@ function apply(printing: boolean): void {
     const player = getLivePlayer(pid);
     if (!player || player.getAnimationNames().length === 0) continue; // not loaded yet → retry
     const desired = printing && b.name === speaker ? b.talk : b.idle;
-    if (player.animationName === desired) continue; // already playing it — don't restart
+    if (player.currentAnimation === desired) continue; // already playing it — don't restart
     // Setting up an animation makes the runtime drop every override but the
     // Permanent ones. Here the author never asked for an animation change — the
     // swap is a transient decoration over whatever the scenario last set — so

@@ -503,7 +503,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /**
      * Gets the current animation name.
      */
-    public get animationName(): string {
+    public get currentAnimation(): string {
         return this._animationName;
     }
 

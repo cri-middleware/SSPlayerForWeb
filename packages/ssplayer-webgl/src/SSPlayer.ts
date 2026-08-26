@@ -304,7 +304,7 @@ export class SSPlayer {
 
   /** Whether this player contributes anything to the frame. */
   public get isVisible(): boolean {
-    return this.visible && this._alpha > 0 && !!this.internalPlayer.animationName;
+    return this.visible && this._alpha > 0 && !!this.internalPlayer.currentAnimation;
   }
 
   // --- Loading --------------------------------------------------------------
@@ -455,7 +455,7 @@ export class SSPlayer {
   public set frameRate(v: number) { this.internalPlayer.setFrameRate(v); }
 
   /** The animation currently set up, or `''` before the first `setAnimation`. */
-  public get animationName(): string { return this.internalPlayer.animationName; }
+  public get currentAnimation(): string { return this.internalPlayer.currentAnimation; }
 
   /**
    * Whether a playback session is live — **true while paused as well**, since a

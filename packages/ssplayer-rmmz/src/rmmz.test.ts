@@ -101,7 +101,7 @@ describe('SSPlayerRenderer', () => {
   });
 
   const makePlayer = (worldAlpha: number) => ({
-    internalPlayer: { animationName: 'Anime_1' },
+    internalPlayer: { currentAnimation: 'Anime_1' },
     resourceManager: {},
     worldTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     worldAlpha,
@@ -151,7 +151,7 @@ describe('SSPlayerRenderer', () => {
   it('skips a player with no animation set', () => {
     const r = new SSPlayerRenderer(makePixiRenderer() as any);
     const player = makePlayer(1) as any;
-    player.internalPlayer.animationName = '';
+    player.internalPlayer.currentAnimation = '';
     r.render(player);
 
     expect(ssRender).not.toHaveBeenCalled();

@@ -17,7 +17,7 @@ await player.load(ssabUrl); // テクスチャ・インスタンスパック・�
 
 ```ts
 player.setAnimation(name);  // アニメーションを選択（WebGL / PixiJS 共通）
-player.animationName;       // 現在のアニメーション名
+player.currentAnimation;       // 現在のアニメーション名
 ```
 
 再生設定は引数ではなくプロパティです（[再生制御](#再生制御)）。これらはアニメーションではなく
@@ -50,7 +50,7 @@ player.totalFrames;         // 現在の再生範囲のフレーム数
 player.startFrame;          // 範囲の開始フレーム
 player.endFrame;            // 範囲の終了フレーム
 player.loopCount;           // 設定したループ回数（-1 = 無限。0 も無限を意味します）
-player.animationName;       // 現在設定されているアニメーション名
+player.currentAnimation;       // 現在設定されているアニメーション名
 player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー再生や高リフレッシュで滑らか）
 ```
 

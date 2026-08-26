@@ -44,7 +44,7 @@ vi.mock('./SSWebGLResourceManager.js', () => ({
 vi.mock('@spritestudio/ssplayer-core', () => ({
   initializeWasm: vi.fn().mockResolvedValue(undefined),
   DirectInternalPlayer: class {
-    animationName = 'Anime_1';
+    currentAnimation = 'Anime_1';
     isPausing = false;
     audioManager: unknown = null;
     subFrameEnabled = false;
