@@ -107,6 +107,9 @@ export default withMermaid({
               },
             ],
           },
+          // The family entry point, carried in the nav of every sibling site so a reader who
+          // arrives from a search can reach the portal and the other players.
+          { text: 'SpriteStudio Docs', link: 'https://cri-middleware.github.io/SpriteStudio-Docs/' },
         ],
         sidebar: [
           {
@@ -196,6 +199,8 @@ export default withMermaid({
               },
             ],
           },
+          // ポータルへの戻り導線。日本語ロケール（/ja/）を指すこと。
+          { text: 'SpriteStudio Docs', link: 'https://cri-middleware.github.io/SpriteStudio-Docs/ja/' },
         ],
         sidebar: [
           {
