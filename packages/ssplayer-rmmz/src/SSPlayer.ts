@@ -481,6 +481,40 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     this.internalPlayer.setPlaybackDirection(direction, style);
   }
 
+  /** The configured heading — not the instantaneous one, which is {@link isPlayingForward}. */
+  public getPlaybackDirection(): WebPlaybackDirection {
+    return this.internalPlayer.getPlaybackDirection();
+  }
+
+  /** What the playhead does at the far end of the section. */
+  public getPlaybackStyle(): WebPlaybackStyle {
+    return this.internalPlayer.getPlaybackStyle();
+  }
+
+  /** First and last frame of the range being played — the section once one is set. */
+  public get startFrame(): number {
+    return this.internalPlayer.getAnimationSectionStart();
+  }
+  public get endFrame(): number {
+    return this.internalPlayer.getAnimationSectionEnd();
+  }
+
+  /** Sub-frame interpolation: whether what is drawn may sit between two authored frames. */
+  public get subFrameEnabled(): boolean {
+    return this.internalPlayer.subFrameEnabled;
+  }
+  public set subFrameEnabled(value: boolean) {
+    this.internalPlayer.subFrameEnabled = value;
+  }
+
+  /** On (the default) keeps playback on the wall clock; off advances one frame per tick. */
+  public get frameSkipEnabled(): boolean {
+    return this.internalPlayer.isFrameSkipEnabled();
+  }
+  public set frameSkipEnabled(value: boolean) {
+    this.internalPlayer.setFrameSkipEnabled(value);
+  }
+
   // --- Events (drained each update() via pollEvents; ported from ssplayer-pixi) ---
 
   public onUserData(l: (e: SSUserDataEvent) => void): Unsubscribe {
