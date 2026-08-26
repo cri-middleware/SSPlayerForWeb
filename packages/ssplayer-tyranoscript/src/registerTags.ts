@@ -424,7 +424,7 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
     const target = next.atframe;
     chain.push(player.onFrame((frame) => { if (frame >= target) fire(); }));
   } else {
-    chain.push(player.onAnimationEnd(fire));
+    chain.push(player.onAnimationFinished(fire));
   }
   entry.chain = chain;
 }
@@ -1001,8 +1001,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         unsubLoop();
         nextOrder();
       };
-      const unsubEnd = player.onAnimationEnd(finish);
-      const unsubLoop = player.onAnimationLoop(finish);
+      const unsubEnd = player.onAnimationFinished(finish);
+      const unsubLoop = player.onAnimationLooped(finish);
     },
   };
 

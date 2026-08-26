@@ -20,7 +20,7 @@ work (see *Blocked on SpriteStudio-SDK* below).
 *   [x] Stencil mask and Effect (particle) rendering.
 *   [x] SpriteStudio integration shaders (`ss-*`, the `SHDR` attribute).
 *   [x] Inline-asset path (`ArrayBuffer` / `Uint8Array` / data-URI; no fetch required).
-*   [x] Animation events (`onUserData` / `onSignal` / `onAudio` / `onAnimationEnd` / `onAnimationLoop`).
+*   [x] Animation events (`onUserData` / `onSignal` / `onAudio` / `onAnimationFinished` / `onAnimationLooped`).
 *   [x] Tree-shakeable optional modules and a `./lite` entry (`sideEffects: false`).
 *   [x] Optional `<ss-player>` custom element.
 *   [x] GL context-loss recovery (`webglcontextlost` / `restored`; rebuild GL objects and re-upload textures).

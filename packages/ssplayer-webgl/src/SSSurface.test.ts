@@ -358,3 +358,42 @@ describe('SSPlayer tint', () => {
     expect(player.isVisible).toBe(false);
   });
 });
+
+describe('SSPlayer onAnimationStarted', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('fires on play, takes more than one listener, and unsubscribes', () => {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+
+    const a: number[] = [];
+    const b: number[] = [];
+    const offA = player.onAnimationStarted(() => a.push(1));
+    player.onAnimationStarted(() => b.push(1));
+
+    player.play();
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
+
+    // Subscribing returns the unsubscribe, and it only detaches its own.
+    offA();
+    player.play();
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(2);
+  });
+
+  it('does not fire on resume — a resume carries on, it does not start', () => {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+
+    let started = 0;
+    player.onAnimationStarted(() => started++);
+
+    player.play();
+    player.pause();
+    player.resume();
+    player.stop();
+
+    expect(started).toBe(1);
+  });
+});

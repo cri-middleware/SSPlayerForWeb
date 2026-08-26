@@ -238,8 +238,8 @@ player.play(startFrame?);  player.pause();  player.resume();  player.stop();
 const off = player.onUserData((e) => console.log('userData', e.partName));
 player.onSignal((e) => console.log('signal', e.commandId));
 player.onAudio((e) => console.log('audio', e.soundName));  // notification hook — audio plays by default (see below)
-player.onAnimationEnd(() => {});
-player.onAnimationLoop(() => {});
+player.onAnimationFinished(() => {});
+player.onAnimationLooped(() => {});
 off();
 ```
 

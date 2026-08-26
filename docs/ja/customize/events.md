@@ -11,16 +11,21 @@ const off = player.onUserData((e) => {
 player.onSignal((e) => console.log('signal', e.commandId, e.partName));
 player.onAudio((e) => playSound(e.soundName ?? e.soundNameHash, e.loopNum));
 
-player.onAnimationEnd(() => console.log('finished'));
-player.onAnimationLoop(() => console.log('looped'));
+player.onAnimationStarted(() => console.log('started'));
+player.onAnimationFinished(() => console.log('finished'));
+player.onAnimationLooped(() => console.log('looped'));
 
 off(); // 購読解除
 ```
 
-`onAnimationEnd` / `onAnimationLoop` は再生状態から導出されます。ユーザーデータ /
-シグナル / サウンドはランタイムがフレーム単位で発火します。
+`onAnimationStarted` / `onAnimationFinished` / `onAnimationLooped` は再生状態から導出されます。
+ユーザーデータ / シグナル / サウンドはランタイムがフレーム単位で発火します。
 
-`onAnimationEnd` は**エッジ**で、再生が完了したティックに 1 回だけ発火します。状態のほうが
+`onAnimationStarted` は再生が **head-out** したときに発火します。自分のコードからの `play()` に
+限らず、`autoplay` 属性やホスト側スクリプトが呼んだものも含みます。`resume()` では発火しません —
+一時停止の解除は続行であって開始ではないからです。
+
+`onAnimationFinished` は**エッジ**で、再生が完了したティックに 1 回だけ発火します。状態のほうが
 欲しい場合は `player.isFinished` を読んでください。完了時に latch され、次の `play()` /
 `setAnimation()` まで貼り付くので、エッジが過ぎた後に接続した呼び出し側でも「終わったか」を
 問えます。どちらも `stop()` では立たず、そこが `!isPlaying` との違いです。

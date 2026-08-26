@@ -112,8 +112,9 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // Reused PIXI.Matrix (v5) for full-affine application; created lazily since
   // PIXI is only guaranteed present once MZ has booted.
   private _attachMatrix: any = null;
-  private _animEndListeners = new Set<() => void>();
-  private _animLoopListeners = new Set<() => void>();
+  private _animStartedListeners = new Set<() => void>();
+  private _animFinishedListeners = new Set<() => void>();
+  private _animLoopedListeners = new Set<() => void>();
 
   /**
    * @param gl the MZ shared WebGL context. Defaults to `Graphics._app.renderer.gl`
@@ -223,6 +224,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
 
   public play(startFrame = -1): void {
     this.internalPlayer.play(startFrame);
+    this._animStartedListeners.forEach((cb) => cb());
   }
   public pause(): void {
     this.internalPlayer.pause();
@@ -283,7 +285,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
   /**
    * Whether the last {@link update} crossed a loop boundary. A **pulse**, true
-   * only inside the tick that crossed — take {@link onAnimationLoop} instead if
+   * only inside the tick that crossed — take {@link onAnimationLooped} instead if
    * you would rather have it delivered than polled.
    */
   public get justLooped(): boolean {
@@ -301,7 +303,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * the next {@link play} or {@link setAnimation}. Never true under an
    * infinite loop count, and **not raised by {@link stop}** — so unlike
    * `!isPlaying` it tells a run that ended on its own apart from one that was
-   * stopped. Take {@link onAnimationEnd} for the one-shot edge.
+   * stopped. Take {@link onAnimationFinished} for the one-shot edge.
    */
   public get isFinished(): boolean {
     return this.internalPlayer.isFinished;
@@ -482,13 +484,22 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     this._audioListeners.add(l);
     return () => this._audioListeners.delete(l);
   }
-  public onAnimationEnd(l: () => void): Unsubscribe {
-    this._animEndListeners.add(l);
-    return () => this._animEndListeners.delete(l);
+  /**
+   * Fires when playback heads out — a `play()`, including one an autoplay or a
+   * host script issued rather than the caller. Not a resume: lifting a pause
+   * carries on, it does not start.
+   */
+  public onAnimationStarted(l: () => void): Unsubscribe {
+    this._animStartedListeners.add(l);
+    return () => this._animStartedListeners.delete(l);
   }
-  public onAnimationLoop(l: () => void): Unsubscribe {
-    this._animLoopListeners.add(l);
-    return () => this._animLoopListeners.delete(l);
+  public onAnimationFinished(l: () => void): Unsubscribe {
+    this._animFinishedListeners.add(l);
+    return () => this._animFinishedListeners.delete(l);
+  }
+  public onAnimationLooped(l: () => void): Unsubscribe {
+    this._animLoopedListeners.add(l);
+    return () => this._animLoopedListeners.delete(l);
   }
 
   /**
@@ -539,11 +550,11 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   private pollEvents(): void {
     const ctx = this.internalPlayer.runtimeManager.context;
     const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
-    if (finished && this._animEndListeners.size > 0) {
-      this._animEndListeners.forEach((cb) => cb());
+    if (finished && this._animFinishedListeners.size > 0) {
+      this._animFinishedListeners.forEach((cb) => cb());
     }
-    if (looped && this._animLoopListeners.size > 0) {
-      this._animLoopListeners.forEach((cb) => cb());
+    if (looped && this._animLoopedListeners.size > 0) {
+      this._animLoopedListeners.forEach((cb) => cb());
     }
 
     const count = ctx.get_passed_event_count();

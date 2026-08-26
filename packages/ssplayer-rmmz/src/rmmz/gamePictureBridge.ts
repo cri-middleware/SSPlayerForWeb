@@ -139,7 +139,7 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       const pid = this._pictureId;
       setLivePlayer(pid, child.player);
       // Drive waitForSS: mark ended when a non-looping animation finishes.
-      child.player.onAnimationEnd(() => markLivePlayerEnded(pid));
+      child.player.onAnimationFinished(() => markLivePlayerEnded(pid));
     }
 
     child

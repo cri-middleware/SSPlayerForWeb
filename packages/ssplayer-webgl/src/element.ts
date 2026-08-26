@@ -271,8 +271,8 @@ export class SSPlayerElement extends HTMLElement {
     // listen on the element. 'audio' carries the sound reference only — actual
     // playback requires an SSWebAudioManager attached to `el.player`.
     this._unsubscribe.push(
-      player.onAnimationEnd(() => this.emit('ended')),
-      player.onAnimationLoop(() => this.emit('loop')),
+      player.onAnimationFinished(() => this.emit('ended')),
+      player.onAnimationLooped(() => this.emit('loop')),
       player.onUserData((e: unknown) => this.emit('userdata', e)),
       player.onSignal((e: unknown) => this.emit('signal', e)),
       player.onAudio((e: unknown) => this.emit('audio', e)),
