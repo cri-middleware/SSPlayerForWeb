@@ -42,7 +42,8 @@
     "wasm",
     "README.md",
     "README.ja.md",
-    "LICENSE.md"
+    "LICENSE.md",
+    "LICENSE.ja.md"
   ],
   "publishConfig": {
     "access": "public"
