@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-tyranobuilder
 
-**TyranoBuilder** で **SpriteStudio 7** のアニメを使えるようにするプラグインです。
+**TyranoBuilder** で **SpriteStudio** のアニメを使えるようにするプラグインです。
 コンポーネントパレットから配置するだけで、シナリオを書く必要はありません。
 
 SpriteStudio のプロジェクトをフォルダに置いておくと、プロジェクトを開くたびに

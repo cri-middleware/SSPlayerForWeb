@@ -33,7 +33,7 @@ const demo = (text: string, link: string) => ({ text, link, target: '_blank', re
 //   3. Development           … understand the whole, then touch core / WASM
 export default withMermaid({
   title: 'SSPlayerForWeb',
-  description: 'SpriteStudio 7 player for the Web (WebAssembly + PixiJS / WebGL)',
+  description: 'SpriteStudio player for the Web (WebAssembly + PixiJS / WebGL)',
   lastUpdated: true,
   cleanUrls: true,
   lang: 'en',
@@ -173,7 +173,7 @@ export default withMermaid({
       link: '/ja/',
       // Feeds <meta name="description"> and the Open Graph tags on every ja page; without
       // it they inherit the top-level English description.
-      description: 'SpriteStudio 7 のアニメーションをブラウザーで再生するプレイヤー（WebAssembly + PixiJS / WebGL）',
+      description: 'SpriteStudio のアニメーションをブラウザーで再生するプレイヤー（WebAssembly + PixiJS / WebGL）',
       themeConfig: {
         outline: { level: [2, 3], label: '目次' },
         nav: [

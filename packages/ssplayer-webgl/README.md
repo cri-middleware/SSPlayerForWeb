@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-webgl
 
-Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio 7** player, driven by a Rust/WebAssembly core — with a drop-in **`<ss-player>` custom element** for declarative, zero-JavaScript use.
+Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio** player, driven by a Rust/WebAssembly core — with a drop-in **`<ss-player>` custom element** for declarative, zero-JavaScript use.
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
 

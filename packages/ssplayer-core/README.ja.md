@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-core
 
-**SpriteStudio 7** プレイヤーのためのエンジン非依存な WebAssembly コアです。
+**SpriteStudio** プレイヤーのためのエンジン非依存な WebAssembly コアです。
 
 > **対象読者:** 自分でレンダラーを作る開発者 / 上級インテグレーター — 新しいエンジンをバインドするための、エンジン非依存な WASM 再生コアです。
 > **インストール:** `npm install @spritestudio/ssplayer-core@beta`

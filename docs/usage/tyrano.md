@@ -10,7 +10,7 @@ distributed on **GitHub Releases** — but for now the only way to obtain it is 
 [build from source](#building-from-source).
 :::
 
-Show and play **SpriteStudio 7** (`.ssab`) animations inside a **TyranoScript** visual novel by
+Show and play **SpriteStudio** (`.ssab`) animations inside a **TyranoScript** visual novel by
 writing `[ss_*]` tags in your scenario — no coding required. Each animation is a real
 `<canvas>` mounted on a Tyrano layer, so it sits in the normal layer stack alongside
 characters, backgrounds, and messages.

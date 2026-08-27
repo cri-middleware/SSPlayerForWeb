@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-tyranoscript
 
-Show and play **SpriteStudio 7** animations in a **TyranoScript** visual novel by
+Show and play **SpriteStudio** animations in a **TyranoScript** visual novel by
 writing `[ss_*]` tags in your scenario — no coding required.
 
 > **Who this is for:** scenario writers using TyranoScript — a drop-in plugin

@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-core
 
-Engine-agnostic WebAssembly core for the **SpriteStudio 7** player.
+Engine-agnostic WebAssembly core for the **SpriteStudio** player.
 
 > **Who this is for:** developers building their own renderer / advanced integrators — the engine-agnostic WASM playback core to bind a new engine onto.
 > **Install:** `npm install @spritestudio/ssplayer-core@beta`

@@ -12,8 +12,8 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- **Initial public release (work in progress).** A collection of Web players that run OPTPiX
-  SpriteStudio 7 animations (`.ssab`) in the browser, sharing one WebAssembly core built on the
+- **Initial public release (work in progress).** A collection of Web players that run
+  SpriteStudio animations (`.ssab`) in the browser, sharing one WebAssembly core built on the
   SpriteStudio-SDK Rust runtime (`libssruntime`).
 - **Playback packages**:
     - `@spritestudio/ssplayer-core` — the engine-agnostic core (WASM runtime + `DrawBatch`

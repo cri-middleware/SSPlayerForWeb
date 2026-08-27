@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-rmmz
 
-Play **SpriteStudio 7** (`.ssab`) animations in **RPG Maker MZ** — shown in correct
+Play **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ** — shown in correct
 Z-order with your characters and pictures.
 
 > **Who this is for:** RPG Maker MZ game creators adding SpriteStudio animations via plugin commands — no coding required. Building the plugin itself? → [For contributors](#for-contributors--building-from-source).

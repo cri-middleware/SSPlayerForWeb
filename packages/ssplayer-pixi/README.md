@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-pixi
 
-PixiJS v8 renderer for the **SpriteStudio 7** player. High-performance **direct drawing** (batched meshes) driven by a Rust/WebAssembly core.
+PixiJS v8 renderer for the **SpriteStudio** player. High-performance **direct drawing** (batched meshes) driven by a Rust/WebAssembly core.
 
 > **Who this is for:** app developers already building on PixiJS v8 who want to play SpriteStudio `.ssab` animations in their app.
 > **Install:** `npm install @spritestudio/ssplayer-pixi@beta pixi.js` (needs `pixi.js@^8` as a peer dependency)
@@ -24,7 +24,7 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 
 - **Pixi renders; it doesn't author animation.** Anything past `AnimatedSprite`
   and spritesheets — bone rigs, mesh deformation, particle effects — means
-  hand-building an animation system or reaching for another runtime. SpriteStudio 7
+  hand-building an animation system or reaching for another runtime. SpriteStudio
   is that dedicated 2D editor, and this player drops the finished animation
   straight onto your stage.
 - **A whole scene, not just a character.** Compose characters, backgrounds,

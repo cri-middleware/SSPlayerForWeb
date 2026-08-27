@@ -14,7 +14,7 @@ distributed on **GitHub Releases** — but for now the only way to obtain it is 
 
 :::
 
-This plugin plays **SpriteStudio 7** (`.ssab`) animations in **RPG Maker MZ**. Because
+This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**. Because
 the animation is drawn straight into MZ's PixiJS v5 renderer, it sits in the correct
 Z-order with your characters and pictures.
 

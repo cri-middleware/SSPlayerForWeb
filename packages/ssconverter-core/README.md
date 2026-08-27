@@ -2,7 +2,7 @@
 
 # @spritestudio/ssconverter-core
 
-Engine-agnostic WebAssembly core that converts OPTPiX SpriteStudio 7 projects (`.sspj`) to runtime binaries (`.ssab` / `.ssqb`).
+Engine-agnostic WebAssembly core that converts SpriteStudio projects (`.sspj`) to runtime binaries (`.ssab` / `.ssqb`).
 
 > **Who this is for:** developers embedding `.sspj → .ssab` conversion into their own app, service, worker, or build pipeline — a bytes-in/bytes-out engine, no filesystem or DOM required.
 > **Install:** `npm install @spritestudio/ssconverter-core@beta`
