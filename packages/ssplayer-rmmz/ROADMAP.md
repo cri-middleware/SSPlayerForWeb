@@ -1,7 +1,6 @@
 # @spritestudio/ssplayer-rmmz Roadmap
 
-RPG Maker MZ (PixiJS v5) player for the SpriteStudio-SDK. Cold-start spec:
-[`../../SSPLAYER_RMMZ_SPEC.md`](../../SSPLAYER_RMMZ_SPEC.md). Project-wide roadmap:
+RPG Maker MZ (PixiJS v5) player for the SpriteStudio-SDK. Project-wide roadmap:
 [`../../ROADMAP.md`](../../ROADMAP.md).
 
 This file records **how much of the cold-start spec is implemented** and **what
