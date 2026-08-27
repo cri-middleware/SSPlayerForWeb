@@ -70,7 +70,7 @@ and [Live2D](https://tyrano.jp/sample/live2d_5) plugins. Everything here is save
 - [x] `wait=` on `[ss_move]` (opt-in; the default stays non-blocking).
 
 Deliberately **not** ported: `[spine_mix_anim]` / `[spine_config mixval]` (cross-animation
-blending — no SS7 runtime equivalent, see the FFI-gated item under "Open questions");
+blending — no SpriteStudio runtime equivalent, see the FFI-gated item under "Open questions");
 `skin=` and `[live2d_expression]` (already covered, and then some, by `[ss_part_*]`);
 `lip_time` / `lip_sound_level` / `breath` (Live2D parameter-rig specifics);
 `bgimage` (Tyrano's own background layer already does this).
