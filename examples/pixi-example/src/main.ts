@@ -60,8 +60,8 @@ async function main() {
     // authored; end/loop are derived from playback state. Drag-drop e.g.
     // UserData.ssab / Signal.ssab / Sound.ssab to see these fire. The runtime
     // plays no audio itself — onAudio hands the sound reference to the host.
-    player.onAnimationEnd(() => console.log('[SS][end] animation finished'));
-    player.onAnimationLoop(() => console.log('[SS][loop] animation looped'));
+    player.onAnimationFinished(() => console.log('[SS][end] animation finished'));
+    player.onAnimationLooped(() => console.log('[SS][loop] animation looped'));
     player.onUserData((e) => {
         console.log('[SS][userData]', e);
         showToast(`UserData @${e.partName ?? e.partIndex}`, 'info');
