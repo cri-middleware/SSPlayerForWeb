@@ -9,7 +9,8 @@
     "dist",
     "lang",
     "README.md",
-    "LICENSE.md"
+    "LICENSE.md",
+    "LICENSE.ja.md"
   ],
   "dependencies": {
     "@spritestudio/ssconverter-core": "workspace:^",
