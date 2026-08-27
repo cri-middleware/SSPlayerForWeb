@@ -9,7 +9,7 @@
 // API used (all on SSPlayer; the same methods exist on the WebGL and RMMZ
 // players, and on the core InternalPlayerBase underneath them):
 //   findPartIndex(partName)
-//   setPartColorOverride(part, blendOp, rgba, priority = HoldUntilNextAnimation)
+//   setPartColorOverride(part, rgba, blendOp = Mix, priority = HoldUntilNextAnimation)
 //   setPartVisibilityOverride(part, hide, cascade = false)
 //   setPartCellOverride(part, cellmapName, cellName, priority = HoldUntilNextAnimation)
 //   clearAllPartOverrides()
@@ -114,10 +114,10 @@ async function runDemo(player: SSPlayer) {
 
         // 1) Colour — tint the body (Normal parts only). The default priority
         //    (HoldUntilNextAnimation) keeps it through animation loops.
-        player.setPartColorOverride(partIndex, SSBlendOp.Mix, OVERRIDE_COLOR);
+        player.setPartColorOverride(partIndex, OVERRIDE_COLOR, SSBlendOp.Mix);
         await step(
             '1) Color override:  body -> blue',
-            `player.setPartColorOverride(${partIndex}, SSBlendOp.Mix, 0x${OVERRIDE_COLOR.toString(16).padStart(8, '0')})`,
+            `player.setPartColorOverride(${partIndex}, 0x${OVERRIDE_COLOR.toString(16).padStart(8, '0')}, SSBlendOp.Mix)`,
             2,
         );
 

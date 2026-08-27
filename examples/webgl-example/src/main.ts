@@ -61,8 +61,8 @@ async function main() {
   // Playback happens automatically regardless of whether you listen.
 
   // --- Animation event listeners (06_playback_control) ---
-  player.onAnimationEnd(() => console.log('[SS][end] animation finished'));
-  player.onAnimationLoop(() => console.log('[SS][loop] animation looped'));
+  player.onAnimationFinished(() => console.log('[SS][end] animation finished'));
+  player.onAnimationLooped(() => console.log('[SS][loop] animation looped'));
   player.onUserData((e) => {
     console.log('[SS][userData]', e);
     showToast(`UserData @${e.partName ?? e.partIndex}`, 'info');

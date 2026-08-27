@@ -1,4 +1,4 @@
-import type { SSCanvasPlayer } from '@spritestudio/ssplayer-webgl';
+import type { SSPlayer } from '@spritestudio/ssplayer-webgl';
 import type { ViewControls } from '../view/ViewControls.js';
 
 export type ToastType = 'info' | 'error' | 'warning' | 'success';
@@ -57,7 +57,7 @@ export class UIManager {
 
   private isDraggingSeekBar = false;
 
-  constructor(private player: SSCanvasPlayer, private view: ViewControls) {
+  constructor(private player: SSPlayer, private view: ViewControls) {
     this.setupControls();
   }
 
@@ -92,7 +92,7 @@ export class UIManager {
     this.seekBar.addEventListener('mouseup', () => { this.isDraggingSeekBar = false; });
     this.seekBar.addEventListener('input', (e) => {
       const val = parseFloat((e.target as HTMLInputElement).value);
-      this.player.frame = val;
+      this.player.frameNo = val;
       this.frameDisplay.textContent = `${val.toFixed(1)} / ${this.endFrame}`;
     });
 

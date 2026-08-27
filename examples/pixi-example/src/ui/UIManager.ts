@@ -88,7 +88,7 @@ export class UIManager {
         this.seekBar.addEventListener('mouseup', () => { this.isDraggingSeekBar = false; });
         this.seekBar.addEventListener('input', (e) => {
             const val = parseFloat((e.target as HTMLInputElement).value);
-            this.player.frame = val;
+            this.player.frameNo = val;
             this.frameDisplay.textContent = `${val.toFixed(1)} / ${this.player.endFrame}`;
         });
 
@@ -108,8 +108,8 @@ export class UIManager {
         // Update UI every frame
         Ticker.shared.add(() => {
             if (!this.isDraggingSeekBar && this.player.isPlaying && !this.player.isPausing) {
-                this.seekBar.value = this.player.frame.toString();
-                this.frameDisplay.textContent = `${this.player.frame.toFixed(1)} / ${this.player.endFrame}`;
+                this.seekBar.value = this.player.frameNo.toString();
+                this.frameDisplay.textContent = `${this.player.frameNo.toFixed(1)} / ${this.player.endFrame}`;
             }
         });
 
