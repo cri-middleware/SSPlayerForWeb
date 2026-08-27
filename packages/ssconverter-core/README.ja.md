@@ -2,7 +2,7 @@
 
 # @spritestudio/ssconverter-core
 
-OPTPiX SpriteStudio 7 のプロジェクト（`.sspj`）をランタイムバイナリ（`.ssab` / `.ssqb`）へ変換する、エンジン非依存な WebAssembly コアです。
+SpriteStudio のプロジェクト（`.sspj`）をランタイムバイナリ（`.ssab` / `.ssqb`）へ変換する、エンジン非依存な WebAssembly コアです。
 
 > **対象読者:** 自作のアプリ・サービス・Worker・ビルドパイプラインに `.sspj → .ssab` 変換を組み込みたい開発者 — bytes-in / bytes-out のエンジンで、ファイルシステムや DOM を前提としません。
 > **インストール:** `npm install @spritestudio/ssconverter-core@beta`

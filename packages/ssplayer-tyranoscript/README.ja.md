@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-tyranoscript
 
-**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio 7** の
+**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio** の
 アニメを表示・再生できます。プログラミングは不要です。
 
 > **対象読者:** TyranoScript を使うシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` タグを追加するドロップイン・プラグインです。

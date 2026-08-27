@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: SSPlayerForWeb
-  text: SpriteStudio 7 player for the Web
-  tagline: WebAssembly（Rust）× JavaScript のハイブリッド。WebGL や PixiJS などの Web グラフィックスで SpriteStudio 7 アニメーションを高速に再生します。
+  text: SpriteStudio player for the Web
+  tagline: WebAssembly（Rust）× JavaScript のハイブリッド。WebGL や PixiJS などの Web グラフィックスで SpriteStudio アニメーションを高速に再生します。
   actions:
     - theme: brand
       text: クイックスタート

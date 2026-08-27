@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-tyranobuilder
 
-Use **SpriteStudio 7** animations in **TyranoBuilder** — placed from the
+Use **SpriteStudio** animations in **TyranoBuilder** — placed from the
 component palette, with no scenario code to write.
 
 Drop a SpriteStudio project into a folder and the editor converts it for you

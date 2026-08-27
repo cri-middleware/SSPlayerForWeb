@@ -9,7 +9,7 @@ the folder layout may still change before `7.0.0`. Verified on **TyranoBuilder V
 distributed on **GitHub Releases** — for now, [build it from source](#building-from-source).
 :::
 
-Place **SpriteStudio 7** animations from TyranoBuilder's component palette, with no scenario
+Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
 code to write. Drop a SpriteStudio project into a folder in your game and the editor converts
 it for you — on every save, while you keep working.
 
