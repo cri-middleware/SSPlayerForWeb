@@ -1,4 +1,4 @@
-import { GeometryBuilder, DirectInternalPlayer, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, ssRuntime, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, ssRuntime, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
@@ -68,6 +68,12 @@ export class SSWebGLRenderer {
   // Mesh batches), with per-writer rank, OP, geometry, cutout threshold, and clip flag.
   private maskPlanner = new MaskPlanner();
   private maskSource = new FrameDataMaskSource();
+  // A SECOND planner/source, used only to plan a visible instance child's writers
+  // when carrying its clipping masks up into this context (§2-7). Kept separate
+  // so it never clobbers `maskPlanner`, whose plan + `_maskCursor` this context is
+  // still walking when it reaches the instance batch.
+  private bubblePlanner = new MaskPlanner();
+  private bubbleSource = new FrameDataMaskSource();
   // Cursor into the (rank-sorted) planner writer list: index of the next writer whose
   // scope transition to apply as content is drawn in ascending rank order (syncMasksTo).
   private _maskCursor = 0;
@@ -112,6 +118,13 @@ export class SSWebGLRenderer {
   // against an already-premultiplied fragment, so scaling only the alpha channel
   // would leave RGB unattenuated and fades would wash out instead of dimming.
   private readonly _tint = new Float32Array([1, 1, 1, 1]);
+  // The current context's uColor: the player `_tint` scaled by the parent-chain
+  // opacity (the product of the enclosing instance parts' alphas). A part's OWN
+  // alpha is already premultiplied into aColor.a by the GeometryBuilder, so this
+  // carries only the instance ancestry's — mirroring pixi's `mesh.alpha`. Stays
+  // premultiplied like `_tint`: scaling all four channels by the same factor
+  // keeps (rgb * a, a) valid. Reset per context in `_renderContext`.
+  private readonly _ctxTint = new Float32Array([1, 1, 1, 1]);
 
   // For Effect batching
   private _fxDesc: { partIdx: number, plan: any, cellmap: number, blend: number, quadCount: number, particleOffset: number, partAlpha: number }[] = [];
@@ -465,6 +478,13 @@ export class SSWebGLRenderer {
     }
   }
 
+  /** Set `_ctxTint` = the player tint scaled by the parent-chain opacity (§opacity). */
+  private applyCtxTint(parentAlpha: number): void {
+    const t = this._tint, ct = this._ctxTint;
+    ct[0] = t[0] * parentAlpha; ct[1] = t[1] * parentAlpha;
+    ct[2] = t[2] * parentAlpha; ct[3] = t[3] * parentAlpha;
+  }
+
   /**
    * Draw one player context (also invoked recursively for instance children).
    * `maskingAllowed` is false for instance children: masking is confined to the
@@ -479,7 +499,7 @@ export class SSWebGLRenderer {
    * clipped even when its caller was a target, which a single enclosing test
    * cannot express.
    */
-  private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, maskingAllowed: boolean = true, inherited: InheritedStencilMask | null = null): void {
+  private _renderContext(player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager, transform: Float32Array, maskingAllowed: boolean = true, inherited: InheritedStencilMask | null = null, parentAlpha: number = 1): void {
     if (!player.currentAnimation) return;
 
     const gl = this.gl;
@@ -503,10 +523,11 @@ export class SSWebGLRenderer {
     const pcp = this.partsColorProgram;
 
     // Position this context (uTransform) and seed the parent-chain colour from
-    // the player tint (identity unless the caller set one).
+    // the player tint scaled by the instance-ancestry opacity (`parentAlpha`).
     this.setTransformUniform(transform);
+    this.applyCtxTint(parentAlpha);
     if (pcp.uColor) {
-      gl.uniform4fv(pcp.uColor, this._tint);
+      gl.uniform4fv(pcp.uColor, this._ctxTint);
     }
 
     // The VAO (if any) already carries the attribute layout, bound once in render();
@@ -531,6 +552,10 @@ export class SSWebGLRenderer {
       this._maskCursor = 0;
       if (maskWriterCount > 0) this._prewritePureMasks(player, resourceManager, fd, gb);
     }
+    // Set once a visible instance child carries its clipping mask up into this
+    // context's stencil (§2-7): this player's parts drawn after that instance then
+    // become stencil-test targets even when it owns no writers of its own.
+    let carriedOpen = false;
 
     // Caller chain's composed mask context (§2-6). Root identity: influence
     // true / visibleInside false, so a top-level animation evaluates every part
@@ -600,9 +625,10 @@ export class SSWebGLRenderer {
       const batchBlend = b.blendType();
       const isContentKind = kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape;
       if (this._stencilSupported && isContentKind && batchInfluence && ctxInfluence &&
-          (maskWriterCount > 0 || inheritedActive)) {
+          (maskWriterCount > 0 || inheritedActive || carriedOpen)) {
         // Only a context that owns writers may advance the cursor; a child has no
-        // plan of its own and the caller already positioned the coverage.
+        // plan of its own, and coverage carried up from an instance child (§2-7) is
+        // already standing in the stencil — the caller positioned neither via a plan.
         this.drawMaskedContent(player, resourceManager, b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts, maskWriterCount > 0, ctxVisibleInside);
         continue;
       }
@@ -702,7 +728,7 @@ export class SSWebGLRenderer {
         // so the whole batch shares startRank's rank + polarity. Bring the coverage to
         // that rank, then keep the stencil test on for every quad draw below.
         const effectMasked = this._stencilSupported && batchInfluence && ctxInfluence &&
-                             (maskWriterCount > 0 || inheritedActive);
+                             (maskWriterCount > 0 || inheritedActive || carriedOpen);
         if (effectMasked) {
           if (maskWriterCount > 0) {
             this.syncMasksTo(startRank, player, resourceManager, fd, gb, meshVOff, meshIOff, shapeVertexCounts);
@@ -865,7 +891,7 @@ export class SSWebGLRenderer {
           // The child holds this slot for its whole render, so it must hand out a
           // different one to ITS children.
           this._depth++;
-          this._renderContext(child.player, resourceManager, composed, false, childInherited);
+          this._renderContext(child.player, resourceManager, composed, false, childInherited, parentAlpha * alpha);
           this._depth--;
 
           // Re-fetch WASM views in case the child's rendering grew WASM memory —
@@ -878,12 +904,24 @@ export class SSWebGLRenderer {
           meshIOff = player.runtimeManager.getMeshIndexOffsets();
           shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
 
+          // Carry the child's own clipping masks up into this context's stencil so
+          // they clip this player's parts drawn after the instance (§2-7). Only at
+          // maskingAllowed contexts (single-level: a sub-animation's grandchildren
+          // are not bubbled through). Writes in `composed` screen space; the state
+          // restore below returns to this context's transform/program.
+          if (this._stencilSupported && maskingAllowed &&
+              this._carryChildClipWriters(child, resourceManager, composed, instInfluence)) {
+            carriedOpen = true;
+          }
+
           // Restore this context's program state after the child rebound it —
-          // back to the PLAYER's tint, not identity (the child left its own).
+          // back to this context's tint (the child overwrote `_ctxTint` with its
+          // own parentAlpha), not identity.
           gl.useProgram(this.partsColorProgram.program);
           this.setTransformUniform(transform);
+          this.applyCtxTint(parentAlpha);
           if (pcp.uColor) {
-            gl.uniform4fv(pcp.uColor, this._tint);
+            gl.uniform4fv(pcp.uColor, this._ctxTint);
           }
           // The VAO stays bound across the child recursion (same buffers/program);
           // only the no-VAO path must re-bind the attribute pointers.
@@ -1017,7 +1055,7 @@ export class SSWebGLRenderer {
     gl.useProgram(prog.program);
     if (prog.uProjection) gl.uniformMatrix3fv(prog.uProjection, false, this.projMatrix);
     if (prog.uTransform) gl.uniformMatrix3fv(prog.uTransform, false, this.transformMatrix3);
-    if (prog.uColor) gl.uniform4fv(prog.uColor, this._tint);
+    if (prog.uColor) gl.uniform4fv(prog.uColor, this._ctxTint);
     if (prog.uTexture) gl.uniform1i(prog.uTexture, 0);
 
     const p = this._ssParams;
@@ -1100,12 +1138,12 @@ export class SSWebGLRenderer {
    * (0 Normal / 1 Shape / 2 Mesh).
    */
   private _writePlannedWriter(
-    mp: MaskProgram, resourceManager: SSWebGLResourceManager, w: number,
+    planner: MaskPlanner, mp: MaskProgram, resourceManager: SSWebGLResourceManager, w: number,
     fd: FrameData, gb: GeometryBuilder, stencilOp: number,
     meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
   ): void {
     const gl = this.gl;
-    const p = this.maskPlanner;
+    const p = planner;
     const texInfo = this.bindMaskTexture(mp, resourceManager, p.textureHash[w] >>> 0);
     if (mp.uThreshold) gl.uniform1f(mp.uThreshold, p.threshold[w]);
     gl.stencilOp(gl.KEEP, gl.KEEP, stencilOp);
@@ -1183,9 +1221,65 @@ export class SSWebGLRenderer {
     this.beginMaskWrite(mp);
     for (let w = 0; w < p.count; w++) {
       if (p.isClipping[w] !== 0) continue; // clipping added at its own rank (syncMasksTo)
-      this._writePlannedWriter(mp, resourceManager, w, fd, gb, p.opInvert[w] !== 0 ? gl.INVERT : gl.INCR_WRAP, meshVOff, meshIOff, shapeVertexCounts);
+      this._writePlannedWriter(p, mp, resourceManager, w, fd, gb, p.opInvert[w] !== 0 ? gl.INVERT : gl.INCR_WRAP, meshVOff, meshIOff, shapeVertexCounts);
     }
     this.endMaskWrite();
+  }
+
+  /**
+   * Carry a visible instance child's CLIPPING writers up into this context's
+   * shared stencil (§2-7): they must keep clipping this player's parts drawn after
+   * the instance. Written in the child's composed screen transform, so no per-child
+   * UV is needed (the stencil is screen-space). Each writer's op/plane follows its
+   * EFFECTIVE maskInfluence — its own AND the influence handed down to the instance
+   * (`instInfluence`) — so a mask inside a maskInfluence==0 instance lands on the
+   * counter plane (union) rather than the parity plane (matching SS7.5's mixed
+   * composition). Only clipping writers carry out; a pure mask closes within the
+   * sub-animation. Planned via `bubblePlanner` so this context's own plan / cursor
+   * survive. Like this renderer's own clipping writers, the carried ones are not
+   * closed here — the per-frame stencil clear reclaims them. Single-level (a direct
+   * instance child); nested carry-over is not handled. Returns whether any writer
+   * was carried, so the caller treats its later parts as stencil-test targets even
+   * when it owns no writers of its own.
+   */
+  private _carryChildClipWriters(
+    child: InstanceChildState<DirectInternalPlayer>, resourceManager: SSWebGLResourceManager,
+    composed: Float32Array, instInfluence: boolean
+  ): boolean {
+    const cm = child.player.runtimeManager;
+    const cfd = cm.getFrameData(child.player.getFrameNo());
+    if (!cfd) return false;
+    const cdo = cfd.drawOrderArray();
+    if (!cdo) return false;
+    const p = this.bubblePlanner;
+    this.bubbleSource.bind(cfd, cdo, cm);
+    const n = p.plan(this.bubbleSource);
+    if (n === 0) return false;
+
+    let any = false;
+    for (let w = 0; w < n; w++) { if (p.isClipping[w] !== 0) { any = true; break; } }
+    if (!any) return false;
+
+    const gl = this.gl;
+    const cgb = child.player.geometryBuilder;
+    cgb.parentMatrix = null;
+    cgb.updateWorldPositions();
+    const cMeshVOff = cm.getMeshVertexOffsets();
+    const cMeshIOff = cm.getMeshIndexOffsets();
+    const cShapeVC = cm.getShapeVertexCounts();
+
+    const mp = this.ensureMaskProgram();
+    // The child's writers land in its composed screen transform.
+    this.setTransformUniform(composed);
+    this.beginMaskWrite(mp);
+    for (let w = 0; w < n; w++) {
+      if (p.isClipping[w] === 0) continue; // only clipping carries out (§2-7)
+      const effOpInvert = p.opInvert[w] !== 0 && instInfluence;
+      const op = effOpInvert ? gl.INVERT : gl.INCR_WRAP;
+      this._writePlannedWriter(p, mp, resourceManager, w, cfd, cgb, op, cMeshVOff, cMeshIOff, cShapeVC);
+    }
+    this.endMaskWrite();
+    return true;
   }
 
   /**
@@ -1215,7 +1309,7 @@ export class SSWebGLRenderer {
       const op = p.isClipping[w] !== 0
         ? (opInvert ? gl.INVERT : gl.INCR_WRAP)   // clipping: forward scope begins → add
         : (opInvert ? gl.INVERT : gl.DECR_WRAP);  // pure: backward scope ended → remove
-      this._writePlannedWriter(mp, resourceManager, w, fd, gb, op, meshVOff, meshIOff, shapeVertexCounts);
+      this._writePlannedWriter(p, mp, resourceManager, w, fd, gb, op, meshVOff, meshIOff, shapeVertexCounts);
       this._maskCursor++;
     }
     this.endMaskWrite();
