@@ -1,4 +1,3 @@
-import { Assets } from 'pixi.js';
 import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 import { UIManager, showToast } from '../ui/UIManager.js';
 import {
@@ -20,15 +19,6 @@ export function resolveRelativePath(baseDir: string, relativePath: string): stri
         }
     }
     return parts.join('/');
-}
-
-export function fileToDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
 }
 
 export async function getFilesFromDirHandle(dirHandle: any, currentPath = '', currentDepth = 0, maxDepth = 4): Promise<{file: File, path: string}[]> {
@@ -232,22 +222,14 @@ export class DropLoader {
                 return;
             }
 
-            const registered = new Set<string>();
-            await Promise.all(texRefs.map(async ({ hash, expectedPath }) => {
-                const alias = hash.toString();
-                if (registered.has(alias)) return;
-                registered.add(alias);
+            const textures = new Map<number, Uint8Array>();
+            for (const { hash, expectedPath } of texRefs) {
+                if (textures.has(hash)) continue;
                 const texFileObj = this.loadedFiles.find(f => f.path === expectedPath)!;
-                const dataUrl = await fileToDataUrl(texFileObj.file);
-                if (!Assets.resolver.hasKey(alias)) {
-                    Assets.add({ alias, src: dataUrl });
-                }
-                await Assets.load(alias);
-            }));
+                textures.set(hash, new Uint8Array(await texFileObj.file.arrayBuffer()));
+            }
 
-            const ssabBlobUrl = URL.createObjectURL(ssabObj.file);
-            await this.player.load(ssabBlobUrl);
-            URL.revokeObjectURL(ssabBlobUrl);
+            await this.player.loadBuffer(buffer, textures);
 
             const anims = extractAnimationNames(buffer);
             this.ui.updateAnimationSelect(anims);

@@ -25,6 +25,13 @@ export interface IResourceManager {
     getTexture(hash: number): any;
 
     /**
+     * Optional: forget every texture bound for the previously bound pack, so the
+     * next one loads its own from scratch. Called by the core from
+     * `bindResource`; a manager that caches by hash must implement it.
+     */
+    reset?(): void;
+
+    /**
      * Frees all managed resources.
      */
     destroy(): void;

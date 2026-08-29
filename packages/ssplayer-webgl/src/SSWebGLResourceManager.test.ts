@@ -11,6 +11,8 @@ import { SSWebGLTextureCache } from './SSWebGLTextureCache.js';
 
 let nextTexture = 0;
 const deleted: unknown[] = [];
+// URLs the fake Image was asked to fetch, in order.
+const requested: string[] = [];
 
 function fakeGl() {
   return {
@@ -30,13 +32,16 @@ function fakeGl() {
 // jsdom never fires Image load events, so resolve them synchronously instead.
 beforeEach(() => {
   deleted.length = 0;
+  requested.length = 0;
+  // jsdom has no createImageBitmap; the manager only forwards the result.
+  vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 64, height: 32, close: () => {} })));
   vi.stubGlobal('Image', class {
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
     crossOrigin = '';
     width = 64;
     height = 32;
-    set src(_v: string) { queueMicrotask(() => this.onload?.()); }
+    set src(v: string) { requested.push(v); queueMicrotask(() => this.onload?.()); }
   });
 });
 
@@ -162,5 +167,56 @@ describe('SSWebGLResourceManager sharing', () => {
     const own = a.getTexture(0x1111)!.tex;
     a.destroy();
     expect(deleted).toContain(own);
+  });
+});
+
+describe('reset() — a new pack replaces the previous pack textures', () => {
+  it('loads the new atlas under a hash the previous pack also used', async () => {
+    const gl = fakeGl();
+    const rm = new SSWebGLResourceManager(gl, new SSWebGLTextureCache(gl));
+    const HASH = 0x1111;
+
+    await rm.loadTexture('/projectA/texture.png', HASH);
+    rm.reset();
+    await rm.loadTexture('/projectB/texture.png', HASH);
+
+    expect(requested).toEqual(['/projectA/texture.png', '/projectB/texture.png']);
+  });
+
+  it('frees the textures it owns, and only those', async () => {
+    const gl = fakeGl();
+    const cache = new SSWebGLTextureCache(gl);
+    const shared = new SSWebGLResourceManager(gl, cache);
+    const standalone = new SSWebGLResourceManager(gl);
+
+    await shared.loadTexture('/chara/atlas.png', 0x1111);
+    await standalone.loadTexture('/chara/atlas.png', 0x1111);
+    await shared.loadTextureFromBytes(new Uint8Array([1, 2, 3]), 0x2222);
+    const fromCache = shared.getTexture(0x1111)!.tex;
+    const embedded = shared.getTexture(0x2222)!.tex;
+    const owned = standalone.getTexture(0x1111)!.tex;
+
+    shared.reset();
+    standalone.reset();
+
+    expect(deleted).toContain(embedded);
+    expect(deleted).toContain(owned);
+    expect(deleted).not.toContain(fromCache);
+    expect(shared.getTexture(0x1111)).toBeUndefined();
+  });
+
+  it('does not resurrect the old pack textures on a later context loss', async () => {
+    const gl = fakeGl();
+    const cache = new SSWebGLTextureCache(gl);
+    const rm = new SSWebGLResourceManager(gl, cache);
+    await rm.loadTexture('/projectA/texture.png', 0x1111);
+
+    rm.reset();
+    await rm.loadTexture('/projectB/texture.png', 0x1111);
+    requested.length = 0;
+    cache.invalidate(); // as the Surface does, before restoring each player
+    await rm.restoreContext();
+
+    expect(requested).toEqual(['/projectB/texture.png']);
   });
 });

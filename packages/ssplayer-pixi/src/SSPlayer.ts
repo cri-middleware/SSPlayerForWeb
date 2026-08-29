@@ -565,12 +565,84 @@ export class SSPlayer extends Container {
      * @param ssabUrl URL to the .ssab file
      */
     public async load(ssabUrl: string) {
+        this.releaseTextureBindings();
         await this.internalPlayer.load(ssabUrl);
+        this.configureContext();
+        await this.ensureAutoAudio();
+    }
+
+    /**
+     * Drop everything still holding the previous pack's `TextureSource`s, so the
+     * ResourceManager can free them when the core resets it on `bindResource`.
+     * The shader caches are keyed by `Texture` and a pooled mesh keeps the
+     * shader it was last drawn with, so freeing a texture out from under either
+     * is a crash, not a leak.
+     */
+    private releaseTextureBindings() {
+        for (const s of this.partsColorShaders.values()) s.destroy();
+        for (const s of this.effectShaders.values()) s.destroy();
+        for (const s of this.maskWriteShaders.values()) s.destroy();
+        for (const s of this.maskedShaders.values()) s.destroy();
+        for (const pool of this.ssShaderPools.values()) for (const s of pool) s.destroy();
+        this.partsColorShaders.clear();
+        this.effectShaders.clear();
+        this.maskWriteShaders.clear();
+        this.maskedShaders.clear();
+        this.ssShaderPools.clear();
+
+        for (const m of this.meshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        for (const m of this.maskedMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        for (const m of this.maskMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        this.meshPool.length = 0;
+        this.maskedMeshPool.length = 0;
+        this.maskMeshPool.length = 0;
+        this.activeMeshes = 0;
+    }
+
+    /**
+     * Load a pack from bytes already in memory, with its textures supplied by
+     * cell-map hash — for packs that are not URL-addressable (drag-and-drop, an
+     * in-memory bundle). The counterpart of `load()`, and the same signature
+     * `ssplayer-webgl` takes. Each texture may be a URL, the encoded bytes of an
+     * image (PNG/JPEG), or a decoded image source.
+     *
+     * @param ssab The `.ssab` bytes.
+     * @param textures Cell-map name hash → URL / encoded bytes / image source.
+     */
+    public async loadBuffer(
+        ssab: ArrayBuffer | Uint8Array,
+        textures: Map<number, ImageBitmap | HTMLImageElement | HTMLCanvasElement | ArrayBuffer | Uint8Array | string>,
+    ): Promise<void> {
+        this.releaseTextureBindings();
+        this.internalPlayer.bindResource(new Uint8Array(ssab));
+        this.configureContext();
+        for (const [hash, src] of textures.entries()) {
+            if (typeof src === 'string') {
+                await this.pixiResourceManager.loadTexture(src, hash);
+            } else if (src instanceof ArrayBuffer || src instanceof Uint8Array) {
+                await this.pixiResourceManager.loadTextureFromBytes(src instanceof ArrayBuffer ? new Uint8Array(src) : src, hash);
+            } else {
+                this.pixiResourceManager.bindTextureSource(src, hash);
+            }
+        }
+        // Finish the pack's asset load here, like `load()` does, so `setAnimation`
+        // stays a pure runtime switch. Textures the caller just supplied are already
+        // in the manager under their hash and are not fetched again; this resolves
+        // what the caller could not — embedded textures and instance packs.
+        await this.internalPlayer.prepareResources();
+        await this.ensureAutoAudio();
+    }
+
+    private configureContext() {
         this.internalPlayer.runtimeManager.context.set_render_mode(0); // 0 corresponds to RenderMode::Direct
         this.internalPlayer.runtimeManager.context.set_coordinate_system(1); // 1 = YDown
+    }
 
-        // Lazy initialize the audio manager only if the loaded SSAB contains sounds,
-        // so that projects without audio don't waste resources creating AudioContexts.
+    /**
+     * Lazy initialize the audio manager only if the loaded SSAB contains sounds,
+     * so that projects without audio don't waste resources creating AudioContexts.
+     */
+    private async ensureAutoAudio() {
         const sounds = this.internalPlayer.runtimeManager.getSounds();
         if (sounds.length > 0 && !this.audioManager) {
             const defaultAudioManager = new SSWebAudioManager();
