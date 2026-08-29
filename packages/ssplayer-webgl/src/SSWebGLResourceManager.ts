@@ -154,19 +154,28 @@ export class SSWebGLResourceManager implements IResourceManager {
     await Promise.all(tasks);
   }
 
+  public reset(): void {
+    this.deleteOwned();
+    this.textures.clear();
+    this.sources.clear();
+  }
+
   /**
    * Delete the textures this player uploaded itself. Shared ones are left alone —
    * a sibling player is probably still drawing with them, and the surface deletes
    * the cache when it goes.
    */
   public destroy(): void {
-    const gl = this.gl;
-    for (const hash of this.owned) {
-      const entry = this.textures.get(hash);
-      if (entry) gl.deleteTexture(entry.tex);
-    }
-    this.owned.clear();
+    this.deleteOwned();
     this.textures.clear();
     this.sources.clear();
+  }
+
+  private deleteOwned(): void {
+    for (const hash of this.owned) {
+      const entry = this.textures.get(hash);
+      if (entry) this.gl.deleteTexture(entry.tex);
+    }
+    this.owned.clear();
   }
 }

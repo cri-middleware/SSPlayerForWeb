@@ -164,6 +164,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // setup the new pack still needs — leaving it bound but unplayable.
         this._animationName = '';
         // A new pack means new assets: re-arm the one-shot load.
+        this._resourceManager?.reset?.();
         this._prepared = null;
         this._resourcesReady = false;
         this._soundsPreloadedFor = null;
