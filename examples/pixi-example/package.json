@@ -17,11 +17,11 @@
   "dependencies": {
     "@spritestudio/ssplayer-pixi": "workspace:*",
     "flatbuffers": "^25.9.23",
-    "pixi.js": "^8.20.0"
+    "pixi.js": "^8.20.1"
   },
   "devDependencies": {
-    "@types/node": "^26.3.0",
-    "terser": "^5.50.0",
+    "@types/node": "^26.4.0",
+    "terser": "^5.51.2",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vite-plugin-compression": "^0.5.1"
