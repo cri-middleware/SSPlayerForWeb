@@ -3,6 +3,15 @@
 Here is the minimum code to play a `.ssab`. Both the dependency-free `ssplayer-webgl`
 and the PixiJS v8 `ssplayer-pixi` paths are shown — pick the one that fits your setup.
 
+::: tip No SpriteStudio data of your own yet?
+The [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
+works as-is — that page is Japanese only, but the downloads themselves are
+language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good
+character sample, and
+[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
+if you want effects.
+:::
+
 ## ssplayer-webgl (no dependencies)
 
 The simplest option is the `<ss-player>` Web Component, which plays back with almost no

@@ -3,6 +3,14 @@
 `.ssab` を再生する最小コードです。依存の要らない `ssplayer-webgl` と、
 PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う環境に合う方を選んでください。
 
+::: tip SpriteStudio のデータが手元に無くても始められます
+[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)が
+そのまま使えます。キャラクターなら
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
+[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
+が手頃です。
+:::
+
 ## ssplayer-webgl（依存なし）
 
 もっとも手軽な方法は Web Component の `<ss-player>` です。JavaScript をほとんど
