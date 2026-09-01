@@ -12,6 +12,14 @@
 自作アプリに組み込みたい場合は、ライブラリ **`@spritestudio/ssconverter-core`** を
 使います。
 
+::: tip 手元に `.sspj` がまだ無いときは
+[SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)が
+そのまま使えます。キャラクターなら
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
+[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
+が手頃です。ダウンロードしたプロジェクトは、下のどのツールにもそのまま渡せます。
+:::
+
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
 | [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧 初回リリースの公開後に有効） |
