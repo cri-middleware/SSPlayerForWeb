@@ -12,6 +12,15 @@ There are three conversion tool routes — pick by how you work. In addition, if
 want to embed conversion itself into your own app, use the library
 **`@spritestudio/ssconverter-core`**.
 
+::: tip No `.sspj` of your own yet?
+The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
+works as-is — that page is only available in Japanese, but the downloads
+themselves are language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)
+is a good character sample, and
+[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
+if you want effects. The downloaded project feeds any of the tools below as-is.
+:::
+
 | Tool | Best for | Getting it |
 |---|---|---|
 | [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> (🚧 live once the first release is published) |
