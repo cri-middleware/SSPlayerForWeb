@@ -10,6 +10,14 @@ What is offered differs per renderer: a **pull API shared by every player**, wit
 | `SSPlayer` (RPG Maker MZ) | Managed following via `attachToPart()` + the pull API |
 | `SSPlayer` (WebGL) | **Pull API only** (`getPartTransform()` + `onFrame()`) — this player has no scene graph |
 
+::: warning Mesh (skinned) parts cannot be followed directly
+A **bone-bound mesh part** (a deforming part such as a hand or a face) has its vertices drawn by bone skinning, while the part's own transform stays at its setup node position — usually near the character root. So targeting such a part with `attachToPart()` (or reading it with `getPartTransform()`) makes the follower snap near the root rather than onto the visible art.
+
+To follow the position of a mesh part, add a **NULL part** (a bone-point / empty part) at that spot in SpriteStudio and target that part's name instead. A bone (armature) or joint part works the same way.
+
+A **rigid** mesh — one with no bone binding, deformed only by its own mesh keys — follows correctly; only skinned parts are affected. Call `isPartSkinnedMesh(part)` to detect one (for example, to dim it in a follow-target picker). It does not block following.
+:::
+
 ## Basic usage
 
 ```ts
@@ -40,6 +48,7 @@ player.detachFromPart(sword);
 | `detachFromPart(target)` | Stops following for that `target`. **PixiJS / MZ only** |
 | `getPartTransform(part, out?)` | The part's transform for the current frame, as a 2D affine `[m00, m01, m10, m11, tx, ty]`, with the player's `flipX` / `flipY` / `offsetX` / `offsetY` applied. `null` if the part is unknown |
 | `isPartHidden(part)` | Whether the part is hidden on the current frame. `null` if the part is unknown |
+| `isPartSkinnedMesh(part)` | Whether the part is a **skinned (bone-bound) mesh** — a poor follow target (see the warning above). `null` if the part is unknown |
 | `onFrame(cb)` | Fires on each advanced frame, after the world matrices are final. Returns an unsubscribe function (`Unsubscribe`) |
 | `findPartIndex(partName)` | Part index, or `-1` if it isn't in the current animation |
 
@@ -137,6 +146,27 @@ const { x, y, rotation, scaleX, scaleY } = decomposePartAffine(m);
 ```
 
 > For a mirrored part, the sign of the determinant is folded into `scaleY` (it comes back negative).
+
+## Building a follow-target picker
+
+If you build UI that lets someone choose which part to follow, mirror what the SpriteStudio, Unity and Godot editors do: **list every part, but keep skinned mesh parts out of reach** so they can't be chosen by accident — while still accepting a name typed by hand, since following one is occasionally deliberate.
+
+```ts
+const select = document.querySelector('select')!;
+for (const name of player.getPartNames()) {
+  if (!name) continue;
+  const opt = document.createElement('option');
+  opt.value = name;
+  // A skinned mesh is a poor target — offer it, but disabled (dimmed).
+  opt.disabled = player.isPartSkinnedMesh(name) === true;
+  opt.textContent = opt.disabled ? `${name} (skinned mesh)` : name;
+  select.append(opt);
+}
+```
+
+Keep it a **soft** filter, not a hard block: a name typed by hand (or set from code) should still go through, exactly as the Unity and Godot inspectors allow. When one does, flag it rather than refuse it — `isPartSkinnedMesh()` is the same test, so a warning beside the field is enough.
+
+The `examples/part-follow` demo does exactly this: the Ringo character's skinned parts (`hand_r`, `hand_l`, the legs, ears and tail) are dimmed in the dropdown, and typing one in by hand shows the non-blocking warning.
 
 ## Notes
 

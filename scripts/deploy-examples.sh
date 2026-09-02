@@ -59,4 +59,11 @@ HARNESS_PUBLIC="$ROOT_DIR/examples/rmmz-harness/public"
 mkdir -p "$HARNESS_PUBLIC/Ringo"
 cp "$PIXI_PUBLIC/Ringo/Ringo.ssab" "$PIXI_PUBLIC/Ringo/Ringo.png" "$HARNESS_PUBLIC/Ringo/"
 
-echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata, examples/rmmz-example/SampleProject/spritestudio and examples/rmmz-harness/public."
+# part-follow: the part-tracking demo runs on Ringo alone, using the REFERENCE
+# Ringo (ssab + sibling PNG, as main.ts loads it). Ringo has bone-skinned parts,
+# which the demo's follow-target picker dims to steer away from tracking them.
+PARTFOLLOW_PUBLIC="$ROOT_DIR/examples/part-follow/public"
+mkdir -p "$PARTFOLLOW_PUBLIC/Ringo"
+cp "$PIXI_PUBLIC/Ringo/Ringo.ssab" "$PIXI_PUBLIC/Ringo/Ringo.png" "$PARTFOLLOW_PUBLIC/Ringo/"
+
+echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata, examples/rmmz-example/SampleProject/spritestudio, examples/rmmz-harness/public and examples/part-follow/public."

@@ -574,6 +574,16 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   }
 
   /**
+   * Whether the part is a skinned (bone-bound) mesh, or null if unknown. Such a
+   * part is a poor {@link attachToPart} target: its node transform sits near the
+   * character root, not on the drawn mesh. Follow a NULL / bone / joint part
+   * placed there instead. Following is not blocked — this only flags the target.
+   */
+  public isPartSkinnedMesh(part: number | string): boolean | null {
+    return this.internalPlayer.isPartSkinnedMesh(part);
+  }
+
+  /**
    * Make `target` (a PixiJS display object) follow `part` (name or index) every
    * frame — a weapon, effect or hitbox tracking a null part. By default the
    * target is added as a child of this player (so it inherits the player's own

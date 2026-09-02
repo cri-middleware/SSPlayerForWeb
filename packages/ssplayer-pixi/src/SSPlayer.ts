@@ -841,6 +841,16 @@ export class SSPlayer extends Container {
         return this.internalPlayer.isPartHidden(part);
     }
 
+    /**
+     * Whether the part is a skinned (bone-bound) mesh, or null if unknown. Such a
+     * part is a poor {@link attachToPart} target: its node transform sits near the
+     * character root, not on the drawn mesh. Follow a NULL / bone / joint part
+     * placed there instead. Following is not blocked — this only flags the target.
+     */
+    public isPartSkinnedMesh(part: number | string): boolean | null {
+        return this.internalPlayer.isPartSkinnedMesh(part);
+    }
+
     // --- Part overrides (65_override_layer) ---
     //
     // Thin pass-throughs to the core player, which owns the contract (see

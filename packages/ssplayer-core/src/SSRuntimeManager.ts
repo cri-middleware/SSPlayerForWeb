@@ -162,6 +162,18 @@ export class SSRuntimeManager {
     private partMaskFlags: Uint8Array | null = null;
 
     /**
+     * Per-part "is a skinned mesh" flag, one byte per part index (parallel to
+     * the SSAB parts table): 1 when the part carries a `mesh_binding` with at
+     * least one influence bone, 0 otherwise. A static property of the asset,
+     * cached once per animation from the same SSAB walk as `partMaskFlags`.
+     * `null` until an animation is set up. See `getPartSkinnedFlag`, which
+     * backs {@link InternalPlayerBase.isPartSkinnedMesh} — a skinned mesh's
+     * node transform is not where its art is drawn, so it is a poor
+     * part-following target.
+     */
+    private partSkinnedFlags: Uint8Array | null = null;
+
+    /**
      * Index of the currently set-up animation within the SSAB `animations`
      * table, or -1 before setup / if the name didn't resolve. Event polling
      * uses it to read that animation's per-frame events table. Stored as an
@@ -214,6 +226,7 @@ export class SSRuntimeManager {
         this.currentAnimationIndex = -1;
         this.partNames = null;
         this.partMaskFlags = null;
+        this.partSkinnedFlags = null;
         this.effectPartRefs = [];
 
         if (!this.resource) return;
@@ -232,6 +245,7 @@ export class SSRuntimeManager {
             // (both are allocation-free reads over the borrowed SSAB view).
             const partsLen = ssab.partsLength();
             const maskFlags = new Uint8Array(partsLen);
+            const skinnedFlags = new Uint8Array(partsLen);
             const partNames: (string | null)[] = new Array(partsLen).fill(null);
             const refHashByPart = new Map<number, number>();
             let fallbackHash = 0;
@@ -244,6 +258,10 @@ export class SSRuntimeManager {
                 if (part.maskInfluence()) mf |= 0x04;
                 if (part.drawAsMask()) mf |= 0x08;
                 maskFlags[i] = mf;
+                // Skinned = bound to bones. A rigid (deform-only) mesh has a
+                // mesh_binding but no influence bones, and follows correctly, so
+                // the bone count — not the presence of the binding — is what marks it.
+                if ((part.meshBinding()?.influenceBoneLength() ?? 0) > 0) skinnedFlags[i] = 1;
                 partNames[i] = part.name();
                 if (part.partTypeType() === PartType.PartTypeEffect) {
                     const effectPart = part.partType(new PartTypeEffect());
@@ -255,6 +273,7 @@ export class SSRuntimeManager {
                 }
             }
             this.partMaskFlags = maskFlags;
+            this.partSkinnedFlags = skinnedFlags;
             this.partNames = partNames;
 
             // Cache the index of the animation just set up so event polling can
@@ -450,6 +469,17 @@ export class SSRuntimeManager {
      */
     public getPartsCount(): number {
         return this.partNames ? this.partNames.length : 0;
+    }
+
+    /**
+     * Whether the part at `index` is a skinned (bone-bound) mesh, from the
+     * per-animation cache. Out-of-range or before setup reads as false. See
+     * {@link InternalPlayerBase.isPartSkinnedMesh} for the contract.
+     */
+    public getPartSkinnedFlag(index: number): boolean {
+        return !!this.partSkinnedFlags && index >= 0 && index < this.partSkinnedFlags.length
+            ? this.partSkinnedFlags[index] === 1
+            : false;
     }
 
 

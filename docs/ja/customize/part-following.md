@@ -10,6 +10,14 @@
 | `SSPlayer`（RPG ツクール MZ） | `attachToPart()` による自動追従 ＋ プル API |
 | `SSPlayer`（WebGL） | シーングラフを持たないため**プル API のみ**（`getPartTransform()` ＋ `onFrame()`） |
 
+::: warning メッシュ（スキン）パーツには直接追従できません
+ボーンにバインドされた**メッシュパーツ**（手・顔などの変形パーツ）は、頂点がボーンのスキニングで描かれる一方、パーツ自身の変換はセットアップ時のノード位置（多くはキャラクターのルート付近）に留まります。そのため、こうしたパーツを `attachToPart()` の追従先に指定したり `getPartTransform()` で読み出したりすると、対象は見た目の絵ではなくルート付近に吸い寄せられます。
+
+メッシュパーツの位置に追従させたいときは、SpriteStudio 側でその位置に **NULL パーツ**（ボーンポイント／空パーツ）を 1 つ置き、そのパーツ名を追従先に指定してください。ボーン（armature）やジョイントパーツを指定しても同様に追従できます。
+
+ボーンにバインドされていない**リジッドメッシュ**（自身のメッシュキーだけで変形するパーツ）は正しく追従します。影響を受けるのはスキンパーツだけです。判別には `isPartSkinnedMesh(part)` を使えます（追従先の候補リストで淡色表示するなど）。この判定は追従自体を妨げません。
+:::
+
 ## 基本的な使い方
 
 ```ts
@@ -40,6 +48,7 @@ player.detachFromPart(sword);
 | `detachFromPart(target)` | その `target` の追従を解除する。**PixiJS / MZ のみ** |
 | `getPartTransform(part, out?)` | そのパーツの現在フレームの変換行列（2D アフィン `[m00, m01, m10, m11, tx, ty]`。プレイヤーの `flipX` / `flipY` / `offsetX` / `offsetY` を適用済み）。パーツが不明なら `null` |
 | `isPartHidden(part)` | そのパーツが現在フレームで hide かどうか。パーツが不明なら `null` |
+| `isPartSkinnedMesh(part)` | そのパーツが**スキン（ボーンバインド）メッシュ**かどうか。追従先には不向き（上記の警告を参照）。パーツが不明なら `null` |
 | `onFrame(cb)` | フレームが進むたびに発火する（ワールド行列が確定した後）。解除用の関数（`Unsubscribe`）を返す |
 | `findPartIndex(partName)` | パーツインデックス。現在のアニメーションに無ければ `-1` |
 
@@ -148,6 +157,27 @@ const { x, y, rotation, scaleX, scaleY } = decomposePartAffine(m);
 ```
 
 > 反転（ミラー）したパーツでは、行列式の符号が `scaleY` に折り込まれて返ります（`scaleY` が負になります）。
+
+## 追従先パーツの選択 UI を作る
+
+追従先パーツをユーザーに選ばせる UI を作る場合は、SpriteStudio / Unity / Godot のエディタと同じ作法に倣ってください。**全パーツを列挙しつつ、スキンメッシュパーツは選べないようにする**（誤選択を防ぐ）——ただし手打ちの名前は通す（意図的に追従させたい場合があるため）、という形です。
+
+```ts
+const select = document.querySelector('select')!;
+for (const name of player.getPartNames()) {
+  if (!name) continue;
+  const opt = document.createElement('option');
+  opt.value = name;
+  // スキンメッシュは不向きな追従先 —— 候補には出すが disabled（淡色）にする。
+  opt.disabled = player.isPartSkinnedMesh(name) === true;
+  opt.textContent = opt.disabled ? `${name}（スキンメッシュ）` : name;
+  select.append(opt);
+}
+```
+
+**ハードに弾かず、ソフトフィルタに留める**のが要点です。手打ち（やコードからの指定）は Unity / Godot のインスペクタ同様そのまま通し、通した場合は拒否せず注意を促します。`isPartSkinnedMesh()` は同じ判定なので、入力欄の脇に警告を1つ出せば十分です。
+
+`examples/part-follow` デモがまさにこれを行っています。Ringo キャラのスキンパーツ（`hand_r`・`hand_l`・脚・耳・尻尾）がドロップダウンで淡色化され、手打ちで指定すると非ブロッキングの警告が出ます。
 
 ## 注意点
 

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSPlayerForWeb - Part Following Example</title>
+    <!-- PIXI_IMPORT_MAP -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; background: linear-gradient(135deg, #12233b 0%, #3a6073 100%); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Inter', sans-serif; color: #fff; }
+        #canvas-container { position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); border-radius: 16px; overflow: hidden; }
+        canvas { display: block; }
+
+        #status { position: absolute; top: 20px; left: 20px; right: 20px; z-index: 10; pointer-events: none; }
+        #step { font-size: 22px; font-weight: 600; text-shadow: 0 0 6px #000, 0 2px 4px #000; }
+        #call {
+            margin-top: 8px;
+            display: inline-block;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 8px;
+            padding: 8px 12px;
+            white-space: pre-wrap;
+        }
+
+        /* Follow-target picker, top-right. */
+        #picker {
+            position: absolute; top: 20px; right: 20px; z-index: 10;
+            max-width: 360px;
+            display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+        }
+        #picker .row { display: flex; gap: 8px; align-items: center; }
+        #picker label { font-size: 13px; font-weight: 600; text-shadow: 0 1px 3px #000; }
+        #picker select, #picker input {
+            pointer-events: auto;
+            font-family: 'Inter', sans-serif; font-size: 13px;
+            color: #fff; background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px;
+            padding: 6px 10px;
+        }
+        #picker select option:disabled { color: rgba(255, 255, 255, 0.4); }
+        #picker input { width: 150px; }
+        #warn {
+            font-size: 13px; line-height: 1.4;
+            color: #ffdf7e; background: rgba(80, 40, 0, 0.6);
+            border: 1px solid rgba(255, 200, 100, 0.4); border-radius: 8px;
+            padding: 8px 12px; text-align: left;
+        }
+
+        /* Controls, bottom-left. pointer-events re-enabled so they're clickable. */
+        #controls {
+            position: absolute; bottom: 20px; left: 20px; z-index: 10;
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        #controls button {
+            pointer-events: auto;
+            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+            color: #fff; background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px;
+            padding: 8px 14px; cursor: pointer;
+        }
+        #controls button:hover { background: rgba(255, 255, 255, 0.15); }
+        #controls button.active { background: rgba(120, 200, 255, 0.35); border-color: rgba(120, 200, 255, 0.8); }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <div id="status">
+            <div id="step">Loading…</div>
+            <div id="call"></div>
+        </div>
+        <div id="picker">
+            <div class="row">
+                <label for="part-select">Follow target</label>
+                <select id="part-select"></select>
+            </div>
+            <div class="row">
+                <label for="part-input">or type</label>
+                <input id="part-input" type="text" placeholder="any part name" spellcheck="false" />
+            </div>
+            <div id="warn" hidden></div>
+        </div>
+        <div id="controls"></div>
+        <!-- Canvas is injected here -->
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

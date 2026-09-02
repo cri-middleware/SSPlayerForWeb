@@ -65,4 +65,11 @@ $HARNESS_RINGO = Join-Path $ROOT_DIR "examples\rmmz-harness\public\Ringo"
 New-Item -ItemType Directory -Force -Path $HARNESS_RINGO | Out-Null
 Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo\Ringo.png") -Destination $HARNESS_RINGO -Force
 
-Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $OVERRIDE_PUBLIC, $TYRANO_SSDATA, $RMMZ_SS and $HARNESS_RINGO."
+# part-follow: the part-tracking demo runs on Ringo alone, using the REFERENCE
+# Ringo (ssab + sibling PNG, as main.ts loads it). Ringo has bone-skinned parts,
+# which the demo's follow-target picker dims to steer away from tracking them.
+$PARTFOLLOW_RINGO = Join-Path $ROOT_DIR "examples\part-follow\public\Ringo"
+New-Item -ItemType Directory -Force -Path $PARTFOLLOW_RINGO | Out-Null
+Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo\Ringo.png") -Destination $PARTFOLLOW_RINGO -Force
+
+Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $OVERRIDE_PUBLIC, $TYRANO_SSDATA, $RMMZ_SS, $HARNESS_RINGO and $PARTFOLLOW_RINGO."
