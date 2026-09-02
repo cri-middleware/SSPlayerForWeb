@@ -1,0 +1,26 @@
+{
+  "name": "part-follow-example",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Part-following demo: a weapon tracks a character part (attachToPart / onFrame), with a follow-target picker that dims skinned mesh parts (getPartNames / isPartSkinnedMesh)",
+  "scripts": {
+    "test": "echo \"(part-follow-example) no unit tests\"",
+    "dev": "vite",
+    "build": "vite build",
+    "clean": "rimraf dist"
+  },
+  "author": "",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "dependencies": {
+    "@spritestudio/ssplayer-pixi": "workspace:*",
+    "pixi.js": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "terser": "^5.49.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vite-plugin-compression": "^0.5.1"
+  }
+}

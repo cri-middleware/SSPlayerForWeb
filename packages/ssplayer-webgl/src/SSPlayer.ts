@@ -773,6 +773,16 @@ export class SSPlayer {
     return this.internalPlayer.isPartHidden(part);
   }
 
+  /**
+   * Whether the part is a skinned (bone-bound) mesh, or null if unknown. Such a
+   * part is a poor part-following target: its node transform — what
+   * {@link getPartTransform} reports — sits near the character root, not on the
+   * drawn mesh. Follow a NULL / bone / joint part placed there instead.
+   */
+  public isPartSkinnedMesh(part: number | string): boolean | null {
+    return this.internalPlayer.isPartSkinnedMesh(part);
+  }
+
   // --- Animation events (06_playback_control.ja.md) ---
   //
   // Listeners are drained each frame by update() via pollEvents(). Each

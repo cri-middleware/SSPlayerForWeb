@@ -1140,6 +1140,27 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return state ? state.hide() : false;
     }
 
+    /**
+     * Whether the part is a **skinned mesh** — a mesh part bound to bones, whose
+     * vertices are drawn by bone skinning while the part's own transform stays at
+     * its setup node position (usually near the character root). Returns null when
+     * the part name/index is unknown.
+     *
+     * This is a static property of the asset, not of a frame, and it exists for
+     * part following: {@link getPartTransform} reports a part's *node* transform,
+     * which for a skinned mesh is not where its art ends up, so following one
+     * snaps the target near the root rather than onto the visible mesh. Target a
+     * NULL / bone / joint part placed at that spot instead. A rigid (deform-only,
+     * unbound) mesh returns false — its node transform does move with the art, so
+     * it follows correctly. Nothing here blocks following either way; this only
+     * lets a host mark a poor target (e.g. dim it in a follow-target picker).
+     */
+    public isPartSkinnedMesh(part: number | string): boolean | null {
+        const index = this.resolveKnownPartIndex(part);
+        if (index < 0) return null;
+        return this.runtimeManager.getPartSkinnedFlag(index);
+    }
+
     private resolvePartIndex(part: number | string): number {
         if (typeof part === 'string') return this.findPartIndex(part);
         return Number.isInteger(part) && part >= 0 ? part : -1;
