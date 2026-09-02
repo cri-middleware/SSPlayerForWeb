@@ -2,7 +2,7 @@
   "name": "part-follow-example",
   "private": true,
   "version": "1.0.0",
-  "description": "Part-following demo: a weapon tracks a character part (attachToPart / onFrame), with a follow-target picker that dims skinned mesh parts (getPartNames / isPartSkinnedMesh)",
+  "description": "Part-following demo: a fish tracks a part of the Ringo character (attachToPart / onFrame), with a follow-target picker that dims skinned mesh parts (getPartNames / isPartSkinnedMesh)",
   "scripts": {
     "test": "echo \"(part-follow-example) no unit tests\"",
     "dev": "vite",

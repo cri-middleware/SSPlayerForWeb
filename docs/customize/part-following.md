@@ -166,7 +166,7 @@ for (const name of player.getPartNames()) {
 
 Keep it a **soft** filter, not a hard block: a name typed by hand (or set from code) should still go through, exactly as the Unity and Godot inspectors allow. When one does, flag it rather than refuse it — `isPartSkinnedMesh()` is the same test, so a warning beside the field is enough.
 
-The `examples/part-follow` demo does exactly this: switch it to the *Ringo* character to see its skinned parts (`hand_r`, `hand_l`, the legs, ears and tail) dimmed in the dropdown, then type one in by hand to see the non-blocking warning.
+The `examples/part-follow` demo does exactly this: the Ringo character's skinned parts (`hand_r`, `hand_l`, the legs, ears and tail) are dimmed in the dropdown, and typing one in by hand shows the non-blocking warning.
 
 ## Notes
 
