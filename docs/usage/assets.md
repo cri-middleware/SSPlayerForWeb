@@ -230,7 +230,27 @@ Any of these avoids it:
 |---|---|
 | **Version the set** | Change the URL a folder at a time — `/assets/v3/<name>/`. Moving the `.ssab`'s URL moves its textures' URLs with it, so the pair cannot come apart |
 | **One cache policy for the folder** | Serve everything under `<name>/` with the same `Cache-Control` |
-| **Convert with embedded** | The textures live inside the `.ssab`, so there is one request and the problem does not arise |
+| **Convert with embedded** | The textures live inside the `.ssab`, so there is one request and the pair cannot come apart. It suits a self-contained asset, though — see below |
+
+::: warning Embedded is the wrong tool for differential delivery
+Embedding welds the **large, rarely-changing atlas** into the same file as the **small, frequently-changing
+keyframes**. Fixing one frame of an animation re-downloads the atlas with it — exactly backwards from
+what a differential update is for.
+
+Sharing stops working too. Embedded textures are deliberately kept out of the shared cache and are
+decoded per `SSPlayer` ([Resources and lifecycle](/customize/resources)). Five characters using one
+atlas cost one download and one GPU texture in reference mode, and five of each when embedded.
+
+It is a good fit for a one-off banner, or a single character that shares its atlas with nothing. For
+**a set of characters sharing an atlas that you keep updating**, stay on reference textures and
+version the folder instead.
+:::
+
+Note that embedding covers **textures only**. The packs an Instance part plays are still fetched
+separately, as `<base URL>/<pack name>.ssab`, so embedding does not reduce the request to one — ship
+a parent and its referenced packs as a set. The choice is also made per *texture*, not per pack: any
+texture without embedded bytes is still fetched by URL, so in a partly embedded pack everything in
+this section still applies to the rest.
 
 Versioning the set also lines up with the runtime caches: both Pixi's `Assets` cache and the WebGL
 backend's texture cache are **keyed by URL**, so a changed URL cannot keep handing you the old
