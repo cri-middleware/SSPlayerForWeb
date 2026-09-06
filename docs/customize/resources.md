@@ -8,7 +8,7 @@ before putting many players on one page, or when teardown leaks or blanks someth
 | Thing | Scope | Notes |
 |---|---|---|
 | WASM module & memory | **One per page** | `initialize()` is a module-level singleton, so calling it more than once is harmless. |
-| Textures (PixiJS) | **Shared across every `SSPlayer`** | Registered in Pixi's global `Assets` cache under the cell-map hash, so two players using the same atlas reuse one GPU texture. |
+| Textures (PixiJS) | **Shared across every `SSPlayer`** | Registered in Pixi's global `Assets` cache, keyed by URL — not by cell-map hash, which is only unique within one `.ssab` — so two players using the same atlas reuse one GPU texture. |
 | Textures (WebGL) | **Shared across the surface** | A `WebGLTexture` belongs to the context that created it, so the surface owns them. Keyed by URL — not by cell-map hash, which is only unique within one `.ssab` — so two players using the same atlas reuse one upload. |
 | Embedded textures (`--embedded`) | **Per player** | Decoded from the `.ssab`'s own bytes, deliberately kept out of any shared cache, and freed in `destroy()`. |
 | Parsed `.ssab` (WASM) | **Per player** | Each `load()` builds its own `SSABResource`. The HTTP fetch may be served from the browser cache, but the parsed WASM-side copy is not shared between players. |
