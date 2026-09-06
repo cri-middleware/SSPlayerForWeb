@@ -192,6 +192,17 @@ responsibility. For the full API, see the
 
 ## Placement and texture resolution
 
+::: info Which file becomes which
+The roles of `.sspj` / `.ssae` / `.ssce` / `.ssqe` and how they map to the output are the same for
+every Player, so they are documented in the portal —
+[Asset Conversion — How a project's files map to the output](https://cri-middleware.github.io/SpriteStudio-Docs/overview/conversion/#how-a-projects-files-map-to-the-output).
+
+Two points matter. **One `.ssae` becomes one `.ssab`**, and **cell positions are baked from the
+`.ssce` into the `.ssab`**. Because of the latter, whenever you add, move or resize cells, or change
+the image size, **re-deploy the `.ssab` as well as the image** — serving a new image alone leaves the
+old source rectangles in place and the artwork shifts.
+:::
+
 - Place the generated `.ssab` and the texture images output alongside it somewhere your web server can serve as the application's static assets.
 - Texture images are loaded from the same directory as the `.ssab` (the structure ssconverter emits). Keep them next to the `.ssab`, or in a subdirectory the `.ssab` references — there is no option to point them at an unrelated directory.
 - An `.ssab` converted in **Embedded** mode contains its textures inside the file, so no separate image placement is needed. Having everything in a single file makes the asset convenient to manage.
