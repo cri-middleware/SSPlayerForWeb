@@ -1010,9 +1010,11 @@ export class SSPlayer extends Container {
      * under the player (so it inherits the player's own transform and lands
      * exactly on the part) and its position, rotation and scale are all driven;
      * see {@link SSPartFollowOptions} to change any of that. When all three axes
-     * are driven the full affine is applied, so a skewed / mirrored part is
-     * reproduced exactly; otherwise only the enabled axes are written and the
-     * target keeps its own value for the rest. Attaching the same target twice
+     * are driven the full affine is applied, so a mirrored part is reproduced
+     * exactly; otherwise only the enabled axes are written and the target keeps
+     * its own value for the rest. A part's own skew is not carried — the runtime
+     * keeps it out of the world matrix (matching SpriteStudio). Attaching the
+     * same target twice
      * replaces the earlier attachment. Returns a handle whose `detach()` stops
      * the following.
      */

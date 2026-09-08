@@ -68,9 +68,9 @@ Every `part` argument takes either a **part name** or a **part index** (`number 
 | `onHide` | `'follow'` | Behaviour on frames where the part is hidden. `'follow'` (keep following) / `'hide'` (hide the target too) |
 | `addAsChild` | `true` | Parent the target under the player. As a child it inherits the player's own transform through the hierarchy and lands exactly on the part |
 
-When all three axes (`position` / `rotation` / `scale`) are on, the affine is applied as-is, so **skew and flip are reproduced exactly**. When only some are on, the affine is decomposed into TRS (translate × rotate × scale) and only the enabled axes are written; the target keeps its own value for the rest.
+When all three axes (`position` / `rotation` / `scale`) are on, the affine is applied as-is, so **flip (mirroring) is reproduced exactly**. When only some are on, the affine is decomposed into TRS (translate × rotate × scale) and only the enabled axes are written; the target keeps its own value for the rest.
 
-> The decomposition assumes a TRS composition with no skew. Following a skewed part on a subset of axes is therefore an approximation — enable all three axes, or use the raw affine transformation matrix from `getPartTransform()`, when it has to be exact.
+> A part's own **skew** never reaches a follower. In SpriteStudio, Skew is a per-part vertex deformation that does not propagate to children: the runtime bakes it into the part's own drawn vertices and keeps it out of the world matrix `getPartTransform()` reports, so a follower tracks the part's node pose skew-free — the same pose a child of that part would inherit. (The TRS decomposition used for a subset of axes still assumes no shear; a rotated part under a non-uniform parent scale can still shear the affine, so enable all three axes, or use the raw affine from `getPartTransform()`, when that has to be exact.)
 
 ## Combining it with flip (`flipX` / `flipY`)
 

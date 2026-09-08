@@ -72,7 +72,11 @@ export interface SSDecomposedTransform {
  * taken from the X basis and each scale from its basis length, with `scaleY`
  * signed by the affine's determinant so a mirrored (negatively scaled) part
  * survives the round-trip. A sheared affine cannot be represented this way and
- * is approximated — prefer the raw {@link SSPartAffine} when skew must be exact.
+ * is approximated — prefer the raw {@link SSPartAffine} when the shear must be
+ * exact. A part's own **Skew** never produces that shear here: it is a
+ * non-inheriting local-vertex deform the runtime keeps out of the world matrix,
+ * so it does not reach a follower (matching SpriteStudio, where skew does not
+ * propagate). A rotated part under a non-uniform parent scale still can.
  */
 export function decomposePartAffine(a: ArrayLike<number>): SSDecomposedTransform {
     const m00 = a[0], m01 = a[1], m10 = a[2], m11 = a[3];
@@ -122,7 +126,7 @@ export interface SSPartFollowHost<T> {
     /** Undo {@link addChild}. Must itself check the target is still ours. */
     removeChild(target: T): void;
     setVisible(target: T, visible: boolean): void;
-    /** Write the exact affine `[m00, m01, m10, m11, tx, ty]` (skew and mirroring intact). */
+    /** Write the exact affine `[m00, m01, m10, m11, tx, ty]` (mirroring intact; a part's own skew is not carried — the runtime keeps it out of the world matrix). */
     applyAffine(target: T, affine: SSPartAffine): void;
     /**
      * Write only the enabled axes, leaving the target's own values for the rest.
@@ -180,7 +184,10 @@ export class SSPartFollower<T> {
      * Make `target` follow `part` (a name or an index). Attaching a target that
      * is already attached replaces the earlier attachment rather than stacking a
      * second one. With position, rotation and scale all enabled the full affine
-     * is written, so a skewed or mirrored part is reproduced exactly.
+     * is written, so a mirrored part is reproduced exactly. A part's own skew is
+     * a non-inheriting local-vertex deform kept out of the world matrix, so it
+     * never reaches the follower (matching SpriteStudio, where skew does not
+     * propagate to children).
      */
     public attach(part: number | string, target: T, options: SSPartFollowOptions = {}): SSPartAttachment<T> {
         this.detach(target);
