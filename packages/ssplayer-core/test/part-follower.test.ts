@@ -72,7 +72,8 @@ describe('SSPartFollower', () => {
         expect(t.parented).toBe(true);
 
         f.update();
-        // All three axes on → the exact affine, so skew and mirroring survive.
+        // All three axes on → the exact affine, so mirroring survives (a part's
+        // own skew is never in the world matrix this affine comes from).
         // `scale` has to be asked for: it is off by default, because a follower
         // is placed at the part rather than sized by it.
         expect(t.affine).toEqual(at(10, 20));

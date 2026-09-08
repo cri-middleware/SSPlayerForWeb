@@ -589,8 +589,10 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * target is added as a child of this player (so it inherits the player's own
    * transform and lands exactly on the part) and its position, rotation and
    * scale are all driven; see {@link SSPartFollowOptions}. With all three axes on
-   * the full affine is applied (skew / mirror preserved); otherwise only the
-   * enabled axes are written. Attaching the same target twice replaces the
+   * the full affine is applied (mirror preserved; a part's own skew is not
+   * carried — the runtime keeps it out of the world matrix, matching
+   * SpriteStudio); otherwise only the enabled axes are written. Attaching the
+   * same target twice replaces the
    * earlier attachment. Returns a handle whose `detach()` stops the following.
    */
   public attachToPart(part: number | string, target: PixiContainer, options: SSPartFollowOptions = {}): SSPartAttachment {
