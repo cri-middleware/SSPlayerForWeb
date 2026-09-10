@@ -386,7 +386,7 @@ export class SSPlayer {
     if (this.internalPlayer.runtimeManager.getSounds().length === 0) return;
     this._audioAutoWired = true;
     try {
-      const { SSWebAudioManager } = await import('./SSWebAudioManager.js');
+      const { SSWebAudioManager } = await import('@spritestudio/ssplayer-core/audio');
       // bindToPlayer sets `this.audioManager` and subscribes onAudio → play.
       new SSWebAudioManager().bindToPlayer(this);
       // Attaching starts the pack's sound preload; finish it here so callers of

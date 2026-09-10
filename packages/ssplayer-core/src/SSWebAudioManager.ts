@@ -1,6 +1,62 @@
-import type { SSPlayer, SSAudioEvent } from './SSPlayer.js';
-import type { IAudioManager, SoundAsset } from '@spritestudio/ssplayer-core';
+import type { IAudioManager, SoundAsset } from './IAudioManager.js';
 
+/**
+ * The audio key a player reports as the playhead crosses it.
+ *
+ * Structurally the `SSAudioEvent` every renderer package declares — they are the
+ * same fields, because what a sound key carries does not depend on how the
+ * animation is drawn.
+ */
+export interface SSAudioKey {
+    partIndex: number;
+    partName: string | null;
+    /**
+     * The frame the key is authored on — not necessarily the frame it was
+     * noticed on, since one tick can step across several.
+     */
+    frameNo: number;
+    soundListNameHash: number;
+    soundNameHash: number;
+    soundName: string | null;
+    loopNum: number;
+}
+
+/**
+ * The part of a player {@link SSWebAudioManager.bindToPlayer} needs: somewhere to
+ * register itself, the key stream, and which way the playhead is walking.
+ *
+ * A structural type rather than an import, so this adapter stays clear of every
+ * renderer package — each one's `SSPlayer` satisfies it as it stands.
+ */
+export interface AudioBindablePlayer {
+    audioManager: IAudioManager | null;
+    onAudio(listener: (e: SSAudioKey) => void): () => void;
+    readonly isPlayingForward: boolean;
+}
+
+/**
+ * Optional Web Audio API adapter implementing {@link IAudioManager}.
+ *
+ * The player core never plays audio itself; it only surfaces sound references
+ * (via `onAudio`) and preloads them when an audio manager is attached. Nothing
+ * here touches a rendering engine — Web Audio is the browser's, not PixiJS's or
+ * WebGL's — so one copy serves every renderer, and the behaviour cannot drift
+ * between them.
+ *
+ * It lives behind its own entry point (`@spritestudio/ssplayer-core/audio`)
+ * rather than the package index, so a build that never mentions sound does not
+ * carry it: `ssplayer-webgl` reaches it through a dynamic `import()` and keeps
+ * its `./lite` build audio-free.
+ *
+ * Usage:
+ * ```ts
+ * import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
+ * new SSWebAudioManager().bindToPlayer(player); // preload + play wired in one call
+ * await player.load('chara.ssab');
+ * player.setAnimation('idle'); // sounds preload here (audioManager is set)
+ * player.play();
+ * ```
+ */
 export class SSWebAudioManager implements IAudioManager {
     private ctx: AudioContext;
     private buffers: Map<string, AudioBuffer> = new Map();
@@ -71,8 +127,10 @@ export class SSWebAudioManager implements IAudioManager {
     }
 
     /**
-     * Automatically binds to the SSPlayer's audio events and plays sounds accordingly.
-     * Returns an unsubscribe function if you need to unbind later.
+     * Attaches this manager to a player: registers it as the player's
+     * `audioManager` (so `setAnimation` preloads the animation's sounds) and
+     * subscribes to `onAudio` so referenced sounds play automatically.
+     * Returns an unsubscribe function for the `onAudio` binding.
      *
      * Sounds only while the playhead walks **forwards**: SpriteStudio has no
      * reverse audio (SDK: 10_introduction/20_limitations), and playing the keys
@@ -80,8 +138,9 @@ export class SSWebAudioManager implements IAudioManager {
      * from the one that was authored. The player still reports every key it
      * crosses — the gate belongs here, on the playing, not on the reporting.
      */
-    public bindToPlayer(player: SSPlayer): () => void {
-        return player.onAudio((e: SSAudioEvent) => {
+    public bindToPlayer(player: AudioBindablePlayer): () => void {
+        player.audioManager = this;
+        return player.onAudio((e: SSAudioKey) => {
             if (e.soundName && player.isPlayingForward) {
                 this.play(e.soundName, e.loopNum, e.partIndex);
             }
@@ -108,7 +167,6 @@ export class SSWebAudioManager implements IAudioManager {
             });
             return null;
         }
-
 
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
@@ -151,8 +209,6 @@ export class SSWebAudioManager implements IAudioManager {
         }
         this.activeSources.clear();
     }
-
-
 
     /**
      * Releases specific sounds from memory to free up resources.

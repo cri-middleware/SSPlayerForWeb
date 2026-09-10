@@ -28,7 +28,7 @@ export default defineConfig([
     },
     // pixi.js をバンドルせず、ブラウザのグローバル変数 PIXI に依存させる
     deps: {
-      alwaysBundle: ['@spritestudio/ssplayer-core', 'flatbuffers'],
+      alwaysBundle: ['@spritestudio/ssplayer-core', '@spritestudio/ssplayer-core/audio', 'flatbuffers'],
       neverBundle: ['pixi.js']
     }
   }
