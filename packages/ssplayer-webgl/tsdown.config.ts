@@ -22,6 +22,16 @@ export default defineConfig([
     outputOptions: {
       entryFileNames: 'ssplayer-webgl.browser.min.js',
     },
+    // **Every core subpath export is listed, not just the package.** An IIFE has
+    // no way to resolve a bare specifier at runtime, so anything left external
+    // here fails the moment it is reached — and `'@spritestudio/ssplayer-core'`
+    // does NOT cover `'@spritestudio/ssplayer-core/audio'`: a subpath is its own
+    // specifier. Nothing catches the omission on the way out (the build, the
+    // types and the tests all pass, and the ESM entries are correct as they
+    // stand); it shows up only in the CDN builds, and quietly — the audio
+    // adapter's import is awaited inside a try/catch, so sound just stops.
+    // After adding a subpath to core's `exports`, check the output:
+    //   grep -c 'ssplayer-core/<subpath>' dist/browser/*.js   # must be 0
     deps: {
       alwaysBundle: ['@spritestudio/ssplayer-core', '@spritestudio/ssplayer-core/audio', 'flatbuffers'],
     }
@@ -38,6 +48,7 @@ export default defineConfig([
     outputOptions: {
       entryFileNames: 'ss-player.element.min.js',
     },
+    // Same rule as the bundle above: subpaths are listed one by one.
     deps: {
       alwaysBundle: ['@spritestudio/ssplayer-core', '@spritestudio/ssplayer-core/audio', 'flatbuffers'],
     }
