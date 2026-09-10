@@ -1,6 +1,6 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, type InstanceChildState, BlendType, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, ssRuntime, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
-import { SSWebAudioManager } from './SSWebAudioManager.js';
+import { DirectInternalPlayer, type InstanceChildState, BlendType, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
@@ -147,9 +147,9 @@ export class SSPlayer extends Container {
     // rebinds it) and re-fetches.
     private readonly _raw = new FrameDataRaw();
     private readonly _scratchBatch = new DrawBatch();
-    // Same for the effect plan's draw commands and a part's `SHDR` attribute.
-    private readonly _scratchCmd = new ssRuntime.EffectDrawCommand();
-    private readonly _scratchShaderAttr = new ssRuntime.PartAttributeShader();
+    // Engine-agnostic `SHDR` read (core), shared with ssplayer-webgl: program id,
+    // param0..7 and the cell UV rect derived from the quad's corners.
+    private readonly _shaderAttr = new ShaderAttributeResolver();
     // Engine-agnostic per-instance-part resolution (core), shared with
     // ssplayer-webgl: slot visibility, alpha, composed placement, §2-6 mask
     // context and the child's subframe-aware playhead. Only the drawing that
@@ -162,12 +162,11 @@ export class SSPlayer extends Container {
     private readonly _inheritedPool: InheritedMask[] = [];
     private _depth = 0;
 
-    // Reused per-frame scratch for effect draw-call batching: a pooled list of the
-    // current Effect batch's particle draw commands (descriptors), greedily merged
-    // by (cellmap, blend) at draw time. Pooled so steady-state rendering allocates
-    // nothing; only entries [0, _fxCount) are live each frame.
-    private readonly _fxDesc: { partIdx: number; plan: EffectDrawPlan; cellmap: number; blend: number; quadCount: number; particleOffset: number; partAlpha: number; }[] = [];
-    private _fxCount = 0;
+    // Engine-agnostic Effect batching (core), shared with ssplayer-webgl: which
+    // particle commands draw, and which neighbours merge into one draw call by
+    // (cellmap, blend). Issuing that draw call is ours. Pooled, so steady-state
+    // rendering allocates nothing.
+    private readonly _fx = new EffectBatchPlanner<DirectInternalPlayer>();
 
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
@@ -447,30 +446,16 @@ export class SSPlayer extends Container {
         invTexW: number,
         invTexH: number
     ): Shader | null {
-        const attr = frameData.shaders(shaderIdx, this._scratchShaderAttr);
-        if (!attr) return null;
-        const shader = this.acquireSsShader(attr.idHash(), texture);
+        // Engine-agnostic read (core), shared with ssplayer-webgl: the program's
+        // id, its eight parameters, and the cell UV rect derived from the quad's
+        // corners. Binding them to a UniformGroup is ours.
+        if (!this._shaderAttr.resolve(frameData, shaderIdx, uvs)) return null;
+        const shader = this.acquireSsShader(this._shaderAttr.idHash, texture);
         if (!shader) return null;
 
         const u = (shader.resources.ssUniforms as UniformGroup).uniforms;
-        const params = u.uParams as Float32Array;
-        params[0] = attr.param0(); params[1] = attr.param1();
-        params[2] = attr.param2(); params[3] = attr.param3();
-        params[4] = attr.param4(); params[5] = attr.param5();
-        params[6] = attr.param6(); params[7] = attr.param7();
-
-        // Cell UV rect = (left, top, right, bottom) over the quad's 4 corners.
-        let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
-        for (let q = 0; q < 4; q++) {
-            const uu = uvs[q * 2];
-            const vv = uvs[q * 2 + 1];
-            if (uu < minU) minU = uu;
-            if (uu > maxU) maxU = uu;
-            if (vv < minV) minV = vv;
-            if (vv > maxV) maxV = vv;
-        }
-        const cr = u.uCellRect as Float32Array;
-        cr[0] = minU; cr[1] = minV; cr[2] = maxU; cr[3] = maxV;
+        (u.uParams as Float32Array).set(this._shaderAttr.params);
+        (u.uCellRect as Float32Array).set(this._shaderAttr.cellRect);
 
         const psz = u.uPixelSize as Float32Array;
         psz[0] = invTexW; psz[1] = invTexH;
@@ -647,9 +632,8 @@ export class SSPlayer extends Container {
     private async ensureAutoAudio() {
         const sounds = this.internalPlayer.runtimeManager.getSounds();
         if (sounds.length > 0 && !this.audioManager) {
-            const defaultAudioManager = new SSWebAudioManager();
-            defaultAudioManager.bindToPlayer(this);
-            this.audioManager = defaultAudioManager;
+            // bindToPlayer sets `this.audioManager` and subscribes onAudio → play.
+            new SSWebAudioManager().bindToPlayer(this);
             // Attaching starts the preload; finish it here so `load()` still means
             // "everything this pack needs is in memory" and setAnimation stays sync.
             await this.internalPlayer.preloadSounds();
@@ -1621,52 +1605,18 @@ export class SSPlayer extends Container {
                 // the same (cellmap, blend) into a single pooled Mesh / draw call. Only
                 // *consecutive* runs are merged, so draw order (hence blend compositing)
                 // is preserved exactly.
-                this._fxCount = 0;
-                for (let c = 0; c < count; c++) {
-                    const partIdx = drawOrder[startRank + c];
-                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
-                    if (alpha <= 0) continue;
-
-                    const plan = player.getEffectDrawPlan(partIdx);
-                    if (!plan) continue;
-
-                    const cmdCount = plan.commandsLength();
-                    for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
-                        const cmd = plan.commands(cmdIdx, this._scratchCmd);
-                        if (!cmd) continue;
-                        const quadCount = cmd.quadCount();
-                        if (quadCount === 0) continue;
-
-                        let d = this._fxDesc[this._fxCount];
-                        if (!d) {
-                            d = { partIdx: 0, plan, cellmap: 0, blend: 0, quadCount: 0, particleOffset: 0, partAlpha: 1 };
-                            this._fxDesc[this._fxCount] = d;
-                        }
-                        d.partIdx = partIdx;
-                        d.plan = plan;
-                        d.cellmap = cmd.cellmapHash();
-                        d.blend = cmd.blend();
-                        d.quadCount = quadCount;
-                        d.particleOffset = cmd.particleOffset();
-                        d.partAlpha = alpha;
-                        this._fxCount++;
-                    }
-                }
+                const fxCount = this._fx.collect(player, frameData, drawOrder, startRank, count);
 
                 // The descriptors hold zero-copy EffectDrawPlan views over WASM
                 // memory. Nothing between the gather above and the build below
                 // allocates in WASM (getEffectShader / getTexture / buffer updates
                 // are all JS/GPU side), so the views stay valid — no re-derive needed.
                 let g = 0;
-                while (g < this._fxCount) {
-                    const cellmap = this._fxDesc[g].cellmap;
-                    const blend = this._fxDesc[g].blend;
-                    let h = g;
-                    let totalQuads = 0;
-                    while (h < this._fxCount && this._fxDesc[h].cellmap === cellmap && this._fxDesc[h].blend === blend) {
-                        totalQuads += this._fxDesc[h].quadCount;
-                        h++;
-                    }
+                while (g < fxCount) {
+                    const cellmap = this._fx.items[g].cellmap;
+                    const blend = this._fx.items[g].blend;
+                    const h = this._fx.runEnd(g);
+                    const totalQuads = this._fx.quadsIn(g, h);
 
                     const pCount = totalQuads * 4;
                     const iCount = totalQuads * 6;
@@ -1681,7 +1631,7 @@ export class SSPlayer extends Container {
                     let vOff = 0;
                     let iOff = 0;
                     for (let k = g; k < h; k++) {
-                        const d = this._fxDesc[k];
+                        const d = this._fx.items[k];
                         geometryBuilder.buildEffectCommand(
                             d.partIdx, d.plan, d.particleOffset, d.quadCount,
                             positions, uvs, colors, indices, vOff, iOff, d.partAlpha

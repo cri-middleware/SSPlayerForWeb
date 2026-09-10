@@ -1,4 +1,4 @@
-import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, ssRuntime, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
@@ -126,9 +126,11 @@ export class SSWebGLRenderer {
   // keeps (rgb * a, a) valid. Reset per context in `_renderContext`.
   private readonly _ctxTint = new Float32Array([1, 1, 1, 1]);
 
-  // For Effect batching
-  private _fxDesc: { partIdx: number, plan: any, cellmap: number, blend: number, quadCount: number, particleOffset: number, partAlpha: number }[] = [];
-  private _fxCount = 0;
+  // Engine-agnostic Effect batching (core), shared with ssplayer-pixi: which
+  // particle commands draw, and which neighbours merge into one draw call by
+  // (cellmap, blend). Issuing that draw call is ours. Pooled, so steady-state
+  // rendering allocates nothing.
+  private _fx = new EffectBatchPlanner<DirectInternalPlayer>();
   private _whiteTex: WebGLTexture | null = null;
 
   // The caller's transform with the player's root affine (flip / offset) folded
@@ -162,11 +164,9 @@ export class SSWebGLRenderer {
   // the ss uniforms are set per draw, so no per-texture pooling is needed — unlike
   // ssplayer-pixi, whose Shader objects bake in their resources).
   private ssShaderPrograms = new Map<number, SsShaderProgram | null>();
-  // Reused shader-attribute accessor + param scratch (GC-zero hot path, §6/§9).
-  private _scratchShader = new ssRuntime.PartAttributeShader();
-  private _ssParams = new Float32Array(8);
-  // Reused effect-command accessor — same reason as _scratchBatch.
-  private _scratchCmd = new ssRuntime.EffectDrawCommand();
+  // Engine-agnostic `SHDR` read (core), shared with ssplayer-pixi: program id,
+  // param0..7 and the cell UV rect derived from the quad's corners.
+  private _shaderAttr = new ShaderAttributeResolver();
 
   // Pooled InheritedStencilMask, one per recursion depth (a child holds its own
   // while ours stays live up the stack) — see inheritedAtDepth.
@@ -744,48 +744,14 @@ export class SSWebGLRenderer {
           gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
         }
 
-        this._fxCount = 0;
-        for (let c = 0; c < count; c++) {
-          const partIdx = drawOrder[startRank + c];
-          const alpha = this._raw.partAlphaOf(fd, partIdx);
-          if (alpha <= 0) continue;
-
-          const plan = player.getEffectDrawPlan(partIdx);
-          if (!plan) continue;
-
-          const cmdCount = plan.commandsLength();
-          for (let cmdIdx = 0; cmdIdx < cmdCount; cmdIdx++) {
-            const cmd = plan.commands(cmdIdx, this._scratchCmd);
-            if (!cmd) continue;
-            const quadCount = cmd.quadCount();
-            if (quadCount === 0) continue;
-
-            let d = this._fxDesc[this._fxCount];
-            if (!d) {
-              d = { partIdx: 0, plan, cellmap: 0, blend: 0, quadCount: 0, particleOffset: 0, partAlpha: 1 };
-              this._fxDesc[this._fxCount] = d;
-            }
-            d.partIdx = partIdx;
-            d.plan = plan;
-            d.cellmap = cmd.cellmapHash();
-            d.blend = cmd.blend();
-            d.quadCount = quadCount;
-            d.particleOffset = cmd.particleOffset();
-            d.partAlpha = alpha;
-            this._fxCount++;
-          }
-        }
+        const fxCount = this._fx.collect(player, fd, drawOrder, startRank, count);
 
         let g = 0;
-        while (g < this._fxCount) {
-          const cellmap = this._fxDesc[g].cellmap;
-          const blend = this._fxDesc[g].blend;
-          let h = g;
-          let totalQuads = 0;
-          while (h < this._fxCount && this._fxDesc[h].cellmap === cellmap && this._fxDesc[h].blend === blend) {
-            totalQuads += this._fxDesc[h].quadCount;
-            h++;
-          }
+        while (g < fxCount) {
+          const cellmap = this._fx.items[g].cellmap;
+          const blend = this._fx.items[g].blend;
+          const h = this._fx.runEnd(g);
+          const totalQuads = this._fx.quadsIn(g, h);
 
           const pCount = totalQuads * 4;
           const iCount = totalQuads * 6;
@@ -794,7 +760,7 @@ export class SSWebGLRenderer {
           let vOff = 0;
           let iOff = 0;
           for (let k = g; k < h; k++) {
-            const d = this._fxDesc[k];
+            const d = this._fx.items[k];
             gb.buildEffectCommand(
               d.partIdx, d.plan, d.particleOffset, d.quadCount,
               this.batchPos, this.batchUv, this.batchColor, this.batchIndices, vOff, iOff, d.partAlpha
@@ -1047,9 +1013,11 @@ export class SSWebGLRenderer {
    * tint latched for this render() call, identity when the caller passed none).
    */
   private applySsShader(fd: FrameData, shaderIdx: number, invW: number, invH: number): SsShaderProgram | null {
-    const attr = fd.shaders(shaderIdx, this._scratchShader);
-    if (!attr) return null;
-    const prog = this.acquireSsShaderProgram(attr.idHash());
+    // Engine-agnostic read (core), shared with ssplayer-pixi: the program's id,
+    // its eight parameters, and the cell UV rect derived from the quad's corner
+    // UVs buildOnePart wrote to batchUv. Binding them to the GL program is ours.
+    if (!this._shaderAttr.resolve(fd, shaderIdx, this.batchUv)) return null;
+    const prog = this.acquireSsShaderProgram(this._shaderAttr.idHash);
     if (!prog) return null;
 
     const gl = this.gl;
@@ -1059,24 +1027,8 @@ export class SSWebGLRenderer {
     if (prog.uColor) gl.uniform4fv(prog.uColor, this._ctxTint);
     if (prog.uTexture) gl.uniform1i(prog.uTexture, 0);
 
-    const p = this._ssParams;
-    p[0] = attr.param0(); p[1] = attr.param1(); p[2] = attr.param2(); p[3] = attr.param3();
-    p[4] = attr.param4(); p[5] = attr.param5(); p[6] = attr.param6(); p[7] = attr.param7();
-    if (prog.uParams) gl.uniform4fv(prog.uParams, p);
-
-    // Cell UV rect = (left, top, right, bottom) over the quad's 4 corner UVs (vertices
-    // 0..3; vertex 4 is the centre). buildOnePart wrote the normalised UVs to batchUv.
-    const uv = this.batchUv;
-    let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
-    for (let q = 0; q < 4; q++) {
-      const uu = uv[q * 2];
-      const vv = uv[q * 2 + 1];
-      if (uu < minU) minU = uu;
-      if (uu > maxU) maxU = uu;
-      if (vv < minV) minV = vv;
-      if (vv > maxV) maxV = vv;
-    }
-    if (prog.uCellRect) gl.uniform4f(prog.uCellRect, minU, minV, maxU, maxV);
+    if (prog.uParams) gl.uniform4fv(prog.uParams, this._shaderAttr.params);
+    if (prog.uCellRect) gl.uniform4fv(prog.uCellRect, this._shaderAttr.cellRect);
     if (prog.uPixelSize) gl.uniform2f(prog.uPixelSize, invW, invH);
     return prog;
   }

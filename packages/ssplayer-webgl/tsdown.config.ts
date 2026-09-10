@@ -23,7 +23,7 @@ export default defineConfig([
       entryFileNames: 'ssplayer-webgl.browser.min.js',
     },
     deps: {
-      alwaysBundle: ['@spritestudio/ssplayer-core', 'flatbuffers'],
+      alwaysBundle: ['@spritestudio/ssplayer-core', '@spritestudio/ssplayer-core/audio', 'flatbuffers'],
     }
   },
   // 3. IIFE — self-registering <ss-player> Custom Element for classic <script> / CDN.
@@ -39,7 +39,7 @@ export default defineConfig([
       entryFileNames: 'ss-player.element.min.js',
     },
     deps: {
-      alwaysBundle: ['@spritestudio/ssplayer-core', 'flatbuffers'],
+      alwaysBundle: ['@spritestudio/ssplayer-core', '@spritestudio/ssplayer-core/audio', 'flatbuffers'],
     }
   }
 ]);
