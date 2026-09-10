@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, type InstanceChildState, BlendType, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, type InstanceChildState, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -12,7 +12,7 @@ import { SS_SHADER_SOURCES } from './SSShaderLib.js';
 // than PixiJS "advanced" filter blends (which don't reliably engage / read the
 // live framebuffer here). Importing registers the WebGPU entries; the WebGL map is
 // patched via registerSSBlendModesGL once the renderer is known. See SSBlendModes.
-import { SS_INVERT_BLEND, SS_EXCLUSION_BLEND, SS_MIX_BLEND, SS_ADD_BLEND, SS_MUL_BLEND, SS_SUB_BLEND, SS_SCREEN_BLEND, registerSSBlendModesGL } from './SSBlendModes.js';
+import { SS_MIX_BLEND, SS_ADD_BLEND, SS_BLEND_MODE_NAMES, registerSSBlendModesGL } from './SSBlendModes.js';
 
 // MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
 
@@ -1438,23 +1438,10 @@ export class SSPlayer extends Container {
             // All blend modes are mapped to custom states (SS_*_BLEND) defined in
             // SSBlendModes.ts. This ensures 100% parity with the fixed-function
             // GPU blend equations used in ssplayer-webgl across both WebGL and WebGPU.
-            let blendMode: any = SS_MIX_BLEND;
-            switch (batchBlend) {
-                case BlendType.Mix: blendMode = SS_MIX_BLEND; break;
-                case BlendType.Mul: blendMode = SS_MUL_BLEND; break;
-                case BlendType.Add: blendMode = SS_ADD_BLEND; break;
-                case BlendType.Sub: blendMode = SS_SUB_BLEND; break;
-                case BlendType.Mulalpha: blendMode = SS_MUL_BLEND; break;
-                case BlendType.Screen: blendMode = SS_SCREEN_BLEND; break;
-                case BlendType.Exclusion: blendMode = SS_EXCLUSION_BLEND; break;
-                case BlendType.Invert: blendMode = SS_INVERT_BLEND; break;
-                // Emulated modes (mapping follows ssplayer-webgl)
-                case BlendType.Mul2: blendMode = SS_MUL_BLEND; break;
-                case BlendType.Div2: blendMode = SS_MIX_BLEND; break;
-                case BlendType.Screen2: blendMode = SS_SCREEN_BLEND; break;
-                case BlendType.Overlay2: blendMode = SS_MIX_BLEND; break;
-                default: blendMode = SS_MIX_BLEND; break;
-            }
+            // Which of the seven fixed-function states a BlendType draws with is
+            // core's table (ssplayer-webgl reads the same one); naming the mode we
+            // registered for that state is ours. See SSBlendModes.
+            const blendMode: any = SS_BLEND_MODE_NAMES[ssBlendMode(batchBlend)];
             
             const invTexW = 1.0 / texture.width;
             const invTexH = 1.0 / texture.height;
