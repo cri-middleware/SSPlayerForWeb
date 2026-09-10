@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, type InstanceChildState, BlendType, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, ssRuntime, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, type InstanceChildState, BlendType, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, ssRuntime, EffectDrawPlan, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from './SSWebAudioManager.js';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -141,17 +141,21 @@ export class SSPlayer extends Container {
 
     // Reused per-frame scratch so the render hot path allocates nothing: a
     // zero-copy raw reader for the FlatBuffers struct vectors (bypasses the
-    // per-element accessors — 07_render_loop.ja.md §2), a reused DrawBatch
-    // accessor, and a transient 2D affine for an instance part's own world matrix
-    // before composition. The raw reader is bound via its `*Of(frameData, …)`
-    // helpers at each read so it stays correct across instance-child recursion
-    // (which rebinds it) and re-fetches.
+    // per-element accessors — 07_render_loop.ja.md §2) and a reused DrawBatch
+    // accessor. The raw reader is bound via its `*Of(frameData, …)` helpers at
+    // each read so it stays correct across instance-child recursion (which
+    // rebinds it) and re-fetches.
     private readonly _raw = new FrameDataRaw();
     private readonly _scratchBatch = new DrawBatch();
     // Same for the effect plan's draw commands and a part's `SHDR` attribute.
     private readonly _scratchCmd = new ssRuntime.EffectDrawCommand();
     private readonly _scratchShaderAttr = new ssRuntime.PartAttributeShader();
-    private readonly scratchInstMat = new Float32Array(6);
+    // Engine-agnostic per-instance-part resolution (core), shared with
+    // ssplayer-webgl: slot visibility, alpha, composed placement, §2-6 mask
+    // context and the child's subframe-aware playhead. Only the drawing that
+    // follows is ours. Its record is reused across calls (including across the
+    // recursion), so each call site reads out what it needs immediately.
+    private readonly _instanceResolver = new InstanceResolver<DirectInternalPlayer>();
 
     // Pooled InheritedMask, one per instance-recursion depth (a child holds its own
     // while ours stays live up the stack) — see inheritedAtDepth.
@@ -250,11 +254,9 @@ export class SSPlayer extends Container {
     // rasterises the resulting plan into the coverage bitmap.
     private readonly maskPlanner = new MaskPlanner();
     private readonly maskSource = new FrameDataMaskSource();
-    // Carry-over (§2-7) scratch: the instance placement read for a bubbling
-    // child, the running coverage bbox shared by every baked writer, and a
-    // pooled candidate list of visible instance children whose clipping writers
-    // are carried up into this context's coverage.
-    private readonly scratchBubbleInst = new Float32Array(6);
+    // Carry-over (§2-7) scratch: the running coverage bbox shared by every baked
+    // writer, and a pooled candidate list of visible instance children whose
+    // clipping writers are carried up into this context's coverage.
     private readonly _covBBox = new Float32Array(4);
     private readonly _bubbleCands: { rank: number; child: InstanceChildState<DirectInternalPlayer>; influence: boolean; composed: Float32Array }[] = [];
     private _bubbleCount = 0;
@@ -1379,34 +1381,28 @@ export class SSPlayer extends Container {
             // by recursing into its child context.
             if (kind === DrawBatchKind.Instance) {
                 for (let c = 0; c < count; c++) {
-                    const partIdx = drawOrder[startRank + c];
-                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
-                    if (alpha <= 0) continue;
-
-                    const child = player.getInstanceChild(partIdx);
-                    if (!child || !child.visible) continue;
-
-                    // Caller side of the §2-6 composition, resolved BEFORE the
-                    // child builds anything so the child can settle its own
-                    // parts' roles itself and we never patch its output after
-                    // the fact. mask_write deliberately takes no part: writing
-                    // your own mask is a local fact, not something descendants
-                    // inherit (that the part is itself a target is unaffected).
-                    const instFlags = maskFlags ? maskFlags[partIdx] : 0;
-                    const instInfluence = composeMaskInfluence(ctxInfluence, instFlags);
-                    const instVisibleInside = composeVisibleInside(ctxVisibleInside, instFlags);
+                    // Engine-agnostic resolution (core): slot visibility, alpha,
+                    // the composed placement, the §2-6 mask context handed down
+                    // and the child's subframe-aware playhead. Its record is
+                    // reused, so read out what must survive the recursion below.
+                    const inst = this._instanceResolver.resolve(
+                        player, frameData, drawOrder, startRank + c,
+                        parentMatrix, parentAlpha, ctxInfluence, ctxVisibleInside);
+                    if (!inst) continue;
+                    const child = inst.child;
+                    const composed = inst.composed;
+                    const childAlpha = inst.childAlpha;
+                    const instInfluence = inst.influence;
+                    const instVisibleInside = inst.visibleInside;
 
                     // Coverage is deferred this frame (see maskDeferred): a mask
                     // target instance part would draw its whole sub-animation
                     // unclipped, so hold it back instead.
                     if (maskDeferred && instInfluence) continue;
 
-                    const childFrame = child.player.runtimeManager.context.get_frame_no();
+                    const childFrame = inst.frameNo;
                     const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
                     if (!childFrameData) continue;
-
-                    manager.getWorldMatrix2D(partIdx, this.scratchInstMat);
-                    const composed = GeometryBuilder.composeAffine(parentMatrix, this.scratchInstMat, child.parentMatrix);
 
                     // §3-2-2 instance mask inheritance. The child's composited
                     // positions are already in this coverage's space, so its
@@ -1422,7 +1418,7 @@ export class SSPlayer extends Container {
                     // The child holds this slot for its whole render, so it must
                     // hand out a different one to ITS children.
                     this._depth++;
-                    this.renderContext(child.player, childFrameData, childFrame, composed, parentAlpha * alpha, childInherited);
+                    this.renderContext(child.player, childFrameData, childFrame, composed, childAlpha, childInherited);
                     this._depth--;
 
                     // The child's getFrameData()/recursion may have grown WASM
@@ -1811,7 +1807,7 @@ export class SSPlayer extends Container {
         // clipping writers into this coverage. The coverage pass runs even when
         // this context owns no writer of its own (count === 0), as long as a
         // child carries one up.
-        const bubbleCount = this.collectClipBubbles(player, manager, geometryBuilder, drawOrder, ctxInfluence);
+        const bubbleCount = this.collectClipBubbles(player, geometryBuilder, frameData, drawOrder, ctxInfluence);
         if (count === 0 && bubbleCount === 0) return null;
 
         const root = this.maskRenderRoot;
@@ -1981,28 +1977,33 @@ export class SSPlayer extends Container {
      * geometry into this coverage's space. Reads only the owner frame (no child
      * getFrameData), so it is safe to run before the detach-prone bubble bake.
      * Returns the candidate count.
+     *
+     * Which instance parts qualify is the core resolver's call, so a fully
+     * transparent one is skipped here exactly as it is in the draw loop: an
+     * instance the renderer never draws contributes no coverage either. It is
+     * also the shared reading of §2-7's "visible instance child" — ssplayer-webgl
+     * reaches the same point by carrying the writers up from inside its draw loop.
      */
     private collectClipBubbles(
-        player: DirectInternalPlayer, manager: SSRuntimeManager,
-        geometryBuilder: GeometryBuilder, drawOrder: Uint16Array, ctxInfluence: boolean
+        player: DirectInternalPlayer, geometryBuilder: GeometryBuilder,
+        frameData: FrameData, drawOrder: Uint16Array, ctxInfluence: boolean
     ): number {
         this._bubbleCount = 0;
-        const maskFlags = manager.getPartMaskFlags();
         const ownerParent = geometryBuilder.parentMatrix;
         const n = drawOrder.length;
         for (let rank = 0; rank < n; rank++) {
-            const partIdx = drawOrder[rank];
-            const child = player.getInstanceChild(partIdx);
-            if (!child || !child.visible) continue;
-            const instFlags = maskFlags ? maskFlags[partIdx] : 0;
-            const influence = composeMaskInfluence(ctxInfluence, instFlags);
-            manager.getWorldMatrix2D(partIdx, this.scratchBubbleInst);
-            // Reuses child.parentMatrix as the compose target (recomputed identically
-            // when the child draws its own parts later this frame).
-            const composed = GeometryBuilder.composeAffine(ownerParent, this.scratchBubbleInst, child.parentMatrix);
+            // parentAlpha / ctxVisibleInside play no part in a bubble: only the
+            // rank, the composed placement and the op-deciding influence do.
+            const inst = this._instanceResolver.resolve(
+                player, frameData, drawOrder, rank, ownerParent, 1, ctxInfluence, ROOT_VISIBLE_INSIDE);
+            if (!inst) continue;
+            // The composed matrix reuses child.parentMatrix as its target, and is
+            // recomputed identically when the child draws its own parts later this
+            // frame — so holding it past the loop is safe.
+            const child = inst.child;
             let e = this._bubbleCands[this._bubbleCount];
-            if (!e) { e = { rank: 0, child, influence: false, composed }; this._bubbleCands[this._bubbleCount] = e; }
-            e.rank = rank; e.child = child; e.influence = influence; e.composed = composed;
+            if (!e) { e = { rank: 0, child, influence: false, composed: inst.composed }; this._bubbleCands[this._bubbleCount] = e; }
+            e.rank = rank; e.child = child; e.influence = inst.influence; e.composed = inst.composed;
             this._bubbleCount++;
         }
         return this._bubbleCount;

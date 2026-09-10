@@ -1,4 +1,4 @@
-import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, ssRuntime, composeMaskInfluence, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, ssRuntime, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
@@ -131,11 +131,15 @@ export class SSWebGLRenderer {
   private _fxCount = 0;
   private _whiteTex: WebGLTexture | null = null;
 
-  private scratchMatrix = new Float32Array(6);
   // The caller's transform with the player's root affine (flip / offset) folded
-  // in. Kept apart from scratchMatrix, which the instance-child loop overwrites
-  // per child while this has to stay valid for the whole call.
+  // in. Has to stay valid for the whole call, so it is never used as scratch.
   private rootedTransform = new Float32Array(6);
+  // Engine-agnostic per-instance-part resolution (core), shared with
+  // ssplayer-pixi: slot visibility, alpha, composed placement, §2-6 mask context
+  // and the child's subframe-aware playhead. Only the drawing that follows is
+  // ours. Its record is reused across calls (including across the recursion), so
+  // the call site reads out what it needs immediately.
+  private _instanceResolver = new InstanceResolver<DirectInternalPlayer>();
   // Reused FlatBuffer accessor so the batch loop allocates nothing in steady state
   // (re-`__init`s into this instead of `new`-ing per call).
   private _scratchBatch = new DrawBatch();
@@ -852,22 +856,19 @@ export class SSWebGLRenderer {
 
       if (kind === DrawBatchKind.Instance) {
         for (let c = 0; c < count; c++) {
-          const partIdx = drawOrder[startRank + c];
-          const alpha = this._raw.partAlphaOf(fd, partIdx);
-          if (alpha <= 0) continue;
-
-          const child = player.getInstanceChild(partIdx);
-          if (!child || !child.visible) continue;
-
-          player.runtimeManager.getWorldMatrix2D(partIdx, this.scratchMatrix);
-          const composed = GeometryBuilder.composeAffine(transform, this.scratchMatrix, child.parentMatrix);
-
-          // §2-6 composition, resolved on the caller side and handed down, so the
-          // sub-animation settles its own parts' roles and we never patch its
-          // output afterwards. mask_write takes no part in it.
-          const instFlags = maskFlags ? maskFlags[partIdx] : 0;
-          const instInfluence = composeMaskInfluence(ctxInfluence, instFlags);
-          const instVisibleInside = composeVisibleInside(ctxVisibleInside, instFlags);
+          // Engine-agnostic resolution (core), shared with ssplayer-pixi: slot
+          // visibility, alpha, the composed placement and the §2-6 mask context
+          // handed down. Its record is reused, so read out everything still
+          // needed after the recursion below (the carry-over reads `child`,
+          // `composed` and `instInfluence`).
+          const inst = this._instanceResolver.resolve(
+            player, fd, drawOrder, startRank + c, transform, parentAlpha, ctxInfluence, ctxVisibleInside);
+          if (!inst) continue;
+          const child = inst.child;
+          const composed = inst.composed;
+          const childAlpha = inst.childAlpha;
+          const instInfluence = inst.influence;
+          const instVisibleInside = inst.visibleInside;
 
           // Coverage reaching the sub-animation: ours, brought up to the instance
           // part's rank (§2-1 — the sub-anime sits at that slot in our draw
@@ -891,7 +892,7 @@ export class SSWebGLRenderer {
           // The child holds this slot for its whole render, so it must hand out a
           // different one to ITS children.
           this._depth++;
-          this._renderContext(child.player, resourceManager, composed, false, childInherited, parentAlpha * alpha);
+          this._renderContext(child.player, resourceManager, composed, false, childInherited, childAlpha);
           this._depth--;
 
           // Re-fetch WASM views in case the child's rendering grew WASM memory —
