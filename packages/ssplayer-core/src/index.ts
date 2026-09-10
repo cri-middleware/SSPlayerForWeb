@@ -24,3 +24,5 @@ export * from './InternalPlayerBase.js';
 export * from './InstanceResolver.js';
 export * from './EffectBatchPlanner.js';
 export * from './ShaderAttributeResolver.js';
+export * from './BlendState.js';
+export * from './ShaderIds.js';

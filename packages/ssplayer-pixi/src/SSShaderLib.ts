@@ -32,19 +32,10 @@
 // uses none); shader × mask clipping is not combined (the renderer falls back
 // to the plain masked path); only Normal parts dispatch through here.
 
+import { ssShaderIdHash } from '@spritestudio/ssplayer-core';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 
-// FNV-1a 32-bit over the id's bytes — identical to the converter / runtime
-// (`ssconverter/src/utils.rs::fnv1a_hash_str`, `ssruntime/src/lib.rs`). The
-// `ss-*` ids are ASCII, so charCodeAt == the byte value.
-export function ssFnv1a(s: string): number {
-    let hash = 2166136261 >>> 0;
-    for (let i = 0; i < s.length; i++) {
-        hash ^= s.charCodeAt(i);
-        hash = Math.imul(hash, 16777619) >>> 0;
-    }
-    return hash >>> 0;
-}
+
 
 // ---------------------------------------------------------------------------
 // GLSL (WebGL2 / GLSL ES 3.00) — shared preamble + helpers.
@@ -698,5 +689,5 @@ const DEFS: { id: string; gl: GLProgram; gpu: GPUProgram }[] = [
 
 /** id_hash (FNV-1a of the SS shader id) → GLSL/WGSL program for the renderer. */
 export const SS_SHADER_SOURCES: Map<number, SsShaderProgram> = new Map(
-    DEFS.map((d) => [ssFnv1a(d.id), { gl: d.gl, gpu: d.gpu }] as const)
+    DEFS.map((d) => [ssShaderIdHash(d.id), { gl: d.gl, gpu: d.gpu }] as const)
 );

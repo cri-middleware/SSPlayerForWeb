@@ -1,4 +1,4 @@
-import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, BlendType, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { GeometryBuilder, DirectInternalPlayer, type InstanceChildState, DrawBatchKind, DrawBatch, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendState, SSBlendFactor, SSBlendEquation, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { PartsColorProgram } from './programs/PartsColorProgram.js';
 import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
@@ -357,28 +357,29 @@ export class SSWebGLRenderer {
     this._lastBlend = blendType;
 
     const gl = this.gl;
-    let sRGB: number = gl.ONE;
-    let dRGB: number = gl.ONE_MINUS_SRC_ALPHA;
-    let rgbEq: number = gl.FUNC_ADD;
+    // Which state SpriteStudio draws this blend with is core's table; turning its
+    // factors into GL constants is ours. ssplayer-pixi registers the same states
+    // as real GPU blend modes, which is what keeps the two identical.
+    const st = ssBlendState(blendType);
+    gl.blendFuncSeparate(this.glFactor(st.srcRGB), this.glFactor(st.dstRGB), gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.blendEquationSeparate(
+      st.eqRGB === SSBlendEquation.ReverseSubtract ? gl.FUNC_REVERSE_SUBTRACT : gl.FUNC_ADD,
+      gl.FUNC_ADD,
+    );
+  }
 
-    switch (blendType) {
-      case BlendType.Mix: sRGB = gl.ONE; dRGB = gl.ONE_MINUS_SRC_ALPHA; break;
-      case BlendType.Add: sRGB = gl.ONE; dRGB = gl.ONE; break;
-      case BlendType.Mul: sRGB = gl.DST_COLOR; dRGB = gl.ONE_MINUS_SRC_ALPHA; break;
-      case BlendType.Sub: sRGB = gl.ONE; dRGB = gl.ONE; rgbEq = gl.FUNC_REVERSE_SUBTRACT; break;
-      case BlendType.Screen: sRGB = gl.ONE_MINUS_DST_COLOR; dRGB = gl.ONE; break;
-      case BlendType.Invert: sRGB = gl.ONE_MINUS_DST_COLOR; dRGB = gl.ZERO; break;
-      case BlendType.Exclusion: sRGB = gl.ONE_MINUS_DST_COLOR; dRGB = gl.ONE_MINUS_SRC_COLOR; break;
-      // No GPU-native equivalent; mirror ssplayer-pixi's mapping (Mulalpha/Mul2 -> Mul,
-      // Screen2 -> Screen, Div2/Overlay2 -> Mix) until verified against SS6PlayerForUnity.
-      case BlendType.Mulalpha:
-      case BlendType.Mul2: sRGB = gl.DST_COLOR; dRGB = gl.ONE_MINUS_SRC_ALPHA; break;
-      case BlendType.Screen2: sRGB = gl.ONE_MINUS_DST_COLOR; dRGB = gl.ONE; break;
-      default: sRGB = gl.ONE; dRGB = gl.ONE_MINUS_SRC_ALPHA; break;
+  /** One engine-neutral blend factor as this context's constant. */
+  private glFactor(factor: SSBlendFactor): number {
+    const gl = this.gl;
+    switch (factor) {
+      case SSBlendFactor.Zero: return gl.ZERO;
+      case SSBlendFactor.One: return gl.ONE;
+      case SSBlendFactor.DstColor: return gl.DST_COLOR;
+      case SSBlendFactor.OneMinusSrcAlpha: return gl.ONE_MINUS_SRC_ALPHA;
+      case SSBlendFactor.OneMinusDstColor: return gl.ONE_MINUS_DST_COLOR;
+      case SSBlendFactor.OneMinusSrcColor: return gl.ONE_MINUS_SRC_COLOR;
+      default: return gl.ONE;
     }
-
-    gl.blendFuncSeparate(sRGB, dRGB, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.blendEquationSeparate(rgbEq, gl.FUNC_ADD);
   }
 
   /**

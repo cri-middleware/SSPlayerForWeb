@@ -29,6 +29,7 @@
 // bundled Shader.ssab uses none); shader × mask clipping is not combined (the
 // renderer falls back to the plain masked path); only Normal parts dispatch here.
 
+import { ssShaderIdHash } from '@spritestudio/ssplayer-core';
 import { PARTS_COLOR_VERT, ATTR_LOC, createGLProgram } from './PartsColorProgram.js';
 
 // ---------------------------------------------------------------------------
@@ -351,34 +352,31 @@ const SPOT = `
   gl_FragColor = ssFinish(Pixel);
 `;
 
-// Built-in ss-* shaders. `id` is the readable SpriteStudio shader id (the label);
-// `hash` is `fnv1a_hash_str(id)` — the exact value ssruntime exposes via
-// `PartAttributeShader.idHash()` (converter: `ssconverter/src/utils.rs`
-// `fnv1a_hash_str`, applied at `model_t/animedata.rs`
-// `value.id_hash = fnv1a_hash_str(&id)`). The hashes are **precomputed** rather than
-// derived at load: the player consumes the runtime-provided hash and never runs FNV
-// itself (hashing is the SDK's job). ssplayer-pixi instead computes `ssFnv1a(id)` at
-// module load; we avoid shipping/running FNV in the player here. These ids are stable
-// SDK built-ins, so the id ↔ hash pairing does not drift.
-const SS_SHADERS: { id: string; hash: number; frag: string }[] = [
-  { id: 'ss-sepia', hash: 0x36629dfc, frag: frag(SEPIA) },
-  { id: 'ss-hsb', hash: 0x8a5c3037, frag: frag(HSB, HSB_HELPERS) },
-  { id: 'ss-step', hash: 0x1b721788, frag: frag(STEP) },
-  { id: 'ss-pix', hash: 0xc488a527, frag: frag(PIX) },
-  { id: 'ss-noise', hash: 0x80d6d514, frag: frag(NOISE, NOISE_HELPERS) },
-  { id: 'ss-bmask', hash: 0x64e07450, frag: frag(BMASK) },
-  { id: 'ss-outline', hash: 0x8f8307d4, frag: frag(OUTLINE) },
-  { id: 'ss-blur', hash: 0xb59c8d1b, frag: frag(BLUR) },
-  { id: 'ss-wave', hash: 0xe1df9a2b, frag: frag(WAVE) },
-  { id: 'ss-move', hash: 0xe1c1ee07, frag: frag(MOVE) },
-  { id: 'ss-scatter', hash: 0x45e35578, frag: frag(SCATTER, SCATTER_HELPERS) },
-  { id: 'ss-circle', hash: 0x9b90e282, frag: frag(CIRCLE) },
-  { id: 'ss-spot', hash: 0x7140896a, frag: frag(SPOT) },
+// Built-in ss-* shaders, by the readable SpriteStudio shader id (the label). The
+// id ↔ `idHash` pairing is core's (`ssShaderIdHash`), shared with ssplayer-pixi:
+// what reaches a player on the `SHDR` attribute is the hash, and which program
+// that names has nothing to do with how the program is written. The thirteen
+// values it used to carry as literals are pinned by core's
+// `ss_shader_id_hashes_are_stable`, so nothing is assumed here either.
+const SS_SHADERS: { id: string; frag: string }[] = [
+  { id: 'ss-sepia', frag: frag(SEPIA) },
+  { id: 'ss-hsb', frag: frag(HSB, HSB_HELPERS) },
+  { id: 'ss-step', frag: frag(STEP) },
+  { id: 'ss-pix', frag: frag(PIX) },
+  { id: 'ss-noise', frag: frag(NOISE, NOISE_HELPERS) },
+  { id: 'ss-bmask', frag: frag(BMASK) },
+  { id: 'ss-outline', frag: frag(OUTLINE) },
+  { id: 'ss-blur', frag: frag(BLUR) },
+  { id: 'ss-wave', frag: frag(WAVE) },
+  { id: 'ss-move', frag: frag(MOVE) },
+  { id: 'ss-scatter', frag: frag(SCATTER, SCATTER_HELPERS) },
+  { id: 'ss-circle', frag: frag(CIRCLE) },
+  { id: 'ss-spot', frag: frag(SPOT) },
 ];
 
 /** id_hash (ssruntime `PartAttributeShader.idHash()`) → GLSL ES 1.00 fragment source. */
 export const SS_SHADER_SOURCES: Map<number, string> = new Map(
-  SS_SHADERS.map((s) => [s.hash, s.frag] as const)
+  SS_SHADERS.map((s) => [ssShaderIdHash(s.id), s.frag] as const)
 );
 
 /**
