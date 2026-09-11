@@ -41,7 +41,7 @@ player.stop();              // 停止 — 再生ヘッドはその場に留ま�
 ```ts
 player.frameNo;             // 現在フレーム。小数（get / set）
 player.speedScale = 1.5;    // 再生速度倍率
-player.isPlaying;           // 再生中か
+player.isPlaying;           // 再生セッションが有効か（一時停止中も true。isPlaying && !isPausing で「実際に進行中」）
 player.isPausing;           // 一時停止中か
 player.isFinished;          // 設定したループを全て再生し終えたか。次の play() / setAnimation() まで貼り付き、
                             // 無限ループでは立たず、stop() でも立たない（＝自然に終わったのか止めたのかを区別できる）
@@ -109,7 +109,7 @@ TyranoScript / TyranoBuilder のタグは用意していません。スクリプ
 ## パーツ照会
 
 ```ts
-player.getPartNames();          // パーツ数
+player.getPartNames();          // 全パーツ名（インデックス順。個数は .length）
 player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
 

@@ -80,7 +80,7 @@ PixiJS ではさらに
 
 | インターフェース | 実装するのはどんなとき |
 |---|---|
-| [`IAudioManager`](/api/@spritestudio/ssplayer-core/interfaces/IAudioManager.md) | アニメーションのサウンドを自前のオーディオエンジンで鳴らしたいとき。両レンダラーには `SSWebAudioManager` が同梱されているので、そのまま使うこともできます。 |
+| [`IAudioManager`](/api/@spritestudio/ssplayer-core/interfaces/IAudioManager.md) | アニメーションのサウンドを自前のオーディオエンジンで鳴らしたいとき。`@spritestudio/ssplayer-core` に既製の `SSWebAudioManager`（`/audio` サブパス）が用意されているので、そのまま使うこともできます。 |
 | [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) | レンダラーを自作するとき、またはテクスチャを兄弟ファイル以外から供給したいとき。[リソースとライフサイクル](/ja/customize/resources)を参照。 |
 | [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md) | インスタンスパーツの参照先パックが URL で辿れないとき（インメモリのバンドル、ドラッグ＆ドロップなど）。 |
 

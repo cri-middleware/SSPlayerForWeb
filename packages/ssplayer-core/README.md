@@ -72,6 +72,7 @@ the layer a renderer package sits on top of.
 | `DirectInternalPlayer` | High-performance direct-draw player facade. |
 | `GeometryBuilder` | Builds vertex / index buffers from runtime draw batches. |
 | `IResourceManager` / `IAudioManager` | Interfaces a renderer implements (textures, audio). |
+| `SSWebAudioManager` | Ready-made `IAudioManager` (Web Audio); import from the `./audio` subpath. |
 | `ssFormat` / `ssRuntime` | SSAB / SSQB FlatBuffers introspection accessors. |
 | `WebPlaybackDirection` / `WebPlaybackStyle` | Playback enums. |
 

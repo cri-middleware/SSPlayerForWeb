@@ -42,7 +42,7 @@ player.stop();              // stop — the playhead stays where it stands (play
 ```ts
 player.frameNo;             // current frame, fractional (get / set)
 player.speedScale = 1.5;    // playback speed multiplier
-player.isPlaying;           // whether playback is running
+player.isPlaying;           // a playback session is live — true even while paused (isPlaying && !isPausing = advancing)
 player.isPausing;           // whether playback is paused
 player.isFinished;          // whether every configured loop has played — sticky until the next play()/setAnimation(),
                             // never true on an infinite loop, and NOT raised by stop(), so it tells a run that ended
@@ -110,7 +110,7 @@ There are no TyranoScript / TyranoBuilder tags for these; reach the player from 
 ## Part lookup
 
 ```ts
-player.getPartNames();          // number of parts
+player.getPartNames();          // all part names, in index order (count = .length)
 player.findPartIndex('body');    // name → index (-1 if unknown)
 ```
 

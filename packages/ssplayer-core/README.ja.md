@@ -47,6 +47,7 @@
 | `DirectInternalPlayer` | 高性能な直接描画プレイヤーのファサード。 |
 | `GeometryBuilder` | ランタイムのドローバッチから頂点 / インデックスバッファを構築する。 |
 | `IResourceManager` / `IAudioManager` | レンダラーが実装するインターフェース（テクスチャ、オーディオ）。 |
+| `SSWebAudioManager` | 既製の `IAudioManager`（Web Audio）。`./audio` サブパスからインポート。 |
 | `ssFormat` / `ssRuntime` | SSAB / SSQB FlatBuffers のイントロスペクションアクセサ。 |
 | `WebPlaybackDirection` / `WebPlaybackStyle` | 再生用の列挙型。 |
 

@@ -20,7 +20,7 @@ pnpm add @spritestudio/ssplayer-webgl@beta
 
 - **依存なし**: PixiJS や Three.js などの外部ライブラリを必要とせず、単体で動作します。
 - **Web Components 対応**: JavaScript を書かずに、HTML へ `<ss-player>` を記述するだけで利用できる Custom Element を内包しています。
-- 描画と更新を自動で行う `SSPlayer` と、独自のレンダリングループへ組み込める `SSWebGLRenderer` を提供します。
+- 描画と更新を自動で行う `SSSurface` と `SSPlayer`、独自のレンダリングループへ組み込める `SSWebGLRenderer` を提供します。
 
 ## Web Components (`<ss-player>`) の使い方
 

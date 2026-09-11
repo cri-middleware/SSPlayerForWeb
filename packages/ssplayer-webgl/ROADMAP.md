@@ -16,6 +16,7 @@ work (see *Blocked on SpriteStudio-SDK* below).
 
 *   [x] WebGL1 baseline with WebGL2 auto-upgrade (VAO / `uint32` index / NPOT).
 *   [x] PartsColor rendering — Normal / Shape / Mesh parts.
+*   [x] Part property overrides — `setPart{Color,Cell,Visibility}Override` (name- or index-keyed) and their `clear…` counterparts.
 *   [x] All SS blend modes as fixed-function GL state.
 *   [x] Stencil mask and Effect (particle) rendering.
 *   [x] SpriteStudio integration shaders (`ss-*`, the `SHDR` attribute).
@@ -59,11 +60,13 @@ work (see *Blocked on SpriteStudio-SDK* below).
 These require underlying `SpriteStudio-SDK` runtime / FFI work before the
 renderer can wire them up.
 
-*   [ ] **Part property overrides** (`setPartVisible` / cell / tint) —
-    *Dependency*: the **Override Layer API** (SDK Phase 2).
-*   [ ] **label-seek / runtime texture swap** — awaiting the corresponding SDK API.
+*   [ ] **label-seek** — awaiting the corresponding SDK API.
 *   [ ] **Animation blending / crossfade** — the WASM C-API exists; the JS wiring
     is pending.
+
+(Runtime texture swap is a player-side feature, not SDK-blocked; the resource
+manager's `bindTextureSource()` already provides the partial primitive — see
+[`../../ROADMAP.md`](../../ROADMAP.md).)
 
 ## Items not on the roadmap by design
 
