@@ -2,7 +2,7 @@ export interface IResourceManager {
     /**
      * Loads a texture from the given URL and associates it with the given hash.
      * @param url The URL of the texture to load.
-     * @param hash The hash of the texture (derived from its filename in SSAB).
+     * @param hash The cell-map name hash — a slot in one `.ssab`, not an image.
      */
     loadTexture(url: string, hash: number): Promise<void>;
 
