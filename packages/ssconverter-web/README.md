@@ -21,7 +21,7 @@ Both modes run the **same** `.sspj → .ssab` conversion — pick by workflow:
 | | **Browser tool** | **CLI** |
 |---|---|---|
 | Best for | one-off conversions, non-technical users | **developers**: scripting, CI, batch jobs |
-| How | open the hosted page, drag/drop the `.sspj` project **folder**, download the `.ssab` | `node scripts/cli.js -o ./out project.sspj` |
+| How | open the hosted page, drag/drop the `.sspj` project **folder**, download the `.ssab` | `node packages/ssconverter-web/scripts/cli.js -o ./out project.sspj` |
 | Output | ZIP download from the browser | files written to an output directory |
 | Jump to | [Browser tool](#browser-tool) | [CLI](#cli) |
 
@@ -74,7 +74,7 @@ The CLI reads the `.sspj` directory recursively, converts it, and writes the
 generated `.ssab` (plus any referenced textures) into the output directory.
 
 ```
-Usage: node scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>
+Usage: node packages/ssconverter-web/scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>
 ```
 
 > The package declares a bin, `ssconverter-web-cli` (→ `scripts/cli.js`), but nothing

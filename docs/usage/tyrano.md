@@ -89,6 +89,8 @@ output under `data/others/ssdata/` and point `[ss_new storage=...]` at it.
 
 ## 3. Quick start
 
+A minimal scenario that shows one looping character:
+
 Load the plugin once, at the top of your game:
 
 ```

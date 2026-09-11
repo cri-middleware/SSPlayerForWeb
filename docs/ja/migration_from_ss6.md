@@ -60,7 +60,7 @@ player.play();
 | `SetAlpha(alpha)` | `player.alpha`（Pixi 標準） | `Container` の標準プロパティを利用 |
 | `GetPartIndexFromName(name)` | `findPartIndex(name)` | 不明なパーツは `-1` |
 | `isPlaying` / `isPausing` | `isPlaying` / `isPausing` | 同名 |
-| `frameNo` / `totalFrame` / `fps` | `frame` / `totalFrames` / `frameRate` | |
+| `frameNo` / `totalFrame` / `fps` | `frameNo` / `totalFrames` / `frameRate` | 再生ヘッドは同名 |
 
 ### `speedScale` に負値を渡しても逆再生しません
 

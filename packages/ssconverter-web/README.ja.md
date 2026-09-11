@@ -22,7 +22,7 @@ SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤー
 | | **ブラウザツール** | **CLI** |
 |---|---|---|
 | 向いている用途 | 単発の変換、非技術者 | **開発者**: スクリプト、CI、バッチ処理 |
-| 方法 | ホスト版のページを開き、`.sspj` プロジェクトが入ったフォルダをドロップして `.ssab` をダウンロード | `node scripts/cli.js -o ./out project.sspj` |
+| 方法 | ホスト版のページを開き、`.sspj` プロジェクトが入ったフォルダをドロップして `.ssab` をダウンロード | `node packages/ssconverter-web/scripts/cli.js -o ./out project.sspj` |
 | 出力 | ブラウザからの ZIP ダウンロード | 出力ディレクトリへのファイル書き出し |
 | 参照先 | [ブラウザツール](#ブラウザツール) | [CLI](#cli) |
 
@@ -75,7 +75,7 @@ CLI は `.sspj` ディレクトリを再帰的に読み込んで変換し、生�
 されているテクスチャ）を出力ディレクトリに書き出します。
 
 ```
-Usage: node scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>
+Usage: node packages/ssconverter-web/scripts/cli.js [-o output_dir] [-e|--embedded] [--suffix <s>] [--stem-dir] <project.sspj>
 ```
 
 > 本パッケージは bin（`ssconverter-web-cli` → `scripts/cli.js`）を宣言していますが、

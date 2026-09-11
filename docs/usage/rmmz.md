@@ -78,6 +78,9 @@ Run these from an event's **Plugin Command** → `ssplayer-rpgmakermz`. An SS an
 rides on an MZ **picture**, so *Move Picture* / scale / Z-order / save-load all apply for
 free.
 
+The bold names below are the labels shown in the MZ editor; the value in parentheses is
+the internal command ID.
+
 **Show / attach**
 
 - **Show SS** (`showSS`) — create a picture and attach an animation in one step.
@@ -126,9 +129,10 @@ Making a display object of your own follow a part has **no plugin command**. Get
 
 **Playback / lifecycle**
 
-- **Play / Pause / Stop / Remove SS**, and **Wait for SS** — by `pictureId`. *Wait for
-  SS* holds the event until every configured loop has played (give it a finite
-  `loop`; note `0` is a synonym for infinite, so it waits forever).
+- **Play / Pause / Stop / Remove SS** (`playSS` / `pauseSS` / `stopSS` / `removeSS`), and
+  **Wait for SS** (`waitForSS`) — by `pictureId`. *Wait for SS* holds the event until
+  every configured loop has played (give it a finite `loop`; note `0` is a synonym for
+  infinite, so it waits forever).
 
 **Lip-sync (talking portrait — advanced)**
 

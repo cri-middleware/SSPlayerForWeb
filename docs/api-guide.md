@@ -78,7 +78,7 @@ These are the extension points — the player calls *you*.
 
 | Interface | Implement it when |
 |---|---|
-| [`IAudioManager`](/api/@spritestudio/ssplayer-core/interfaces/IAudioManager.md) | You want the animation's sounds played by your own audio engine. Both renderers ship an `SSWebAudioManager` you can use instead. |
+| [`IAudioManager`](/api/@spritestudio/ssplayer-core/interfaces/IAudioManager.md) | You want the animation's sounds played by your own audio engine. `@spritestudio/ssplayer-core` ships a ready-made `SSWebAudioManager` (its `/audio` subpath) you can use instead. |
 | [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) | You are writing a renderer, or you need textures to come from somewhere other than sibling files. See [Resources & lifecycle](/customize/resources). |
 | [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md) | Instance parts reference packs that are not URL-addressable (in-memory bundles, drag-and-drop). |
 

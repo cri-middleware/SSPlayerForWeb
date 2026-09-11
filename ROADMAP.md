@@ -38,9 +38,10 @@ describes and the official players implement, but this one does not yet.
     Replace the texture bound to a cell map from application code, without touching the `.ssab`.
     See *External resources and textures* in the porting guide — this is explicitly the player's
     job, and distinct from the Override Layer API.
-    *   *Current state*: only partially available, and only on `ssplayer-webgl`, as
-        `SSWebGLResourceManager.bindTextureSource()`. The caller has to hash the cell-map name
-        itself, `ssplayer-pixi` has no equivalent, and nothing can **restore** the original.
+    *   *Current state*: only partially available. Every renderer's resource manager exposes a
+        `bindTextureSource()` (`SSWebGLResourceManager` on WebGL, `PixiResourceManager` on PixiJS,
+        `RMMZResourceManager` on RPG Maker MZ), but the caller has to hash the cell-map name
+        itself, and nothing can **restore** the original.
     *   *Target*: a name-keyed method on the player itself, on both renderers, where passing
         `null` reloads the original from the `.ssab` definition (looking in `cellmaps` and then
         `external_textures`, as `SSPlayerForGodot`'s `set_cellmap_texture` does).
@@ -56,9 +57,9 @@ describes and the official players implement, but this one does not yet.
         would silently drop the flip.
     See [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic).
 
-*   [ ] **`getPartNames()`**
-    Return every part name in one call. Today a caller has to walk `getPartsCount()` and resolve
-    each index. *Low priority.*
+*   [x] **`getPartNames()`** — *done*
+    Return every part name in one call, in part-index order — no need to walk `getPartsCount()`
+    and resolve each index. Available on every player (the count is `getPartNames().length`).
 
 ## Potential Renderer Integrations
 

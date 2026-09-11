@@ -70,6 +70,8 @@ keeps textures from colliding, so you reference it from `[ss_new]` as
 
 ## Quick start
 
+A minimal scenario that shows one looping character:
+
 Load the plugin once, at the top of your game:
 
 ```

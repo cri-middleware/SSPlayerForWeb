@@ -72,8 +72,9 @@ batches, and the cost is proportional to how many parts are involved:
   time**, each with its own program and uniforms, so the shader parts composite correctly. Frames
   with no shader parts skip the check entirely and pay nothing. See
   [Shaders & blend modes](/customize/shaders).
-- **Masking**. Masked content goes through a separate coverage pre-pass. Set
-  `player.maskEnabled = false` to drop that pass for animations that do not use mask parts.
+- **Masking**. Masked content goes through a separate coverage pre-pass. On PixiJS, set
+  `player.maskEnabled = false` to drop that pass for animations that do not use mask parts (the
+  WebGL renderer has no such toggle).
 
 Neither is something to avoid on principle — they are just the first thing to look at when one
 animation costs far more than another with a similar part count.
@@ -86,7 +87,7 @@ You get these without doing anything:
   with few draw calls.
 - **Zero-Copy**: transforms and geometry are passed as `Float32Array` views that
   reference WASM memory directly, avoiding a per-frame copy.
-- **Texture sharing (PixiJS)**: atlases are cached by cell-map hash in Pixi's global `Assets`
+- **Texture sharing (PixiJS)**: atlases are cached by URL in Pixi's global `Assets`
   cache, so many players of the same character share one GPU texture.
 
 What is **not** shared is the parsed `.ssab`: each `load()` allocates its own WASM-side copy, and on
