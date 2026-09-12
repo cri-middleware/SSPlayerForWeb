@@ -21,7 +21,7 @@
 
 詳細なドキュメントは `docs/` フォルダ内で提供しています（VitePress にてホスティング）。読者の目的に応じて段階的に読み進められる構成です。
 
-- [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 初回リリース後に公開
+- [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/ja/) — 🚧 初回リリース後に公開
 - [**日本語ドキュメント**](./docs/ja/index.md) · [**English docs**](./docs/index.md)
 - [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player の入口 — 🚧 初回リリース後に公開
 
@@ -29,19 +29,8 @@
 - [インストール](./docs/ja/setup/install.md)
 - [クイックスタート](./docs/ja/setup/quickstart.md)
 - [基本的な使い方](./docs/ja/usage/basic.md)
-- [アセットの準備](./docs/ja/usage/assets.md)
-- [WebGL・Web Components で使う](./docs/ja/usage/webgl.md)
-- [PixiJS で使う](./docs/ja/usage/pixi.md)
+- [制限事項と対応範囲](./docs/ja/limitations.md)
 - [SS6Player for Web からの移行](./docs/ja/migration_from_ss6.md)
-
-### 目的別・どこから読むか
-目的の達成に必要な範囲だけを読んで利用できます。
-
-| あなたは… | ゴール | 読むところ |
-|---|---|---|
-| **利用ユーザー** | とにかくアニメーションを動かしたい | [クイックスタート](./docs/ja/setup/quickstart.md) → [基本的な再生](./docs/ja/usage/basic.md) |
-| **カスタマイズユーザー** | 表現を作り込み、ロジックを追加したい | 上記 + [カスタマイズ](./docs/ja/customize/events.md) |
-| **SDK / Player 開発者** | 内部の拡張やコアに貢献したい | 上記 + [CONTRIBUTING.md](./CONTRIBUTING.md) |
 
 ## 🎯 どのパッケージを使うか
 
@@ -65,12 +54,21 @@
 
 ## 🚀 クイックスタート
 
-入口は2つあります。自分に合うほうを選んでください:
+**自分のプロジェクトで使う場合**はこのまま下へ。最初の 1 体から先（イベント、パーツ単位の
+上書き、テクスチャ差し替え）も同じ道の続きで、[カスタマイズ](./docs/ja/customize/events.md)にあります。
+**SSPlayerForWeb 自体を開発する場合**は下の[チェックアウトからサンプルを動かす](#チェックアウトからサンプルを動かす)、その後 [CONTRIBUTING.md](./CONTRIBUTING.md) へ。
 
-- **A. このリポジトリでサンプルを動かす** — SSPlayerForWeb を評価する、またはローカルで開発する人向け。
-- **B. 自分のプロジェクトで使う** — 制作中のアプリにパッケージを導入する人向け。
+### 導入する
 
-### A. このリポジトリでサンプルを動かす
+> 🚧 パッケージは **まだ npm に公開されていません**。この導線は初回リリース後に利用できます。それまでは下のチェックアウト経由でお試しください。
+
+Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.5 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。詳しい手順はドキュメントにあります:
+
+**[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
+
+### チェックアウトからサンプルを動かす
+
+🚧 こちらが 2 つめの扉です。パッケージ公開前に評価したい場合か、本体を開発する場合の入口。
 
 **前提条件:** [Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/)（本リポジトリは pnpm workspaces を使用します）。以下の手順は **プリビルド** の WASM コアを取得するため、Rust ツールチェーンは不要です。
 
@@ -88,14 +86,6 @@ pnpm run dev                             # 開発サーバを起動してアニ�
 examples は **ビルド済み** のパッケージをワークスペース参照で利用します。`packages/` 配下の TypeScript を変更したら `pnpm run build` を、サンプルプロジェクトを編集したら `pnpm run deploy-examples` を再実行してください。
 
 **WASM コアをソースからビルド**（Rust コアを変更する場合のみ）: `pnpm run download:wasm` を `pnpm run build:wasm` に置き換えるだけで、他の手順は同じです。追加で **Rust（[rustup](https://rustup.rs/) 経由）** と **wasm-pack**（`cargo install wasm-pack`）が必要です。変更を貢献する場合は、[CONTRIBUTING.md](./CONTRIBUTING.md) にコーディング規約と WASM FFI のルールがあります。
-
-### B. 自分のプロジェクトで使う
-
-> 🚧 パッケージは **まだ npm に公開されていません**。この導線は初回リリース後に利用できます。それまでは **トラック A** でローカルにお試しください。
-
-Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj` を `.ssab` に変換し、数行で再生できます。詳しい手順はドキュメントにあります:
-
-**[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
 
 ## 💡 概要
 
@@ -135,14 +125,14 @@ flowchart TD
 
 ## 🎬 サンプル
 
-すぐ動かせるサンプルアプリは [`examples/`](./examples/) にあります（レンダラーごとに1つ。上の環境別テーブルからリンクしています）。先にパッケージをビルドし（[クイックスタート](#a-このリポジトリでサンプルを動かす)参照）、各サンプルの開発サーバを起動してください。PixiJS および WebGL のサンプルでは、`.ssab` ファイル（およびテクスチャ）を含むフォルダ、または embedded な `.ssab` ファイルをブラウザにドラッグ＆ドロップすることで、手元のアセットを再生できる機能が備わっています。
+すぐ動かせるサンプルアプリは [`examples/`](./examples/) にあります（レンダラーごとに1つ。上の環境別テーブルからリンクしています）。レンダラーに紐づかないものも 2 つあり、[`examples/part-follow`](./examples/part-follow) はパーツの実トランスフォームに HTML 要素を追従させるサンプル、[`examples/cdn`](./examples/cdn) はバンドラーも `npm install` も使わず CDN から直接読み込む 1 ファイル完結のページ 3 種です。先にパッケージをビルドし（[クイックスタート](#チェックアウトからサンプルを動かす)参照）、各サンプルの開発サーバを起動してください。PixiJS および WebGL のサンプルでは、`.ssab` ファイル（およびテクスチャ）を含むフォルダ、または embedded な `.ssab` ファイルをブラウザにドラッグ＆ドロップすることで、手元のアセットを再生できる機能が備わっています。
 
 ## 🔗 関連リポジトリ
 
 - [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — `libssruntime` および `libssconverter` を提供するコア SDK です。
 - [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — `.sspj` から `.ssab` へ変換するためのデスクトップ GUI ツールです。
 
-## ライセンス
+## 📄 ライセンス
 
 このプロジェクトは BSD-3-Clause License の下でライセンスされています。詳細は [LICENSE.md](./LICENSE.md) ファイルを参照してください。参考訳は [LICENSE.ja.md](./LICENSE.ja.md) にあります。
 
