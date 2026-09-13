@@ -61,6 +61,50 @@ describes and the official players implement, but this one does not yet.
     Return every part name in one call, in part-index order — no need to walk `getPartsCount()`
     and resolve each index. Available on every player (the count is `getPartNames().length`).
 
+## DOM / UI integration
+
+The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration point — a Custom Element with a `ResizeObserver`, a shared-overlay mode and a standalone mode. What is missing is everything past drawing: an element that sizes, receives pointers and announces itself the way a control on the page does. The vocabulary is shared with the sibling Players — `fit` / `align` for placement, a part rect read-out for hit areas, and a UI-state map.
+
+*   [ ] **`fit` / `align` on the element and the players**
+    Nothing fits the animation into its box: the element sizes its canvas and the player draws at authored
+    scale, so CSS decides the box and the art ignores it.
+    *   *Target*: `fit` (`contain` / `cover` / `none`) + `align`, spelled in `object-fit` / `object-position`
+        vocabulary on the element and in the family's on the player. `SSPlayerForReactNative` has the
+        reference implementation (`src/core/fit.ts`), including the choice of measuring the content box over
+        one animation or the whole pack.
+    *   Also give the element an intrinsic aspect ratio from that box, so `height: auto` and CSS
+        `aspect-ratio` behave as they do on `<img>`.
+
+*   [ ] **Per-part hit testing and pointer events**
+    An animation cannot be clicked on its artwork. Overlay mode makes it explicit — the shared canvas is
+    `pointer-events: none` (`SSOverlay.ts:98`) — and standalone mode is no better, answering as a rectangle.
+    *   *Target*: a **part rect read-out** built from the `PartState` fields the runtime already delivers
+        every frame (`size_x` / `size_y`, `anchor`, `pivot`) plus `getPartTransform`, then `hitTestPart(x, y)`
+        in element coordinates, with the `fit` transform applied. The element answers from it rather than the
+        canvas, which is what lets overlay mode stay `pointer-events: none` and still be clickable.
+    *   The same read-out is what positions a DOM overlay on a part — the case `getPartTransform` documents
+        today and leaves entirely to the caller.
+
+*   [ ] **UI state binding and ARIA**
+    A player used as a button is a picture to the page: it takes no role, no label, and no state.
+    *   *Target*: map `normal` / `hover` / `pressed` / `disabled` / `focused` to an animation or a label,
+        driven by the element's own pointer / focus events, so the animation follows `:hover` and
+        `:focus-visible` without page script; and pass through `role` / `aria-label`, with a decorative
+        player marked `aria-hidden`.
+
+*   [ ] **`Text` parts**
+    The Brain emits a geometry-less `Text` batch per text part and leaves glyphs to the Player, so a UI
+    label authored in SpriteStudio draws nothing here. Draw it, and allow substituting the string at
+    runtime — a UI label that cannot be localized is not a UI label.
+
+*   [ ] **Stretch a `Nines` part to the element's box** — *needs SDK*
+    The runtime evaluates a Nines part's size from its keyframes and hands over finished vertices
+    (`get_nines_*`), and the Override Layer covers colour / cell / visibility only, so nothing can resize one
+    from the host: an authored window frame cannot follow the box CSS gives it, and scaling the player
+    distorts the border art instead of stretching the middle.
+    *   *Dependency*: the SDK roadmap's **Per-part size override** (Phase 3) — the Override Layer extended
+        with `size_x` / `size_y`.
+
 ## Potential Renderer Integrations
 
 Candidate renderer packages that could be added alongside the existing `ssplayer-pixi` / `ssplayer-webgl` backends. Each would be a new package that consumes the engine-agnostic `@spritestudio/ssplayer-core` and adapts the `DrawBatch` output to the target renderer's scene graph — no changes to the core or the `<ss-player>` Custom Element are required.
