@@ -126,7 +126,7 @@ export interface SSPlayerOptions {
  * ```
  */
 export class SSPlayer {
-  public internalPlayer: DirectInternalPlayer;
+  public readonly internalPlayer: DirectInternalPlayer;
   /**
    * This player's textures. One manager per player (per player *tree* — instance
    * children inherit it, see InternalPlayerBase.createChildPlayer), keyed by the
@@ -136,7 +136,7 @@ export class SSPlayer {
    * players showing the same character upload it once. Embedded and
    * caller-supplied textures stay private to this player.
    */
-  public resourceManager: SSWebGLResourceManager;
+  public readonly resourceManager: SSWebGLResourceManager;
 
   /** The surface this player draws onto. */
   public readonly surface: SSSurface;

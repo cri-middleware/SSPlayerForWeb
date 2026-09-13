@@ -27,7 +27,7 @@ export interface InstanceChildState<T> {
  * to obtain vertex data and matrices required for rendering.
  */
 export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
-    public runtimeManager: SSRuntimeManager;
+    public readonly runtimeManager: SSRuntimeManager;
     private _audioManager: IAudioManager | null = null;
     // The caller's own loop count, not a copy of the runtime's. The runtime
     // resets the count on every transition (it is per-animation there), so
