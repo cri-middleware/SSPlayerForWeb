@@ -508,7 +508,7 @@ export class SSWebGLRenderer {
     if (!player.currentAnimation) return;
 
     const gl = this.gl;
-    const frameNo = player.getFrameNo();
+    const frameNo = player.getDrawFrame();
     let fd = player.runtimeManager.getFrameData(frameNo);
     if (!fd) return;
 
@@ -1201,7 +1201,7 @@ export class SSWebGLRenderer {
     composed: Float32Array, instInfluence: boolean
   ): boolean {
     const cm = child.player.runtimeManager;
-    const cfd = cm.getFrameData(child.player.getFrameNo());
+    const cfd = cm.getFrameData(child.player.getDrawFrame());
     if (!cfd) return false;
     const cdo = cfd.drawOrderArray();
     if (!cdo) return false;

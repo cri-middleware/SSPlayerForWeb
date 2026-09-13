@@ -437,7 +437,7 @@ export class SSPlayer {
   }
 
   public get frameNo(): number { return this.internalPlayer.getFrameNo(); }
-  public set frameNo(v: number) { this.internalPlayer.setFrame(v); }
+  public set frameNo(v: number) { this.internalPlayer.setFrameNo(v); }
 
   /** Frames in the current playback range, inclusive of both ends. */
   public get totalFrames(): number { return this.internalPlayer.getTotalFrames(); }

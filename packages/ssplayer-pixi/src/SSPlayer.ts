@@ -693,7 +693,7 @@ export class SSPlayer extends Container {
     }
 
     public set frameNo(value: number) {
-        this.internalPlayer.setFrame(value);
+        this.internalPlayer.setFrameNo(value);
     }
 
 
@@ -926,7 +926,7 @@ export class SSPlayer extends Container {
      */
     private afterOverride(applied: boolean): boolean {
         if (applied && !this.internalPlayer.isPlaying) {
-            this.renderFrame(this.internalPlayer.getFrameNo());
+            this.renderFrame(this.internalPlayer.getDrawFrame());
         }
         return applied;
     }
@@ -1173,13 +1173,16 @@ export class SSPlayer extends Container {
             this.pollEvents();
         }
 
+        // The playhead for anything that reports a number, the drawn frame for
+        // anything that asks the runtime for pixels. They differ only while
+        // `subFrameEnabled` is off, and that difference is the point.
         const frameNo = this.internalPlayer.getFrameNo();
-        
+
         if (this.debugText.visible) {
             this.debugText.text = `Frame: ${frameNo} (dt: ${deltaMs.toFixed(2)}ms)`;
         }
-        
-        this.renderFrame(frameNo);
+
+        this.renderFrame(this.internalPlayer.getDrawFrame());
 
         // After the frame is placed (meshes + attachments), notify per-frame
         // listeners — the point at which getPartTransform is valid for frameNo.
@@ -1773,7 +1776,7 @@ export class SSPlayer extends Container {
         for (let bi = 0; bi < bubbleCount && total < MAX_MASK_WRITERS; bi++) {
             const cand = this._bubbleCands[bi];
             const childManager = cand.child.player.runtimeManager;
-            const childFrame = childManager.context.get_frame_no();
+            const childFrame = cand.child.player.getDrawFrame();
             const childFrameData = childManager.getFrameData(childFrame);
             if (!childFrameData) continue;
             const childDrawOrder = childFrameData.drawOrderArray();

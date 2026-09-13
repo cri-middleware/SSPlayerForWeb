@@ -754,17 +754,18 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return EffectDrawPlan.getRootAsEffectDrawPlan(bb);
     }
 
-    public setFrame(frame: number) {
-        if (!this._subFrameEnabled) {
-            frame = Math.floor(frame);
-        }
-        this.runtimeManager.context.set_frame_no(frame);
+    /**
+     * Moves the playhead to `frameNo`, which may be fractional.
+     *
+     * Stored as given even while {@link subFrameEnabled} is off. Flooring is a
+     * property of the frame that gets *drawn* — {@link getDrawFrame} — not of
+     * the playhead, so turning sub-frame back on recovers the fraction instead
+     * of finding it already thrown away.
+     */
+    public setFrameNo(frameNo: number) {
+        this.runtimeManager.context.set_frame_no(frameNo);
         this.stepEffectSlots(0, false);
         this.stepInstanceSlots(0, false);
-    }
-
-    public getFrame(): number {
-        return this.runtimeManager.context.get_frame_no();
     }
 
     public get subFrameEnabled(): boolean {
@@ -778,7 +779,33 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         });
     }
 
+    /**
+     * Where the playhead is, fractional — the value the conventions call
+     * `frameNo` (SDK: 20_design/40_api_conventions §3).
+     *
+     * Reports the playhead itself, **not** the frame being drawn: with
+     * {@link subFrameEnabled} off the renderer shows frame 12 while this still
+     * reads 12.4, the same way ForGodot, ForUnity, ForFlutter, ForReactNative
+     * and ForWgpu all report it. Use {@link getDrawFrame} to ask what is on
+     * screen.
+     */
     public getFrameNo(): number {
+        return this.runtimeManager.context.get_frame_no();
+    }
+
+    /**
+     * The frame actually drawn this tick: the playhead, floored while
+     * {@link subFrameEnabled} is off.
+     *
+     * Every draw-side read goes through this — the renderers, the instance
+     * children's frames, {@link isPartHidden} — so that what is asked of the
+     * runtime is always the frame that ends up on screen. Turning sub-frame off
+     * does nothing else; this is the whole of it.
+     *
+     * The siblings compute the same value at their own draw sites and call it
+     * the same thing (ForGodot's `draw_frame`, ForReactNative's `drawFrame`).
+     */
+    public getDrawFrame(): number {
         const frameNo = this.runtimeManager.context.get_frame_no();
         return this._subFrameEnabled ? frameNo : Math.floor(frameNo);
     }
@@ -1092,7 +1119,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // Read a part's current-frame transform so an external object can follow it
     // (a weapon, effect or hitbox tracking a null part). Unlike the overrides
     // above these are pure reads: they report whatever frame the last update() /
-    // setFrame() finalized, so call them after the player has advanced (a facade
+    // setFrameNo() finalized, so call them after the player has advanced (a facade
     // drives its attachments from its per-frame seam). Part indices are stable
     // within one SSAB, so resolve a name once and pass the index if you follow a
     // part every frame.
@@ -1102,7 +1129,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * tx, ty]` in animation-local (Y-down) space, copied out of WASM (safe to
      * retain). Returns null when the part name/index is unknown in the current
      * animation. Pass `out` (a `Float32Array(6)`) to avoid allocation. Valid for
-     * the frame the last update()/setFrame() produced; the matrix is computed
+     * the frame the last update()/setFrameNo() produced; the matrix is computed
      * for every part regardless of `hide`, so a hidden part still reports where
      * it would be.
      *
@@ -1124,15 +1151,15 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Whether the part is hidden on the current frame — the animation's `hide`
-     * keyframe (the same visibility the renderer honours), read at the drawn
-     * frame (`floor` of the subframe playhead). Returns null when the part is
+     * keyframe (the same visibility the renderer honours), read at the frame the
+     * renderer drew ({@link getDrawFrame}). Returns null when the part is
      * unknown. This reflects the animation, not a {@link setPartVisibilityOverride}
      * force-hide.
      */
     public isPartHidden(part: number | string): boolean | null {
         const index = this.resolveKnownPartIndex(part);
         if (index < 0) return null;
-        const frameData = this.runtimeManager.getFrameData(Math.floor(this.getFrame()));
+        const frameData = this.runtimeManager.getFrameData(this.getDrawFrame());
         // The frame's parts vector is num_parts long, ordered by part index
         // (same indexing as the renderer's per-part reads), so `index` addresses
         // this part directly. A part absent from the frame reads as visible.
