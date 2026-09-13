@@ -134,7 +134,7 @@ export class SSPlayer extends Container {
         await initializeWasm(wasmUrl);
     }
 
-    public internalPlayer: DirectInternalPlayer;
+    public readonly internalPlayer: DirectInternalPlayer;
 
     private meshPool: Mesh<any>[] = [];
     private activeMeshes: number = 0;
