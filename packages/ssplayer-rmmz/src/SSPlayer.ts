@@ -269,7 +269,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     return this.internalPlayer.getFrameNo();
   }
   public set frameNo(value: number) {
-    this.internalPlayer.setFrame(value);
+    this.internalPlayer.setFrameNo(value);
   }
   public get totalFrames(): number {
     return this.internalPlayer.getTotalFrames();

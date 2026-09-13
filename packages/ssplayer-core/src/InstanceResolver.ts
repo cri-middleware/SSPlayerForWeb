@@ -116,9 +116,10 @@ export class InstanceResolver<T extends InternalPlayerBase<T>> {
         // writing your own mask is a local fact, not something descendants inherit.
         out.influence = composeMaskInfluence(ctxInfluence, partFlags);
         out.visibleInside = composeVisibleInside(ctxVisibleInside, partFlags);
-        // Through getFrameNo(), not the raw context, so `subFrameEnabled = false`
-        // reaches the sub-animation as it does the root.
-        out.frameNo = child.player.getFrameNo();
+        // The child's DRAW frame, not its playhead: this is what the renderer is
+        // handed for the sub-animation, so `subFrameEnabled = false` reaches it
+        // as it does the root.
+        out.frameNo = child.player.getDrawFrame();
         return out;
     }
 }

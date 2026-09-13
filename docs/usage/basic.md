@@ -56,6 +56,11 @@ player.currentAnimation;       // the animation currently set up
 player.subFrameEnabled;     // sub-frame interpolation (on by default; smooth in slow motion / high-refresh)
 ```
 
+Turning `subFrameEnabled` off changes what is **drawn** — the renderer shows the
+floored frame — and not what `frameNo` reports. The playhead keeps its fraction
+either way, so a seek taken with sub-frame off is still exactly where you put it
+when you turn it back on. Every sibling Player reports it the same way.
+
 ## Section and direction
 
 ```ts
