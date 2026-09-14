@@ -116,7 +116,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public async load(ssabUrl: string) {
         const response = await fetch(ssabUrl);
         if (!response.ok) {
-            throw new Error(`Failed to load SSAB: ${response.statusText}`);
+            // Name the URL that was asked for. Without it a 404 reads "Failed to
+            // load SSAB: Not Found", which does not say *what* was not found —
+            // and a wrong path is the common way to get here.
+            throw new Error(
+                `[SSPlayer] Failed to load ${ssabUrl}: ${response.status} ${response.statusText}`,
+            );
         }
         const buffer = await response.arrayBuffer();
 
@@ -345,7 +350,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // Cleared by bindResource, so "the same name" can never mean a name that
         // belongs to a pack this player no longer has bound.
         if (animationName === this._animationName) return;
-        this.runtimeManager.setupAnimation(animationName);
+        try {
+            this.runtimeManager.setupAnimation(animationName);
+        } catch (cause) {
+            // The wasm boundary throws the Brain's error enum as a bare string —
+            // "AnimationNotFound", naming neither the pack nor what was asked of
+            // it. Only this layer knows either, so only this layer can make the
+            // failure legible (SDK: `20_design/40_api_conventions`, §7). The
+            // reason goes in verbatim because it separates a name the pack does
+            // not have from a player that has no pack bound at all.
+            throw new Error(
+                `[SSPlayer] ${this._ssabUrl || 'the loaded pack'} could not select ` +
+                    `animation "${animationName}" (${String(cause)}). ` +
+                    `animationNames lists what it does have.`,
+                { cause },
+            );
+        }
         this._animationName = animationName;
         // Per-transition in the runtime, so the caller's count has to go back on
         // after every switch. Speed, frame skip and the playback direction all
