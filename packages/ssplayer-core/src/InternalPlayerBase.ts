@@ -370,7 +370,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // Per-transition in the runtime, so the caller's count has to go back on
         // after every switch. Speed, frame skip and the playback direction all
         // survive setup on their own and need nothing here.
-        this.runtimeManager.context.set_loop(this._loopCount);
+        this.runtimeManager.context.set_loop_count(this._loopCount);
 
         this.setupInstanceChildren();
         this.setupEffectChildren();
@@ -631,8 +631,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
         // Delegate to the manager so animation playback advances
         this.runtimeManager.update(deltaMs);
-        this.stepEffectSlots(deltaSeconds, this.runtimeManager.context.is_looped());
-        this.stepInstanceSlots(deltaSeconds, this.runtimeManager.context.is_looped());
+        this.stepEffectSlots(deltaSeconds, this.runtimeManager.context.just_looped());
+        this.stepInstanceSlots(deltaSeconds, this.runtimeManager.context.just_looped());
     }
 
     /**
@@ -648,7 +648,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public pollPlaybackEvents(): { looped: boolean; finished: boolean } {
         const ctx = this.runtimeManager.context;
-        const looped = ctx.is_looped();
+        const looped = ctx.just_looped();
         const finished = ctx.is_finished();
         const rising = finished && !this._prevFinished;
         this._prevFinished = finished;
@@ -746,7 +746,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     public setSpeedScale(speed: number) {
-        this.runtimeManager.context.set_animation_speed(speed);
+        this.runtimeManager.context.set_speed_scale(speed);
     }
 
     /**
@@ -757,7 +757,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * the `-1.0` that was asked for while playback is actually held at `0.0`.
      */
     public getSpeedScale(): number {
-        return this.runtimeManager.context.get_animation_speed();
+        return this.runtimeManager.context.get_speed_scale();
     }
 
     
@@ -839,7 +839,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     public getFrameRate(): number {
-        return this.runtimeManager.context.get_fps();
+        return this.runtimeManager.context.get_frame_rate();
     }
 
     public setAnimationSection(startFrame: number, endFrame: number) {
@@ -875,7 +875,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public setLoopCount(count: number) {
         this._loopCount = count;
-        this.runtimeManager.context.set_loop(count);
+        this.runtimeManager.context.set_loop_count(count);
     }
 
     /**
@@ -883,7 +883,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * value: ask for `0` and this reads back `-1`, the infinite sentinel.
      */
     public getLoopCount(): number {
-        return this.runtimeManager.context.get_loops();
+        return this.runtimeManager.context.get_loop_count();
     }
 
     public setFrameSkipEnabled(skip: boolean) {

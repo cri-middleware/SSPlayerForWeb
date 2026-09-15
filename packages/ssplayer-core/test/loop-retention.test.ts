@@ -14,17 +14,17 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 
 function makePlayer() {
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    const set_loop = vi.fn();
+    const set_loop_count = vi.fn();
     const player = Object.create(InternalPlayerBase.prototype) as any;
     player.runtimeManager = {
         context: {
             get_ssab_buf: () => 0,
             get_ssab_len: () => 0,
-            set_loop,
+            set_loop_count,
             // What the runtime would report back: everything at or below zero
             // normalizes to the infinite sentinel.
-            get_loops: () => (set_loop.mock.lastCall?.[0] ?? -1) > 0
-                ? set_loop.mock.lastCall![0]
+            get_loop_count: () => (set_loop_count.mock.lastCall?.[0] ?? -1) > 0
+                ? set_loop_count.mock.lastCall![0]
                 : -1,
         },
         setupAnimation: vi.fn(),
@@ -49,30 +49,30 @@ function makePlayer() {
     player._audioManager = null;
     // Object.create skips the constructor, so the field initializers with it.
     player._loopCount = -1;
-    return { player: player as InternalPlayerBase<never> & Record<string, any>, set_loop };
+    return { player: player as InternalPlayerBase<never> & Record<string, any>, set_loop_count };
     /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 describe('the loop count is the caller\'s, not the animation\'s', () => {
     it('goes back on after every setAnimation', () => {
-        const { player, set_loop } = makePlayer();
+        const { player, set_loop_count } = makePlayer();
 
         player.setLoopCount(3);
-        expect(set_loop).toHaveBeenLastCalledWith(3);
+        expect(set_loop_count).toHaveBeenLastCalledWith(3);
 
         player.setAnimation('walk');
-        expect(set_loop).toHaveBeenLastCalledWith(3);
+        expect(set_loop_count).toHaveBeenLastCalledWith(3);
         expect(player.getLoopCount()).toBe(3);
 
         player.setAnimation('idle');
-        expect(set_loop).toHaveBeenLastCalledWith(3);
+        expect(set_loop_count).toHaveBeenLastCalledWith(3);
     });
 
     it('defaults to infinite, and pushes that too', () => {
-        const { player, set_loop } = makePlayer();
+        const { player, set_loop_count } = makePlayer();
 
         player.setAnimation('walk');
-        expect(set_loop).toHaveBeenLastCalledWith(-1);
+        expect(set_loop_count).toHaveBeenLastCalledWith(-1);
         expect(player.getLoopCount()).toBe(-1);
     });
 

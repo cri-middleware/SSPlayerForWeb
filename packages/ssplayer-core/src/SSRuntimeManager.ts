@@ -216,7 +216,7 @@ export class SSRuntimeManager {
 
         // Cleanup old effect slots (map value is { slot, visible }).
 
-        this.currentAnimationFps = this.context.get_fps();
+        this.currentAnimationFps = this.context.get_frame_rate();
 
         // Reset every per-animation cache; repopulated below. All of them must be
         // dropped here, not just before a successful walk: on the early return
@@ -808,8 +808,12 @@ export class SSRuntimeManager {
             const start = this.context.get_start_frame();
             const end = this.context.get_end_frame();
             const clamped = frame < start ? start : (frame > end ? end : frame);
-            const ptr = this.context.get_frame_data_buf(clamped);
-            const len = this.context.get_frame_data_len(clamped);
+            // One evaluation per frame. The old buf/len pair each ran a full
+            // get_frame_data, so this path cost the Brain twice every frame;
+            // prepare_frame_data builds it and returns the length, and the
+            // pointer is then a pure read of what was just built.
+            const len = this.context.prepare_frame_data(clamped);
+            const ptr = this.context.get_frame_data_buf();
             if (ptr === 0 || len === 0) return null;
             
             const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);

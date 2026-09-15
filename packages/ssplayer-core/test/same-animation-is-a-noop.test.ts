@@ -35,8 +35,8 @@ function makePlayer() {
         context: {
             get_ssab_buf: () => 0,
             get_ssab_len: () => 0,
-            set_loop: vi.fn(),
-            get_loops: () => -1,
+            set_loop_count: vi.fn(),
+            get_loop_count: () => -1,
         },
         setupAnimation,
         bindResource: vi.fn(),
