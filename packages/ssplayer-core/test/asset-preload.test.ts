@@ -19,7 +19,7 @@ function makePlayer(rm: unknown) {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const player = Object.create(InternalPlayerBase.prototype) as any;
     player.runtimeManager = {
-        context: { get_ssab_buf: () => 0, get_ssab_len: () => 0, stop: () => {}, set_loop: () => {} },
+        context: { get_ssab_buf: () => 0, get_ssab_len: () => 0, stop: () => {}, set_loop_count: () => {} },
         setupAnimation: vi.fn(),
         getInstanceParts: () => [],
         getEffectParts: () => [],

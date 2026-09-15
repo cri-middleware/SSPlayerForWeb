@@ -20,7 +20,7 @@ function makePlayer(ssabUrl: string, throws: unknown) {
     });
     const player = Object.create(InternalPlayerBase.prototype) as any;
     player.runtimeManager = {
-        context: { set_loop: vi.fn(), get_loops: () => -1 },
+        context: { set_loop_count: vi.fn(), get_loop_count: () => -1 },
         setupAnimation,
     };
     player._ssabUrl = ssabUrl;
