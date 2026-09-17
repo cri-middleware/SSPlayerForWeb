@@ -57,6 +57,10 @@ currently emits". Stay on the facade unless you are writing a renderer.
 [`SSOverridePriority`](/api/@spritestudio/ssplayer-core/enumerations/SSOverridePriority.md),
 [`SSPartOverrideTarget`](/api/@spritestudio/ssplayer-core/interfaces/SSPartOverrideTarget.md).
 
+**Texture replacement** — see [Runtime texture replacement](/customize/texture-replacement).
+`setCellmapTexture` / `getReplaceableTextureNames` live on `SSPlayer`; each takes its engine's own
+texture object (no dedicated type to import).
+
 **Part tracking** — see [Part tracking](/customize/part-following).
 [`SSPartFollowOptions`](/api/@spritestudio/ssplayer-core/interfaces/SSPartFollowOptions.md),
 [`SSDecomposedTransform`](/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform.md), and

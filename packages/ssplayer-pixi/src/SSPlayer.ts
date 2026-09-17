@@ -920,6 +920,31 @@ export class SSPlayer extends Container {
     }
 
     /**
+     * Runtime texture replacement: bind `texture` for a cell-map / external-texture
+     * name (costume changes, dynamic expressions), or pass `null` to restore the
+     * original. `cellmapName` is a {@link getReplaceableTextureNames} entry — a
+     * cell-map name (`common`) or a TextureChange target file name (`common.png`).
+     *
+     * The `texture` is caller-owned and never destroyed by the player; it must be
+     * a same-size, same-layout atlas as the original (UVs are normalized by the
+     * bound texture's size). Instance children share this player's textures, so a
+     * name used by a child's sub-animation is replaced there too.
+     */
+    public setCellmapTexture(cellmapName: string, texture: Texture | null): void {
+        this.internalPlayer.setCellmapTexture(cellmapName, texture);
+    }
+
+    /** The current runtime texture override for `cellmapName` (never the original), or undefined. */
+    public getCellmapTexture(cellmapName: string): Texture | undefined {
+        return this.internalPlayer.getCellmapTexture(cellmapName) as Texture | undefined;
+    }
+
+    /** Names {@link setCellmapTexture} can replace (cell-map names + TextureChange targets). */
+    public getReplaceableTextureNames(): string[] {
+        return this.internalPlayer.getReplaceableTextureNames();
+    }
+
+    /**
      * Repaint after an override took effect while the ticker is not advancing.
      * Overrides change the output without changing the frame number, so a
      * stopped player would otherwise keep showing its last drawn frame.

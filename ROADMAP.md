@@ -34,17 +34,26 @@ here because they are player responsibilities the
 [Player Porting Guide](https://github.com/cri-middleware/SpriteStudio-SDK/tree/HEAD/libs/ssruntime/docs)
 describes and the official players implement, but this one does not yet.
 
-*   [ ] **Run-time texture swap** (costume changes, dynamic expressions)
+*   [x] **Run-time texture swap** (costume changes, dynamic expressions) — *done*
     Replace the texture bound to a cell map from application code, without touching the `.ssab`.
     See *External resources and textures* in the porting guide — this is explicitly the player's
     job, and distinct from the Override Layer API.
-    *   *Current state*: only partially available. Every renderer's resource manager exposes a
-        `bindTextureSource()` (`SSWebGLResourceManager` on WebGL, `PixiResourceManager` on PixiJS,
-        `RMMZResourceManager` on RPG Maker MZ), but the caller has to hash the cell-map name
-        itself, and nothing can **restore** the original.
-    *   *Target*: a name-keyed method on the player itself, on both renderers, where passing
-        `null` reloads the original from the `.ssab` definition (looking in `cellmaps` and then
-        `external_textures`, as `SSPlayerForGodot`'s `set_cellmap_texture` does).
+    *   *Shipped*: `setCellmapTexture(cellmapName, texture)` on every player (PixiJS, WebGL, RPG
+        Maker MZ), with `getCellmapTexture()` and `getReplaceableTextureNames()` alongside. The
+        name is resolved to its render-time hash by the runtime's own fnv1a, spanning both
+        namespaces — a cell-map name (`common`) or a TextureChange target file name (`common.png`,
+        which `getReplaceableTextureNames()` also lists). Each renderer takes its engine-native
+        input: a `Texture` (PixiJS), an image source or `SSTextureEntry` (WebGL), or a `Bitmap`
+        (RPG Maker MZ).
+    *   *Restore*: passing `null` restores the original. The overrides shadow the loaded textures
+        rather than replacing them, so restoring drops the shadow and the original reappears with
+        no reload — cheaper than `SSPlayerForGodot`'s reload-from-path, and it works for embedded
+        (`--embedded`) textures too.
+    *   *Naming*: `setCellmapTexture` (camelCase) rather than `SSPlayerForGodot`'s
+        `set_cellmap_texture` — each engine in its own idiom, as the Flip / offset entry notes.
+    *   *Note*: instance children share the parent's resource manager here, so replacing a name a
+        child's sub-animation uses affects the child too — unlike engines whose children keep
+        independent texture maps.
 
 *   [x] **Flip / offset** (`flipX` / `flipY` / `offsetX` / `offsetY`) — *done*
     Mirror or shift what the player draws without touching the host display object, so anything

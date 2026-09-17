@@ -17,19 +17,21 @@
 
 import {
   DirectInternalPlayer,
+  hashString,
   initializeWasm,
   ssFormat,
   SSOverridePriority,
   SSPartFollower,
   type SSBlendOp,
   type IAudioManager,
+  type SSTextureEntry,
   type WebPlaybackDirection,
   type WebPlaybackStyle,
   type SSPartFollowOptions,
   type SSPartAttachment as SSPartAttachmentOf,
 } from '@spritestudio/ssplayer-webgl';
 import type { Container as PixiContainer, Renderer } from 'pixi.js';
-import { getMZGl, getPIXI, type GL } from './rmmzGlobals.js';
+import { getMZGl, getPIXI, type GL, type RMMZBitmap } from './rmmzGlobals.js';
 import { RMMZResourceManager } from './rmmz/RMMZResourceManager.js';
 import { registerSSPlayerRenderer, SSPLAYER_PLUGIN_NAME } from './SSPlayerRenderer.js';
 
@@ -474,6 +476,46 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public getCellNames(cellmapName: string): string[] {
     return this.internalPlayer.getCellNames(cellmapName);
   }
+
+  /**
+   * Runtime texture replacement: bind an MZ `Bitmap` for a cell-map / external-
+   * texture name (costume changes, dynamic expressions), or pass `null` to
+   * restore the original. `cellmapName` is a {@link getReplaceableTextureNames}
+   * entry — a cell-map name (`common`) or a TextureChange target file name
+   * (`common.png`).
+   *
+   * The bitmap's pixels are uploaded into a GL texture this player owns and frees;
+   * MZ keeps owning the `Bitmap`. Load it however you like — e.g.
+   * `ImageManager.loadBitmap('spritestudio/', 'costume_b')`; if it is not ready
+   * yet the upload is deferred to its load listener. It must be a same-size,
+   * same-layout atlas as the original (UVs are normalized by the bound texture's
+   * size). Instance children share this player's textures, so a name used by a
+   * child's sub-animation is replaced there too.
+   */
+  public setCellmapTexture(cellmapName: string, bitmap: RMMZBitmap | null): void {
+    if (bitmap === null) {
+      this.internalPlayer.setCellmapTexture(cellmapName, null);
+      return;
+    }
+    const hash = hashString(cellmapName);
+    const upload = (bmp: RMMZBitmap) => {
+      if (bmp.isError()) return;
+      this.resourceManager.setOverrideTextureFromSource(hash, bmp.canvas, bmp.width, bmp.height);
+    };
+    if (bitmap.isReady()) upload(bitmap);
+    else bitmap.addLoadListener(upload);
+  }
+
+  /** The current runtime texture override for `cellmapName` (never the original), or undefined. */
+  public getCellmapTexture(cellmapName: string): SSTextureEntry | undefined {
+    return this.internalPlayer.getCellmapTexture(cellmapName) as SSTextureEntry | undefined;
+  }
+
+  /** Names {@link setCellmapTexture} can replace (cell-map names + TextureChange targets). */
+  public getReplaceableTextureNames(): string[] {
+    return this.internalPlayer.getReplaceableTextureNames();
+  }
+
   public setAnimationSection(startFrame: number, endFrame: number): void {
     this.internalPlayer.setAnimationSection(startFrame, endFrame);
   }

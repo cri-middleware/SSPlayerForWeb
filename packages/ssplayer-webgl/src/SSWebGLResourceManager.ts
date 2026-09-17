@@ -31,6 +31,14 @@ export class SSWebGLResourceManager implements IResourceManager {
   // Hashes whose texture this manager uploaded itself, and may therefore delete.
   // Anything else came from the shared cache and outlives this player.
   private owned = new Set<number>();
+  // Runtime texture replacements (setOverrideTexture / …FromSource). Shadow the
+  // originally loaded texture — checked first by getTexture — so clearing one
+  // restores the original with no reload.
+  private overrides = new Map<number, SSTextureEntry>();
+  // Overrides whose WebGLTexture this manager built (from a source) and must
+  // therefore delete; an override supplied as a ready SSTextureEntry is
+  // caller-owned and left untouched.
+  private overrideOwned = new Set<number>();
 
   constructor(
     private gl: WebGLRenderingContext | WebGL2RenderingContext,
@@ -120,7 +128,66 @@ export class SSWebGLResourceManager implements IResourceManager {
   }
 
   public getTexture(hash: number): SSTextureEntry | undefined {
-    return this.textures.get(hash);
+    return this.overrides.get(hash) ?? this.textures.get(hash);
+  }
+
+  /**
+   * Runtime texture replacement: bind a ready {@link SSTextureEntry} for `hash`,
+   * shadowing the originally loaded texture. The entry's `WebGLTexture` is
+   * caller-owned — this manager never deletes it. For the common case of
+   * replacing from an image/canvas/video, prefer {@link setOverrideTextureFromSource},
+   * which uploads (and owns) the GL texture for you.
+   *
+   * The entry's `width`/`height` are what the renderer normalizes UVs by, so a
+   * replacement of a different size than the original samples a shifted region —
+   * pass a same-size, same-layout atlas.
+   */
+  public setOverrideTexture(hash: number, entry: SSTextureEntry): void {
+    this.deleteOverride(hash);
+    this.overrides.set(hash, entry);
+  }
+
+  /**
+   * Runtime texture replacement from a raw image source (an `ImageBitmap`,
+   * `HTMLImageElement`, `HTMLCanvasElement`, `HTMLVideoElement`, …). Uploads it
+   * with the same premultiplied-alpha path as the initial textures and binds it
+   * for `hash`. The uploaded GL texture is owned by this manager and freed on
+   * {@link clearOverrideTexture}, replacement, or reset/destroy.
+   */
+  public setOverrideTextureFromSource(hash: number, source: TexImageSource, width: number, height: number): void {
+    const entry = this.createTextureFromSource(source, width, height);
+    this.deleteOverride(hash);
+    this.overrides.set(hash, entry);
+    this.overrideOwned.add(hash);
+  }
+
+  /** Drop the override for `hash`, restoring the originally loaded texture. */
+  public clearOverrideTexture(hash: number): void {
+    this.deleteOverride(hash);
+  }
+
+  /** The current override for `hash` (never the original), or undefined. */
+  public getOverrideTexture(hash: number): SSTextureEntry | undefined {
+    return this.overrides.get(hash);
+  }
+
+  // Remove an override, deleting its GL texture only if this manager built it.
+  private deleteOverride(hash: number): void {
+    if (this.overrideOwned.has(hash)) {
+      const entry = this.overrides.get(hash);
+      if (entry) this.gl.deleteTexture(entry.tex);
+      this.overrideOwned.delete(hash);
+    }
+    this.overrides.delete(hash);
+  }
+
+  private clearOverrides(): void {
+    for (const hash of this.overrideOwned) {
+      const entry = this.overrides.get(hash);
+      if (entry) this.gl.deleteTexture(entry.tex);
+    }
+    this.overrideOwned.clear();
+    this.overrides.clear();
   }
 
   /**
@@ -137,6 +204,11 @@ export class SSWebGLResourceManager implements IResourceManager {
   public async restoreContext(): Promise<void> {
     this.textures.clear();
     this.owned.clear();
+    // Runtime overrides died with the context (their GL handles are invalid, and
+    // we retain no source to rebuild them). Drop them — the original textures are
+    // rebuilt below, and the host re-applies any overrides it still wants.
+    this.overrides.clear();
+    this.overrideOwned.clear();
     const tasks: Promise<void>[] = [];
     for (const [hash, src] of this.sources) {
       if (src.kind === 'url') {
@@ -155,6 +227,7 @@ export class SSWebGLResourceManager implements IResourceManager {
   }
 
   public reset(): void {
+    this.clearOverrides();
     this.deleteOwned();
     this.textures.clear();
     this.sources.clear();
@@ -166,6 +239,7 @@ export class SSWebGLResourceManager implements IResourceManager {
    * the cache when it goes.
    */
   public destroy(): void {
+    this.clearOverrides();
     this.deleteOwned();
     this.textures.clear();
     this.sources.clear();

@@ -220,3 +220,78 @@ describe('reset() — a new pack replaces the previous pack textures', () => {
     expect(requested).toEqual(['/projectB/texture.png']);
   });
 });
+
+describe('runtime texture overrides (setCellmapTexture)', () => {
+  it('shadow the loaded texture; clearing frees the built GL texture and restores the original', async () => {
+    const gl = fakeGl();
+    const rm = new SSWebGLResourceManager(gl);
+    await rm.loadTexture('/chara/atlas.png', 0x1111);
+    const original = rm.getTexture(0x1111);
+
+    rm.setOverrideTextureFromSource(0x1111, {} as TexImageSource, 8, 8);
+    const overrideTex = rm.getTexture(0x1111)!.tex;
+    expect(overrideTex).not.toBe(original!.tex);
+    expect(rm.getOverrideTexture(0x1111)!.tex).toBe(overrideTex);
+
+    rm.clearOverrideTexture(0x1111);
+    // The manager built that GL texture, so it deletes it — and the original,
+    // never touched, is back with no reload.
+    expect(deleted).toContain(overrideTex);
+    expect(rm.getTexture(0x1111)).toBe(original);
+    expect(rm.getOverrideTexture(0x1111)).toBeUndefined();
+  });
+
+  it('never delete a caller-supplied SSTextureEntry override', () => {
+    const gl = fakeGl();
+    const rm = new SSWebGLResourceManager(gl);
+    const entry = { tex: { id: -1 }, width: 8, height: 8 } as never;
+
+    rm.setOverrideTexture(0x2222, entry);
+    expect(rm.getTexture(0x2222)).toBe(entry);
+
+    rm.clearOverrideTexture(0x2222);
+    // Caller owns that texture — the manager must not free it.
+    expect(deleted).not.toContain((entry as { tex: unknown }).tex);
+    expect(rm.getTexture(0x2222)).toBeUndefined();
+  });
+
+  it('free the previous built override when replaced at the same hash', () => {
+    const gl = fakeGl();
+    const rm = new SSWebGLResourceManager(gl);
+
+    rm.setOverrideTextureFromSource(0x3333, {} as TexImageSource, 8, 8);
+    const first = rm.getTexture(0x3333)!.tex;
+    rm.setOverrideTextureFromSource(0x3333, {} as TexImageSource, 8, 8);
+
+    expect(deleted).toContain(first);
+    expect(rm.getTexture(0x3333)!.tex).not.toBe(first);
+  });
+
+  it('are freed and forgotten on reset', async () => {
+    const gl = fakeGl();
+    const rm = new SSWebGLResourceManager(gl);
+    await rm.loadTexture('/chara/atlas.png', 0x1111);
+    rm.setOverrideTextureFromSource(0x1111, {} as TexImageSource, 8, 8);
+    const overrideTex = rm.getTexture(0x1111)!.tex;
+
+    rm.reset();
+
+    expect(deleted).toContain(overrideTex);
+    expect(rm.getOverrideTexture(0x1111)).toBeUndefined();
+  });
+
+  it('are dropped on a context loss (their GL handle died with it)', async () => {
+    const gl = fakeGl();
+    const cache = new SSWebGLTextureCache(gl);
+    const rm = new SSWebGLResourceManager(gl, cache);
+    await rm.loadTexture('/chara/atlas.png', 0x1111);
+    rm.setOverrideTextureFromSource(0x1111, {} as TexImageSource, 8, 8);
+
+    cache.invalidate();
+    await rm.restoreContext();
+
+    // The original is rebuilt; the override is gone (host re-applies if wanted).
+    expect(rm.getOverrideTexture(0x1111)).toBeUndefined();
+    expect(rm.getTexture(0x1111)).toBeDefined();
+  });
+});

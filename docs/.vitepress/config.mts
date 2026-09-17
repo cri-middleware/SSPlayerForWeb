@@ -144,6 +144,7 @@ export default withMermaid({
             items: [
               { text: 'Events & user data', link: '/customize/events' },
               { text: 'Part control (visibility / cell / color)', link: '/customize/part-overrides' },
+              { text: 'Runtime texture replacement (costume changes)', link: '/customize/texture-replacement' },
               { text: 'Part tracking (following a part)', link: '/customize/part-following' },
               { text: 'Shaders & blend modes', link: '/customize/shaders' },
               { text: 'Resources & lifecycle', link: '/customize/resources' },
@@ -235,6 +236,7 @@ export default withMermaid({
             items: [
               { text: 'イベントとユーザーデータ', link: '/ja/customize/events' },
               { text: 'パーツ制御（表示 / セル / 色）', link: '/ja/customize/part-overrides' },
+              { text: 'テクスチャ差し替え（着せ替え）', link: '/ja/customize/texture-replacement' },
               { text: 'パーツトラッキング（指定パーツへの追従）', link: '/ja/customize/part-following' },
               { text: 'シェーダーとブレンドモード', link: '/ja/customize/shaders' },
               { text: 'リソースとライフサイクル', link: '/ja/customize/resources' },

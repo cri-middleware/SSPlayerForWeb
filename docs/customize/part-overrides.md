@@ -132,7 +132,7 @@ These are easy to confuse with overrides, but belong elsewhere.
 
 | What you want | Where it belongs |
 |---|---|
-| Replacing a whole texture / cell map | Swap the texture through the player's resource manager. Overrides work on **one part** at a time |
+| Replacing a whole texture / cell map | [Runtime texture replacement](/customize/texture-replacement) — swaps the texture a whole cell map binds. Overrides work on **one part** at a time |
 | Flipping | Express it with the player's own transform (a negative scale) |
 | Whole-object colour / opacity / draw order | Properties on the player (`SSPlayer` / its container) — not a per-part concern |
 | Swapping an instance part's animation | Planned, pending the SDK's Instance Lifecycle API |

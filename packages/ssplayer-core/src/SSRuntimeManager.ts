@@ -435,6 +435,28 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Names that {@link InternalPlayerBase.setCellmapTexture} can replace at
+     * runtime, in table order: every cell-map name (no `.ssce` extension, e.g.
+     * `common`) followed by every external-texture file name (e.g. `common.png`).
+     * Both are valid replacement targets because `DrawBatch.texture_hash` is
+     * keyed from both namespaces — a cell-map's own name normally, and the
+     * texture file name on frames a TextureChange (`TCHG`) applies. Empty before
+     * a resource is bound.
+     *
+     * Unlike {@link getCellmapNames} (cell-override targets — cell-map names
+     * only), this is the texture-replacement discovery list; the two differ
+     * whenever the SSAB carries any `TCHG` targets.
+     */
+    public getReplaceableTextureNames(): string[] {
+        if (!this.resource) return [];
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return [];
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        return SSRuntimeManager.extractReplaceableTextureNames(buf);
+    }
+
+    /**
      * Cached name of the part at `partIndex` (SSAB parts-table order), or
      * `null` if out of range / before an animation is set up.
      */
@@ -725,6 +747,37 @@ export class SSRuntimeManager {
         for (let i = 0; i < ssab.cellmapsLength(); i++) {
             const name = ssab.cellmaps(i)?.name();
             if (name) out.push(name);
+        }
+        return out;
+    }
+
+    /**
+     * Parse the SSAB buffer and list every name a runtime texture replacement can
+     * target: cell-map names (table order, no `.ssce` extension) followed by
+     * external-texture file names (the `TCHG` targets, e.g. `common.png`). This is
+     * the union of the two hash namespaces {@link extractTexturePaths} loads, by
+     * name; deduplicated by string so a name appearing in both tables lists once.
+     */
+    public static extractReplaceableTextureNames(ssabBuffer: Uint8Array): string[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const out: string[] = [];
+        const seen = new Set<string>();
+        for (let i = 0; i < ssab.cellmapsLength(); i++) {
+            const name = ssab.cellmaps(i)?.name();
+            if (name && !seen.has(name)) {
+                seen.add(name);
+                out.push(name);
+            }
+        }
+        for (let i = 0; i < ssab.externalTexturesLength(); i++) {
+            const name = ssab.externalTextures(i)?.name();
+            if (name && !seen.has(name)) {
+                seen.add(name);
+                out.push(name);
+            }
         }
         return out;
     }
