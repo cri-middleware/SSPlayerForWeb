@@ -58,6 +58,10 @@ SSPlayer / SSPlayer          ← 呼び出すファサード（再生・イベ�
 [`SSOverridePriority`](/api/@spritestudio/ssplayer-core/enumerations/SSOverridePriority.md)、
 [`SSPartOverrideTarget`](/api/@spritestudio/ssplayer-core/interfaces/SSPartOverrideTarget.md)。
 
+**テクスチャ差し替え** — [テクスチャ差し替え（着せ替え）](/ja/customize/texture-replacement)を参照。
+`setCellmapTexture` / `getReplaceableTextureNames` は `SSPlayer` にあり、各エンジンのテクスチャ
+オブジェクトを渡します（インポートすべき専用型はありません）。
+
 **パーツトラッキング** — [パーツトラッキング](/ja/customize/part-following)を参照。
 [`SSPartFollowOptions`](/api/@spritestudio/ssplayer-core/interfaces/SSPartFollowOptions.md)、
 [`SSDecomposedTransform`](/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform.md)、

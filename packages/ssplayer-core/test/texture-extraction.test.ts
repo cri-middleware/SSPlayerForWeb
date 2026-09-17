@@ -112,6 +112,49 @@ describe('extractTexturePaths', () => {
     });
 });
 
+describe('extractReplaceableTextureNames', () => {
+    // buildSsab names each cell map `cellmap<nameHash>` (see above); external
+    // textures keep the name they are given.
+    it('lists cell-map names (the texture-replacement targets)', () => {
+        const buf = buildSsab([
+            { nameHash: 0x1111, imagePath: 'chara.png', imagePathHash: 0xaaaa },
+            { nameHash: 0x2222, imagePath: 'effect.png', imagePathHash: 0xbbbb },
+        ]);
+
+        expect(SSRuntimeManager.extractReplaceableTextureNames(buf)).toEqual([
+            'cellmap4369', // 0x1111
+            'cellmap8738', // 0x2222
+        ]);
+    });
+
+    it('appends texture-change target file names after the cell-map names', () => {
+        // A TCHG target (e.g. `chara_damaged.png`) is a legitimate replacement
+        // target too — it binds on the frames the texture change applies.
+        const buf = buildSsab(
+            [{ nameHash: 0x1111, imagePath: 'chara.png', imagePathHash: 0xaaaa }],
+            [{ nameHash: 0xbbbb, name: 'chara_damaged.png' }],
+        );
+
+        expect(SSRuntimeManager.extractReplaceableTextureNames(buf)).toEqual([
+            'cellmap4369',
+            'chara_damaged.png',
+        ]);
+    });
+
+    it('deduplicates a name that appears in both tables', () => {
+        const buf = buildSsab(
+            [{ nameHash: 0x1111, imagePath: 'chara.png', imagePathHash: 0xaaaa }],
+            [{ nameHash: 0xbbbb, name: 'cellmap4369' }],
+        );
+
+        expect(SSRuntimeManager.extractReplaceableTextureNames(buf)).toEqual(['cellmap4369']);
+    });
+
+    it('is empty for a buffer that is not an SSAB', () => {
+        expect(SSRuntimeManager.extractReplaceableTextureNames(new Uint8Array([1, 2, 3, 4]))).toEqual([]);
+    });
+});
+
 describe('extractEmbeddedTextures', () => {
     it('joins embedded bytes to cell-maps by image-path hash', () => {
         const buf = buildSsab(

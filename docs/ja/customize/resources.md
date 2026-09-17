@@ -94,6 +94,10 @@ canvas は復帰せず白いままになります。
 登録してください。登録は `load()` より前に行います（パックのテクスチャはそこで解決されるため）。
 `loadBuffer()` を使う場合は第 2 引数に渡せば代わりに登録されます。
 
+読み込み*後*にテクスチャを差し替えたい場合（着せ替えや動的な表情差分など）は、名前をキーにした
+[テクスチャ差し替え（着せ替え）](/ja/customize/texture-replacement) の API を使ってください。
+セルマップ名の解決を代わりに行い、元テクスチャへの復元もできます。
+
 URL で辿れないインスタンスパックも同様で、
 [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md)
 でバイト列を渡します。この場合コアはフェッチを行わなくなるため、そのパックのテクスチャ登録も

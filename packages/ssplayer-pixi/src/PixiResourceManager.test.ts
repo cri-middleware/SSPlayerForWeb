@@ -197,3 +197,50 @@ describe('embedded textures are owned by the manager', () => {
     expect(assetsState.loadCalls).toEqual([]);
   });
 });
+
+describe('runtime texture overrides (setCellmapTexture)', () => {
+  it('shadow the loaded texture and restore it when cleared', async () => {
+    const rm = new PixiResourceManager();
+    await rm.loadTexture('/chara/atlas.png', 0x1111);
+    const original = rm.getTexture(0x1111);
+    const override = new FakeTexture('override');
+
+    rm.setOverrideTexture(0x1111, override as never);
+    expect(rm.getTexture(0x1111)).toBe(override);
+    expect(rm.getOverrideTexture(0x1111)).toBe(override);
+
+    rm.clearOverrideTexture(0x1111);
+    // Cleared without a reload — the original texture object is still there.
+    expect(rm.getTexture(0x1111)).toBe(original);
+    expect(rm.getOverrideTexture(0x1111)).toBeUndefined();
+  });
+
+  it('win over an embedded texture too', async () => {
+    const rm = new PixiResourceManager();
+    await rm.loadTextureFromBytes(new Uint8Array([1]), 0x3333);
+    const override = new FakeTexture('override');
+
+    rm.setOverrideTexture(0x3333, override as never);
+
+    expect(rm.getTexture(0x3333)).toBe(override);
+  });
+
+  it('are caller-owned: never destroyed, only forgotten, on reset', async () => {
+    const rm = new PixiResourceManager();
+    await rm.loadTexture('/chara/atlas.png', 0x1111);
+    const override = new FakeTexture('override');
+    rm.setOverrideTexture(0x1111, override as never);
+
+    rm.reset();
+
+    expect(override.destroyed).toBe(false); // the caller still owns it
+    expect(rm.getOverrideTexture(0x1111)).toBeUndefined(); // but the binding is gone
+  });
+
+  it('getOverrideTexture returns nothing for a merely-loaded texture', async () => {
+    const rm = new PixiResourceManager();
+    await rm.loadTexture('/chara/atlas.png', 0x1111);
+
+    expect(rm.getOverrideTexture(0x1111)).toBeUndefined();
+  });
+});

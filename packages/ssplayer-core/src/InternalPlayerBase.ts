@@ -1048,6 +1048,76 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.getCellNames(cellmapName);
     }
 
+    // --- Runtime texture replacement -------------------------------------
+    //
+    // Swap the texture an animation samples, from your program (costume changes,
+    // dynamic expressions) rather than from the authoring data. This is a
+    // Player-side override and is NOT the Override Layer (per-part cell/colour/
+    // visibility) above: it keys by CELL-MAP NAME, replacing the texture object
+    // the ResourceManager hands the renderer for that name's hash. The renderer
+    // resolves `DrawBatch.texture_hash` against that map every frame, so a swap
+    // takes effect on the next draw with no batch re-planning.
+    //
+    // Two things to know (see 70_external_resources.md): the replacement must be
+    // the SAME size and layout as the original atlas (UVs stay in the original
+    // cell-map's pixel space, normalized by the BOUND texture's size); and a
+    // frame under an authored TextureChange (`TCHG`) binds through the texture
+    // FILE-name hash instead, so to affect those frames replace that name (the
+    // `xxx.png` entries {@link getReplaceableTextureNames} lists) rather than the
+    // cell-map name.
+    //
+    // Instance children share this player's ResourceManager, so replacing a name
+    // used by a child's sub-animation affects the child too — unlike engines
+    // whose children keep independent texture maps.
+
+    /**
+     * Replace (or restore) the texture bound to a cell-map / external-texture
+     * name at runtime.
+     *
+     * @param cellmapName A name from {@link getReplaceableTextureNames} — a
+     *   cell-map name (`common`) or a TextureChange target file name
+     *   (`common.png`). An unknown name hashes to a key nothing draws, so the
+     *   call is a harmless no-op rather than an error.
+     * @param texture The engine-specific texture object to bind, or `null` to
+     *   clear the override and restore the originally loaded texture.
+     *
+     * The `texture` object is caller-owned; the player never frees it. Requires a
+     * ResourceManager that implements {@link IResourceManager.setOverrideTexture};
+     * throws otherwise.
+     */
+    public setCellmapTexture(cellmapName: string, texture: unknown | null): void {
+        const rm = this._resourceManager;
+        if (!rm || !rm.setOverrideTexture || !rm.clearOverrideTexture) {
+            throw new Error(
+                "This player's ResourceManager does not support runtime texture replacement (setOverrideTexture/clearOverrideTexture).",
+            );
+        }
+        const hash = hashString(cellmapName);
+        if (texture == null) {
+            rm.clearOverrideTexture(hash);
+        } else {
+            rm.setOverrideTexture(hash, texture);
+        }
+    }
+
+    /**
+     * The current runtime override for `cellmapName` (the object last passed to
+     * {@link setCellmapTexture}), or `undefined` when nothing is overridden. This
+     * returns only the override — never the originally loaded texture.
+     */
+    public getCellmapTexture(cellmapName: string): unknown {
+        return this._resourceManager?.getOverrideTexture?.(hashString(cellmapName));
+    }
+
+    /**
+     * Names {@link setCellmapTexture} can replace: cell-map names plus
+     * TextureChange target file names. See
+     * {@link SSRuntimeManager.getReplaceableTextureNames}.
+     */
+    public getReplaceableTextureNames(): string[] {
+        return this.runtimeManager.getReplaceableTextureNames();
+    }
+
     // --- Root transform (flip / offset) ----------------------------------
     //
     // Mirror or shift what this player DRAWS, without touching the host object's

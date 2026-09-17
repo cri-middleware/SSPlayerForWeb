@@ -94,6 +94,10 @@ the core directly, or on WebGL register the texture under its cell-map hash with
 `bindTextureSource()` — before `load()`, since that is where the pack's textures are resolved.
 `loadBuffer()` takes the same textures as its second argument and registers them for you.
 
+To swap a texture *after* load — a costume change or dynamic expression — use the name-keyed
+[runtime texture replacement](/customize/texture-replacement) API instead; it resolves the
+cell-map name for you and can restore the original.
+
 The same applies to Instance parts whose packs are not URL-addressable: hand the bytes over with
 [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md).
 When you do, the core stops fetching for you — registering that pack's textures becomes your job

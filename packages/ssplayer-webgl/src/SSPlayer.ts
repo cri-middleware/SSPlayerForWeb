@@ -1,5 +1,6 @@
-import { DirectInternalPlayer, IAudioManager, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, hashString, IAudioManager, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
+import type { SSTextureEntry } from './SSWebGLTextureCache.js';
 import type { SSSurface } from './SSSurface.js';
 
 // --- Animation event payloads (06_playback_control.ja.md) ---
@@ -756,6 +757,53 @@ export class SSPlayer {
     return this.internalPlayer.getCellNames(cellmapName);
   }
 
+  /**
+   * Runtime texture replacement: bind a new texture for a cell-map / external-
+   * texture name (costume changes, dynamic expressions), or pass `null` to
+   * restore the original. `cellmapName` is a {@link getReplaceableTextureNames}
+   * entry — a cell-map name (`common`) or a TextureChange target file name
+   * (`common.png`).
+   *
+   * `texture` is either a raw image source (an `ImageBitmap`, `HTMLImageElement`,
+   * `HTMLCanvasElement`, `HTMLVideoElement`, …) — uploaded into a GL texture this
+   * player owns and frees — or a ready {@link SSTextureEntry} you built and keep
+   * ownership of. Either way it must be a same-size, same-layout atlas as the
+   * original (UVs are normalized by the bound texture's size). When passing a
+   * source whose dimensions cannot be inferred, give `width`/`height` explicitly.
+   *
+   * Instance children share this player's textures, so a name used by a child's
+   * sub-animation is replaced there too.
+   */
+  public setCellmapTexture(
+    cellmapName: string,
+    texture: TexImageSource | SSTextureEntry | null,
+    width?: number,
+    height?: number,
+  ): void {
+    if (texture === null) {
+      this.internalPlayer.setCellmapTexture(cellmapName, null);
+      return;
+    }
+    // A ready entry is caller-owned — route through the core so it is stored,
+    // not rebuilt. A raw source is uploaded (and owned) by the manager.
+    if (isTextureEntry(texture)) {
+      this.internalPlayer.setCellmapTexture(cellmapName, texture);
+      return;
+    }
+    const [w, h] = sourceDimensions(texture, width, height);
+    this.resourceManager.setOverrideTextureFromSource(hashString(cellmapName), texture, w, h);
+  }
+
+  /** The current runtime texture override for `cellmapName` (never the original), or undefined. */
+  public getCellmapTexture(cellmapName: string): SSTextureEntry | undefined {
+    return this.internalPlayer.getCellmapTexture(cellmapName) as SSTextureEntry | undefined;
+  }
+
+  /** Names {@link setCellmapTexture} can replace (cell-map names + TextureChange targets). */
+  public getReplaceableTextureNames(): string[] {
+    return this.internalPlayer.getReplaceableTextureNames();
+  }
+
   // --- Part following: transform read-out ---
 
   /**
@@ -993,4 +1041,27 @@ export class SSPlayer {
     this.internalPlayer?.destroy();
     this.resourceManager.destroy();
   }
+}
+
+/** True for a ready {@link SSTextureEntry} (carries a WebGLTexture), false for a raw image source. */
+function isTextureEntry(v: TexImageSource | SSTextureEntry): v is SSTextureEntry {
+  return typeof (v as SSTextureEntry).tex !== 'undefined';
+}
+
+/**
+ * Pixel dimensions of a texture source, preferring explicit `w`/`h` when given
+ * and otherwise reading the source's own (intrinsic for images/videos). Falls
+ * back to 0, which the caller can treat as "unknown" — a mis-sized override
+ * samples a shifted region rather than crashing.
+ */
+function sourceDimensions(source: TexImageSource, w?: number, h?: number): [number, number] {
+  if (w !== undefined && h !== undefined) return [w, h];
+  const anySrc = source as unknown as {
+    naturalWidth?: number; naturalHeight?: number;
+    videoWidth?: number; videoHeight?: number;
+    width?: number; height?: number;
+  };
+  const width = w ?? anySrc.naturalWidth ?? anySrc.videoWidth ?? anySrc.width ?? 0;
+  const height = h ?? anySrc.naturalHeight ?? anySrc.videoHeight ?? anySrc.height ?? 0;
+  return [width, height];
 }

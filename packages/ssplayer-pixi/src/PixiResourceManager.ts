@@ -8,6 +8,11 @@ export class PixiResourceManager implements IResourceManager {
     // their lifetime and free them in reset()/destroy(). getTexture() checks
     // here first, then this player's URL-loaded textures.
     private embeddedTextures: Map<number, Texture> = new Map();
+    // Runtime texture replacements (setOverrideTexture). Shadows the originally
+    // loaded texture — checked first by getTexture — so clearing restores the
+    // original with no reload. Caller-owned: never destroyed here (like the
+    // URL-loaded textures), only forgotten on reset()/destroy().
+    private overrideTextures: Map<number, Texture> = new Map();
 
     /**
      * Load `url` and bind it under `hash`. Cached in Pixi's global `Assets`
@@ -43,13 +48,36 @@ export class PixiResourceManager implements IResourceManager {
     }
 
     public getTexture(hash: number): Texture | undefined {
-        return this.embeddedTextures.get(hash) ?? this.textures.get(hash);
+        return this.overrideTextures.get(hash) ?? this.embeddedTextures.get(hash) ?? this.textures.get(hash);
+    }
+
+    /**
+     * Runtime texture replacement: bind `texture` for `hash`, shadowing the
+     * originally loaded texture. Caller-owned — not destroyed here. The pixi
+     * shader/mesh caches are keyed by the `Texture` object, so the new texture
+     * gets its own shader on the next draw and the swap is picked up
+     * automatically; the stale entry is dropped at the next pack load.
+     */
+    public setOverrideTexture(hash: number, texture: Texture): void {
+        this.overrideTextures.set(hash, texture);
+    }
+
+    /** Drop the override for `hash`, restoring the originally loaded texture. */
+    public clearOverrideTexture(hash: number): void {
+        this.overrideTextures.delete(hash);
+    }
+
+    /** The current override for `hash` (never the original), or undefined. */
+    public getOverrideTexture(hash: number): Texture | undefined {
+        return this.overrideTextures.get(hash);
     }
 
     public reset(): void {
         this.embeddedTextures.forEach(tex => tex.destroy(true));
         this.embeddedTextures.clear();
         this.textures.clear();
+        // Overrides are caller-owned; forget them without destroying.
+        this.overrideTextures.clear();
     }
 
     public destroy(): void {
