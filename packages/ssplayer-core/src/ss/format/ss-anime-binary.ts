@@ -39,7 +39,7 @@ static bufferHasIdentifier(bb:flatbuffers.ByteBuffer):boolean {
 
 version():number {
   const offset = this.bb!.__offset(this.bb_pos, 4);
-  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 1;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
 }
 
 name():string|null
@@ -149,7 +149,7 @@ static startSsAnimeBinary(builder:flatbuffers.Builder) {
 }
 
 static addVersion(builder:flatbuffers.Builder, version:number) {
-  builder.addFieldInt32(0, version, 1);
+  builder.addFieldInt32(0, version, 0);
 }
 
 static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {

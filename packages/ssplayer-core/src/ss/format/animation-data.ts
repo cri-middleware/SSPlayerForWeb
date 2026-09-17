@@ -9,7 +9,7 @@ import { InitialEvents } from '../../ss/format/initial-events.js';
 import { InitialPartAttributes } from '../../ss/format/initial-part-attributes.js';
 import { Label } from '../../ss/format/label.js';
 import { PartAnimationData } from '../../ss/format/part-animation-data.js';
-import { Rect } from '../../ss/format/rect.js';
+import { Vec2 } from '../../ss/format/vec2.js';
 
 
 export class AnimationData {
@@ -112,13 +112,18 @@ fps():number {
   return offset ? this.bb!.readInt16(this.bb_pos + offset) : 0;
 }
 
-canvas(obj?:Rect):Rect|null {
+canvasSize(obj?:Vec2):Vec2|null {
   const offset = this.bb!.__offset(this.bb_pos, 26);
-  return offset ? (obj || new Rect()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? (obj || new Vec2()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
+pivot(obj?:Vec2):Vec2|null {
+  const offset = this.bb!.__offset(this.bb_pos, 28);
+  return offset ? (obj || new Vec2()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 static startAnimationData(builder:flatbuffers.Builder) {
-  builder.startObject(12);
+  builder.startObject(13);
 }
 
 static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
@@ -225,8 +230,12 @@ static addFps(builder:flatbuffers.Builder, fps:number) {
   builder.addFieldInt16(10, fps, 0);
 }
 
-static addCanvas(builder:flatbuffers.Builder, canvasOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(11, canvasOffset, 0);
+static addCanvasSize(builder:flatbuffers.Builder, canvasSizeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(11, canvasSizeOffset, 0);
+}
+
+static addPivot(builder:flatbuffers.Builder, pivotOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(12, pivotOffset, 0);
 }
 
 static endAnimationData(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -234,7 +243,8 @@ static endAnimationData(builder:flatbuffers.Builder):flatbuffers.Offset {
   builder.requiredField(offset, 4) // name
   builder.requiredField(offset, 8) // parts_initial_attributes
   builder.requiredField(offset, 10) // parts_animation_data
-  builder.requiredField(offset, 26) // canvas
+  builder.requiredField(offset, 26) // canvas_size
+  builder.requiredField(offset, 28) // pivot
   return offset;
 }
 
