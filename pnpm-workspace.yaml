@@ -8,3 +8,5 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - tsdown@0.22.14
   - vite@8.3.0
+  - jsdom@30.1.0
+  - pixi.js@8.21.0
