@@ -6,16 +6,28 @@ import { DropLoader } from './loader/DropLoader.js';
 import { extractAnimationNames } from './utils/ssabExtractor.js';
 
 // The deploy nests each SS project's output under public/<project>/ (ssconverter
-// `--stem-dir`): Ringo's assets live in Ringo/, everything else comes from the
-// `overall` test project in overall/. Map a bare sample filename to its URL.
+// `--stem-dir`): Ringo's packs live in Ringo/, Doll's in Doll/, and everything
+// else comes from the `overall` test project in overall/. Map a bare sample
+// filename to its URL.
+//
+// Keyed on the pack name rather than a prefix, because Doll's packs are named
+// after its animations (Action01_Body, Eye) and share nothing with the directory.
+// The `_embedded` suffix is stripped first, so both conversions of a pack land
+// in the same place.
 //
 // Resolved against the page, not written as a root-absolute '/Ringo/...', so
 // this works both at the dev-server root and under the /examples/pixi/ subpath
 // the Pages build is served from -- vite's --base rewrites HTML references and
 // imported assets, never a string literal like this one. (override-example
 // resolves its one asset the same way.)
-const ssabUrl = (name: string) =>
-    new URL((name.startsWith('Ringo') ? 'Ringo/' : 'overall/') + name, document.baseURI).href;
+const PROJECT_OF_PACK: Record<string, string> = {
+    Ringo: 'Ringo', Ringo_tyu: 'Ringo',
+    Action01_Body: 'Doll', Action02_Body: 'Doll', Eye: 'Doll',
+};
+const ssabUrl = (name: string) => {
+    const pack = name.replace(/(_embedded)?\.ssab$/, '');
+    return new URL(`${PROJECT_OF_PACK[pack] ?? 'overall'}/${name}`, document.baseURI).href;
+};
 
 async function main() {
     await SSPlayer.initialize();
@@ -90,6 +102,9 @@ async function main() {
         'Interpolation_Easing_v1.ssab', 'Mask.ssab', 'Mesh.ssab', 'NineSlice.ssab',
         'PartsColor.ssab', 'Ringo_tyu.ssab', 'Shader.ssab', 'Shape.ssab', 'Signal.ssab',
         'Sound.ssab', 'Text.ssab', 'TextureChange.ssab', 'UserData.ssab',
+        // Doll: instance parts playing a pack of their own (Eye) plus effect
+        // parts, which no single `overall` fixture puts together.
+        'Action01_Body.ssab', 'Action02_Body.ssab', 'Eye.ssab',
     ];
     // Embedded-texture SSABs (converter `--embedded`): the PNG is inlined in the
     // .ssab, so these load with no sibling texture file. Every base sample above has
