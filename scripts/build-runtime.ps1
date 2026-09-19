@@ -3,12 +3,25 @@ param (
     [string[]]$ArgsList
 )
 
+$App = Split-Path -Leaf $PSCommandPath
+
+function Fail {
+    param([string] $Message, [int] $Code = 1)
+    [Console]::Error.WriteLine("${App}: $Message")
+    exit $Code
+}
+
 $Mode = "release"
 foreach ($arg in $ArgsList) {
-    if ($arg -match "^build=(.*)") {
-        $Mode = $Matches[1]
-    } elseif ($arg -eq "release" -or $arg -eq "debug") {
-        $Mode = $arg
+    switch -Regex ($arg) {
+        '^build=(release|debug)$' { $Mode = $Matches[1]; break }
+        '^build=' { Fail "build= takes release or debug, not '$($arg -replace '^build=')'" 2 }
+        '^(-h|--help|help)$' {
+            Write-Host "Usage: $App [build=release|debug]"
+            Write-Host "  build=<mode>  wasm build profile (default release)"
+            exit 0
+        }
+        default { Fail "unknown argument '$arg'" 2 }
     }
 }
 

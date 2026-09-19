@@ -5,17 +5,21 @@ set -eo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SSRUNTIME_DIR="$ROOT_DIR/SpriteStudio-SDK/libs/ssruntime"
 OUT_DIR="$ROOT_DIR/packages/ssplayer-core/wasm"
+APP="$(basename "$0")"
 
 MODE="release"
 
+usage () {
+    echo "Usage: ${APP} [build=release|debug]"
+    echo "  build=<mode>  wasm build profile (default release)"
+}
+
 for arg in "$@"; do
     case $arg in
-        build=*)
-            MODE="${arg#*=}"
-            ;;
-        release|debug)
-            MODE="$arg"
-            ;;
+        build=release|build=debug) MODE="${arg#*=}" ;;
+        build=*) echo "${APP}: build= takes release or debug, not '${arg#*=}'" >&2; exit 2 ;;
+        -h|--help|help) usage; exit 0 ;;
+        *) echo "${APP}: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
     esac
 done
 echo "Building WASM runtime via release-web.sh in $MODE mode..."
