@@ -89,6 +89,26 @@ build them first. The examples consume the **built** packages via workspace
 references, so re-run `pnpm run build` after changing any TypeScript under
 `packages/`. Verify your changes against `examples/webgl-example` (`pnpm run dev`).
 
+### Regenerating the FlatBuffers accessors
+
+`packages/ssplayer-core/src/ss/` is flatc output over the SDK's `.fbs` schemas,
+and unlike the WASM it **is** tracked — a normal checkout builds without flatc.
+Regenerate and commit it after a schema change in SpriteStudio-SDK; `flatc` has
+to be on your PATH.
+
+```bash
+# macOS / Linux
+./scripts/generate-fbs-code.sh
+
+# Windows (PowerShell)
+.\scripts\generate-fbs-code.ps1
+```
+
+The script also rewrites the namespace entrypoints `src/ss/runtime.ts` and
+`src/ss/format.ts`: run file by file, flatc leaves each of them holding only the
+last schema's exports. It is deliberately not part of `build:wasm` or
+`download:wasm` — run it only when a schema changes.
+
 ## Coding Standards
 
 ### TypeScript
@@ -198,6 +218,26 @@ pnpm run build
 ビルドが必要です。examples は **ビルド済み** のパッケージをワークスペース参照で利用
 するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行して
 ください。変更は `examples/webgl-example`（`pnpm run dev`）で確認してください。
+
+### FlatBuffers アクセサの再生成
+
+`packages/ssplayer-core/src/ss/` は SDK の `.fbs` スキーマに flatc をかけた出力で、
+WASM とは違い **git で管理しています** — 通常のチェックアウトは flatc なしでビルド
+できます。SpriteStudio-SDK 側でスキーマが変わったら再生成してコミットしてください。
+`flatc` に PATH が通っている必要があります。
+
+```bash
+# macOS / Linux
+./scripts/generate-fbs-code.sh
+
+# Windows (PowerShell)
+.\scripts\generate-fbs-code.ps1
+```
+
+このスクリプトは名前空間のエントリポイント `src/ss/runtime.ts` と
+`src/ss/format.ts` も書き直します。flatc をファイルごとに走らせると、どちらも
+最後のスキーマの export だけになってしまうためです。`build:wasm` や
+`download:wasm` には意図的に含めていません。スキーマが変わったときだけ実行します。
 
 ## コーディング規約
 
