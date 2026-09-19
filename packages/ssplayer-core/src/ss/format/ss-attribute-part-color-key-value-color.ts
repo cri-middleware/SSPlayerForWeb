@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { U8Rect } from '../../ss/format/u8-rect.js';
+import { U8Color } from '../../ss/format/u8-color.js';
 
 
 export class SsAttributePartColorKeyValueColor {
@@ -25,9 +25,9 @@ static getSizePrefixedRootAsSsAttributePartColorKeyValueColor(bb:flatbuffers.Byt
   return (obj || new SsAttributePartColorKeyValueColor()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-rgba(obj?:U8Rect):U8Rect|null {
+rgba(obj?:U8Color):U8Color|null {
   const offset = this.bb!.__offset(this.bb_pos, 4);
-  return offset ? (obj || new U8Rect()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? (obj || new U8Color()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 rate():number {

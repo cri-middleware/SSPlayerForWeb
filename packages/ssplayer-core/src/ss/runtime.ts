@@ -13,6 +13,6 @@ export { PartAttributeShader } from './runtime/part-attribute-shader.js';
 export { PartAttributeVertex } from './runtime/part-attribute-vertex.js';
 export { PartState } from './runtime/part-state.js';
 export { SsAttributePartColorKeyValueColor } from './runtime/ss-attribute-part-color-key-value-color.js';
-export { U8Rect } from './runtime/u8-rect.js';
+export { U8Color } from './runtime/u8-color.js';
 export { UpdateAttributeFlags } from './runtime/update-attribute-flags.js';
 export { Vec2 } from './runtime/vec2.js';

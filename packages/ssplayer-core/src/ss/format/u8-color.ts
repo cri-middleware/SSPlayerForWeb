@@ -4,22 +4,22 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-export class U8Rect {
+export class U8Color {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i:number, bb:flatbuffers.ByteBuffer):U8Rect {
+  __init(i:number, bb:flatbuffers.ByteBuffer):U8Color {
   this.bb_pos = i;
   this.bb = bb;
   return this;
 }
 
-static getRootAsU8Rect(bb:flatbuffers.ByteBuffer, obj?:U8Rect):U8Rect {
-  return (obj || new U8Rect()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+static getRootAsU8Color(bb:flatbuffers.ByteBuffer, obj?:U8Color):U8Color {
+  return (obj || new U8Color()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-static getSizePrefixedRootAsU8Rect(bb:flatbuffers.ByteBuffer, obj?:U8Rect):U8Rect {
+static getSizePrefixedRootAsU8Color(bb:flatbuffers.ByteBuffer, obj?:U8Color):U8Color {
   bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-  return (obj || new U8Rect()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  return (obj || new U8Color()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
 a():number {
@@ -42,7 +42,7 @@ b():number {
   return offset ? this.bb!.readUint8(this.bb_pos + offset) : 0;
 }
 
-static startU8Rect(builder:flatbuffers.Builder) {
+static startU8Color(builder:flatbuffers.Builder) {
   builder.startObject(4);
 }
 
@@ -62,17 +62,17 @@ static addB(builder:flatbuffers.Builder, b:number) {
   builder.addFieldInt8(3, b, 0);
 }
 
-static endU8Rect(builder:flatbuffers.Builder):flatbuffers.Offset {
+static endU8Color(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createU8Rect(builder:flatbuffers.Builder, a:number, r:number, g:number, b:number):flatbuffers.Offset {
-  U8Rect.startU8Rect(builder);
-  U8Rect.addA(builder, a);
-  U8Rect.addR(builder, r);
-  U8Rect.addG(builder, g);
-  U8Rect.addB(builder, b);
-  return U8Rect.endU8Rect(builder);
+static createU8Color(builder:flatbuffers.Builder, a:number, r:number, g:number, b:number):flatbuffers.Offset {
+  U8Color.startU8Color(builder);
+  U8Color.addA(builder, a);
+  U8Color.addR(builder, r);
+  U8Color.addG(builder, g);
+  U8Color.addB(builder, b);
+  return U8Color.endU8Color(builder);
 }
 }

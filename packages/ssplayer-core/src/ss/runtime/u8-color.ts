@@ -4,10 +4,10 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-export class U8Rect {
+export class U8Color {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i:number, bb:flatbuffers.ByteBuffer):U8Rect {
+  __init(i:number, bb:flatbuffers.ByteBuffer):U8Color {
   this.bb_pos = i;
   this.bb = bb;
   return this;
@@ -33,7 +33,7 @@ static sizeOf():number {
   return 4;
 }
 
-static createU8Rect(builder:flatbuffers.Builder, a: number, r: number, g: number, b: number):flatbuffers.Offset {
+static createU8Color(builder:flatbuffers.Builder, a: number, r: number, g: number, b: number):flatbuffers.Offset {
   builder.prep(1, 4);
   builder.writeInt8(b);
   builder.writeInt8(g);

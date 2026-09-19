@@ -1099,7 +1099,7 @@ export class SSPlayer extends Container {
             const str = val.str();
             if (str !== null) ev.str = str;
             const rect = val.rect();
-            if (rect) ev.rect = { x1: rect.x1(), y1: rect.y1(), x2: rect.x2(), y2: rect.y2() };
+            if (rect) ev.rect = { x1: rect.left(), y1: rect.top(), x2: rect.right(), y2: rect.bottom() };
             const point = val.point();
             if (point) ev.point = { x: point.v1(), y: point.v2() };
             this._userDataListeners.forEach(cb => cb(ev));
