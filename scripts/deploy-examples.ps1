@@ -1,5 +1,23 @@
 $ErrorActionPreference = "Stop"
 
+$HelpApp = Split-Path -Leaf $PSCommandPath
+function Show-Usage {
+    Write-Host "Usage: ${HelpApp} [--help]"
+    Write-Host "  Compile the SDK's bundled test projects into the examples' asset directories,"
+    Write-Host "  both reference and embedded. Needs node and the built ssconverter-web package."
+}
+
+foreach ($arg in $args) {
+    switch -Regex ($arg) {
+        '^(-h|--help|help)$' { Show-Usage; exit 0 }
+        default {
+            [Console]::Error.WriteLine("${HelpApp}: unknown argument '$arg'")
+            Show-Usage
+            exit 2
+        }
+    }
+}
+
 $ROOT_DIR = (Resolve-Path "$PSScriptRoot\..").Path
 $PIXI_PUBLIC = Join-Path $ROOT_DIR "examples\pixi-example\public"
 $WEBGL_PUBLIC = Join-Path $ROOT_DIR "examples\webgl-example\public"

@@ -5,6 +5,24 @@
 
 $ErrorActionPreference = "Stop"
 
+$HelpApp = Split-Path -Leaf $PSCommandPath
+function Show-Usage {
+    Write-Host "Usage: ${HelpApp} [--help]"
+    Write-Host "  flatc --ts over the SDK's .fbs schemas, into packages/ssplayer-core/src/ss/,"
+    Write-Host "  then rewrites the namespace entrypoints flatc overwrites per file. Needs flatc."
+}
+
+foreach ($arg in $args) {
+    switch -Regex ($arg) {
+        '^(-h|--help|help)$' { Show-Usage; exit 0 }
+        default {
+            [Console]::Error.WriteLine("${HelpApp}: unknown argument '$arg'")
+            Show-Usage
+            exit 2
+        }
+    }
+}
+
 # Setup paths
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $SdkDir = Join-Path $ProjectRoot "SpriteStudio-SDK"

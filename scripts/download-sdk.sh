@@ -17,6 +17,23 @@ set -e
 # The no-SIMD runtime variant is consumed by ssplayer-rmmz (RPG Maker MZ / NW.js
 # lacks WASM simd128).
 
+HELP_APP="$(basename "$0")"
+usage () {
+    cat <<USAGE
+Usage: ${HELP_APP} [--help]
+  Install the SpriteStudio-SDK WASM release pinned by scripts/SDK_VERSION.txt into
+  ssplayer-core/wasm, ssplayer-core/wasm-nosimd and ssconverter-core/wasm.
+  Skips the download when that version is already in place.
+USAGE
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help|help) usage; exit 0 ;;
+    *) echo "${HELP_APP}: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
 BASEDIR=$(dirname "$0")
 SCRIPTDIR=$(cd "$BASEDIR" && pwd -P)
 ROOTDIR=$(cd "$BASEDIR/.." && pwd -P)
