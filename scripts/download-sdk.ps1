@@ -4,7 +4,7 @@
 #
 # NOTE (provisional): until a SpriteStudio-SDK release that publishes the WASM
 # assets is available, this script fails at the download step — build from
-# source with `pnpm run build:wasm:win` in the meantime.
+# source with `pnpm run build:wasm` in the meantime.
 #
 # The SDK publishes one combined archive, spritestudio-sdk-web-libs.zip, holding the
 # three wasm-pack packages as subdirectories. Each is extracted into its target:
