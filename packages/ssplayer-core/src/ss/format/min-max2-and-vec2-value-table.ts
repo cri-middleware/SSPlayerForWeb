@@ -4,31 +4,31 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { Rect } from '../../ss/format/rect.js';
+import { MinMax2 } from '../../ss/format/min-max2.js';
 import { Vec2 } from '../../ss/format/vec2.js';
 
 
-export class RectAndVec2ValueTable {
+export class MinMax2AndVec2ValueTable {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i:number, bb:flatbuffers.ByteBuffer):RectAndVec2ValueTable {
+  __init(i:number, bb:flatbuffers.ByteBuffer):MinMax2AndVec2ValueTable {
   this.bb_pos = i;
   this.bb = bb;
   return this;
 }
 
-static getRootAsRectAndVec2ValueTable(bb:flatbuffers.ByteBuffer, obj?:RectAndVec2ValueTable):RectAndVec2ValueTable {
-  return (obj || new RectAndVec2ValueTable()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+static getRootAsMinMax2AndVec2ValueTable(bb:flatbuffers.ByteBuffer, obj?:MinMax2AndVec2ValueTable):MinMax2AndVec2ValueTable {
+  return (obj || new MinMax2AndVec2ValueTable()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-static getSizePrefixedRootAsRectAndVec2ValueTable(bb:flatbuffers.ByteBuffer, obj?:RectAndVec2ValueTable):RectAndVec2ValueTable {
+static getSizePrefixedRootAsMinMax2AndVec2ValueTable(bb:flatbuffers.ByteBuffer, obj?:MinMax2AndVec2ValueTable):MinMax2AndVec2ValueTable {
   bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-  return (obj || new RectAndVec2ValueTable()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  return (obj || new MinMax2AndVec2ValueTable()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-size(obj?:Rect):Rect|null {
+size(obj?:MinMax2):MinMax2|null {
   const offset = this.bb!.__offset(this.bb_pos, 4);
-  return offset ? (obj || new Rect()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? (obj || new MinMax2()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 scaleFactorValue(obj?:Vec2):Vec2|null {
@@ -36,7 +36,7 @@ scaleFactorValue(obj?:Vec2):Vec2|null {
   return offset ? (obj || new Vec2()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
-static startRectAndVec2ValueTable(builder:flatbuffers.Builder) {
+static startMinMax2AndVec2ValueTable(builder:flatbuffers.Builder) {
   builder.startObject(2);
 }
 
@@ -48,7 +48,7 @@ static addScaleFactorValue(builder:flatbuffers.Builder, scaleFactorValueOffset:f
   builder.addFieldOffset(1, scaleFactorValueOffset, 0);
 }
 
-static endRectAndVec2ValueTable(builder:flatbuffers.Builder):flatbuffers.Offset {
+static endMinMax2AndVec2ValueTable(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   builder.requiredField(offset, 6) // scale_factor_value
   return offset;

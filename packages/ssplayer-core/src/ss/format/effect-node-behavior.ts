@@ -10,8 +10,8 @@ import { EffectParticleElementTransColor } from '../../ss/format/effect-particle
 import { EffectParticlePointGravity } from '../../ss/format/effect-particle-point-gravity.js';
 import { FloatValueEntry } from '../../ss/format/float-value-entry.js';
 import { IntValueEntry } from '../../ss/format/int-value-entry.js';
-import { RectAndVec2ValueTable } from '../../ss/format/rect-and-vec2-value-table.js';
-import { RectValueEntry } from '../../ss/format/rect-value-entry.js';
+import { MinMax2AndVec2ValueTable } from '../../ss/format/min-max2-and-vec2-value-table.js';
+import { MinMax2ValueEntry } from '../../ss/format/min-max2-value-entry.js';
 import { Vec2ValueEntry } from '../../ss/format/vec2-value-entry.js';
 
 
@@ -38,15 +38,15 @@ export enum EffectNodeBehavior {
 
 export function unionToEffectNodeBehavior(
   type: EffectNodeBehavior,
-  accessor: (obj:EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|RectAndVec2ValueTable|RectValueEntry|Vec2ValueEntry) => EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|RectAndVec2ValueTable|RectValueEntry|Vec2ValueEntry|null
-): EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|RectAndVec2ValueTable|RectValueEntry|Vec2ValueEntry|null {
+  accessor: (obj:EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|MinMax2AndVec2ValueTable|MinMax2ValueEntry|Vec2ValueEntry) => EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|MinMax2AndVec2ValueTable|MinMax2ValueEntry|Vec2ValueEntry|null
+): EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|MinMax2AndVec2ValueTable|MinMax2ValueEntry|Vec2ValueEntry|null {
   switch(EffectNodeBehavior[type]) {
     case 'NONE': return null; 
     case 'EffectParticleElementBasic': return accessor(new EffectParticleElementBasic())! as EffectParticleElementBasic;
     case 'EffectParticleElementRndSeedChange': return accessor(new IntValueEntry())! as IntValueEntry;
     case 'EffectParticleElementDelay': return accessor(new IntValueEntry())! as IntValueEntry;
     case 'EffectParticleElementGravity': return accessor(new Vec2ValueEntry())! as Vec2ValueEntry;
-    case 'EffectParticleElementPosition': return accessor(new RectValueEntry())! as RectValueEntry;
+    case 'EffectParticleElementPosition': return accessor(new MinMax2ValueEntry())! as MinMax2ValueEntry;
     case 'EffectParticleElementRotation': return accessor(new EffectParticleElementRotation())! as EffectParticleElementRotation;
     case 'EffectParticleElementRotationTrans': return accessor(new EffectParticleElementRotationTrans())! as EffectParticleElementRotationTrans;
     case 'EffectParticleElementTransSpeed': return accessor(new Vec2ValueEntry())! as Vec2ValueEntry;
@@ -54,8 +54,8 @@ export function unionToEffectNodeBehavior(
     case 'EffectParticleElementInitColor': return accessor(new EffectParticleElementInitColor())! as EffectParticleElementInitColor;
     case 'EffectParticleElementTransColor': return accessor(new EffectParticleElementTransColor())! as EffectParticleElementTransColor;
     case 'EffectParticleElementAlphaFade': return accessor(new Vec2ValueEntry())! as Vec2ValueEntry;
-    case 'EffectParticleElementSize': return accessor(new RectAndVec2ValueTable())! as RectAndVec2ValueTable;
-    case 'EffectParticleElementTransSize': return accessor(new RectAndVec2ValueTable())! as RectAndVec2ValueTable;
+    case 'EffectParticleElementSize': return accessor(new MinMax2AndVec2ValueTable())! as MinMax2AndVec2ValueTable;
+    case 'EffectParticleElementTransSize': return accessor(new MinMax2AndVec2ValueTable())! as MinMax2AndVec2ValueTable;
     case 'EffectParticlePointGravity': return accessor(new EffectParticlePointGravity())! as EffectParticlePointGravity;
     case 'EffectParticleTurnToDirectionEnabled': return accessor(new FloatValueEntry())! as FloatValueEntry;
     case 'EffectParticleInfiniteEmitEnabled': return accessor(new IntValueEntry())! as IntValueEntry;
@@ -65,16 +65,16 @@ export function unionToEffectNodeBehavior(
 
 export function unionListToEffectNodeBehavior(
   type: EffectNodeBehavior, 
-  accessor: (index: number, obj:EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|RectAndVec2ValueTable|RectValueEntry|Vec2ValueEntry) => EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|RectAndVec2ValueTable|RectValueEntry|Vec2ValueEntry|null, 
+  accessor: (index: number, obj:EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|MinMax2AndVec2ValueTable|MinMax2ValueEntry|Vec2ValueEntry) => EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|MinMax2AndVec2ValueTable|MinMax2ValueEntry|Vec2ValueEntry|null, 
   index: number
-): EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|RectAndVec2ValueTable|RectValueEntry|Vec2ValueEntry|null {
+): EffectParticleElementBasic|EffectParticleElementInitColor|EffectParticleElementRotation|EffectParticleElementRotationTrans|EffectParticleElementTransColor|EffectParticlePointGravity|FloatValueEntry|IntValueEntry|MinMax2AndVec2ValueTable|MinMax2ValueEntry|Vec2ValueEntry|null {
   switch(EffectNodeBehavior[type]) {
     case 'NONE': return null; 
     case 'EffectParticleElementBasic': return accessor(index, new EffectParticleElementBasic())! as EffectParticleElementBasic;
     case 'EffectParticleElementRndSeedChange': return accessor(index, new IntValueEntry())! as IntValueEntry;
     case 'EffectParticleElementDelay': return accessor(index, new IntValueEntry())! as IntValueEntry;
     case 'EffectParticleElementGravity': return accessor(index, new Vec2ValueEntry())! as Vec2ValueEntry;
-    case 'EffectParticleElementPosition': return accessor(index, new RectValueEntry())! as RectValueEntry;
+    case 'EffectParticleElementPosition': return accessor(index, new MinMax2ValueEntry())! as MinMax2ValueEntry;
     case 'EffectParticleElementRotation': return accessor(index, new EffectParticleElementRotation())! as EffectParticleElementRotation;
     case 'EffectParticleElementRotationTrans': return accessor(index, new EffectParticleElementRotationTrans())! as EffectParticleElementRotationTrans;
     case 'EffectParticleElementTransSpeed': return accessor(index, new Vec2ValueEntry())! as Vec2ValueEntry;
@@ -82,8 +82,8 @@ export function unionListToEffectNodeBehavior(
     case 'EffectParticleElementInitColor': return accessor(index, new EffectParticleElementInitColor())! as EffectParticleElementInitColor;
     case 'EffectParticleElementTransColor': return accessor(index, new EffectParticleElementTransColor())! as EffectParticleElementTransColor;
     case 'EffectParticleElementAlphaFade': return accessor(index, new Vec2ValueEntry())! as Vec2ValueEntry;
-    case 'EffectParticleElementSize': return accessor(index, new RectAndVec2ValueTable())! as RectAndVec2ValueTable;
-    case 'EffectParticleElementTransSize': return accessor(index, new RectAndVec2ValueTable())! as RectAndVec2ValueTable;
+    case 'EffectParticleElementSize': return accessor(index, new MinMax2AndVec2ValueTable())! as MinMax2AndVec2ValueTable;
+    case 'EffectParticleElementTransSize': return accessor(index, new MinMax2AndVec2ValueTable())! as MinMax2AndVec2ValueTable;
     case 'EffectParticlePointGravity': return accessor(index, new EffectParticlePointGravity())! as EffectParticlePointGravity;
     case 'EffectParticleTurnToDirectionEnabled': return accessor(index, new FloatValueEntry())! as FloatValueEntry;
     case 'EffectParticleInfiniteEmitEnabled': return accessor(index, new IntValueEntry())! as IntValueEntry;
