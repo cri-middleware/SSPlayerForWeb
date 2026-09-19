@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { Rect } from '../../ss/format/rect.js';
+import { Region } from '../../ss/format/region.js';
 import { Vec2 } from '../../ss/format/vec2.js';
 
 
@@ -38,9 +38,9 @@ name(optionalEncoding?:any):string|Uint8Array|null {
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
-rectangle(obj?:Rect):Rect|null {
+region(obj?:Region):Region|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? (obj || new Rect()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? (obj || new Region()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 pivot(obj?:Vec2):Vec2|null {
@@ -110,8 +110,8 @@ static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
   builder.addFieldOffset(1, nameOffset, 0);
 }
 
-static addRectangle(builder:flatbuffers.Builder, rectangleOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, rectangleOffset, 0);
+static addRegion(builder:flatbuffers.Builder, regionOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, regionOffset, 0);
 }
 
 static addPivot(builder:flatbuffers.Builder, pivotOffset:flatbuffers.Offset) {
@@ -188,7 +188,7 @@ static startTableIndexVertexVector(builder:flatbuffers.Builder, numElems:number)
 static endCell(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   builder.requiredField(offset, 6) // name
-  builder.requiredField(offset, 8) // rectangle
+  builder.requiredField(offset, 8) // region
   builder.requiredField(offset, 10) // pivot
   return offset;
 }

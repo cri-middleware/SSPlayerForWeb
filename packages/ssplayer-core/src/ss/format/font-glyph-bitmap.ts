@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { Rect } from '../../ss/format/rect.js';
+import { Region } from '../../ss/format/region.js';
 import { Vec2 } from '../../ss/format/vec2.js';
 
 
@@ -31,9 +31,9 @@ id():number {
   return offset ? this.bb!.readUint16(this.bb_pos + offset) : 0;
 }
 
-atlas(obj?:Rect):Rect|null {
+atlas(obj?:Region):Region|null {
   const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? (obj || new Rect()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? (obj || new Region()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 offset(obj?:Vec2):Vec2|null {
