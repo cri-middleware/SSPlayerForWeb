@@ -2,6 +2,22 @@
 set -eo pipefail
 
 # Setup paths
+HELP_APP="$(basename "$0")"
+usage () {
+    cat <<USAGE
+Usage: ${HELP_APP} [--help]
+  flatc --ts over the SDK's .fbs schemas, into packages/ssplayer-core/src/ss/,
+  then rewrites the namespace entrypoints flatc overwrites per file. Needs flatc.
+USAGE
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help|help) usage; exit 0 ;;
+    *) echo "${HELP_APP}: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SDK_DIR="${PROJECT_ROOT}/SpriteStudio-SDK"
 TARGET_DIR="${PROJECT_ROOT}/packages/ssplayer-core/src"

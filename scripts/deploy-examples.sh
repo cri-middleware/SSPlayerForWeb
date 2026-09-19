@@ -1,6 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
+HELP_APP="$(basename "$0")"
+usage () {
+    cat <<USAGE
+Usage: ${HELP_APP} [--help]
+  Compile the SDK's bundled test projects into the examples' asset directories,
+  both reference and embedded. Needs node and the built ssconverter-web package.
+USAGE
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help|help) usage; exit 0 ;;
+    *) echo "${HELP_APP}: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SDK_DIR="$ROOT_DIR/SpriteStudio-SDK"
 PIXI_PUBLIC="$ROOT_DIR/examples/pixi-example/public"
