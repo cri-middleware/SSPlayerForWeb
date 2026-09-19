@@ -193,7 +193,10 @@ function Show-Usage {
     Write-Host "  clean=<yes|no>          Delete <out> before building (default: yes, or no"
     Write-Host "                          when skip= is given, so a partial run keeps what an"
     Write-Host "                          earlier one produced)."
-    Write-Host "  -h | --help             Show this help"
+        Write-Host "  in=                     Accepted and ignored here. The family's build-release"
+    Write-Host "                          scripts share out= clean= verify= in= sdk= skip=,"
+    Write-Host "                          so one command line drives all of them."
+Write-Host "  -h | --help             Show this help"
     Write-Host ""
     Write-Host "Stages:"
     Write-Host "  install   pnpm install --frozen-lockfile"
@@ -220,6 +223,12 @@ foreach ($item in $args) {
         exit 0
     } elseif ($item -match "=") {
         $key, $value = $item -split "=", 2
+        # Accepted so one command line drives build-release in every repository
+        # of the family; this one has no use for it.
+        if ($key -eq "in") {
+            [Console]::Error.WriteLine("${APP}: in= does not apply here; ignored")
+            continue
+        }
         if (-not $opts.Contains($key)) {
             Fail "unknown option '$key' (see $APP --help)" 2
         }
