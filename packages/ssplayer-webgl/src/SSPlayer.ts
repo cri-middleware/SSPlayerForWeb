@@ -26,7 +26,7 @@ export interface SSUserDataEvent {
   integer?: number;
   str?: string;
   /** User-data rectangle as authored (left/top/right/bottom). */
-  rect?: { x1: number; y1: number; x2: number; y2: number };
+  rect?: { left: number; top: number; right: number; bottom: number };
   /** User-data point as authored. */
   point?: { x: number; y: number };
 }
@@ -945,7 +945,7 @@ export class SSPlayer {
       const str = val.str();
       if (str !== null) ev.str = str;
       const rect = val.rect();
-      if (rect) ev.rect = { x1: rect.x1(), y1: rect.y1(), x2: rect.x2(), y2: rect.y2() };
+      if (rect) ev.rect = { left: rect.left(), top: rect.top(), right: rect.right(), bottom: rect.bottom() };
       const point = val.point();
       if (point) ev.point = { x: point.v1(), y: point.v2() };
       this._userDataListeners.forEach(cb => cb(ev));

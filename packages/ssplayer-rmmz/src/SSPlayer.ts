@@ -53,7 +53,7 @@ export interface SSUserDataEvent {
   frameNo: number;
   integer?: number;
   str?: string;
-  rect?: { x1: number; y1: number; x2: number; y2: number };
+  rect?: { left: number; top: number; right: number; bottom: number };
   point?: { x: number; y: number };
 }
 export interface SSSignalEvent {
@@ -695,7 +695,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       const str = val.str();
       if (str !== null) ev.str = str;
       const rect = val.rect();
-      if (rect) ev.rect = { x1: rect.x1(), y1: rect.y1(), x2: rect.x2(), y2: rect.y2() };
+      if (rect) ev.rect = { left: rect.left(), top: rect.top(), right: rect.right(), bottom: rect.bottom() };
       const point = val.point();
       if (point) ev.point = { x: point.v1(), y: point.v2() };
       this._userDataListeners.forEach((cb) => cb(ev));

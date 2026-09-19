@@ -2,7 +2,7 @@ import type { FrameData } from './ss/runtime/frame-data.js';
 import { PartState } from './ss/runtime/part-state.js';
 import { PartAttributePartColor } from './ss/runtime/part-attribute-part-color.js';
 import { SsAttributePartColorKeyValueColor } from './ss/runtime/ss-attribute-part-color-key-value-color.js';
-import { U8Rect } from './ss/runtime/u8-rect.js';
+import { U8Color } from './ss/runtime/u8-color.js';
 import { DrawBatch } from './ss/runtime/draw-batch.js';
 
 /**
@@ -45,11 +45,11 @@ const PART_SHADER_OFF = 130;    // int16
 
 // ── PartAttributePartColor struct (stride 36) — offsets mirror
 // part-attribute-part-color.ts. Each corner is an SsAttributePartColorKeyValueColor
-// { rgba: U8Rect{a,r,g,b}, rate: float32 }; U8Rect packs a@+0, r@+1, g@+2, b@+3.
+// { rgba: U8Color{a,r,g,b}, rate: float32 }; U8Color packs a@+0, r@+1, g@+2, b@+3.
 const PC_STRIDE = 36;
 const PC_BLEND_OFF = 0;             // uint8
 const PC_CORNER_OFFSETS = [4, 12, 20, 28]; // LT, RT, LB, RB
-const PC_RGBA_A = 0, PC_RGBA_R = 1, PC_RGBA_G = 2, PC_RGBA_B = 3; // within U8Rect
+const PC_RGBA_A = 0, PC_RGBA_R = 1, PC_RGBA_G = 2, PC_RGBA_B = 3; // within U8Color
 const PC_RATE_OFF = 4;             // float32, within the corner
 
 // ── DrawBatch struct (stride 16) — offsets mirror draw-batch.ts.
@@ -83,7 +83,7 @@ export class FrameDataRaw {
     private readonly _scPart = new PartState();
     private readonly _scPc = new PartAttributePartColor();
     private readonly _scCorner = new SsAttributePartColorKeyValueColor();
-    private readonly _scRgba = new U8Rect();
+    private readonly _scRgba = new U8Color();
     private readonly _scBatch = new DrawBatch();
 
     /**

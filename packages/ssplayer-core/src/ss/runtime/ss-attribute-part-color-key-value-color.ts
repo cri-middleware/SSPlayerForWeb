@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { U8Rect } from '../../ss/runtime/u8-rect.js';
+import { U8Color } from '../../ss/runtime/u8-color.js';
 
 
 export class SsAttributePartColorKeyValueColor {
@@ -16,8 +16,8 @@ export class SsAttributePartColorKeyValueColor {
   return this;
 }
 
-rgba(obj?:U8Rect):U8Rect|null {
-  return (obj || new U8Rect()).__init(this.bb_pos, this.bb!);
+rgba(obj?:U8Color):U8Color|null {
+  return (obj || new U8Color()).__init(this.bb_pos, this.bb!);
 }
 
 rate():number {

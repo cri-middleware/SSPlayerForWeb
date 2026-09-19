@@ -4,8 +4,8 @@
 
 import * as flatbuffers from 'flatbuffers';
 
+import { Bounds } from '../../ss/format/bounds.js';
 import { IntValueEntry } from '../../ss/format/int-value-entry.js';
-import { Rect } from '../../ss/format/rect.js';
 import { Vec2 } from '../../ss/format/vec2.js';
 
 
@@ -32,9 +32,9 @@ integer(obj?:IntValueEntry):IntValueEntry|null {
   return offset ? (obj || new IntValueEntry()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
-rect(obj?:Rect):Rect|null {
+rect(obj?:Bounds):Bounds|null {
   const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? (obj || new Rect()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? (obj || new Bounds()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
 point(obj?:Vec2):Vec2|null {
