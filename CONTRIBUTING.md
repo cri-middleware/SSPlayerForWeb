@@ -61,16 +61,8 @@ bump. Note this differs from other SpriteStudio repositories (e.g. the
 lockstep-versioned SDK, which uses a `develop` branch): the branch model follows
 the versioning model, not the other way around.
 
-Before running it, `scripts/build-release.sh` (`.ps1` on Windows) builds everything
-that release would upload — the npm tarballs of the public packages and the plugin
-archives of the private ones — into `release-dist/`, and publishes none of it. The
-workflow runs this same script for the plugin archives it attaches to the GitHub
-Releases, so what you look at here is what ships; the npm tarballs it cannot use
-(`changeset publish` packs from the workspace itself), and since a published npm
-version is immutable, building them is the only chance to look at one while it can
-still be fixed. It builds from the tree as it stands and never bumps anything; when
-changesets are pending it says which versions the release will actually give them.
-`scripts/build-release.sh --help` lists the options.
+Running that workflow, and the preflight that goes with it, is maintainer work —
+see [RELEASING.md](./RELEASING.md).
 
 ## Development Environment
 
