@@ -58,6 +58,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - ▶️ **<a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ example</a>** — a sample MZ project
 - ▶️ **<a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript example</a>** — a visual-novel scene
 - 🎨 **<a href="./examples/override/" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
+- 📂 **<a href="./examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>** — convert **your own** project in the tab and scrub it, user-data / signal / sound keys marked on the timeline. No tool to install
 
 ## Overview (.sspj → on screen)
 

@@ -84,4 +84,11 @@ PARTFOLLOW_PUBLIC="$ROOT_DIR/examples/part-follow/public"
 mkdir -p "$PARTFOLLOW_PUBLIC/Ringo"
 cp "$PIXI_PUBLIC/Ringo/Ringo.ssab" "$PIXI_PUBLIC/Ringo/Ringo.png" "$PARTFOLLOW_PUBLIC/Ringo/"
 
-echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata, examples/rmmz-example/SampleProject/spritestudio, examples/rmmz-harness/public and examples/part-follow/public."
+# sspj-preview: converts whatever the reader drops, so the only asset it needs
+# is the one it opens on before they have dropped anything — the REFERENCE
+# Ringo, loaded by URL like any other bundled pack.
+PREVIEW_PUBLIC="$ROOT_DIR/examples/sspj-preview/public"
+mkdir -p "$PREVIEW_PUBLIC/Ringo"
+cp "$PIXI_PUBLIC/Ringo/Ringo.ssab" "$PIXI_PUBLIC/Ringo/Ringo.png" "$PREVIEW_PUBLIC/Ringo/"
+
+echo "Deploy complete! Assets copied to examples/pixi-example/public, examples/webgl-example/public, examples/override-example/public, examples/tyranoscript-example/data/others/ssdata, examples/rmmz-example/SampleProject/spritestudio, examples/rmmz-harness/public, examples/part-follow/public and examples/sspj-preview/public."

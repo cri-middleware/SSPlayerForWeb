@@ -148,6 +148,12 @@ It is **bytes in, bytes out** and depends on neither the file system nor the DOM
 the same core runs in the browser, Node, a Web Worker, or an edge runtime
 (`ssconverter-web`'s browser UI and Node CLI both sit on top of this core).
 
+📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>**
+is this library and the WebGL player on one page, and its source
+([`examples/sspj-preview`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/examples/sspj-preview))
+is a working version of everything below: a folder read in the browser, converted,
+and handed straight to a player without a server or a build step.
+
 ```bash
 npm i @spritestudio/ssconverter-core@beta
 ```

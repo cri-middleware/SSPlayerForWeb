@@ -148,6 +148,12 @@ TypeScript API を被せたもので、これ単体は npm で公開していま
 ため同じコアがブラウザ・Node・Web Worker・エッジランタイムのいずれでも動作します
 （`ssconverter-web` のブラウザ UI と Node CLI もこのコアの上に載っています）。
 
+📂 **<a href="../../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>**
+は、このライブラリと WebGL プレイヤーを 1 ページに載せたものです。ソース
+（[`examples/sspj-preview`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/examples/sspj-preview)）
+は以下の内容が実際に動く形になっています。ブラウザでフォルダを読み、変換し、サーバも
+ビルドも介さずそのままプレイヤーに渡す、という一連の流れです。
+
 ```bash
 npm i @spritestudio/ssconverter-core@beta
 ```

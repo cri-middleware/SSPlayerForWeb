@@ -93,7 +93,7 @@ usage () {
   echo "  rmmz          sync the built plugin + wasm into rmmz-example"
   echo "  tyranoscript  fetch the TyranoScript engine, then sync the plugin + wasm"
   echo "  docs          build-docs.sh (TypeDoc, then VitePress)"
-  echo "  examples      vite build for pixi-example, webgl-example, override-example"
+  echo "  examples      vite build for pixi-example, webgl-example, override-example, sspj-preview"
   echo "  ssconverter   build-ssconverter-pages.sh -- every schema version"
   echo ""
   echo "A skipped stage leaves its part out of the site (a warning says which);"
@@ -336,6 +336,7 @@ if stage examples "build the vite examples"; then
   pnpm --filter=pixi-example exec vite build --base="${BASE}examples/pixi/"
   pnpm --filter=webgl-example exec vite build --base="${BASE}examples/webgl/"
   pnpm --filter=override-example exec vite build --base="${BASE}examples/override/"
+  pnpm --filter=sspj-preview exec vite build --base="${BASE}examples/sspj-preview/"
 fi
 
 # ssconverter-web: every schema version from versions.json, into
@@ -382,6 +383,7 @@ if skipping examples; then req="no"; else req="yes"; fi
 copy_tree "pixi-example"     examples/pixi-example/dist     "$OUT/examples/pixi"     "$req"
 copy_tree "webgl-example"    examples/webgl-example/dist    "$OUT/examples/webgl"    "$req"
 copy_tree "override-example" examples/override-example/dist "$OUT/examples/override" "$req"
+copy_tree "sspj-preview"     examples/sspj-preview/dist     "$OUT/examples/sspj-preview" "$req"
 
 # rmmz-example: the static MZ project is copied as it is -- its paths are
 # relative, so it runs under the /examples/rmmz/ subpath with no base rewrite.

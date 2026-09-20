@@ -92,4 +92,11 @@ $PARTFOLLOW_RINGO = Join-Path $ROOT_DIR "examples\part-follow\public\Ringo"
 New-Item -ItemType Directory -Force -Path $PARTFOLLOW_RINGO | Out-Null
 Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo\Ringo.png") -Destination $PARTFOLLOW_RINGO -Force
 
-Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $OVERRIDE_PUBLIC, $TYRANO_SSDATA, $RMMZ_SS, $HARNESS_RINGO and $PARTFOLLOW_RINGO."
+# sspj-preview: converts whatever the reader drops, so the only asset it needs
+# is the one it opens on before they have dropped anything -- the REFERENCE
+# Ringo, loaded by URL like any other bundled pack.
+$PREVIEW_RINGO = Join-Path $ROOT_DIR "examples\sspj-preview\public\Ringo"
+New-Item -ItemType Directory -Force -Path $PREVIEW_RINGO | Out-Null
+Copy-Item -Path (Join-Path $PIXI_PUBLIC "Ringo\Ringo.ssab"), (Join-Path $PIXI_PUBLIC "Ringo\Ringo.png") -Destination $PREVIEW_RINGO -Force
+
+Write-Host "Deploy complete! Assets copied to $PIXI_PUBLIC, $WEBGL_PUBLIC, $OVERRIDE_PUBLIC, $TYRANO_SSDATA, $RMMZ_SS, $HARNESS_RINGO, $PARTFOLLOW_RINGO and $PREVIEW_RINGO."
