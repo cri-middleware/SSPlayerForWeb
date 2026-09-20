@@ -23,13 +23,24 @@ import type { ConvertOptions } from '@spritestudio/ssconverter-core';
  */
 export const CONVERT_OPTIONS: ConvertOptions = { embedded: false };
 
+/** The formats a converter build emits — the line people quote in a report. */
+export interface SchemaVersions {
+  ssab: number;
+  ssqb: number;
+}
+
 export type ToWorker =
   | { kind: 'init'; wasm: Uint8Array }
   | { kind: 'convert'; id: number; files: Map<string, Uint8Array> };
 
 export type FromWorker =
-  /** The wasm is instantiated; `version` identifies the build that did it. */
-  | { kind: 'ready'; version: string }
+  /**
+   * The wasm is instantiated; `version` identifies the build that did it, and
+   * `schema` the formats it emits. Both are read off this side of the wire
+   * because the UI thread only instantiates the wasm when it has to convert
+   * there itself.
+   */
+  | { kind: 'ready'; version: string; schema: SchemaVersions }
   /** The Worker started but cannot convert; the caller falls back in-thread. */
   | { kind: 'unavailable'; message: string }
   | { kind: 'converted'; id: number; output: Map<string, Uint8Array>; assets: Map<string, string> }

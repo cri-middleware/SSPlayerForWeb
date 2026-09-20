@@ -36,6 +36,38 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   there possible at all — settled by undoing the file's string-array
   obfuscation rather than by guessing. The handler is delegated from `document`,
   because the host rewrites that element on every change of the plugin list.
+- **One output folder, one project.** Two `.sspj` of the same name resolved to
+  the same `outRoot/<stem>`: both converted, the second replaced the first, and
+  the record they shared then said both were current — so the loser was never
+  rebuilt either. The pass plans before it converts, the first project keeps the
+  folder, and the rest are named in the run report because renaming one is the
+  author's call. Godot's `_dedupe_plan` and Unity's `DedupePlan` are the same
+  decision.
+- **Stale output is removed.** A record carries the files its import wrote, and
+  the next conversion of that folder deletes what it no longer produces — an
+  animation dropped from a project used to leave a `.ssab` in the pack picker
+  and inside every exported game. Only files a record says this importer wrote
+  are ever candidates, which is what makes it safe in a folder the author may
+  also keep their own files in. Godot's note that this needs the converter to
+  report what it wrote still holds; here `ConvertStats.written` is that report.
+- **A source map, keyed by output folder.** `.ss_import_state.json` records the
+  `.sspj` behind each folder, so a `.ssab` can find its way back to a project.
+  `Reconvert` then works for a pack kept anywhere under `data/` — the picker has
+  always listed them all — and writes where the `.ssab` lies rather than back in
+  `outRoot`, which is the line Unity's `ReconvertInto` and Godot's
+  `queue_reconvert` draw. Stem-keyed records are re-keyed on load.
+- **Failures say why, on screen.** The editor has no DevTools, so a toast naming
+  the log file left the reason in a text file nobody was looking at; the
+  converter's message is now in a dialog, beside any name clash from the pass.
+  SSPlayerForRenPy's importer reached the same conclusion.
+- **The panel is a place to work from.** `preload.js` publishes Electron's
+  `shell` — undocumented, unused until now — so the panel opens the source
+  folder and the import log, and carries the build line
+  (`converter <version> (ssab v1, ssqb v1)`) that a bug report wants.
+  `window.js` reads `plugin_text` off the live instance at every selection, so
+  that line can be written after the converter reports it. "Import now" counts
+  its way through a batch rather than saying `Converting…` for a folder of
+  fifty.
 - **One pack scan per task.** `listPacks()` walks the whole of `data/`, and one
   inspector render asks for it more than once — the pack picker's options, its
   default, and the widened animation picker. The result is now shared for the
@@ -89,10 +121,12 @@ conversion, the palette, preview, and save/load.
   one that asks once alone (`[ss_play]` widened: 7.5 ms → 7.8 ms). Removing the
   last one needs either a cache that outlives a task — and then something has
   to invalidate it, which nothing cheaper than the walk can decide — or a
-  cheaper traversal. `TB.io.getAllFilesUnderDirectory` is the candidate for the
-  second: it is one `ipcRenderer.sendSync`, and the main process walks in Node
-  and returns `{path: {item, path, is_dir}}` in a single round trip, so 377
-  crossings become one. Undocumented, so it would need proving first.
+  cheaper traversal. `getAllFilesUnderDirectory` is the candidate for the
+  second: one `ipcRenderer.sendSync`, with the main process walking in Node and
+  returning `{path: {item, path, dir_path, is_dir}}` in a single round trip, so
+  377 crossings become one. It carries no `mtime` and no `size`, so it can only
+  ever serve this scan — the freshness walk needs the stats. Undocumented, so
+  it would need proving first.
 - **Windows.** Untested, and `pack-tbp.mjs` shells out to `zip`, so a release
   cannot currently be cut from a Windows machine.
 - **A sample builder project**, and a submission to plugin.tyrano.jp.
@@ -147,8 +181,11 @@ a `<id>.builder.js`; the load stops there, taking every later plugin with it.
 ### Filesystem
 
 The renderer runs with `contextIsolation: true`, so a plugin never gets
-`require()`. `preload.js` publishes `fs-extra`, `node:path`, `mkdirp` and
-`adm-zip` on `window.studio_api` — the whole basis for an in-editor importer.
+`require()`. `preload.js` publishes `fs-extra`, `node:path`, `mkdirp`,
+`adm-zip`, `zip-dir`, `request`, `csv-parse`, `ipcRenderer` and Electron's
+`shell` on `window.studio_api` — the whole basis for an in-editor importer.
+`dialog` is in that file but commented out, so there is no file picker: `shell`
+is the only way a plugin can put a folder in front of the author.
 
 Binary payloads crossing that bridge are the one undocumented step, so
 `HostFs.probeBinaryBridge()` writes a known byte pattern, reads it back and

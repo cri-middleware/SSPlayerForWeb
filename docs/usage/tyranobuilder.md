@@ -142,11 +142,17 @@ you have already decided the pack is out of date. **Import now** is for a `.sspj
 `SpriteStudio_Source/` while the builder is open has nowhere to press. The plugin manager panel
 is not attached to anything in the scenario, which is exactly why the button lives there.
 
+The same panel has **Open the source folder** and **Open the import log**, and shows the
+converter build it is running (`converter <version> (ssab v1, ssqb v1)`) — the line to quote
+when you report a problem.
+
 ::: tip Where the notifications come from
 A reconversion often finishes while you are in SpriteStudio rather than in the editor, so it is
 reported as a **toast** rather than a modal — nothing steals focus from the app you are
-actually using. The one modal is on a project whose `SpriteStudio_Source/` holds no `.sspj` at
-all, which tells a first-time author where projects go.
+actually using. A conversion that *failed* is a dialog, because the reason is in it and the
+editor has no console to fall back on; so is a name clash, because you have to rename
+something. The other dialog is for a project that has never imported anything and has no
+`.sspj` to import, which tells a first-time author where projects go.
 :::
 
 ::: tip The editor keeps drawing while it converts
@@ -170,10 +176,22 @@ That record is a small JSON file, `.ss_import_state.json`, at the project root:
 ```json
 {
   "packs": {
-    "Ringo": { "source_mtime": 1753142400000, "converter": "…" }
+    "data/others/ssdata/Ringo": {
+      "source_mtime": 1753142400000,
+      "converter": "…",
+      "source": "SpriteStudio_Source/Ringo/Ringo.sspj",
+      "files": ["Ringo.ssab", "Ringo.ssqb", "Ringo.png"]
+    }
   }
 }
 ```
+
+A record is keyed by the folder it describes and names the `.sspj` it came from, so a pack can
+always be traced back to a project. `files` is what that import wrote: the next conversion of
+the same folder deletes whatever it no longer produces, so an animation you remove in
+SpriteStudio stops appearing in the dropdowns and stops being copied into your exported game.
+Only files a record says the importer wrote are ever removed — anything you put in the folder
+yourself stays.
 
 Two details are worth knowing, because they decide when a reconversion happens:
 
@@ -197,8 +215,10 @@ and copied in by hand shows up like any other — put it wherever suits your pro
 scene's images, for instance). The **Animation** dropdown is read out of the `.ssab` itself, so
 it is accurate for those packs too.
 
-Only what lives under `SpriteStudio_Source/` is kept in sync automatically; a hand-copied pack
-is yours to update.
+Only what lives under `SpriteStudio_Source/` is kept in sync automatically. **Reconvert now**
+still works on a pack you copied *out of* `data/others/ssdata/`, and rebuilds it where it now
+lies rather than back where it was generated; a pack converted somewhere else entirely has no
+project here to rebuild it from, and the plugin says so rather than pretending.
 
 ### Where the importer puts things
 
@@ -206,7 +226,7 @@ is yours to update.
 | --- | --- | --- |
 | `SpriteStudio_Source/` | Your `.sspj` projects — the input | No |
 | `data/others/ssdata/<name>/` | The converted `.ssab` + textures | **Yes** — this is what the game plays |
-| `.ss_import_state.json` | What the last successful import covered | No |
+| `.ss_import_state.json` | What the last successful import covered, and which `.sspj` each folder came from | No |
 | `ss_import_log.txt` | Everything the importer did, and why anything failed | No |
 | `.ss_tools/ssconverter_bg.wasm` | The converter itself, moved out of the plugin folder | No |
 
@@ -227,9 +247,9 @@ sessions (it is started over once it passes 256 KB):
 2026-07-29T04:15:02.118Z  --- session start ---
 2026-07-29T04:15:02.140Z  sources: /Users/you/TyranoBuilder/mygame/SpriteStudio_Source
 2026-07-29T04:15:02.141Z  output:   /Users/you/TyranoBuilder/mygame/data/others/ssdata
-2026-07-29T04:15:02.150Z  converter: worker (7.0.0-beta.1+427024d)
+2026-07-29T04:15:02.150Z  converter: worker — converter 7.0.0-beta.1+427024d (ssab v1, ssqb v1)
 2026-07-29T04:15:02.219Z  converted Ringo: 14 in -> 2 out (+1 textures) in 78ms -> …/ssdata/Ringo
-2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed
+2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed, 0 dropped
 ```
 
 The `converter:` line says where the wasm ran. `worker` is the normal answer; `inline` means
@@ -292,8 +312,8 @@ component, using the [`[ss_*]` tags](/usage/tyrano#_4-tags).
 
 ## Troubleshooting
 
-Start with `ss_import_log.txt` in your project folder — every conversion is recorded there,
-with the reason when one fails.
+A conversion that fails says why on screen. The same reason, and every conversion that worked,
+is in `ss_import_log.txt` at your project root — the plugin manager panel opens it for you.
 
 - **The animation is not in the dropdown** — check the `.sspj` is inside `SpriteStudio_Source/`
   together with the rest of its folder, and look for a `FAILED` line in the log.
@@ -301,6 +321,9 @@ with the reason when one fails.
   and check you are not over the free version's two-plugin limit.
 - **It converted, but nothing shows in the game** — make sure *show* comes before the
   components that refer to it, and that the layer is one your game uses.
+- **One of two projects is never converted** — two `.sspj` of the same file name convert into
+  the same `data/others/ssdata/<name>/`, so only the first one found is converted and the
+  plugin names both. Rename one of them.
 - **A change in SpriteStudio was not picked up** — nothing runs on its own after the project is
   opened. Use **Reconvert now** on the component, or **Import now** in the plugin manager for a
   project that has no component yet; if neither takes, delete `.ss_import_state.json` and reopen

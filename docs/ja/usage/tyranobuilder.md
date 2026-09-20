@@ -138,10 +138,16 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 `SpriteStudio_Source/` に置いたプロジェクトには押す場所がありません。プラグイン管理のパネルは
 シナリオ上のどれにも紐づかない場所で、ボタンがそこにあるのはそのためです。
 
+同じパネルに **SpriteStudio_Source を開く** と **変換ログを開く** があり、動いているコンバータの
+バージョン（`converter <version> (ssab v1, ssqb v1)`）も表示されます。不具合を報告するときは、この行を
+添えてください。
+
 ::: tip 通知の出し方について
 再変換が終わるのは、エディタではなく SpriteStudio で作業している最中であることが多いため、モーダルでは
-なく**トースト**で通知します。作業中のアプリからフォーカスを奪わないためです。モーダルを出す唯一の
-ケースは `SpriteStudio_Source/` に `.sspj` が 1 つもないときで、初めて使う人にプロジェクトの置き場所を
+なく**トースト**で通知します。作業中のアプリからフォーカスを奪わないためです。変換が**失敗**したとき
+はダイアログです。理由そのものを出す必要があり、エディタにはコンソールがないためです。名前の衝突も
+同じ理由でダイアログです（どちらかの名前を変えてもらう必要があります）。もう 1 つのダイアログは、
+一度も変換したことがなく変換するものも無いプロジェクト向けで、初めて使う人にプロジェクトの置き場所を
 伝えるためです。
 :::
 
@@ -164,10 +170,21 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 ```json
 {
   "packs": {
-    "Ringo": { "source_mtime": 1753142400000, "converter": "…" }
+    "data/others/ssdata/Ringo": {
+      "source_mtime": 1753142400000,
+      "converter": "…",
+      "source": "SpriteStudio_Source/Ringo/Ringo.sspj",
+      "files": ["Ringo.ssab", "Ringo.ssqb", "Ringo.png"]
+    }
   }
 }
 ```
+
+記録のキーは出力フォルダで、変換元の `.sspj` も持っています。データからプロジェクトを必ず辿れる
+ようにするためです。`files` はそのインポートが書き出したファイルで、次回の変換では**そこに含まれ
+なくなったファイルを削除します**。SpriteStudio 側でアニメを削除すれば、プルダウンからも消え、
+書き出したゲームにも入らなくなります。削除されるのは記録にある「このインポーターが書いた」ファイル
+だけで、自分で置いたファイルはそのまま残ります。
 
 再変換のタイミングを決めているのは、次の 2 点です。
 
@@ -190,8 +207,9 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 したデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。
 **アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
 
-自動で同期されるのは `SpriteStudio_Source/` に置いたものだけです。手動でコピーしたデータの更新は
-自分で行ってください。
+自動で同期されるのは `SpriteStudio_Source/` に置いたものだけです。ただし `data/others/ssdata/` から
+**コピーした**データなら **今すぐ再変換** が使え、生成元のフォルダではなく今ある場所へ書き直します。
+まったく別の場所で変換したデータには変換元のプロジェクトがないため、その旨を表示します。
 
 ### 生成されるファイルの置き場所
 
@@ -199,7 +217,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 | --- | --- | --- |
 | `SpriteStudio_Source/` | 入力となる `.sspj` プロジェクト | 含まれない |
 | `data/others/ssdata/<名前>/` | 変換後の `.ssab` + テクスチャ | **含まれる**（ゲームが再生するデータ） |
-| `.ss_import_state.json` | 成功した最後のインポートの記録 | 含まれない |
+| `.ss_import_state.json` | 成功した最後のインポートの記録と、各フォルダの変換元 `.sspj` | 含まれない |
 | `ss_import_log.txt` | インポーターの動作ログと失敗理由 | 含まれない |
 | `.ss_tools/ssconverter_bg.wasm` | プラグインフォルダから退避したコンバータ本体 | 含まれない |
 
@@ -220,9 +238,9 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 2026-07-29T04:15:02.118Z  --- session start ---
 2026-07-29T04:15:02.140Z  sources: /Users/you/TyranoBuilder/mygame/SpriteStudio_Source
 2026-07-29T04:15:02.141Z  output:   /Users/you/TyranoBuilder/mygame/data/others/ssdata
-2026-07-29T04:15:02.150Z  converter: worker (7.0.0-beta.1+427024d)
+2026-07-29T04:15:02.150Z  converter: worker — converter 7.0.0-beta.1+427024d (ssab v1, ssqb v1)
 2026-07-29T04:15:02.219Z  converted Ringo: 14 in -> 2 out (+1 textures) in 78ms -> …/ssdata/Ringo
-2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed
+2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed, 0 dropped
 ```
 
 `converter:` の行は wasm がどこで動いたかを示します。通常は `worker` です。`inline` の場合は Worker を
@@ -284,8 +302,8 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 ## うまくいかないとき
 
-まずプロジェクト直下の `ss_import_log.txt` を確認してください。すべての変換が、失敗時はその理由と
-ともに記録されています。
+変換に失敗した場合は、その理由が画面に表示されます。同じ内容は、成功した変換の記録とともに
+プロジェクト直下の `ss_import_log.txt` に残ります。このファイルはプラグイン管理パネルから開けます。
 
 - **アニメがプルダウンに出ない** — `.sspj` がフォルダ一式で `SpriteStudio_Source/` に入っているかを
   確認し、ログに `FAILED` の行がないか見てください。
@@ -293,6 +311,9 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
   入れ直し、無料版のプラグイン 2 個制限を超えていないか確認してください。
 - **変換はできたのにゲームに出ない** — 「表示」がそれを参照するコンポーネントより前にあるか、
   レイヤー番号がゲームで使っているものかを確認してください。
+- **2 つのうち片方がいつまでも変換されない** — 同じファイル名の `.sspj` は同じ
+  `data/others/ssdata/<名前>/` に変換されるため、先に見つかった方だけを変換し、ぶつかった 2 つの名前を
+  表示します。どちらかの名前を変えてください。
 - **SpriteStudio での変更が反映されない** — プロジェクトを開いたあとは自動では走りません。
   コンポーネントの **今すぐ再変換** を使ってください。まだコンポーネントが無いプロジェクトは
   プラグイン管理の **今すぐ取り込む** です。どちらでも反映されない場合は

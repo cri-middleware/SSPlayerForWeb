@@ -50,6 +50,20 @@ export interface HostFsModule {
 }
 
 /**
+ * Electron's `shell`, as `preload.js` hands it to the renderer.
+ *
+ * The only way a plugin can show the author a folder: there is no file dialog
+ * on the bridge (`dialog` is commented out in `preload.js`) and no menu on the
+ * main window. Optional, because it is undocumented and a build that stopped
+ * publishing it must degrade to a panel with one less button.
+ */
+export interface HostShell {
+  /** Opens a file or folder with the OS handler. Resolves to '' on success. */
+  openPath(path: string): Promise<string> | string;
+  showItemInFolder(path: string): void;
+}
+
+/**
  * `window.studio_api` — installed by the builder's `preload.js` via
  * `contextBridge.exposeInMainWorld`. This is the whole reason an in-editor
  * importer is possible at all: the renderer gets real filesystem access.
@@ -61,6 +75,7 @@ export interface StudioApi {
   fs_default: HostFsModule;
   path: HostPath;
   mkdirp: { sync(dir: string, mode?: string): void };
+  shell?: HostShell;
   admzip?: unknown;
   ipcRenderer?: unknown;
 }

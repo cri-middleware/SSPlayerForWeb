@@ -20,9 +20,20 @@
 // `probeBinaryBridge()` does for the binary bridge. The fallback is the old
 // behaviour, not a degraded one: the editor freezes, as it always did.
 
-import { convertProject, init, version as converterVersion } from '@spritestudio/ssconverter-core';
+import {
+  convertProject,
+  init,
+  ssabSchemaVersion,
+  ssqbSchemaVersion,
+  version as converterVersion,
+} from '@spritestudio/ssconverter-core';
 
-import { CONVERT_OPTIONS, type FromWorker, type ToWorker } from './converterProtocol.js';
+import {
+  CONVERT_OPTIONS,
+  type FromWorker,
+  type SchemaVersions,
+  type ToWorker,
+} from './converterProtocol.js';
 import type { HostFs } from './hostFs.js';
 
 /** One conversion's results, as they leave the converter. */
@@ -36,6 +47,8 @@ export interface Conversion {
 export interface Converter {
   /** Converter build version; what a pack's import record is stamped with. */
   readonly version: string;
+  /** The formats this build emits, for the version line in the panel. */
+  readonly schema: SchemaVersions;
   /** Whether conversions block the editor. Logged once, at startup. */
   readonly mode: 'worker' | 'inline';
   /** Why the Worker was not used; empty when it was. */
@@ -71,7 +84,7 @@ const WORKER_START_TIMEOUT_MS = 20_000;
  * Instantiate the converter wasm on this thread. Once per session: the module
  * is 1.4 MB and the editor converts repeatedly.
  */
-let inlineInit: Promise<string> | null = null;
+let inlineInit: Promise<{ version: string; schema: SchemaVersions }> | null = null;
 
 function startInline(fs: HostFs, wasmPath: string, detail: string): Promise<Converter> {
   inlineInit ??= (async () => {
@@ -81,11 +94,15 @@ function startInline(fs: HostFs, wasmPath: string, detail: string): Promise<Conv
     // `init` takes a BufferSource — the host reads the bytes itself, so the
     // usual `fetch(import.meta.url)` path (blocked for file://) is not used.
     await init(fs.readBinary(wasmPath));
-    return converterVersion();
+    return {
+      version: converterVersion(),
+      schema: { ssab: ssabSchemaVersion(), ssqb: ssqbSchemaVersion() },
+    };
   })();
 
-  return inlineInit.then((version) => ({
+  return inlineInit.then(({ version, schema }) => ({
     version,
+    schema,
     mode: 'inline' as const,
     detail,
     convert(files: Map<string, Uint8Array>): Promise<Conversion> {
@@ -140,9 +157,9 @@ async function startWorker(
     { resolve: (value: Conversion) => void; reject: (error: Error) => void }
   >();
   let nextId = 1;
-  let onReady: (version: string) => void = () => {};
+  let onReady: (ready: { version: string; schema: SchemaVersions }) => void = () => {};
   let onFailed: (error: Error) => void = () => {};
-  const ready = new Promise<string>((resolve, reject) => {
+  const ready = new Promise<{ version: string; schema: SchemaVersions }>((resolve, reject) => {
     onReady = resolve;
     onFailed = reject;
   });
@@ -151,7 +168,7 @@ async function startWorker(
     const reply = event.data;
     switch (reply.kind) {
       case 'ready':
-        onReady(reply.version);
+        onReady({ version: reply.version, schema: reply.schema });
         return;
       case 'unavailable':
         onFailed(new Error(reply.message));
@@ -189,9 +206,9 @@ async function startWorker(
   );
   worker.postMessage({ kind: 'init', wasm: fs.readBinary(wasmPath) } satisfies ToWorker);
 
-  let version: string;
+  let handshake: { version: string; schema: SchemaVersions };
   try {
-    version = await ready;
+    handshake = await ready;
   } catch (e) {
     worker.terminate();
     URL.revokeObjectURL(url);
@@ -205,7 +222,8 @@ async function startWorker(
   started = true;
 
   return {
-    version,
+    version: handshake.version,
+    schema: handshake.schema,
     mode: 'worker',
     detail: '',
     convert(files: Map<string, Uint8Array>): Promise<Conversion> {
@@ -272,6 +290,15 @@ export interface ConvertStats {
   copiedAssets: number;
   /** Names of the generated `.ssab` files. */
   ssab: string[];
+  /**
+   * Everything this conversion wrote, relative to `outDir` and with `/`
+   * separators — the generated files and the textures copied beside them.
+   *
+   * Recorded in the import state so the next conversion of the same folder can
+   * remove what it no longer produces. It is the list of files this importer
+   * put there, and nothing else is ever a candidate for removal.
+   */
+  written: string[];
   elapsedMs: number;
 }
 
@@ -312,6 +339,7 @@ export async function convertProjectAt(
     outputFiles: 0,
     copiedAssets: 0,
     ssab: [],
+    written: [],
     elapsedMs: 0,
   };
 
@@ -321,6 +349,7 @@ export async function convertProjectAt(
     const dest = fs.resolveWithin(outDir, name, 'output path');
     fs.writeBinary(dest, data);
     stats.outputFiles++;
+    stats.written.push(name.replace(/\\/g, '/'));
     if (name.toLowerCase().endsWith('.ssab')) stats.ssab.push(name);
   }
 
@@ -331,6 +360,7 @@ export async function convertProjectAt(
     if (!fs.exists(src)) continue;
     fs.mkdirp(fs.path.dirname(dest));
     fs.copy(src, dest);
+    stats.written.push(destPath.replace(/\\/g, '/'));
     stats.copiedAssets++;
   }
 
