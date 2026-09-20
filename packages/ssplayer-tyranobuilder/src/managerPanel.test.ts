@@ -9,30 +9,54 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { JQueryLike, TB } from './builderTypes.js';
-import { bindImportButton, panelHtml } from './managerPanel.js';
+import { bindPanelButtons, panelHtml, type PanelContent } from './managerPanel.js';
 
 const identity = (text: string): string => text;
 
+const content = (over: Partial<PanelContent> = {}): PanelContent => ({
+  withImport: true,
+  withFolders: true,
+  version: '',
+  ...over,
+});
+
 describe('panelHtml', () => {
   it('offers a button when there is something behind it', () => {
-    const html = panelHtml(identity, true);
+    const html = panelHtml(identity, content());
     expect(html).toContain('class="ss-import-now btn btn-info btn-sm"');
     expect(html).toContain('value="Import now"');
   });
 
   it('says only what the plugin does when it could not reach the filesystem', () => {
-    // Pressing it could not do anything, so it is not offered.
-    const html = panelHtml(identity, false);
+    // Pressing anything could not do anything, so nothing is offered.
+    const html = panelHtml(identity, content({ withImport: false, withFolders: false }));
     expect(html).not.toContain('input');
     expect(html).toContain('SpriteStudio_Source');
+  });
+
+  it('leaves the folder buttons off a host with no shell', () => {
+    // `preload.js` publishes Electron's `shell`, but it is undocumented: a
+    // build that stopped would leave a button that could not do anything.
+    const html = panelHtml(identity, content({ withFolders: false }));
+    expect(html).toContain('ss-import-now');
+    expect(html).not.toContain('ss-open-source');
+    expect(html).not.toContain('ss-open-log');
+  });
+
+  it('shows the build line once the converter has reported it', () => {
+    // The line an author copies into a bug report — both formats, as
+    // SSConverterGUI's footer does.
+    const html = panelHtml(identity, content({ version: 'converter 7.0.0 (ssab v1, ssqb v1)' }));
+    expect(html).toContain('converter 7.0.0 (ssab v1, ssqb v1)');
   });
 
   it('escapes the translation, which lands in an attribute and in markup', () => {
     // `.plugin_text` is rendered with `.html()`; a translator's `&` or `"` must
     // not be able to end the attribute or open a tag.
-    const html = panelHtml(() => 'a & b "<i>"', true);
+    const html = panelHtml(() => 'a & b "<i>"', content({ version: '<b>v</b>' }));
     expect(html).toContain('value="a &amp; b &quot;&lt;i&gt;&quot;"');
     expect(html).toContain('<p>a &amp; b "&lt;i&gt;"</p>');
+    expect(html).toContain('&lt;b&gt;v&lt;/b&gt;');
     expect(html).not.toContain('<i>');
   });
 });
@@ -40,18 +64,20 @@ describe('panelHtml', () => {
 /** A `$` that records what was bound to it, standing in for jQuery. */
 function fakeJQuery() {
   const calls = { off: [] as string[], on: [] as string[] };
-  let handler: ((event: { currentTarget: unknown }) => void) | null = null;
+  // Per selector, because the panel binds three buttons under one namespace
+  // and a press has to reach the one it was aimed at.
+  const handlers = new Map<string, (event: { currentTarget: unknown }) => void>();
 
   const $ = vi.fn((selector: unknown) => {
     const node = {
       off(events: string) {
         calls.off.push(events);
-        handler = null;
+        handlers.clear();
         return node;
       },
       on(events: string, delegate: string, fn: (event: { currentTarget: unknown }) => void) {
         calls.on.push(`${events} ${delegate}`);
-        handler = fn;
+        handlers.set(delegate, fn);
         return node;
       },
       selector,
@@ -59,7 +85,12 @@ function fakeJQuery() {
     return node;
   }) as unknown as TB['$'];
 
-  return { $, calls, fire: (target: unknown) => handler?.({ currentTarget: target }) };
+  return {
+    $,
+    calls,
+    fire: (selector: string, target?: unknown) =>
+      handlers.get(selector)?.({ currentTarget: target }),
+  };
 }
 
 /** There is no renderer here; the binding only needs something to delegate from. */
@@ -75,37 +106,59 @@ function withDocument<T>(body: () => T): T {
   }
 }
 
-describe('bindImportButton', () => {
+const noHandlers = () => ({ import: vi.fn(), openSource: vi.fn(), openLog: vi.fn() });
+
+describe('bindPanelButtons', () => {
   it('delegates from document, namespaced, replacing its own predecessor', () => {
-    const { $, calls } = withDocument(() => {
+    const { calls } = withDocument(() => {
       const jq = fakeJQuery();
-      expect(bindImportButton(jq.$, () => {})).toBe(true);
+      expect(bindPanelButtons(jq.$, noHandlers())).toBe(true);
       return jq;
     });
 
-    // Delegated, because the host writes the button into the panel long after
+    // Delegated, because the host writes the buttons into the panel long after
     // this runs; namespaced, because `loadPlugins()` re-runs this constructor
-    // and two handlers would convert twice.
+    // and two handlers would convert twice. One `off` covers all three, which
+    // is the point of binding them under one namespace.
     expect(calls.off).toEqual(['click.ssplayer']);
-    expect(calls.on).toEqual(['click.ssplayer .ss-import-now']);
+    expect(calls.on).toEqual([
+      'click.ssplayer .ss-import-now',
+      'click.ssplayer .ss-open-source',
+      'click.ssplayer .ss-open-log',
+    ]);
   });
 
-  it('hands the run the button that was pressed', () => {
-    const run = vi.fn();
+  it('hands the import run the button that was pressed', () => {
+    const handlers = noHandlers();
     const button = { id: 'the-button' };
     withDocument(() => {
       const { $, fire } = fakeJQuery();
-      bindImportButton($, run);
-      fire(button);
+      bindPanelButtons($, handlers);
+      fire('.ss-import-now', button);
     });
 
-    expect(run).toHaveBeenCalledTimes(1);
+    expect(handlers.import).toHaveBeenCalledTimes(1);
     // Wrapped, so the caller can disable it and put a label on it.
-    expect((run.mock.calls[0][0] as unknown as { selector: unknown }).selector).toBe(button);
+    const wrapped = handlers.import.mock.calls[0][0] as unknown as { selector: unknown };
+    expect(wrapped.selector).toBe(button);
+  });
+
+  it('sends each folder button to its own handler', () => {
+    const handlers = noHandlers();
+    withDocument(() => {
+      const { $, fire } = fakeJQuery();
+      bindPanelButtons($, handlers);
+      fire('.ss-open-source');
+      fire('.ss-open-log');
+    });
+
+    expect(handlers.openSource).toHaveBeenCalledTimes(1);
+    expect(handlers.openLog).toHaveBeenCalledTimes(1);
+    expect(handlers.import).not.toHaveBeenCalled();
   });
 
   it('reports failure rather than throwing when the host has no jQuery', () => {
     // A constructor that threw would abort loading of every plugin after it.
-    expect(bindImportButton(undefined, () => {})).toBe(false);
+    expect(bindPanelButtons(undefined, noHandlers())).toBe(false);
   });
 });

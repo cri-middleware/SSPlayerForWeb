@@ -141,6 +141,28 @@ export class HostFs {
     this.api.fs.copySync(src, dest);
   }
 
+  /**
+   * Whether this build of the builder published Electron's `shell`. Ver 3.00
+   * does; a build that did not would leave the panel's buttons off rather than
+   * offering one that cannot work.
+   */
+  get canOpen(): boolean {
+    return typeof this.api.shell?.openPath === 'function';
+  }
+
+  /**
+   * Hand a file or folder to the OS. Never throws and never waits: the author
+   * pressed a button, and whether Finder came up is not something this plugin
+   * can do anything about.
+   */
+  openPath(p: string): void {
+    try {
+      void this.api.shell?.openPath(p);
+    } catch {
+      // A bridge that refused is the same outcome as no `shell` at all.
+    }
+  }
+
   remove(p: string): void {
     try {
       this.api.fs.removeSync(p);

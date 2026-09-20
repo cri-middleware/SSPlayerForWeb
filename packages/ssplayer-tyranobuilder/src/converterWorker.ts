@@ -13,7 +13,13 @@
 // reach the editor as an unhandled worker error with no id attached, and the
 // caller waiting on that conversion would hang forever.
 
-import { convertProject, init, version } from '@spritestudio/ssconverter-core';
+import {
+  convertProject,
+  init,
+  ssabSchemaVersion,
+  ssqbSchemaVersion,
+  version,
+} from '@spritestudio/ssconverter-core';
 
 import { CONVERT_OPTIONS, type FromWorker, type ToWorker } from './converterProtocol.js';
 
@@ -46,7 +52,12 @@ scope.onmessage = (event) => {
   if (request.kind === 'init') {
     ready ??= init(request.wasm).then(() => undefined);
     void ready.then(
-      () => scope.postMessage({ kind: 'ready', version: version() }),
+      () =>
+        scope.postMessage({
+          kind: 'ready',
+          version: version(),
+          schema: { ssab: ssabSchemaVersion(), ssqb: ssqbSchemaVersion() },
+        }),
       (error: unknown) => scope.postMessage({ kind: 'unavailable', message: message(error) }),
     );
     return;

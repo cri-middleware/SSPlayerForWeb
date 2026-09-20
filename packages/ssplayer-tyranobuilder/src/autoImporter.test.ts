@@ -134,6 +134,9 @@ function importerFor(
   });
 }
 
+/** The import state's key for a pack: its output folder, below the project. */
+const packKey = (stem: string): string => `data/others/ssdata/${stem}`;
+
 /** Files plus directories under `dir` — one `stat` each is what a walk costs. */
 function countEntries(dir: string): number {
   let total = 0;
@@ -299,7 +302,7 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     const state = JSON.parse(readFileSync(nodePath.join(root, '.ss_import_state.json'), 'utf8'));
     writeFileSync(
       nodePath.join(outDir, '.ss_import_ok'),
-      JSON.stringify(state.packs.Ringo),
+      JSON.stringify(state.packs[packKey('Ringo')]),
       'utf8',
     );
     rmSync(nodePath.join(root, '.ss_import_state.json'));
@@ -408,7 +411,7 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     // rebuilds a pack whose sources have not moved.
     const statePath = nodePath.join(root, '.ss_import_state.json');
     const state = JSON.parse(readFileSync(statePath, 'utf8'));
-    state.packs.Ringo.converter = 'some-older-build';
+    state.packs[packKey('Ringo')].converter = 'some-older-build';
     writeFileSync(statePath, JSON.stringify(state), 'utf8');
 
     const after = importerFor(root, fs, []);
@@ -512,5 +515,117 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
     ]);
     expect(plain.skipped).toEqual(['Ringo']);
     expect(forced?.converted.map((c) => c.name)).toEqual(['Ringo']);
+  });
+
+  it('gives one output folder to one project, and names the one it dropped', async () => {
+    // Two projects of the same name resolve to the same `outRoot/<stem>`.
+    // Converting both wrote that folder twice — the second silently replaced
+    // the first — and the record they shared then said both were current, so
+    // the loser was never rebuilt either.
+    const root = makeEmptyProject();
+    cpSync(SAMPLE, nodePath.join(root, 'SpriteStudio_Source/chara/Ringo'), { recursive: true });
+    cpSync(SAMPLE, nodePath.join(root, 'SpriteStudio_Source/enemy/Ringo'), { recursive: true });
+
+    const log: string[] = [];
+    const importer = importerFor(root, withApi('faithful'), log);
+    const run = await importer.runOnce();
+
+    expect(run.converted.map((c) => c.name)).toEqual(['Ringo']);
+    expect(run.dropped).toHaveLength(1);
+    // Both sides of the clash, because the fix is to rename one of them.
+    const [drop] = run.dropped;
+    expect([drop.source, drop.kept].sort()).toEqual([
+      'chara/Ringo/Ringo.sspj',
+      'enemy/Ringo/Ringo.sspj',
+    ]);
+    expect(log.join('\n')).toContain('not converted');
+
+    // Still a clash on the next pass, and still said so: the condition is on
+    // disk, not something the first run resolved.
+    expect((await importer.runOnce()).dropped).toHaveLength(1);
+  });
+
+  it('removes output it no longer produces, and nothing else', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+
+    const outDir = nodePath.join(root, 'data/others/ssdata/Ringo');
+    expect(readdirSync(outDir)).toContain('Ringo_tyu.ssab');
+    // A file the author put beside the pack. Not ours, not a candidate.
+    writeFileSync(nodePath.join(outDir, 'notes.txt'), 'mine', 'utf8');
+
+    // Drop one animation pack from the project, the way removing it in
+    // SpriteStudio would.
+    const src = nodePath.join(root, 'SpriteStudio_Source/Ringo');
+    const sspj = nodePath.join(src, 'Ringo.sspj');
+    writeFileSync(
+      sspj,
+      readFileSync(sspj, 'utf8').replace(/\s*<value>Ringo_tyu\.ssae<\/value>/, ''),
+      'utf8',
+    );
+    rmSync(nodePath.join(src, 'Ringo_tyu.ssae'));
+
+    await importer.reconvertPack('others/ssdata/Ringo/Ringo.ssab');
+
+    const left = readdirSync(outDir);
+    expect(left).not.toContain('Ringo_tyu.ssab');
+    expect(left).toContain('Ringo.ssab');
+    expect(left).toContain('notes.txt');
+    // And the picker stops offering a pack that no longer exists.
+    expect(importer.listPacks().map((p) => p.val)).not.toContain(
+      'others/ssdata/Ringo/Ringo_tyu.ssab',
+    );
+  });
+
+  it('rebuilds a pack copied out of the output folder, where it lies', async () => {
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    await importer.runOnce();
+
+    // An author is free to keep a pack anywhere under data/ — the picker lists
+    // them all — so Reconvert has to write where the .ssab is, not where this
+    // importer would have put it. Same rule as SSPlayerForUnity's
+    // `ReconvertInto` and SSPlayerForGodot's `queue_reconvert`.
+    const copy = nodePath.join(root, 'data/image/hero');
+    cpSync(nodePath.join(root, 'data/others/ssdata/Ringo'), copy, { recursive: true });
+    rmSync(nodePath.join(copy, 'Ringo.ssab'));
+
+    const run = await importer.reconvertPack('image/hero/Ringo.ssab');
+    expect(run?.converted.map((c) => c.name)).toEqual(['Ringo']);
+    expect(existsSync(nodePath.join(copy, 'Ringo.ssab'))).toBe(true);
+  });
+
+  it('carries over a record written when the key was the .sspj stem', async () => {
+    const root = makeProject();
+    const fs = withApi('faithful');
+    await importerFor(root, fs, []).runOnce();
+
+    const statePath = nodePath.join(root, '.ss_import_state.json');
+    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    // What the file looked like before the key described a folder.
+    writeFileSync(
+      statePath,
+      JSON.stringify({ packs: { Ringo: state.packs[packKey('Ringo')] } }),
+      'utf8',
+    );
+
+    const fresh = importerFor(root, fs, []);
+    expect(fresh.hasImported()).toBe(true);
+    // Re-keyed, not re-converted: the record still describes what is on disk.
+    expect((await fresh.runOnce()).skipped).toEqual(['Ringo']);
+    expect(Object.keys(JSON.parse(readFileSync(statePath, 'utf8')).packs)).toEqual([
+      packKey('Ringo'),
+    ]);
+  });
+
+  it('knows whether this project has ever imported anything', async () => {
+    // What tells a first-time project ("here is where the sources go") from
+    // one whose author has since emptied the source folder.
+    const root = makeProject();
+    const importer = importerFor(root, withApi('faithful'), []);
+    expect(importer.hasImported()).toBe(false);
+    await importer.runOnce();
+    expect(importer.hasImported()).toBe(true);
   });
 });

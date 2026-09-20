@@ -64,6 +64,20 @@ plugin manager instead (the editor's **Plugin** menu), select **SpriteStudio**,
 and press **Import now**. It converts anything added or edited since the project
 was opened, exactly as opening the project does.
 
+That panel also has **Open the source folder** and **Open the import log**, and
+shows which converter build is installed — the line to quote if you report a
+problem.
+
+**Removed an animation from the project?** Its `.ssab` goes when the pack is
+next converted, so it leaves the dropdowns and stops being copied into your
+exported game. Only files this plugin created are ever removed; anything you
+put in the folder yourself stays.
+
+**Two projects cannot have the same file name.** `chara/hero.sspj` and
+`enemy/hero.sspj` both convert into `data/others/ssdata/hero/`, so only the
+first one found is converted and the plugin tells you which two clashed.
+Rename one of them.
+
 ## The components
 
 Under **Plugin** in the palette:
@@ -109,12 +123,14 @@ TyranoScript-code component, using the
 | `ss_import_log.txt` | what was converted, and any errors |
 
 You can keep a converted `.ssab` anywhere under `data/` if you prefer; the
-dropdown finds it either way.
+dropdown finds it either way, and **Reconvert now** rebuilds it where it is
+rather than back in `data/others/ssdata/`.
 
 ## If something goes wrong
 
-Open `ss_import_log.txt` in your project folder. Every conversion is recorded
-there, with the reason when one fails.
+A conversion that fails says why on screen, and the same reason is written to
+`ss_import_log.txt` in your project folder, together with every conversion that
+worked. The plugin manager panel opens that file for you.
 
 - **The animation does not appear in the dropdown** — check the `.sspj` is inside
   `SpriteStudio_Source/`, together with the rest of its folder.

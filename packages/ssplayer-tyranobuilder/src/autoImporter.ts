@@ -82,10 +82,39 @@ interface PackState {
   /** Newest mtime across the source project folder at the time it was read. */
   source_mtime: number;
   converter?: string;
+  /**
+   * The `.sspj` behind this folder, relative to the project root.
+   *
+   * The source map SSPlayerForGodot keeps in `.ssplayer_sources.cfg` and
+   * SSPlayerForUnity in its importer: it is what lets a `.ssab` find its way
+   * back to a project, including one the author has moved out of the folder
+   * this importer writes to. Relative, so copying the whole project elsewhere
+   * does not invalidate it.
+   */
+  source?: string;
+  /**
+   * What that import wrote, relative to the output folder.
+   *
+   * The next conversion removes whatever it no longer produces — rename an
+   * animation and the old `.ssab` would otherwise stay in the pack picker and
+   * ship inside every exported game. Godot cannot do this (its note says
+   * removing stale output needs the converter to report what it wrote); here
+   * the converter does report it, so the rule can be the narrow one: nothing
+   * is ever deleted but a file this importer recorded writing.
+   */
+  files?: string[];
 }
 
 interface ImportState {
-  /** Keyed by `.sspj` stem, which is also the output folder's name. */
+  /**
+   * Keyed by output folder — relative to the project root, `/` separators,
+   * e.g. `data/others/ssdata/Ringo`.
+   *
+   * It was the `.sspj` stem until a record had to describe a folder outside
+   * `outRoot` (a pack the author copied elsewhere under `data/`, reconverted
+   * where it lies). A key with no `/` in it is one of those older records and
+   * is migrated on load.
+   */
   packs: Record<string, PackState>;
 }
 
@@ -94,18 +123,48 @@ export interface ImportRunResult {
   skipped: string[];
   failed: { name: string; error: string }[];
   /**
+   * Projects that were not converted because another project had already
+   * claimed the folder they would have written into. Reported rather than
+   * dropped quietly, because the fix is the author's — the same judgement as
+   * SSPlayerForGodot's `_dedupe_plan`.
+   */
+  dropped: { name: string; source: string; kept: string }[];
+  /**
    * True when the pass found no `.sspj` to consider — an empty source folder,
    * or for a pass scoped to one pack, a source project that is no longer there.
    */
   empty: boolean;
 }
 
+/** Where a pass is in its work, for a caller that has somewhere to show it. */
+export interface ImportProgress {
+  /** 1-based index of the project being converted. */
+  index: number;
+  total: number;
+  name: string;
+}
+
+/** One conversion a pass intends to run. */
+interface PlannedJob {
+  /** Absolute path of the `.sspj`. */
+  sspj: string;
+  /** Absolute path of the folder its output goes into. */
+  outDir: string;
+  /** What a report calls it: the `.sspj` stem. */
+  name: string;
+}
+
 /** What one pass is asked to do. */
 interface PassOptions {
-  /** Restrict the pass to this `.sspj` stem. Undefined means every project. */
-  only?: string;
+  /**
+   * Run exactly these, instead of planning from the source folder. This is the
+   * `Reconvert` route, which is anchored on a `.ssab` and so knows its
+   * destination before the pass starts.
+   */
+  jobs?: PlannedJob[];
   /** Convert even when the record says the output is current. */
   force?: boolean;
+  onProgress?: (progress: ImportProgress) => void;
 }
 
 export interface AutoImporterOptions {
@@ -270,6 +329,16 @@ export class AutoImporter {
     return files.filter((f) => f.path.toLowerCase().endsWith('.sspj')).map((f) => f.path);
   }
 
+  /** A path below the project root, as the state file and the log write it. */
+  private relative(from: string, to: string): string {
+    return this.fs.path.relative(from, to).replace(/\\/g, '/');
+  }
+
+  /** The state key for an output folder. */
+  private outKey(outDir: string): string {
+    return this.relative(this.projectRoot, outDir);
+  }
+
   /**
    * Newest mtime under each project folder — its `.sspj`, `.ssae`, `.ssce` and
    * textures — from one walk's worth of stats.
@@ -308,8 +377,29 @@ export class AutoImporter {
         // Unreadable state costs one reconversion, nothing worse.
       }
     }
-    this.state = state;
-    return state;
+    const migrated = this.migrateKeys(state);
+    this.state = migrated.state;
+    // Written back now rather than left for the first conversion to carry: a
+    // pass that skips everything never saves, and the file would keep a shape
+    // nothing writes any more for as long as the project stayed unchanged.
+    if (migrated.changed) this.saveState();
+    return this.state;
+  }
+
+  /**
+   * Records written when the key was the `.sspj` stem, re-keyed onto the folder
+   * they describe. Nothing else changes: an entry keeps its mtime, so a
+   * migrated project is not reconverted for the sake of it.
+   */
+  private migrateKeys(state: ImportState): { state: ImportState; changed: boolean } {
+    const packs: Record<string, PackState> = {};
+    let changed = false;
+    for (const [key, entry] of Object.entries(state.packs)) {
+      const moved = key.includes('/') ? key : this.outKey(this.fs.path.join(this.outRoot, key));
+      if (moved !== key) changed = true;
+      packs[moved] = entry;
+    }
+    return { state: { packs }, changed };
   }
 
   private saveState(): void {
@@ -317,22 +407,28 @@ export class AutoImporter {
     this.fs.writeText(path, JSON.stringify(this.loadState(), null, 2) + '\n');
   }
 
+  /** Whether this project has ever had a pack imported into it. */
+  hasImported(): boolean {
+    return Object.keys(this.loadState().packs).length > 0;
+  }
+
   /**
-   * What the last successful import of `stem` covered, carrying over — and then
-   * removing — the old in-output marker. That marker sat under `data/`, so every
-   * export shipped it inside the game; a project that predates this move gets
-   * cleaned up the first time it is opened.
+   * What the last successful import of this folder covered, carrying over — and
+   * then removing — the old in-output marker. That marker sat under `data/`, so
+   * every export shipped it inside the game; a project that predates this move
+   * gets cleaned up the first time it is opened.
    */
-  private readMarker(stem: string, outDir: string): PackState | null {
+  private readMarker(outDir: string): PackState | null {
     const state = this.loadState();
+    const key = this.outKey(outDir);
     const legacy = this.fs.path.join(outDir, LEGACY_MARKER);
 
     if (this.fs.exists(legacy)) {
-      if (!state.packs[stem]) {
+      if (!state.packs[key]) {
         try {
           const parsed = JSON.parse(this.fs.readText(legacy)) as PackState;
           if (typeof parsed?.source_mtime === 'number') {
-            state.packs[stem] = parsed;
+            state.packs[key] = parsed;
             this.saveState();
           }
         } catch {
@@ -343,12 +439,22 @@ export class AutoImporter {
       this.log(`removed ${LEGACY_MARKER} from ${outDir} (import state moved out of data/)`);
     }
 
-    const entry = state.packs[stem];
+    const entry = state.packs[key];
     return entry && typeof entry.source_mtime === 'number' ? entry : null;
   }
 
-  private stampMarker(stem: string, sourceMtime: number, converter: string): void {
-    this.loadState().packs[stem] = { source_mtime: sourceMtime, converter };
+  private stampMarker(
+    job: PlannedJob,
+    sourceMtime: number,
+    converter: string,
+    files: string[],
+  ): void {
+    this.loadState().packs[this.outKey(job.outDir)] = {
+      source_mtime: sourceMtime,
+      converter,
+      source: this.relative(this.projectRoot, job.sspj),
+      files,
+    };
     this.saveState();
   }
 
@@ -370,8 +476,8 @@ export class AutoImporter {
    * import. Safe to call repeatedly; an unchanged project costs one `stat` per
    * source file and a single `readdir` of its output folder.
    */
-  async runOnce(): Promise<ImportRunResult> {
-    return this.queuePass({});
+  async runOnce(onProgress?: (progress: ImportProgress) => void): Promise<ImportRunResult> {
+    return this.queuePass({ onProgress });
   }
 
   /**
@@ -384,27 +490,70 @@ export class AutoImporter {
    * the pack is wrong, so a freshness check would only be an opportunity to
    * disagree with them.
    *
-   * Returns `null` for a pack this importer did not produce — one placed in
-   * `data/` by hand has no `.sspj` to go back to.
+   * Returns `null` for a pack with no `.sspj` behind it — one an author placed
+   * in `data/` by hand has nothing to be rebuilt from.
    */
   async reconvertPack(storage: unknown): Promise<ImportRunResult | null> {
-    const stem = this.stemOfPack(storage);
-    if (!stem) return null;
-    return this.queuePass({ only: stem, force: true });
+    const resolved = this.resolveReconvert(storage);
+    if (resolved === 'unknown') return null;
+    if (resolved === 'missing') {
+      return { converted: [], skipped: [], failed: [], dropped: [], empty: true };
+    }
+    return this.queuePass({ jobs: [resolved], force: true });
   }
 
   /**
-   * The `.sspj` stem behind a `storage=` value, or null when the pack does not
-   * live in this importer's output folder.
+   * The conversion behind a `storage=` value.
+   *
+   * It writes into the folder the `.ssab` is in, not into `outRoot/<stem>`:
+   * a pack is an ordinary asset and an author may have moved or copied one
+   * elsewhere under `data/`, and rebuilding it anywhere but where it lies would
+   * refresh a file nothing in the scenario points at. SSPlayerForUnity's
+   * `ReconvertInto` and SSPlayerForGodot's `queue_reconvert` draw the same line.
+   *
+   * `'unknown'` is "no source to rebuild this from"; `'missing'` is "we know
+   * which project produced it, and that project is gone" — which the author
+   * needs told apart.
    */
-  private stemOfPack(storage: unknown): string | null {
+  private resolveReconvert(storage: unknown): PlannedJob | 'unknown' | 'missing' {
     const abs = this.resolvePack(storage);
-    if (!abs) return null;
-    const rel = this.fs.path.relative(this.outRoot, abs).replace(/\\/g, '/');
-    // `..` means it resolved outside the output root: a hand-placed pack.
-    if (!rel || rel.startsWith('..')) return null;
-    const stem = rel.split('/')[0];
-    return stem && stem !== rel ? stem : null;
+    if (!abs) return 'unknown';
+
+    const p = this.fs.path;
+    const outDir = p.dirname(abs);
+    const recorded = this.loadState().packs[this.outKey(outDir)]?.source;
+
+    const sspj =
+      (recorded ? p.join(this.projectRoot, recorded) : null) ??
+      // A pack copied out of the output folder: the record naming the file is
+      // the one that produced it, as long as only one did.
+      this.ownerOfPackFile(p.basename(abs)) ??
+      // No record at all — a deleted state file, or a project that predates
+      // one. The folder's own name is the stem, which is how this worked
+      // before the source map existed.
+      this.stemSourceFor(outDir);
+
+    if (!sspj) return 'unknown';
+    if (!this.fs.exists(sspj)) return 'missing';
+    return { sspj, outDir, name: p.basename(sspj, '.sspj') };
+  }
+
+  /** The `.sspj` that wrote a pack file of this name, when exactly one did. */
+  private ownerOfPackFile(fileName: string): string | null {
+    const sources = Object.values(this.loadState().packs)
+      .filter((entry) => entry.source && entry.files?.includes(fileName))
+      .map((entry) => this.fs.path.join(this.projectRoot, entry.source as string));
+    return sources.length === 1 ? sources[0] : null;
+  }
+
+  /** The `.sspj` whose stem names this folder, for a pack under `outRoot`. */
+  private stemSourceFor(outDir: string): string | null {
+    const rel = this.relative(this.outRoot, outDir);
+    if (!rel || rel.startsWith('..') || rel.includes('/')) return null;
+    const matches = this.findProjects().filter(
+      (f) => this.fs.path.basename(f, '.sspj') === rel,
+    );
+    return matches.length === 1 ? matches[0] : null;
   }
 
   /**
@@ -443,18 +592,109 @@ export class AutoImporter {
     return ensureConverter(this.fs, { wasmPath: this.wasmPath, workerSource: this.workerSource });
   }
 
+  /**
+   * One conversion per output folder.
+   *
+   * Two `.sspj` of the same name — `chara/hero.sspj` and `enemy/hero.sspj` —
+   * both resolve to `outRoot/hero`, and converting both wrote one folder twice:
+   * the second silently replaced the first, and the shared record then said
+   * both were up to date, so the loser was never built again. The first keeps
+   * the folder and the rest are reported, because renaming one is the author's
+   * call and dropping them quietly would look like the converter lost a file.
+   * SSPlayerForGodot's `_dedupe_plan` and SSPlayerForUnity's `DedupePlan` are
+   * the same decision.
+   */
+  private planProjects(sspjs: string[]): {
+    jobs: PlannedJob[];
+    dropped: ImportRunResult['dropped'];
+  } {
+    const jobs: PlannedJob[] = [];
+    const dropped: ImportRunResult['dropped'] = [];
+    const owner = new Map<string, PlannedJob>();
+
+    for (const sspj of sspjs) {
+      const name = this.fs.path.basename(sspj, '.sspj');
+      const outDir = this.fs.path.join(this.outRoot, name);
+      const taken = owner.get(outDir);
+      if (taken) {
+        dropped.push({
+          name,
+          source: this.relative(this.sourceDir, sspj),
+          kept: this.relative(this.sourceDir, taken.sspj),
+        });
+        continue;
+      }
+      const job: PlannedJob = { sspj, outDir, name };
+      owner.set(outDir, job);
+      jobs.push(job);
+    }
+
+    return { jobs, dropped };
+  }
+
+  /**
+   * Delete what the previous import of this folder wrote and this one did not.
+   *
+   * Only ever the files a record says this importer wrote: the output folder is
+   * an ordinary folder under `data/`, an author may keep their own files beside
+   * a pack, and not claiming a file is cheaper than being careful about
+   * deleting one. A record with no file list predates this and prunes nothing;
+   * the conversion that reads it writes one.
+   */
+  private pruneStale(outDir: string, previous: PackState | null, written: string[]): string[] {
+    if (!previous?.files?.length) return [];
+
+    const kept = new Set(written);
+    const removed: string[] = [];
+    for (const rel of previous.files) {
+      if (kept.has(rel)) continue;
+      let target: string;
+      try {
+        target = this.fs.resolveWithin(outDir, rel, 'stale output path');
+      } catch {
+        continue;
+      }
+      if (!this.fs.exists(target)) continue;
+      this.fs.remove(target);
+      removed.push(rel);
+    }
+    return removed;
+  }
+
   private async importPass(opts: PassOptions): Promise<ImportRunResult> {
-    const result: ImportRunResult = { converted: [], skipped: [], failed: [], empty: false };
+    const result: ImportRunResult = {
+      converted: [],
+      skipped: [],
+      failed: [],
+      dropped: [],
+      empty: false,
+    };
 
     // One walk for the whole pass: it finds the projects *and* dates them. The
     // two used to be separate traversals, which statted every source file three
-    // times over.
-    const sourceFiles = this.fs.walkEntries(this.sourceDir);
-    const all = this.sspjsIn(sourceFiles);
-    const sspjs = opts.only
-      ? all.filter((f) => this.fs.path.basename(f, '.sspj') === opts.only)
-      : all;
-    if (sspjs.length === 0) {
+    // times over. A scoped pass already knows its project, so it walks only
+    // that folder.
+    let jobs: PlannedJob[];
+    let sourceFiles: WalkedFile[];
+    if (opts.jobs) {
+      jobs = opts.jobs;
+      sourceFiles = jobs.flatMap((job) =>
+        this.fs.walkEntries(this.fs.path.dirname(job.sspj)),
+      );
+    } else {
+      sourceFiles = this.fs.walkEntries(this.sourceDir);
+      const plan = this.planProjects(this.sspjsIn(sourceFiles));
+      jobs = plan.jobs;
+      result.dropped = plan.dropped;
+      for (const drop of plan.dropped) {
+        this.log(
+          `not converted: ${drop.source} — ${drop.kept} already writes to ` +
+            `${this.outKey(this.fs.path.join(this.outRoot, drop.name))}`,
+        );
+      }
+    }
+
+    if (jobs.length === 0) {
       // For a scoped pass this reads "the source is gone", which is exactly
       // what the caller needs to tell the author.
       result.empty = true;
@@ -472,11 +712,11 @@ export class AutoImporter {
 
     const mtimes = this.latestSourceMtimes(
       sourceFiles,
-      sspjs.map((f) => this.fs.path.dirname(f)),
+      jobs.map((job) => this.fs.path.dirname(job.sspj)),
     );
 
     let converted = false;
-    for (const sspj of sspjs) {
+    for (const [index, job] of jobs.entries()) {
       // Between projects, not before the first: a pass that skips everything —
       // the ordinary project open — must not cost a turn of the event loop per
       // project just to say so. In `worker` mode the conversion itself is the
@@ -484,43 +724,46 @@ export class AutoImporter {
       // Worker to convert in.
       if (converted && converter.mode === 'inline') await yieldToEditor();
 
-      const stem = this.fs.path.basename(sspj, '.sspj');
-      const sourceProjectDir = this.fs.path.dirname(sspj);
-      const outDir = this.fs.path.join(this.outRoot, stem);
+      const { name, outDir } = job;
+      const sourceProjectDir = this.fs.path.dirname(job.sspj);
       const latest = mtimes.get(sourceProjectDir) ?? 0;
 
       // Unconditional, so a legacy marker is migrated and deleted even when the
       // output around it is gone.
-      const previous = this.readMarker(stem, outDir);
+      const previous = this.readMarker(outDir);
       if (
         !opts.force &&
         previous &&
         this.isCurrent(previous, latest, converterVer) &&
         this.hasOutput(outDir)
       ) {
-        result.skipped.push(stem);
+        result.skipped.push(name);
         continue;
       }
 
       converted = true;
+      opts.onProgress?.({ index: index + 1, total: jobs.length, name });
       try {
-        const stats = await convertProjectAt(this.fs, converter, sspj, outDir, () =>
+        const stats = await convertProjectAt(this.fs, converter, job.sspj, outDir, () =>
           performance.now(),
         );
-        this.stampMarker(stem, latest, converterVer);
-        result.converted.push({ name: stem, stats });
+        const removed = this.pruneStale(outDir, previous, stats.written);
+        this.stampMarker(job, latest, converterVer, stats.written);
+        result.converted.push({ name, stats });
         this.log(
-          `converted ${stem}: ${stats.inputFiles} in -> ${stats.outputFiles} out ` +
+          `converted ${name}: ${stats.inputFiles} in -> ${stats.outputFiles} out ` +
             `(+${stats.copiedAssets} textures) in ${stats.elapsedMs}ms -> ${outDir}`,
         );
+        if (removed.length > 0) {
+          this.log(`removed from ${outDir}, no longer produced: ${removed.join(', ')}`);
+        }
       } catch (e) {
         const message = (e as Error).message ?? String(e);
-        result.failed.push({ name: stem, error: message });
-        this.log(`FAILED ${stem}: ${message}`);
+        result.failed.push({ name, error: message });
+        this.log(`FAILED ${name}: ${message}`);
       }
     }
 
     return result;
   }
-
 }

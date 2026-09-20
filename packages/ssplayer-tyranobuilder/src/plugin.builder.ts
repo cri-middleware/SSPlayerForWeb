@@ -21,7 +21,12 @@ import { BUTTON_PARAM_TYPE, registerButtonParam } from './buttonParam.js';
 import { defineSSComponents } from './components.js';
 import { HostFs } from './hostFs.js';
 import { ImportLog } from './importLog.js';
-import { bindImportButton, panelHtml } from './managerPanel.js';
+import {
+  bindPanelButtons,
+  escapeText,
+  panelHtml,
+  type PanelContent,
+} from './managerPanel.js';
 
 const WASM_FILENAME = 'ssconverter_bg.wasm';
 
@@ -97,25 +102,66 @@ function listMethods(obj: object): string[] {
   return [...names].sort();
 }
 
-/** Report a run that did something, as a toast rather than a modal. */
+/**
+ * What a run could not do, spelled out — or '' when it did everything.
+ *
+ * A toast is the right weight for "converted"; it is the wrong weight for a
+ * failure, because the reason is not in it. The editor's main window is created
+ * with `removeMenu()` and has no DevTools, so without this the only account of
+ * why a conversion failed is a line in a text file the author would have to go
+ * looking for. SSPlayerForRenPy reached the same conclusion — an importer that
+ * fails silently mid-iteration looks like an importer that did nothing.
+ *
+ * Both problems name what the author has to change, which is why they share a
+ * dialog: a failed conversion names the project and what the converter said, a
+ * dropped one names the two projects that want the same folder.
+ */
+function problemsHtml(t: (text: string) => string, run: ImportRunResult): string {
+  const lines: string[] = [];
+
+  for (const failure of run.failed) {
+    lines.push(`<b>${escapeText(failure.name)}</b><br />${escapeText(failure.error)}`);
+  }
+  for (const drop of run.dropped) {
+    lines.push(
+      `<b>${escapeText(drop.source)}</b><br />` +
+        `${escapeText(t('Not converted: another project of the same name got there first'))} ` +
+        `(${escapeText(drop.kept)}). ${escapeText(t('Rename one of them.'))}`,
+    );
+  }
+  if (lines.length === 0) return '';
+
+  return (
+    `<b>${escapeText(t('SpriteStudio'))}</b><br /><br />` +
+    lines.join('<br /><br />') +
+    `<br /><br /><small>${escapeText(t('The whole log is in'))} ${LOG_FILENAME}</small>`
+  );
+}
+
+/**
+ * Report a run: a toast for what worked, a dialog for what the author has to
+ * act on.
+ */
 function notifyRun(TB: TB | undefined, run: ImportRunResult): void {
   const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
   const inform = TB?.$?.inform;
-  if (typeof inform !== 'function') return;
 
-  if (run.converted.length > 0) {
+  if (run.converted.length > 0 && typeof inform === 'function') {
     const names = run.converted.map((c) => c.name);
     // Long lists say nothing useful; the first few plus a count do.
     const shown =
       names.length > 3 ? `${names.slice(0, 3).join(', ')} +${names.length - 3}` : names.join(', ');
     inform(`SpriteStudio: ${shown} — ${t('Converted')}`, 'success');
   }
-  if (run.failed.length > 0) {
-    inform(
-      `SpriteStudio: ${run.failed.map((f) => f.name).join(', ')} — ${t('Failed')} (${LOG_FILENAME})`,
-      'error',
-    );
+
+  const problems = problemsHtml(t, run);
+  if (!problems) return;
+  if (typeof TB?.$?.alert === 'function') {
+    TB.$.alert(problems);
+    return;
   }
+  // No alertify: say at least that something needs looking at.
+  inform?.(`SpriteStudio: ${t('Failed')} (${LOG_FILENAME})`, 'error');
 }
 
 /**
@@ -144,7 +190,11 @@ function importNow(TB: TB | undefined, importer: AutoImporter, button: JQueryLik
   button.prop('disabled', true).val(t('Converting…'));
 
   void importer
-    .runOnce()
+    // A folder of fifty projects is a long time under one unchanging word.
+    // The button is the only surface this press owns, so the count goes on it.
+    .runOnce((progress) => {
+      button.val(`${t('Converting…')} ${progress.index}/${progress.total}`);
+    })
     .then((run) => {
       if (run.empty) {
         TB?.$?.inform?.(
@@ -153,7 +203,13 @@ function importNow(TB: TB | undefined, importer: AutoImporter, button: JQueryLik
         );
         return;
       }
-      if (run.converted.length === 0 && run.failed.length === 0) {
+      // A pass that dropped a project is not "up to date" — that clash is the
+      // whole reason to have pressed this.
+      if (
+        run.converted.length === 0 &&
+        run.failed.length === 0 &&
+        run.dropped.length === 0
+      ) {
         TB?.$?.inform?.(`SpriteStudio: ${t('Already up to date')}`, 'success');
         return;
       }
@@ -178,6 +234,8 @@ interface Host {
   pluginDir: string;
   projectRoot: string;
   log: ImportLog;
+  /** Where {@link ImportLog} writes, so the panel can offer to open it. */
+  logPath: string;
   importer: AutoImporter;
 }
 
@@ -228,7 +286,8 @@ function createHost(TB: TB | undefined): Host | null {
   }
 
   const projectRoot = resolveProjectRoot(TB, fs, pluginDir);
-  const log = new ImportLog(fs, fs.path.join(projectRoot, LOG_FILENAME));
+  const logPath = fs.path.join(projectRoot, LOG_FILENAME);
+  const log = new ImportLog(fs, logPath);
   const importer = new AutoImporter({
     fs,
     projectRoot,
@@ -237,7 +296,7 @@ function createHost(TB: TB | undefined): Host | null {
     log: (line) => log.line(line),
   });
 
-  return { fs, pluginDir, projectRoot, log, importer };
+  return { fs, pluginDir, projectRoot, log, logPath, importer };
 }
 
 function describeEnvironment(log: ImportLog, TB: TB | undefined, fs: HostFs): void {
@@ -253,7 +312,15 @@ function describeEnvironment(log: ImportLog, TB: TB | undefined, fs: HostFs): vo
   log.line(`user agent: ${navigator.userAgent}`);
 }
 
-async function boot(host: Host, TB: TB | undefined): Promise<void> {
+/**
+ * @param onVersions Called once the converter can say what it is and what it
+ *   emits, so the panel can show the line an author quotes in a bug report.
+ */
+async function boot(
+  host: Host,
+  TB: TB | undefined,
+  onVersions: (line: string) => void,
+): Promise<void> {
   const { fs, pluginDir, projectRoot, log, importer } = host;
 
   log.line(`plugin dir:   ${pluginDir}`);
@@ -281,10 +348,17 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
   // for, and stopping now would leave the log ending mid-sentence.
   try {
     const converter = await importer.converter();
+    // Both formats, because a conversion emits both and this line is what
+    // people copy into a bug report — the gap SSConverterGUI closed in its own
+    // footer, which named only the `.ssab` one.
+    const versions =
+      `converter ${converter.version} ` +
+      `(ssab v${converter.schema.ssab}, ssqb v${converter.schema.ssqb})`;
     log.line(
-      `converter: ${converter.mode} (${converter.version})` +
+      `converter: ${converter.mode} — ${versions}` +
         (converter.detail ? ` — no worker: ${converter.detail}` : ''),
     );
+    onVersions(versions);
   } catch (e) {
     log.line(`converter: unavailable (${(e as Error).message})`);
   }
@@ -299,10 +373,15 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
   log.line(`sources: ${importer.sourceDir}`);
   log.line(`output:   ${importer.outRoot}`);
 
+  // Whether this project has ever had anything imported — read before the
+  // pass, because the pass itself is what changes the answer.
+  const firstTime = !importer.hasImported();
+
   const run = await importer.runOnce();
   log.line(
     `first pass: ${run.converted.length} converted, ${run.skipped.length} up to date, ` +
-      `${run.failed.length} failed${run.empty ? ' (no .sspj found)' : ''}`,
+      `${run.failed.length} failed, ${run.dropped.length} dropped` +
+      `${run.empty ? ' (no .sspj found)' : ''}`,
   );
 
   log.line(
@@ -315,9 +394,11 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
   setTimeout(() => {
     // "Everything was already up to date" is the normal case on every project
     // open. Saying so in a modal is just something to dismiss — the log has it.
-    if (run.empty) {
-      // The one case worth a modal: nothing to convert, so tell a first-time
-      // user where projects go.
+    if (run.empty && firstTime) {
+      // The one case worth a modal: a project that has never imported anything
+      // and has nothing to import, so tell a first-time user where projects go.
+      // Not for a project whose packs are already converted and whose author
+      // has since emptied the source folder — that is every open from then on.
       const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
       TB?.$?.alert?.(
         `<b>${t('SpriteStudio')}</b><br />` +
@@ -337,18 +418,27 @@ async function boot(host: Host, TB: TB | undefined): Promise<void> {
 export class plugin_setting {
   private readonly TB: TB | undefined;
   private readonly host: Host | null;
+  private readonly t: (text: string) => string;
+  /** What the panel is currently showing; see `showVersions`. */
+  private readonly panel: PanelContent;
 
   // Read as plain properties by the plugin manager panel and the install dialog
   // (`js/app/window/window.js`). `plugin_img` is compared against the literal
   // 'no_image'; leaving it unset would point an <img> at `<plugin>/undefined`.
   readonly name: string;
-  readonly plugin_text: string;
+  /**
+   * Not `readonly`: the host reads this off the live instance every time the
+   * author selects the plugin (`app.plugin.map_plugin[id].plugin_text`), so
+   * rewriting it later is how the version line gets in.
+   */
+  plugin_text: string;
   readonly plugin_img = 'no_image';
 
   constructor(TB?: TB) {
     this.TB = TB;
     const t = (text: string): string =>
       typeof TB?.$?.s === 'function' ? TB.$.s(text) : text;
+    this.t = t;
     this.name = t('SpriteStudio');
 
     // Must never throw: `loadPlugins()` does not guard the constructor, and an
@@ -356,19 +446,46 @@ export class plugin_setting {
     let started: Host | null = null;
     try {
       started = createHost(TB);
-      if (started) void boot(started, TB).catch((e) => console.error('[ssplayer-tyranobuilder]', e));
     } catch (e) {
       console.error('[ssplayer-tyranobuilder] boot failed', e);
     }
     const host = started;
     this.host = host;
 
-    // Written after the host is resolved, because the panel only offers to
-    // convert when there is something that can.
-    this.plugin_text = panelHtml(t, host !== null);
+    // Written after the host is resolved, because the panel only offers what
+    // there is something behind: no filesystem bridge, no conversion; no
+    // `shell` on it, no way to show a folder.
+    this.panel = {
+      withImport: host !== null,
+      withFolders: host !== null && host.fs.canOpen,
+      version: '',
+    };
+    this.plugin_text = panelHtml(t, this.panel);
+
     if (host) {
-      bindImportButton(TB?.$, (button) => importNow(TB, host.importer, button));
+      bindPanelButtons(TB?.$, {
+        import: (button) => importNow(TB, host.importer, button),
+        openSource: () => host.fs.openPath(host.importer.sourceDir),
+        openLog: () => host.fs.openPath(host.logPath),
+      });
+      // Last, so the panel is already answerable when the first pass starts
+      // reporting into it.
+      void boot(host, TB, (line) => this.showVersions(line)).catch((e) =>
+        console.error('[ssplayer-tyranobuilder]', e),
+      );
     }
+  }
+
+  /**
+   * Put the converter's build line on the panel, once it is known.
+   *
+   * Only the property is updated: the host renders `.plugin_text` from this
+   * instance whenever the plugin is selected, and the converter is up about a
+   * second into a project open — long before anyone has the panel open.
+   */
+  private showVersions(line: string): void {
+    this.panel.version = line;
+    this.plugin_text = panelHtml(this.t, this.panel);
   }
 
   /**
