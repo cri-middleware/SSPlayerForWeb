@@ -1,44 +1,72 @@
-# Instructions for AI Agents
-
-This file contains rules, context, and guidelines for AI agents working on the **SSPlayerForWeb** repository. When performing tasks in this workspace, strictly adhere to the following principles.
+# SSPlayerForWeb — AI Agent Guide
 
 ## Operating rules
 
-- Keep changes scoped to the requested task.
-- Do not commit unless the user explicitly asks.
-- Before editing, read enough surrounding context to understand callers and invariants; if the read tool truncated the file, read the remaining ranges before making non-trivial changes.
-- Follow existing code style in touched files (naming, type usage, control flow, error handling).
+*   Keep changes scoped to the requested task. Unrequested hardening is a suggestion, not a commit; a defect
+    you actually hit in the code you touched is not — fix it, or say plainly why you did not.
+*   Do not commit, push, or open PRs unless the user explicitly asks.
+*   Before editing, read enough surrounding context to understand callers and invariants, the ones below
+    included. If the read tool truncated a file, read the remaining ranges first.
+*   Follow the existing style of the file you touch (naming, type usage, control flow, error handling).
+*   **Anything that exists twice changes twice** — a page and its translation, a `.sh` and its `.ps1`. A
+    change that lands in one half is the defect this family produces most.
+*   **Finish by running this repository's checks**: the commands in [CONTRIBUTING.md](./CONTRIBUTING.md),
+    and `pnpm run build` again before checking an example, which consumes the **built** packages. Read what
+    a run says it verified rather than its exit code — several checks here pass, or skip themselves, when a
+    prerequisite is missing.
+*   **Do not restate here what another file owns.** The table below says which file that is; a fact that
+    belongs to none of them goes where it will be seen to go stale.
+*   **Never commit inside the `SpriteStudio-SDK` submodule.** A change the core needs is a pull request in
+    the SDK repository, followed by a submodule bump here.
+*   **Playback semantics are the SDK's** — the Rust core is the submodule; do not reimplement the rules it
+    owns. Do not alter that submodule's structure without explicit instruction.
 
-## 1. Core Architectural Constraints
+## What this repo is
 
-- **Absolute Decoupling in Core**: The `@spritestudio/ssplayer-core` package MUST remain completely decoupled from any rendering engine (e.g., PixiJS, Three.js) or browser-specific DOM APIs. It acts solely as a wrapper for the Rust WebAssembly logic.
-- **Zero-Copy Memory Management**: When transferring data between WebAssembly and JavaScript, prioritize zero-copy techniques. Use `Float32Array` or similar TypedArrays referencing the `wasmMemory.buffer` directly to prevent unnecessary memory allocation and Garbage Collection (GC) pauses.
-- **Memory Safety**: WASM memory is not automatically garbage-collected by JS. Implement safeguards using JS `FinalizationRegistry` to automatically call WASM `free()` when objects are garbage-collected, preventing memory leaks.
-- **Player Facades (Render Modes)**: The architecture is divided by rendering strategies. `DirectInternalPlayer` handles high-performance direct drawing (e.g., PixiJS v8 via BatchRenderer). `SceneGraphInternalPlayer` (future/WIP) handles hierarchy-based drawing (e.g., RPG Maker MZ using PixiJS v5).
-- **Architecture Reference**: Always refer to `README.md` for the most up-to-date architecture diagram (Mermaid) and design concepts.
+A pnpm workspace of browser packages over the Rust core, compiled to WebAssembly.
 
-## 2. Monorepo Guidelines
+| Package | Role |
+|---|---|
+| `ssplayer-core` | Engine-agnostic WebAssembly wrapper (runtime). |
+| `ssplayer-pixi` | PixiJS v8 renderer bindings. |
+| `ssplayer-webgl` | Standalone WebGL1/2 renderer and the `<ss-player>` Web Component. |
+| `ssplayer-rmmz` | RPG Maker MZ renderer bindings. |
+| `ssconverter-core` | Engine-agnostic WebAssembly converter core (`.sspj` → `.ssab` / `.ssqb`). |
+| `ssconverter-web` | A host over it: the browser converter UI and the Node CLI. |
 
-- The project uses `pnpm` workspaces. Ensure any dependency modifications are made correctly within the context of a monorepo (e.g., `pnpm add <pkg> --filter <workspace>`).
-- **Packages (`packages/`)**:
-  - `ssplayer-core`: Engine-agnostic WebAssembly wrapper (runtime).
-  - `ssplayer-pixi`: PixiJS v8 renderer bindings.
-  - `ssplayer-webgl`: Standalone WebGL1/2 renderer + `<ss-player>` Web Component.
-  - `ssplayer-rmmz`: RPG Maker MZ renderer bindings.
-  - `ssconverter-core`: Engine-agnostic WebAssembly converter core (`.sspj` → `.ssab`/`.ssqb`; wasm build of Rust `libssconverter`). No fs/DOM. The wasm glue is kept **external** (`deps.neverBundle`) so it never desyncs from the wasm binary in `wasm/`.
-  - `ssconverter-web`: Host built on `ssconverter-core` — browser converter UI + Node CLI (`ssconverter-web-cli`).
-- **Examples (`examples/`)**:
-  - `pixi-example`: Vite-based test server for PixiJS.
-  - `rmmz-example`: Test environment for RPG Maker MZ.
-- **Rust Core**: Located in the `SpriteStudio-SDK` Git submodule. Do not alter the submodule structure without explicit instruction.
+`examples/` holds a Vite test server per renderer. The Rust core is the `SpriteStudio-SDK`
+submodule.
 
-## 3. Development & Tooling Rules
+## Where each answer is written
 
-- **User Global Rules**: The user has configured `rtk` (Rust Token Killer) as a CLI proxy. All command-line operations should ideally respect this hook-based usage implicitly, but keep in mind that `rtk` handles token-saving analytics.
-- **TypeScript**: Use strict typing. Avoid `any` where possible. The examples consume built packages, so ensure you run `pnpm run build` from the root whenever modifying `packages/`.
-- **Rust & WASM Builds**: Generated WASM binaries are **not tracked in git**. When checking out the project freshly or modifying Rust code, WASM must be built using `pnpm run build:wasm` (which picks the `.sh` or the `.ps1` twin for the host, so Windows needs no separate entry). It builds **release** by default, the same default `build-runtime` has on its own; pass `debug` for the quick one. This requires `rustup` and `cargo install wasm-pack`.
-- **Rust FFI**: Ensure any modifications to the `ssruntime` expose a C-API/FFI compatible with `wasm-bindgen`.
-- **Docs site build**: `scripts/prepare-docs.sh` (pnpm install + the SDK wasm) then `scripts/build-docs.sh` (TypeDoc, then VitePress → `docs/.vitepress/dist`); `.ps1` twins on Windows, `key=value` options and `--help` like the other scripts here. `pages.yml` runs `build-docs.sh` too, so CI and the local build cannot drift. Two options earn their keep: `api=no` skips TypeDoc when only prose changed, and `base=/SSPlayerForWeb/` sets `DOCS_BASE` the way the project site needs it. **Building the docs is the only gate there is** — nothing builds them on a pull request, and a dead link fails the build (VitePress checks by default; the config does not set `ignoreDeadLinks`). Note this is *one* build for both locales, VitePress resolving `docs/ja` itself — the Zensical player repos need one build per locale, which is why their `build-docs` takes `locale=` and this one does not. The wasm is not optional: TypeDoc parses `packages/*/src`, which import the bindings. Every repository in the family spells this pair the same way; the `-docs` suffix keeps it apart from the scripts that build the player.
-- **Pages site build**: `scripts/build-pages.sh` builds the *whole* published site into one directory (`_site` by default) — the docs at the root, `ssconverter-web` (every schema version in `versions.json`) under `/ssconverter/`, and the five examples under `/examples/`. `pages.yml` runs this same script, so CI and a local build cannot drift; the workflow keeps only what is GitHub's — the checkout (SDK submodule, `fetch-depth: 0`), the pnpm/Node toolchain, the artifact upload and the deploy. `.ps1` twins on Windows, `key=value` options and `--help` like the other scripts here: `base=` (default `/<repo>/`, because a project site is served under it — a site built for `/` looks fine locally and 404s once deployed), `out=`, `api=no` (passed to `build-docs.*`), `sdk=`, `skip=<stages>` and `clean=`. `skip=` is what makes it usable while iterating — `skip=install,wasm,packages,assets,rmmz,tyranoscript,ssconverter` rebuilds the docs alone — and a skipped stage leaves its part out of the site with a warning, while a stage that ran and produced nothing is an error. `sdk=download` (the default) takes the pre-built wasm for `scripts/SDK_VERSION.txt`; `sdk=build` compiles it from the submodule's Rust source in release mode, which is the way through when that SDK release does not exist yet. It reaches the `ssconverter` stage too, but **only as far as the one schema version whose `sdk` tag matches `SDK_VERSION.txt`** (`SDK_WASM=build`, which `build-pages.*` passes down to `build-ssconverter-pages.*`) — every other version still downloads the release it pins, which is the point of pinning it and which no local build can stand in for. Each version logs which of the two it took, so add a schema version and the split is visible in the run. Three things it needs that `pnpm install` does not: the **SpriteStudio-SDK submodule** (`deploy-examples` compiles its `tests/*.sspj`, so `download:wasm` is no substitute; `sdk=build` compiles its Rust runtime), network access, and — for the `.sh` path only — `jq`, which the `.ps1` twin does without (`ConvertFrom-Json`). `build-ssconverter-pages.*` gained a `.ps1` twin for the same reason: `build-pages.ps1` has to drive it.
-- **Release build**: `scripts/build-release.sh` builds *both* release channels into one directory (`release-dist` by default) and publishes neither: `<out>/npm/*.tgz` (`pnpm pack` for every package that is not `private`, so the `files` allow-list, the `prepack` artifact guard and the `workspace:^` rewrite all apply exactly as they would on publish) and `<out>/plugins/*` (each private package's own `pack` script — the very files `release.yml` attaches to the per-plugin GitHub Releases), plus `SHA256SUMS` over both. `.ps1` twin on Windows, `key=value` options and `--help` like the other scripts here: `out=`, `sdk=download|build|skip`, `skip=<stages>` (`install wasm build test npm plugins`), `verify=` and `clean=`. **`release.yml` runs it for the plugin assets it uploads** (`skip=install,test,npm`, plus `wasm,build` when the npm half already built them), so CI and a local run cannot drift: the archives a maintainer looks over are the ones the Releases carry, and the workflow reads `<out>/manifest.json` to know which file belongs to which package. The npm half is the exception and cannot be otherwise — `changeset publish` packs and uploads from the workspace itself, so there is no tarball to hand it; building those locally buys the only look at an npm artifact anyone gets while it can still be fixed, since a published version is immutable. It never bumps a version — `changeset version` runs inside the release, so a local run before it produces artifacts one bump behind, and the run says so (naming what each package would become) when changesets are pending, as it does when changesets' pre mode is active. The verification is what earns the script its keep, and every check in it is a failure that would otherwise ship: `workspace:` left in a packed manifest, a `files` entry missing from the tarball, `ssplayer-core` without its second (`dist/`) copy of the wasm that the CDN snippets load by URL, the RPG Maker MZ plugin carrying the SIMD runtime instead of the no-SIMD one (MZ's NW.js cannot load it), `ssplayer.tbp` renamed or holding anything but the one `ssplayer/` folder (the builder derives the plugin id from the filename), a `{{VERSION}}` left unsubstituted in the TyranoScript readme, and the docs' version pins disagreeing with the manifests. A new private package with a `pack` script fails the run until it is listed in `PLUGIN_ROWS`, which is the only place the plugin artifact names live now — the workflow takes them from the manifest, so nothing there needs touching. The npm tarballs are reproducible run to run; the plugin archives are not (`zip` stores mtimes), so compare those by content, not by hash. The Windows twin needs `zip` on PATH for the plugins stage, which Windows does not ship.
-- **Docs site metadata**: `docs/.vitepress/config.mts` builds the Open Graph / Twitter Card tags in `transformHead`, from the title and description VitePress has already resolved (frontmatter > locale > site). **One code path serves both locales** — Japanese cards come from `locales.ja.description`, so localize by adding a per-locale config value, never by branching on the locale inside `transformHead`. `og:url` is built from `SITE_URL`, deliberately not from `base`, which is `/` during local dev. There is no `og:image` and no favicon yet: no SpriteStudio artwork exists to point at, and the sibling player repos are holding off for the same reason so one mark can be adopted everywhere at once. Build with `pnpm --filter docs exec vitepress build` and check the emitted tags before changing any of this. **There is deliberately no `editLink`**, matching the five MkDocs player repos, which dropped their `edit_uri` for the same reason: it hardcodes a branch name that nothing validates, and it had already drifted wrong in three of them. Do not reintroduce it.
+| Question | File |
+|---|---|
+| What each package does, and the architecture diagram | [README.md](./README.md), the [docs site](./docs/) |
+| How to set up, build, test and regenerate code | [CONTRIBUTING.md](./CONTRIBUTING.md) |
+| How the site is built and a release is cut | [RELEASING.md](./RELEASING.md), maintainers only |
+| What to build next, and what is out of scope | [ROADMAP.md](./ROADMAP.md) |
+| What each script does and takes | that script's `--help` |
+
+## Invariants
+
+- **`@spritestudio/ssplayer-core` stays decoupled** from every rendering engine and from
+  browser-specific DOM APIs. It is the wrapper around the Rust WebAssembly logic and nothing else;
+  engine bindings are their own packages.
+- **Transfer between WebAssembly and JavaScript is zero-copy.** Use typed arrays that view
+  `wasmMemory.buffer` directly rather than copying out of it, so playback allocates nothing per
+  frame and gives the collector nothing to pause for.
+- **WASM memory is not collected for you.** Every object holding a WASM allocation registers with
+  a `FinalizationRegistry` that calls its `free()`, so a dropped reference cannot leak.
+- **The player facades are split by rendering strategy**, and that split is the architecture:
+  `DirectInternalPlayer` draws directly (PixiJS v8 through its BatchRenderer),
+  `SceneGraphInternalPlayer` draws through a hierarchy (RPG Maker MZ, PixiJS v5). Add a renderer
+  by choosing one of them, not by widening the other.
+- **Generated WASM is not tracked in git**, so a fresh checkout has to build or download it before
+  anything else works. The FlatBuffers accessors under `packages/ssplayer-core/src/ss/` **are**
+  tracked: regenerate and commit them after a schema change, and never hand-edit them.
+- **Anything exposed from `ssruntime` must be a C-API compatible with `wasm-bindgen`.**
+- **Dependencies are added per workspace** (`pnpm add <pkg> --filter <workspace>`), never to the
+  root by reflex.
+- **`ssconverter-core` keeps its wasm glue external** (`deps.neverBundle`), so the glue can never
+  desync from the wasm binary in `wasm/`.
+- **TypeScript is strict; avoid `any`.**
