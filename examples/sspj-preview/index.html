@@ -15,6 +15,13 @@
         --accent: #5ac8fa;
         --error: #ff8a80;
         --success: #a5e887;
+        /* One colour per event kind, shared by the strip and the list so a
+           marker and its row are recognisably the same thing. Same three as
+           SSPlayerForWgpu's preview shell. */
+        --user-data: #a78bfa;
+        --signal: #38bdf8;
+        --audio: #fbbf24;
+        --thumb: 14px;
       }
       * { box-sizing: border-box; }
       body {
@@ -98,6 +105,93 @@
       footer { color: var(--muted); text-align: center; font-size: 12px; }
       footer a { color: var(--accent); }
       #build { margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+
+      #transport {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        align-items: center;
+        width: min(100%, 860px);
+        padding: 12px 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      #transport button {
+        background: #1d1d2b;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        width: 34px;
+        height: 30px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #transport button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+      #transport button:disabled { opacity: 0.5; cursor: default; }
+      #frame { font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; color: var(--muted); }
+
+      /* The seek bar and the marker strip share one coordinate space: both are
+         inset by half a thumb at each end, so a marker sits exactly under the
+         thumb for the frame it names. */
+      .track { position: relative; flex: 1 1 260px; min-width: 200px; }
+      #seek { width: 100%; margin: 0; accent-color: var(--accent); }
+      #markers { position: relative; height: 14px; margin-top: 2px; }
+      .marker {
+        position: absolute;
+        top: 0;
+        width: 8px;
+        height: 10px;
+        margin-left: -4px;
+        border-radius: 2px;
+        cursor: pointer;
+        opacity: 0.85;
+        transition: transform 0.12s ease, opacity 0.12s ease;
+      }
+      .marker:hover { transform: scaleY(1.35); opacity: 1; }
+      .marker.fired {
+        transform: scaleY(1.6);
+        opacity: 1;
+        box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 35%, transparent);
+      }
+      .kind-userData { background: var(--user-data); color: var(--user-data); }
+      .kind-signal { background: var(--signal); color: var(--signal); }
+      .kind-audio { background: var(--audio); color: var(--audio); }
+
+      #events {
+        width: min(100%, 860px);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        max-height: 34vh;
+        overflow: auto;
+      }
+      /* Fixed layout and a wrapping payload cell, because the alternative is a
+         page wider than the window: one long user-data string widens the table,
+         which widens the column, which stretches the stage the canvas sizes
+         itself from — and the animation ends up drawn into a box off screen.
+         (The same trap SSPlayerForWgpu's shell records.) */
+      #events table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 12px; }
+      #events td { overflow-wrap: anywhere; }
+      #events td:nth-child(1), #events th:nth-child(1) { width: 4.5em; }
+      #events td:nth-child(2), #events th:nth-child(2) { width: 6em; }
+      #events td:nth-child(3), #events th:nth-child(3) { width: 9em; }
+      #events th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--muted);
+        padding: 6px 10px;
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      #events td { padding: 4px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      #events tr { cursor: pointer; }
+      #events tr:hover td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+      #events tr.fired td { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+      .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+      .empty { padding: 10px; color: var(--muted); }
     </style>
   </head>
   <body>
@@ -122,6 +216,21 @@
       <label>Pack <select id="pack" disabled></select></label>
       <label>Animation <select id="anime" disabled></select></label>
     </div>
+
+    <div id="transport">
+      <button id="playPause" title="Play / pause" disabled>⏸</button>
+      <button id="restart" title="Back to the start" disabled>↺</button>
+      <div class="track">
+        <input id="seek" type="range" min="0" max="100" value="0" step="0.1" disabled />
+        <!-- One marker per event seen, in the seek bar's own coordinate space. -->
+        <div id="markers"></div>
+      </div>
+      <span id="frame">0.0 / 0</span>
+      <label>speed <input id="speed" type="range" min="0.1" max="3" step="0.1" value="1" style="width:90px" /><span id="speedOut">1.0</span></label>
+      <label><input id="sub" type="checkbox" checked /> sub-frame</label>
+    </div>
+
+    <div id="events"><div class="empty">Events appear here as the animation plays them.</div></div>
 
     <p id="status">Starting…</p>
 

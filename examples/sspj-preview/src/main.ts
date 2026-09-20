@@ -32,6 +32,7 @@ import {
   type FoundProject,
   type ProjectFile,
 } from './projectDrop.js';
+import { Timeline } from './timeline.js';
 
 /**
  * The pack shown before the reader has dropped anything, so the page opens on
@@ -71,6 +72,20 @@ async function main(): Promise<void> {
   const surface = new SSSurface(canvas, { autoStart: true, backgroundColor: 0x1a1a2e });
   const player = surface.createPlayer();
 
+  // The seek bar, the marker strip and the event list, ported from
+  // SSPlayerForWgpu's preview shell so both previews read the same way.
+  const timeline = new Timeline(player, {
+    playPause: $<HTMLButtonElement>('playPause'),
+    restart: $<HTMLButtonElement>('restart'),
+    seek: $<HTMLInputElement>('seek'),
+    markers: $('markers'),
+    frame: $('frame'),
+    speed: $<HTMLInputElement>('speed'),
+    speedOut: $('speedOut'),
+    subFrame: $<HTMLInputElement>('sub'),
+    events: $('events'),
+  });
+
   /** The packs the last conversion produced, by file name. Empty until one runs. */
   let packs = new Map<string, Uint8Array>();
   /** What was dropped, kept so a second project in the same drop can be picked. */
@@ -82,6 +97,9 @@ async function main(): Promise<void> {
     if (!name) return;
     player.setAnimation(name);
     player.play();
+    // After `setAnimation`, because the frame range is the new animation's —
+    // and its events are its own, so the table starts empty again.
+    timeline.reset();
   };
 
   const fillSelect = (select: HTMLSelectElement, options: string[], selected?: string): void => {
