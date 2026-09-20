@@ -126,7 +126,7 @@ function Show-Usage {
     Write-Host "  rmmz          sync the built plugin + wasm into rmmz-example"
     Write-Host "  tyranoscript  fetch the TyranoScript engine, then sync the plugin + wasm"
     Write-Host "  docs          build-docs.ps1 (TypeDoc, then VitePress)"
-    Write-Host "  examples      vite build for pixi-example, webgl-example, override-example"
+    Write-Host "  examples      vite build for pixi-example, webgl-example, override-example, sspj-preview"
     Write-Host "  ssconverter   build-ssconverter-pages.ps1 -- every schema version"
     Write-Host ""
     Write-Host "A skipped stage leaves its part out of the site (a warning says which);"
@@ -331,6 +331,7 @@ try {
         Invoke-Checked "pixi-example build" { & pnpm --filter=pixi-example exec vite build --base="$($opts.base)examples/pixi/" }
         Invoke-Checked "webgl-example build" { & pnpm --filter=webgl-example exec vite build --base="$($opts.base)examples/webgl/" }
         Invoke-Checked "override-example build" { & pnpm --filter=override-example exec vite build --base="$($opts.base)examples/override/" }
+        Invoke-Checked "sspj-preview build" { & pnpm --filter=sspj-preview exec vite build --base="$($opts.base)examples/sspj-preview/" }
     }
 
     # ssconverter-web: every schema version from versions.json, into
@@ -394,6 +395,7 @@ try {
     Copy-Tree "pixi-example"     "examples/pixi-example/dist"     (Join-Path $OUT "examples/pixi")     $req
     Copy-Tree "webgl-example"    "examples/webgl-example/dist"    (Join-Path $OUT "examples/webgl")    $req
     Copy-Tree "override-example" "examples/override-example/dist" (Join-Path $OUT "examples/override") $req
+    Copy-Tree "sspj-preview" "examples/sspj-preview/dist" (Join-Path $OUT "examples/sspj-preview") $req
 
     # rmmz-example: the static MZ project is copied as it is -- its paths are
     # relative, so it runs under the /examples/rmmz/ subpath with no base rewrite.
