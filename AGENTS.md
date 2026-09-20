@@ -2,16 +2,24 @@
 
 ## Operating rules
 
-- Keep changes scoped to the requested task.
-- Do not commit, push, or open PRs unless the user explicitly asks.
-- Before editing, read enough surrounding context to understand callers and invariants; if the
-  read tool truncated the file, read the remaining ranges first.
-- Follow existing code style in touched files (naming, type usage, control flow, error handling).
-- Validate with the commands in [CONTRIBUTING.md](./CONTRIBUTING.md). The examples consume the
-  **built** packages, so re-run `pnpm run build` after changing anything under `packages/`. For
-  docs, the build is the only gate there is — see [RELEASING.md](./RELEASING.md).
-- **Do not alter the `SpriteStudio-SDK` submodule's structure** without explicit instruction. A
-  change to the Rust core is a pull request there, followed by a submodule bump here.
+*   Keep changes scoped to the requested task. Unrequested hardening is a suggestion, not a commit; a defect
+    you actually hit in the code you touched is not — fix it, or say plainly why you did not.
+*   Do not commit, push, or open PRs unless the user explicitly asks.
+*   Before editing, read enough surrounding context to understand callers and invariants, the ones below
+    included. If the read tool truncated a file, read the remaining ranges first.
+*   Follow the existing style of the file you touch (naming, type usage, control flow, error handling).
+*   **Anything that exists twice changes twice** — a page and its translation, a `.sh` and its `.ps1`. A
+    change that lands in one half is the defect this family produces most.
+*   **Finish by running this repository's checks**: the commands in [CONTRIBUTING.md](./CONTRIBUTING.md),
+    and `pnpm run build` again before checking an example, which consumes the **built** packages. Read what
+    a run says it verified rather than its exit code — several checks here pass, or skip themselves, when a
+    prerequisite is missing.
+*   **Do not restate here what another file owns.** The table below says which file that is; a fact that
+    belongs to none of them goes where it will be seen to go stale.
+*   **Never commit inside the `SpriteStudio-SDK` submodule.** A change the core needs is a pull request in
+    the SDK repository, followed by a submodule bump here.
+*   **Playback semantics are the SDK's** — the Rust core is the submodule; do not reimplement the rules it
+    owns. Do not alter that submodule's structure without explicit instruction.
 
 ## What this repo is
 
@@ -38,8 +46,6 @@ submodule.
 | How the site is built and a release is cut | [RELEASING.md](./RELEASING.md), maintainers only |
 | What to build next, and what is out of scope | [ROADMAP.md](./ROADMAP.md) |
 | What each script does and takes | that script's `--help` |
-
-Do not restate those here. This file is for what an agent would otherwise break silently.
 
 ## Invariants
 
