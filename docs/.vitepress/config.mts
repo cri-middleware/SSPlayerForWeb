@@ -25,6 +25,13 @@ const demo = (text: string, link: string) => ({ text, link, target: '_blank', re
 // reference (docs/api/, TypeDoc-generated) is language-neutral and shared by both
 // locales at /api/.
 //
+// **Every linked Japanese heading carries an explicit ASCII id**, the same one its
+// English page uses -- `## ソースからビルドする {#building-from-source}`. VitePress
+// slugifies through NFKD, which *decomposes* voiced kana, so the id it emits for
+// `ソースからビルドする` holds ヒ+U+3099 and a hand-written `#ソースからビルドする`
+// never matches the heading it points at. Its dead-link check does not look at
+// anchors, so nothing else catches it.
+//
 // The sidebar is ordered as a difficulty gradient — reader personas are the
 // design driver but are intentionally NOT surfaced as section labels. Reading
 // top-to-bottom, the effort required rises naturally:

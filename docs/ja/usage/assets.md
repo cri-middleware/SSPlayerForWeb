@@ -16,14 +16,14 @@
 
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-ブラウザツール) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧 初回リリースの公開後に有効） |
-| [`SSConverterGUI`](#ssconvertergui-デスクトップguiツール) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
-| [`ssconverter-cli`](#ssconverter-cli-cli-ci-開発者向け) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
-| [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-ライブラリ-自作アプリへの組み込み) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
+| [`ssconverter-web`](#ssconverter-web-browser-tool) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧 初回リリースの公開後に有効） |
+| [`SSConverterGUI`](#ssconvertergui-desktop-gui-tool) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
+| [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
+| [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
 
 全体の流れは [トップページの概要図](/ja/#概要-sspj-描画まで) を参照してください。
 
-## ssconverter-web（ブラウザツール）
+## ssconverter-web（ブラウザツール） {#ssconverter-web-browser-tool}
 
 ブラウザ上で `.sspj` プロジェクトを変換し、結果を **ZIP** でダウンロードするツールです。WASM 版コンバータをそのままブラウザで実行します。
 
@@ -59,12 +59,12 @@ WASM の初期化状況・変換状況はステータスバッジに、詳細は
 
 ダウンロードした ZIP を展開し、`.ssab`（と通常モードのテクスチャ）を配信場所に置きます（[配置とテクスチャ解決](#配置とテクスチャ解決)）。
 
-## SSConverterGUI（デスクトップGUIツール）
+## SSConverterGUI（デスクトップGUIツール） {#ssconvertergui-desktop-gui-tool}
 
 デスクトップ上で動作する、`.sspj` を `.ssab` に変換するための GUI ツールです。
 **[SSConverterGUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** から OS 向けのバイナリをダウンロードして使用してください。
 
-## ssconverter-cli（CLI・CI / 開発者向け）
+## ssconverter-cli（CLI・CI / 開発者向け） {#ssconverter-cli-cli-ci-for-developers}
 
 SpriteStudio-SDK が配布する**ネイティブのビルド時 CLI**です（`libssconverter` のラッパーで、SDK のリリース成果物と同じ変換パイプライン）。CI やバッチ変換、再現性が必要な場面に向きます。
 
@@ -117,7 +117,7 @@ ssconverter-cli ./assets/projects ./extra_assets
 [ssconverter-cli README](https://github.com/cri-middleware/SpriteStudio-SDK/blob/main/cli/README.md)
 を参照してください。
 
-## ssconverter-core（ライブラリ / 自作アプリへの組み込み）
+## ssconverter-core（ライブラリ / 自作アプリへの組み込み） {#ssconverter-core-library-embedding-in-your-own-app}
 
 上記のツール類ではなく、**変換そのものを自分の JavaScript/TypeScript アプリやサービスに組み込みたい**場合は、変換エンジンを npm ライブラリとして提供する
 **[`@spritestudio/ssconverter-core`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core)**
