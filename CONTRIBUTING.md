@@ -42,7 +42,8 @@ not attach it to a public issue — contact the maintainers privately instead.*
 ### Pull Requests
 1. Fork the repository and create your branch from `main`.
 2. Follow the existing code style and the constraints above.
-3. Verify your changes against the sample app in `examples/pixi-example`.
+3. Run `pnpm test`, then check the change in the example for the renderer you touched (see
+   [Development Environment](#development-environment)).
 4. Submit a Pull Request targeting `main` with a clear description of the change.
 
 ### Branching & releases
@@ -74,12 +75,18 @@ section of the README. In short, from the repo root:
 pnpm install
 pnpm run build:wasm   # builds the Rust core to WASM (needs Rust + wasm-pack)
 pnpm run build
+pnpm test             # every workspace's vitest suite
 ```
 
 The generated WASM binaries are **not tracked in git**, so a fresh checkout must
-build them first. The examples consume the **built** packages via workspace
-references, so re-run `pnpm run build` after changing any TypeScript under
-`packages/`. Verify your changes against `examples/webgl-example` (`pnpm run dev`).
+build them first. `pnpm test` needs both steps above it: the core's tests import
+the built WASM, and `examples/sspj-preview` imports the other packages' `dist/`.
+Without the converter WASM or the `SpriteStudio-SDK` submodule, the conversion
+suites are reported as **skipped**, not passed — read the summary line. The
+examples consume the **built** packages via workspace references, so re-run
+`pnpm run build` after changing any TypeScript under `packages/`, then check the
+change in the example for the renderer you touched — `examples/webgl-example`
+for the core and WebGL, `examples/pixi-example` for PixiJS — with `pnpm run dev`.
 
 ### Regenerating the FlatBuffers accessors
 
@@ -159,7 +166,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 ### プルリクエスト
 1. リポジトリをフォークし、`main` ブランチから作業用ブランチを作成してください。
 2. 既存のコードスタイルと上記の制約に従ってください。
-3. `examples/pixi-example` のサンプルアプリで変更内容を確認してください。
+3. `pnpm test` を実行し、触ったレンダラーのサンプルで変更内容を確認してください（[開発環境のセットアップ](#開発環境のセットアップ)を参照）。
 4. `main` ブランチに向けて、変更内容を明確に記載したプルリクエストを送信してください。
 
 ### ブランチとリリース
@@ -183,9 +190,10 @@ bump は行いません。未消費の changeset がある場合は、リリー�
 pnpm install
 pnpm run build:wasm   # Rust コアを WASM へビルド（Rust / wasm-pack が必要）
 pnpm run build
+pnpm test             # 全ワークスペースの vitest スイート
 ```
 
-生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行してください。変更は `examples/webgl-example`（`pnpm run dev`）で確認してください。
+生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。`pnpm test` には上の 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。
 
 ### FlatBuffers アクセサの再生成
 
