@@ -147,7 +147,7 @@ while [ $# -gt 0 ]; do
         clean)  CLEAN="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')" ;;
         skip)   SKIP="$(printf '%s' "$value" | tr ',' ' ')" ;;
         # Accepted so one command line drives build-release in every repository
-        # of the family; this one has no use for them (AGENTS.md).
+        # of the family; this one has no use for them.
         in) echo "$APP: ${key}= does not apply here; ignored" >&2 ;;
         *)
           echo "$APP: unknown option '$key' (see $APP --help)" >&2
