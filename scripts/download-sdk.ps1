@@ -15,6 +15,8 @@
 # lacks WASM simd128).
 
 $ErrorActionPreference = "Stop"
+# Invoke-WebRequest's progress bar slows the download itself in Windows PowerShell 5.1.
+$ProgressPreference = "SilentlyContinue"
 
 $HelpApp = Split-Path -Leaf $PSCommandPath
 function Show-Usage {
@@ -107,7 +109,15 @@ Write-Host "Extracting web WASM packages..."
 $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 try {
-    Expand-Archive -Path "$cacheDir/$webAsset" -DestinationPath $tmpDir -Force
+    # Expand-Archive is a script-module function: run from a session, it reads the
+    # global progress preference rather than this script's.
+    $savedProgress = $global:ProgressPreference
+    $global:ProgressPreference = "SilentlyContinue"
+    try {
+        Expand-Archive -Path "$cacheDir/$webAsset" -DestinationPath $tmpDir -Force
+    } finally {
+        $global:ProgressPreference = $savedProgress
+    }
 
     Write-Host "  runtime WASM          -> $runtimeDir"
     New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null

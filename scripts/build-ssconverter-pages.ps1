@@ -30,6 +30,8 @@
 #
 # Unlike the .sh twin this needs no jq -- ConvertFrom-Json reads the manifest.
 $ErrorActionPreference = "Stop"
+# Invoke-WebRequest's progress bar slows the download itself in Windows PowerShell 5.1.
+$ProgressPreference = "SilentlyContinue"
 
 $APP = Split-Path -Leaf $PSCommandPath
 $ROOT_DIR = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
@@ -133,7 +135,15 @@ function Get-VersionWasm {
         Write-Host "   checksum OK: $WEB_ASSET"
 
         $extract = Join-Path $tmp "zip"
-        Expand-Archive -Path "$tmp/web-libs.zip" -DestinationPath $extract -Force
+        # Expand-Archive is a script-module function: run from a session, it reads
+        # the global progress preference rather than this script's.
+        $savedProgress = $global:ProgressPreference
+        $global:ProgressPreference = "SilentlyContinue"
+        try {
+            Expand-Archive -Path "$tmp/web-libs.zip" -DestinationPath $extract -Force
+        } finally {
+            $global:ProgressPreference = $savedProgress
+        }
         # The files land flat, as @spritestudio/ssconverter-core expects (mirrors
         # download-sdk.ps1). A renamed or restructured archive aborts the build
         # instead of leaving an empty wasm dir behind -- what `unzip`'s exit code
