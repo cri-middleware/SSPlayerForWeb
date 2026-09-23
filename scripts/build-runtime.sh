@@ -27,6 +27,10 @@ bash "$ROOT_DIR/SpriteStudio-SDK/scripts/release-web.sh" "$MODE"
 
 echo "Copying generated WASM files..."
 mkdir -p "$OUT_DIR"
+# wasm/VERSION names the SDK release download-sdk installed, and what follows
+# replaces the WASM with this local build. Stamp it "local" first, so a later
+# download:wasm sees a mismatch and reinstalls instead of skipping as up to date.
+echo "local" > "$OUT_DIR/VERSION"
 cp -r "$ROOT_DIR/SpriteStudio-SDK/pkg/runtime-web/$MODE/"* "$OUT_DIR/"
 
 # No-SIMD runtime variant for RPG Maker MZ / NW.js (bundled Chromium lacks WASM
