@@ -4,7 +4,7 @@
 `@spritestudio/ssplayer-tyranobuilder` は **ベータ版**（`7.0.0-beta.1`）です。コンポーネント構成やフォルダ構成は `7.0.0` までに変わる可能性があります。動作確認は **TyranoBuilder Ver 3.00**
 （Electron 24.8.8）の macOS で行っています。Windows は未検証です。
 
-**リリースはまだ 1 つもありません。** 正式リリース後は `ssplayer.tbp` が **GitHub Releases** で配布される予定です。現時点では [ソースからビルド](#ソースからビルドする)してください。
+**リリースはまだ 1 つもありません。** 正式リリース後は `ssplayer.tbp` が **GitHub Releases** で配布される予定です。現時点では [ソースからビルド](#building-from-source)してください。
 :::
 
 **SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、保存するたびにエディタ側が自動で変換します。作業を続けたままで構いません。
@@ -24,7 +24,7 @@ TyranoScript 版のサンプルシーンです。ランタイムは同じなの�
 
 | | ファイル | 役割 |
 | --- | --- | --- |
-| **エディタ側** | `ssplayer.builder.js` | [自動インポート](#自動インポート)と、パレットの [SpriteStudio コンポーネント](#コンポーネント) |
+| **エディタ側** | `ssplayer.builder.js` | [自動インポート](#the-auto-importer)と、パレットの [SpriteStudio コンポーネント](#the-components) |
 | **ランタイム側** | `main.js` + `ssruntime_bg.wasm` | コンポーネントが書き出す `[ss_*]` タグの登録と、アニメの描画 |
 
 ランタイム側は [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) そのもので、手書きシナリオで使うバンドルと同一です。1 つのフォルダに両方を同梱しているため、**プラグインの数は 1 つ**で済みます。無料版はプラグインを 2 つまでしか読み込まないため、この点は重要です。
@@ -47,7 +47,7 @@ TyranoScript 版のサンプルシーンです。ランタイムは同じなの�
 
 これ以外の準備は不要です。プラグイン読み込みのタグも、ランタイムの初期化も要りません。
 
-## 自動インポート
+## 自動インポート {#the-auto-importer}
 
 `.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はゲームが実際に再生する軽量なランタイムファイルです。この変換はどの統合でもどこかで行う必要があり、[単体のツール](/ja/usage/assets)では手動で行います。このプラグインはそれをエディタ内で、ソースが変わるたびに自動で行います。
 
@@ -198,7 +198,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 - **テクスチャは埋め込みではなくコピーです。** 各データは画像を `.ssab` の兄弟ファイルとして持ちます。手動で移動するときは一緒に移動してください。
 - **拾うのは `.sspj` だけです。** `SpriteStudio_Source/` 内のそれ以外のファイルは対象になりません（プロジェクトが変更されたかどうかの判定では、フォルダ内の一部として参照されます）。
 
-## コンポーネント
+## コンポーネント {#the-components}
 
 パレットの **プラグイン** の下にあります。
 
@@ -244,7 +244,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 - **SpriteStudio での変更が反映されない** — プロジェクトを開いたあとは自動では走りません。コンポーネントの **今すぐ再変換** を使ってください。まだコンポーネントが無いプロジェクトはプラグイン管理の **今すぐ取り込む** です。どちらでも反映されない場合は
   `.ss_import_state.json` を削除してプロジェクトを開き直してください。
 
-## ソースからビルドする
+## ソースからビルドする {#building-from-source}
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # ランタイム側

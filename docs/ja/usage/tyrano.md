@@ -4,7 +4,7 @@
 `@spritestudio/ssplayer-tyranoscript` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
 [`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
 
-**リリースはまだ 1 つもありません。** 正式リリース後はプラグイン ZIP が **GitHub Releases** で配布される予定ですが、現時点で入手する唯一の方法は [ソースからのビルド](#ソースからビルドする)です。
+**リリースはまだ 1 つもありません。** 正式リリース後はプラグイン ZIP が **GitHub Releases** で配布される予定ですが、現時点で入手する唯一の方法は [ソースからのビルド](#building-from-source)です。
 :::
 
 **TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**
@@ -46,7 +46,7 @@
 ここで説明するプラグイン ZIP は **TyranoScript 用**です。**ティラノビルダー**で制作する場合は代わりに `ssplayer.tbp` を入れてください。`.tbp` はこの ZIP の 3 ファイルをそのまま内包した上で、エディタ側（コンポーネントと自動変換）を追加したものなので、ダウンロードはそれ 1 つで足ります。**どちらか一方だけを入れてください。** 展開先はどちらも同じ `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
 :::
 
-**まだリリースが公開されていない**ため、当面は [ソースからビルド](#ソースからビルドする)してください。最初のリリース以降は、**GitHub Releases** からプラグイン ZIP をダウンロードして次のように導入します。
+**まだリリースが公開されていない**ため、当面は [ソースからビルド](#building-from-source)してください。最初のリリース以降は、**GitHub Releases** からプラグイン ZIP をダウンロードして次のように導入します。
 
 1. 解凍すると `ssplayer/` フォルダが入っています（`init.ks`＝ローダ、`main.js`＝プラグイン本体、
    `ssruntime_bg.wasm`＝ランタイム）。
@@ -219,7 +219,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 ティラノビルダーについては専用プラグイン `@spritestudio/ssplayer-tyranobuilder` があり、`.tbp` として配布され、コンポーネントパレットへの追加に加えて `.sspj` の変換もエディタ内で行います（[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照）。どちらの統合でも未対応の範囲は
 [制約と適用範囲](/ja/limitations#tyranoscript-ティラノビルダー) を参照してください。
 
-## ソースからビルドする
+## ソースからビルドする {#building-from-source}
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
