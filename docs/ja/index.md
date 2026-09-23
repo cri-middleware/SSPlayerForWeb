@@ -51,8 +51,7 @@ features:
 
 ## 概要（.sspj → 描画まで）
 
-`.sspj` は **ビルド時に一度** `.ssab` へ変換し、**実行時**はその `.ssab` を
-読み込んで描画するだけです。変換は **ブラウザツール（`ssconverter-web`）**、**GUI ツール（[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)）** と
+`.sspj` は **ビルド時に一度** `.ssab` へ変換し、**実行時**はその `.ssab` を読み込んで描画するだけです。変換は **ブラウザツール（`ssconverter-web`）**、**GUI ツール（[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)）** と
 **CLI（[`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases)）** の 3 経路があります。
 
 ```mermaid
@@ -107,8 +106,7 @@ graph LR
 | [`ssconverter-web`](/ja/usage/assets) | `.sspj` → `.ssab` 変換ツール（ブラウザツール + Node CLI）です。 |
 | [`@spritestudio/ssconverter-core`](/ja/usage/assets) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合）です。 |
 
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（非公開・npm 未公開。
-プラグインとして導入します）:
+**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（非公開・npm 未公開。プラグインとして導入します）:
 
 | パッケージ | 用途 |
 |---|---|

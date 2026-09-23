@@ -97,34 +97,21 @@ scripts/build-docs.sh      # TypeDoc のあと VitePress -> docs/.vitepress/dist
 
 `pages.yml` も `build-docs.sh` を実行するので、CI と手元のビルドがずれません。役に立つオプションは
 2 つです。文章だけを直したときに TypeDoc を飛ばす `api=no` と、プロジェクトサイトに必要な
-`DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。**ゲートはこのビルドだけです。** プルリクエスト
-では docs はビルドされず、リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
+`DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。**ゲートはこのビルドだけです。** プルリクエストでは docs はビルドされず、リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
 `docs/ja` を自分で解決するため、これは両ロケールを**一度に**ビルドします。Zensical の Player 群の
 `build-docs` が `locale=` を取るのに対し、こちらが取らないのはそのためです。wasm は省略できません。
 TypeDoc が読む `packages/*/src` がバインディングを import しているからです。
 
-`docs/.vitepress/config.mts` は Open Graph / Twitter Card タグを `transformHead` で、VitePress が
-解決済みのタイトルと説明から組み立てます。**1 つのコードパスが両ロケールを賄います。** 日本語の
-カードは `locales.ja.description` から来るので、ローカライズはロケールごとの設定値を足して行い、
-`transformHead` の中でロケール分岐を書かないでください。`og:url` は `base` ではなく `SITE_URL` から
-作ります（`base` はローカル開発では `/` になるためです）。
+`docs/.vitepress/config.mts` は Open Graph / Twitter Card タグを `transformHead` で、VitePress が解決済みのタイトルと説明から組み立てます。**1 つのコードパスが両ロケールを賄います。** 日本語のカードは `locales.ja.description` から来るので、ローカライズはロケールごとの設定値を足して行い、
+`transformHead` の中でロケール分岐を書かないでください。`og:url` は `base` ではなく `SITE_URL` から作ります（`base` はローカル開発では `/` になるためです）。
 
 ## 公開サイト全体のビルド
 
 `scripts/build-pages.sh` が全体を 1 つのディレクトリ（既定 `_site`）に組み立てます。ルートに docs、
-`/ssconverter/` に `versions.json` の各スキーマバージョンの `ssconverter-web`、`/examples/` に
-サンプル 5 本です。`pages.yml` も同じスクリプトを実行し、GitHub 側の仕事（チェックアウト、
-ツールチェイン、アーティファクトのアップロード、デプロイ）だけを持ちます。
+`/ssconverter/` に `versions.json` の各スキーマバージョンの `ssconverter-web`、`/examples/` にサンプル 5 本です。`pages.yml` も同じスクリプトを実行し、GitHub 側の仕事（チェックアウト、ツールチェイン、アーティファクトのアップロード、デプロイ）だけを持ちます。
 
-`base=` の既定は `/<repo>/` です。プロジェクトサイトはその下で配信されるため、`/` 向けに建てた
-サイトはローカルでは問題なく見えて、デプロイすると 404 します。`skip=<stages>` が反復作業を可能に
-します（`skip=install,wasm,packages,assets,rmmz,tyranoscript,ssconverter` で docs だけ建て直せます）。
-スキップした段はその部分をサイトから外し警告を出しますが、走ったのに何も出さなかった段はエラーです。
-既定の `sdk=download` は `scripts/SDK_VERSION.txt` のビルド済み wasm を取得します。`sdk=build` は
-submodule からコンパイルし、その SDK リリースがまだ無いときの回避路ですが、`ssconverter` 段に
-届くのは **`sdk` タグが `SDK_VERSION.txt` と一致するスキーマバージョン 1 つだけ**です。他の
-バージョンは自分がピンしたリリースをダウンロードし続けます（それがピンの意味です）。どちらを
-取ったかは各バージョンがログに出します。
+`base=` の既定は `/<repo>/` です。プロジェクトサイトはその下で配信されるため、`/` 向けに建てたサイトはローカルでは問題なく見えて、デプロイすると 404 します。`skip=<stages>` が反復作業を可能にします（`skip=install,wasm,packages,assets,rmmz,tyranoscript,ssconverter` で docs だけ建て直せます）。スキップした段はその部分をサイトから外し警告を出しますが、走ったのに何も出さなかった段はエラーです。既定の `sdk=download` は `scripts/SDK_VERSION.txt` のビルド済み wasm を取得します。`sdk=build` は
+submodule からコンパイルし、その SDK リリースがまだ無いときの回避路ですが、`ssconverter` 段に届くのは **`sdk` タグが `SDK_VERSION.txt` と一致するスキーマバージョン 1 つだけ**です。他のバージョンは自分がピンしたリリースをダウンロードし続けます（それがピンの意味です）。どちらを取ったかは各バージョンがログに出します。
 
 `pnpm install` では足りないものが 3 つあります。SpriteStudio-SDK submodule、ネットワーク、そして
 `.sh` の経路でのみ `jq` です（`.ps1` 双子は `ConvertFrom-Json` で済ませます）。
@@ -132,34 +119,20 @@ submodule からコンパイルし、その SDK リリースがまだ無いと�
 ## リリースの手順
 
 リリースとは、溜まった changeset が出荷に値するようになったときに、維持者が `main` で **Release**
-ワークフローを実行することです。パッケージは Changesets により独立にバージョニングされ、ブランチ
-モデルはそこから導かれます（[CONTRIBUTING.md](./CONTRIBUTING.md) に記載）。
+ワークフローを実行することです。パッケージは Changesets により独立にバージョニングされ、ブランチモデルはそこから導かれます（[CONTRIBUTING.md](./CONTRIBUTING.md) に記載）。
 
-`scripts/build-release.sh` は**両方**のチャンネルを 1 つのディレクトリ（既定 `release-dist`）に
-ビルドし、どちらも publish しません。`<out>/npm/*.tgz`（`private` でない全パッケージの `pnpm pack`。
-`files` 許可リスト、`prepack` の成果物ガード、`workspace:^` の書き換えが publish と同じように
-適用されます）と `<out>/plugins/*`（各 private パッケージ自身の `pack` スクリプトの出力。
+`scripts/build-release.sh` は**両方**のチャンネルを 1 つのディレクトリ（既定 `release-dist`）にビルドし、どちらも publish しません。`<out>/npm/*.tgz`（`private` でない全パッケージの `pnpm pack`。
+`files` 許可リスト、`prepack` の成果物ガード、`workspace:^` の書き換えが publish と同じように適用されます）と `<out>/plugins/*`（各 private パッケージ自身の `pack` スクリプトの出力。
 `release.yml` がプラグインごとの GitHub Release に添付するファイルそのもの）、そして両方に対する
-`SHA256SUMS` です。`release.yml` はアップロードするプラグイン asset のためにこれを実行するので、
-維持者が確認するアーカイブが Release に載るものと同一になります。どのファイルがどのパッケージの
-ものかは、ワークフローが `<out>/manifest.json` から読みます。
+`SHA256SUMS` です。`release.yml` はアップロードするプラグイン asset のためにこれを実行するので、維持者が確認するアーカイブが Release に載るものと同一になります。どのファイルがどのパッケージのものかは、ワークフローが `<out>/manifest.json` から読みます。
 
 npm 側だけは例外で、そうする他にありません。`changeset publish` はワークスペースから直接
-pack するため、渡せる tarball が存在しないのです。ローカルでビルドしておくことが、npm の成果物を
-まだ直せるうちに確認できる唯一の機会になります（publish 済みのバージョンは変更できません）。
-このスクリプトはバージョンを上げません（`changeset version` はリリースの中で走ります）。したがって
-事前のローカル実行は 1 バンプ古い成果物を作ります。changeset が未処理のときや pre モードのときは、
-各パッケージがどのバージョンになるかを明示してそう伝えます。
+pack するため、渡せる tarball が存在しないのです。ローカルでビルドしておくことが、npm の成果物をまだ直せるうちに確認できる唯一の機会になります（publish 済みのバージョンは変更できません）。このスクリプトはバージョンを上げません（`changeset version` はリリースの中で走ります）。したがって事前のローカル実行は 1 バンプ古い成果物を作ります。changeset が未処理のときや pre モードのときは、各パッケージがどのバージョンになるかを明示してそう伝えます。
 
 **このスクリプトの価値は検査にあります。** どの検査も、無ければそのまま出荷される失敗です。
-packed manifest に残った `workspace:`、tarball から欠けた `files` エントリ、CDN スニペットが URL で
-読み込む 2 つめ（`dist/`）の wasm コピーを欠いた `ssplayer-core`、no-SIMD ではなく SIMD ランタイムを
-同梱した RPG ツクール MZ プラグイン（MZ の NW.js は読み込めません）、改名されたか `ssplayer/`
+packed manifest に残った `workspace:`、tarball から欠けた `files` エントリ、CDN スニペットが URL で読み込む 2 つめ（`dist/`）の wasm コピーを欠いた `ssplayer-core`、no-SIMD ではなく SIMD ランタイムを同梱した RPG ツクール MZ プラグイン（MZ の NW.js は読み込めません）、改名されたか `ssplayer/`
 フォルダ以外を含む `ssplayer.tbp`（ビルダーはファイル名からプラグイン ID を導きます）、
-TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の
-不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が
-失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
+TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
 
-npm の tarball は実行ごとに再現可能ですが、プラグインのアーカイブは再現しません（`zip` が mtime を
-格納するため）。そちらはハッシュではなく中身で比較してください。Windows 双子は plugins 段で PATH 上の
+npm の tarball は実行ごとに再現可能ですが、プラグインのアーカイブは再現しません（`zip` が mtime を格納するため）。そちらはハッシュではなく中身で比較してください。Windows 双子は plugins 段で PATH 上の
 `zip` を必要とします（Windows には同梱されていません）。

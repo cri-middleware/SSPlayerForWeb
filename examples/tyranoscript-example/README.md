@@ -4,9 +4,7 @@
 プロジェクト上で表示・再生する最小サンプルです（PT1）。
 
 > **TyranoScript 本体はこのリポジトリに含まれません。**
-> ライセンス上、本体の再配布は控えています（フリー・商用可のエンジンですが、
-> プラグインとして自作物を配る方針）。本体は**開発時に各自で配置**します。
-> このサンプルがコミットしているのは *authored* な部分だけです:
+> ライセンス上、本体の再配布は控えています（フリー・商用可のエンジンですが、プラグインとして自作物を配る方針）。本体は**開発時に各自で配置**します。このサンプルがコミットしているのは *authored* な部分だけです:
 > `data/scenario/first.ks` / `data/others/plugin/ssplayer/init.ks` /
 > `data/others/ssdata/*.ssab`。
 
@@ -32,8 +30,7 @@ examples/tyranoscript-example/
 
 公式リポジトリ [ShikemokuMK/tyranoscript](https://github.com/ShikemokuMK/tyranoscript)
 （**ブラウザ対応版**）を自動取得します。取得先の ref は `TYRANO_VERSION.txt`
-（既定 `master`、タグ例 `v514` も可）。なお上流はタグ運用を停止しており、
-最新タグ `v514` は master より大幅に古いため、既定の `master` を推奨します。
+（既定 `master`、タグ例 `v514` も可）。なお上流はタグ運用を停止しており、最新タグ `v514` は master より大幅に古いため、既定の `master` を推奨します。
 
 ```bash
 pnpm --filter tyranoscript-example run fetch:engine
@@ -41,17 +38,13 @@ pnpm --filter tyranoscript-example run fetch:engine
 ```
 
 これで `index.html` / `tyrano/` / `data/system/` を配置し（すべて .gitignore 済み）、
-`Config.tjs` に **`configSave = webstorage`** と一意の **`projectID`** を自動設定します
-（下記トラブルシュート参照）。本サンプルの `data/scenario/first.ks` ・
+`Config.tjs` に **`configSave = webstorage`** と一意の **`projectID`** を自動設定します（下記トラブルシュート参照）。本サンプルの `data/scenario/first.ks` ・
 `others/plugin/ssplayer` ・ `others/ssdata` は保持されます。
 
 > **なぜ手動コピーでなく取得か**: TyranoScript の**デスクトップ（nw.js）書き出し**は
-> `configSave = file`（`require('fs')` 依存）で動くため、**ブラウザで開くと起動時に
-> クラッシュ**します（`init_game` が `_system_config_bgm_volume` を null から読む）。
-> 公式リポジトリはブラウザ版で、本スクリプトが `webstorage` を強制するので確実です。
+> `configSave = file`（`require('fs')` 依存）で動くため、**ブラウザで開くと起動時にクラッシュ**します（`init_game` が `_system_config_bgm_volume` を null から読む）。公式リポジトリはブラウザ版で、本スクリプトが `webstorage` を強制するので確実です。
 
-> 必要ツール: `curl` と `tar`（macOS/Linux・Windows 10+ に同梱）。手動配置したい場合は
-> 上記 3 つを `examples/tyranoscript-example/` 直下に置き、Config.tjs に
+> 必要ツール: `curl` と `tar`（macOS/Linux・Windows 10+ に同梱）。手動配置したい場合は上記 3 つを `examples/tyranoscript-example/` 直下に置き、Config.tjs に
 > `configSave = webstorage;` と一意の `projectID` を設定してください。
 
 配置後のイメージ（`index.html` / `tyrano/` / `data/system/` は .gitignore 済み）:
@@ -68,8 +61,7 @@ examples/tyranoscript-example/
     others/ssdata/Ringo/…       ← 生成アセット（deploy-examples、コミットしない）
 ```
 
-> 画面解像度は TyranoScript 既定の **1280×720** を想定しています
-> （`first.ks` の `x=640 y=480` はこの論理座標）。`data/system/Config.tjs` の
+> 画面解像度は TyranoScript 既定の **1280×720** を想定しています（`first.ks` の `x=640 y=480` はこの論理座標）。`data/system/Config.tjs` の
 > `scWidth` / `scHeight` を変えた場合は座標も合わせてください。
 
 ### 2. プラグインと SS アセットを用意する
@@ -95,9 +87,7 @@ pnpm --filter tyranoscript-example run dev
 # → http://localhost:5847/ を開く（他 tyrano プロジェクトと origin を分離するため独自ポート）
 ```
 
-`[ss_new]` で Ringo アニメがレイヤー 0 に表示され、ループ再生されれば成功です。
-**見た目の正解合わせ**は SpriteStudio エディタ／`examples/webgl-example` と
-並べて突き合わせてください（webgl 版と同一レンダラなので一致するはず）。
+`[ss_new]` で Ringo アニメがレイヤー 0 に表示され、ループ再生されれば成功です。**見た目の正解合わせ**は SpriteStudio エディタ／`examples/webgl-example` と並べて突き合わせてください（webgl 版と同一レンダラなので一致するはず）。
 
 ## 開発イテレーション（まとめ）
 
@@ -120,9 +110,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run test
 
 TyranoScript 本体の `init_game` が、localStorage の `<projectID>_sf`（システム変数）を
 `JSON.parse` した結果が `null`（文字列 `"null"` が保存されている）だと落ちます。
-`projectID` を **未指定のままにすると既定値 `tyranoproject` に集約**され、同一
-ドメイン（`localhost`）上の別の TyranoScript プロジェクトと localStorage が衝突して
-このゴミが混入します。
+`projectID` を **未指定のままにすると既定値 `tyranoproject` に集約**され、同一ドメイン（`localhost`）上の別の TyranoScript プロジェクトと localStorage が衝突してこのゴミが混入します。
 
 **対策**（このサンプルは実施済み・二重に隔離）:
 
@@ -135,12 +123,9 @@ TyranoScript 本体の `init_game` が、localStorage の `<projectID>_sf`（シ
 projectID = ssplayer_tyrano_example;
 ```
 
-> それでも直らない場合（過去に同一 origin で起動して localStorage が汚れている等）は、
-> **シークレット/プライベートウィンドウで開く**のが確実（localStorage・SW・キャッシュ・
-> 拡張が全てクリーン）。または DevTools ▸ Application ▸ **Clear site data** → リロード。
+> それでも直らない場合（過去に同一 origin で起動して localStorage が汚れている等）は、**シークレット/プライベートウィンドウで開く**のが確実（localStorage・SW・キャッシュ・拡張が全てクリーン）。または DevTools ▸ Application ▸ **Clear site data** → リロード。
 >
-> なお `polyfills.js` / `vendor-3rdparty.js` の `Failed to fetch` は**ブラウザ拡張**が
-> 出しているもので本サンプルとは無関係（シークレットウィンドウでは消えます）。
+> なお `polyfills.js` / `vendor-3rdparty.js` の `Failed to fetch` は**ブラウザ拡張**が出しているもので本サンプルとは無関係（シークレットウィンドウでは消えます）。
 >
 > `Config.tjs` はエンジン付属＝git 管理外。本体を各自配置したら**必ず一意の
 > `projectID` を設定**してください。
@@ -162,31 +147,23 @@ projectID = ssplayer_tyrano_example;
 
 ### セーブ / ロード復元（PT2）
 
-`[ss_new]` 等は各プレイヤーの復元情報を `stat.f.__ssplayers`（セーブ対象）へ随時
-ミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、
-シナリオが再開する直前＝TyranoScript が **`data/scenario/make.ks`** を call するのと
-同じ隙間）でプラグインが自動的に再構築します。**`make.ks` への記述は不要**です。
+`[ss_new]` 等は各プレイヤーの復元情報を `stat.f.__ssplayers`（セーブ対象）へ随時ミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝TyranoScript が **`data/scenario/make.ks`** を call するのと同じ隙間）でプラグインが自動的に再構築します。**`make.ks` への記述は不要**です。
 
 動作確認: 起動 → Ringo 表示中にメニューからセーブ → タイトルへ戻る → ロード。
 Ringo が復元されれば成功です（frame ではなくアニメ先頭から再生を復元）。
 
 > ⚠️ **表示テキスト内に `[ss_xxx]` のような角括弧のタグ記法を書かないこと**。
-> TyranoScript はテキスト内の `[...]` もタグとして実行してしまいます（`ss_play` のように
-> 角括弧なしで書く）。
+> TyranoScript はテキスト内の `[...]` もタグとして実行してしまいます（`ss_play` のように角括弧なしで書く）。
 
 ### 移動・エフェクトは標準タグで
 
 canvas にはプレイヤー名が CSS クラスとして付くので、**フェードや単純移動は
 TyranoScript 標準の `[anim]` / `[kanim]` がそのまま使えます**（本サンプルは
-`[anim ... opacity=]` でフェードを実演）。**アンカー基準・絶対座標**の移動/スケールは
-内部 `setTransform` を叩く **`[ss_pos]`（瞬間）/ `[ss_move]`（補間）**を使います
-（本サンプルで実演）。詳細はパッケージ README を参照。
+`[anim ... opacity=]` でフェードを実演）。**アンカー基準・絶対座標**の移動/スケールは内部 `setTransform` を叩く **`[ss_pos]`（瞬間）/ `[ss_move]`（補間）**を使います（本サンプルで実演）。詳細はパッケージ README を参照。
 
 ### 音声（PT3）
 
 SS の音声イベントは TyranoScript 同梱の howler で再生されます。音声ファイルは
-`data/sound/` に置き、SS のサウンド名 → `data/sound/<name>.ogg` に解決されます
-（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
-本サンプルの Ringo には音声が無いため鳴りません。
+`data/sound/` に置き、SS のサウンド名 → `data/sound/<name>.ogg` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。本サンプルの Ringo には音声が無いため鳴りません。
 
 ティラノビルダー `.tbp` 対応は PT4（[ssplayer-tyranoscript ROADMAP](../../packages/ssplayer-tyranoscript/ROADMAP.md)）。

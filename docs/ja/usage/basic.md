@@ -20,8 +20,7 @@ player.setAnimation(name);  // アニメーションを選択（WebGL / PixiJS �
 player.currentAnimation;       // 現在のアニメーション名
 ```
 
-再生設定は引数ではなくプロパティです（[再生制御](#再生制御)）。これらはアニメーションではなく
-呼び出し側のものなので、`setAnimation` を跨いで保持されます。`loopCount = 3` は切り替え後も
+再生設定は引数ではなくプロパティです（[再生制御](#再生制御)）。これらはアニメーションではなく呼び出し側のものなので、`setAnimation` を跨いで保持されます。`loopCount = 3` は切り替え後も
 3 回のままです。
 
 `setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので
@@ -54,10 +53,7 @@ player.currentAnimation;       // 現在設定されているアニメーショ�
 player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー再生や高リフレッシュで滑らか）
 ```
 
-`subFrameEnabled` を off にすると変わるのは **描画される** フレーム（レンダラは floor した
-フレームを表示します）で、`frameNo` が返す値ではありません。再生ヘッドはどちらでも小数を
-保つので、off のまま行ったシークは on に戻したときもそのままの位置にあります。兄弟 Player も
-同じ返し方です。
+`subFrameEnabled` を off にすると変わるのは **描画される** フレーム（レンダラは floor したフレームを表示します）で、`frameNo` が返す値ではありません。再生ヘッドはどちらでも小数を保つので、off のまま行ったシークは on に戻したときもそのままの位置にあります。兄弟 Player も同じ返し方です。
 
 ## 区間・方向
 
@@ -85,8 +81,7 @@ player.offsetY = -10;
 player.flipX = velocityX < 0;
 ```
 
-`player.scale.x = -1`（WebGL なら `setTransform({ scaleX: -1 })`）でも絵は同じように反転します。
-違うのは **反転したことを誰が知っているか** です。
+`player.scale.x = -1`（WebGL なら `setTransform({ scaleX: -1 })`）でも絵は同じように反転します。違うのは **反転したことを誰が知っているか** です。
 
 | | `flipX` | `scale.x = -1` |
 |---|---|---|
@@ -119,8 +114,7 @@ player.findPartIndex('body');    // 名前 → インデックス（不明なら
 ```
 
 パーツ単位で色 / セル / 表示を実行時に上書きするには
-[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください
-（こちらは PixiJS・WebGL 共通です）。
+[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください（こちらは PixiJS・WebGL 共通です）。
 
 ---
 

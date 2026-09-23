@@ -10,13 +10,10 @@
 | **PixiJS v8** で構築済みのアプリ | [`@spritestudio/ssplayer-pixi`](/ja/usage/pixi) |
 | 独自エンジンにレンダラーを自作する | `@spritestudio/ssplayer-core` |
 
-レンダラーパッケージは `@spritestudio/ssplayer-core` を再エクスポートしているため、
-コアを個別に入れる必要はありません。
+レンダラーパッケージは `@spritestudio/ssplayer-core` を再エクスポートしているため、コアを個別に入れる必要はありません。
 
 ::: tip フレームワーク連携
-ゲーム/ノベルフレームワーク向けの連携は `ssplayer-webgl` を土台とし、各フレームワークの
-プラグイン機構で読み込む **IIFE バンドル**として提供されます（npm からインストールするのではなく
-プラグインとして利用）:
+ゲーム/ノベルフレームワーク向けの連携は `ssplayer-webgl` を土台とし、各フレームワークのプラグイン機構で読み込む **IIFE バンドル**として提供されます（npm からインストールするのではなくプラグインとして利用）:
 
 - **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
 - **TyranoScript**（`@spritestudio/ssplayer-tyranoscript`）— [TyranoScript で使う](/ja/usage/tyrano) を参照。
@@ -53,9 +50,7 @@ npm install @spritestudio/ssplayer-pixi@beta pixi.js
 ## 前提
 
 - ブラウザが **WebGL** に対応していること（`ssplayer-webgl` は WebGL 1 / 2、
-  `ssplayer-pixi` は WebGL 2 が必要）。加えて `ssplayer-pixi` は、PixiJS v8 の
-  バックエンド優先順位に従い、WebGPU が利用可能ならそれを使い、なければ WebGL2 に
-  フォールバックします。
+  `ssplayer-pixi` は WebGL 2 が必要）。加えて `ssplayer-pixi` は、PixiJS v8 のバックエンド優先順位に従い、WebGPU が利用可能ならそれを使い、なければ WebGL2 にフォールバックします。
 - 再生には **`.ssab`（ランタイムバイナリ）** が必要です。SpriteStudio の `.sspj`
   からの変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
 

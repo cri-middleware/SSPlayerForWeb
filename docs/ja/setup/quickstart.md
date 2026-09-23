@@ -4,8 +4,7 @@
 PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う環境に合う方を選んでください。
 
 ::: tip SpriteStudio のデータが手元に無くても始められます
-[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)が
-そのまま使えます。キャラクターなら
+[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
 [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
 [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
 が手頃です。
@@ -13,8 +12,7 @@ PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う�
 
 ## ssplayer-webgl（依存なし）
 
-もっとも手軽な方法は Web Component の `<ss-player>` です。JavaScript をほとんど
-書かずに再生できます。
+もっとも手軽な方法は Web Component の `<ss-player>` です。JavaScript をほとんど書かずに再生できます。
 
 ```html
 <script type="module">
@@ -58,8 +56,7 @@ main().catch(console.error);
 
 ## ssplayer-pixi（PixiJS v8）
 
-`SSPlayer` は PixiJS の `Container` を継承し、`Ticker.shared` から**自動更新**されます。
-ステージに追加して `play()` を呼ぶだけで、毎フレームの `update()` は不要です。
+`SSPlayer` は PixiJS の `Container` を継承し、`Ticker.shared` から**自動更新**されます。ステージに追加して `play()` を呼ぶだけで、毎フレームの `update()` は不要です。
 
 ```ts
 import { Application } from 'pixi.js';
@@ -90,11 +87,9 @@ main().catch(console.error);
 
 ## つまずきやすい点
 
-- **`initialize()` は一度だけ**：WASM ランタイムはアプリ起動時に 1 回初期化すれば
-  十分です（`SSSurface.initialize()` / `SSPlayer.initialize()`）。
+- **`initialize()` は一度だけ**：WASM ランタイムはアプリ起動時に 1 回初期化すれば十分です（`SSSurface.initialize()` / `SSPlayer.initialize()`）。
 - **Pixi では `update()` を呼ばない**：`SSPlayer` は `Ticker.shared` に自動登録されます。
 - **`.ssab` が無い**：`.sspj` からの変換は [アセットの準備](/ja/usage/assets) を参照してください。
-- **テクスチャが表示されない**：テクスチャは `.ssab` と同じディレクトリから読み込まれます。
-  テクスチャファイルを `.ssab` の隣に置く（または `--embedded` の `.ssab` を使う）でください。
+- **テクスチャが表示されない**：テクスチャは `.ssab` と同じディレクトリから読み込まれます。テクスチャファイルを `.ssab` の隣に置く（または `--embedded` の `.ssab` を使う）でください。
 
 次は [基本的な再生](/ja/usage/basic) で再生制御 API を見ていきます。
