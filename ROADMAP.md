@@ -70,6 +70,18 @@ describes and the official players implement, but this one does not yet.
     Return every part name in one call, in part-index order — no need to walk `getPartsCount()`
     and resolve each index. Available on every player (the count is `getPartNames().length`).
 
+*   [ ] **Animation blending / crossfade** — *after the first release*
+    Layer and cross-fade animations on one player through the runtime's track stack. The runtime
+    side is complete and the WASM build already exports the track calls; what is missing is the
+    JS surface in `ssplayer-core` and the renderers on top of it.
+    *   *Reference*: `SSPlayerForWgpu`, the one official player that surfaces it
+        (`set_track_animation` / `crossfade` / `fade_track` / …). The names follow the stems in
+        the SDK's [Player API Conventions](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/20_design/30_api_conventions.md)
+        §3-2 — `setTrackAnimation`, `crossfade`, `addTrackSource`, `fadeTrack`, … — and the
+        design is its [Animation mixing](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/50_features/10_animation_mixing.md)
+        page.
+    *   *Deferred*: a selling point, not a release blocker.
+
 ## DOM / UI integration
 
 The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration point — a Custom Element with a `ResizeObserver`, a shared-overlay mode and a standalone mode. What is missing is everything past drawing: an element that sizes, receives pointers and announces itself the way a control on the page does. The vocabulary is shared with the sibling Players — `fit` / `align` for placement, a part rect read-out for hit areas, and a UI-state map.

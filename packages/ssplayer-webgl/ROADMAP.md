@@ -9,8 +9,8 @@ stays minimal.
 For the overall project roadmap see [`../../ROADMAP.md`](../../ROADMAP.md); for
 the underlying Rust/WASM engine see
 [`../../SpriteStudio-SDK/ROADMAP.md`](../../SpriteStudio-SDK/ROADMAP.md). As with
-the other Players, several remaining items are gated on `SpriteStudio-SDK` FFI
-work (see *Blocked on SpriteStudio-SDK* below).
+the other Players, a remaining item is gated on `SpriteStudio-SDK` FFI work (see
+*Blocked on SpriteStudio-SDK* below).
 
 ## Implemented
 
@@ -61,12 +61,10 @@ These require underlying `SpriteStudio-SDK` runtime / FFI work before the
 renderer can wire them up.
 
 *   [ ] **label-seek** — awaiting the corresponding SDK API.
-*   [ ] **Animation blending / crossfade** — the WASM C-API exists; the JS wiring
-    is pending.
 
-(Runtime texture swap is a player-side feature, not SDK-blocked; the resource
-manager's `bindTextureSource()` already provides the partial primitive — see
-[`../../ROADMAP.md`](../../ROADMAP.md).)
+(Animation blending / crossfade is not SDK-blocked — the WASM build already
+exports the track calls — so it is tracked with the other player-side features
+in [`../../ROADMAP.md`](../../ROADMAP.md).)
 
 ## Items not on the roadmap by design
 
