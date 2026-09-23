@@ -282,7 +282,7 @@ function boot(): void {
     clearSSTalk(num(args.pictureId, 1));
   });
 
-  // --- Part overrides (SDK docs: 40_components/65_override_layer) ---
+  // --- Part overrides ---
   //
   // "Make this part this colour / this cell / hidden NOW", winning over the
   // keyframed animation. Each command writes the picture (saved) and applies it

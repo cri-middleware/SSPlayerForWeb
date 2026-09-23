@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 
 // A name the pack does not have has to come back as a failure that says which
-// pack and which name (SDK: `20_design/40_api_conventions`, §7).
+// pack and which name.
 //
 // The wasm boundary throws the Brain's error enum as a bare string —
 // "AnimationNotFound" — which names neither. This layer is the only one holding

@@ -133,7 +133,7 @@ export class SSWebAudioManager implements IAudioManager {
      * Returns an unsubscribe function for the `onAudio` binding.
      *
      * Sounds only while the playhead walks **forwards**: SpriteStudio has no
-     * reverse audio (SDK: 10_introduction/20_limitations), and playing the keys
+     * reverse audio, and playing the keys
      * a backward or ping-pong-return leg crosses would be a different sound
      * from the one that was authored. The player still reports every key it
      * crosses — the gate belongs here, on the playing, not on the reporting.

@@ -99,7 +99,7 @@ export class TyranoAudioManager implements IAudioManager {
    * unsubscribe. Call BEFORE `setAnimation`.
    *
    * Sounds only while the playhead walks **forwards**: SpriteStudio has no
-   * reverse audio (SDK: 10_introduction/20_limitations). The player reports
+   * reverse audio. The player reports
    * every key it crosses either way — the gate belongs here, on the playing.
    */
   bindToPlayer(player: SSPlayer): Unsubscribe {

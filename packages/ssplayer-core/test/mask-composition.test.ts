@@ -11,7 +11,7 @@ import {
 } from '../src/MaskComposition.js';
 
 /**
- * Instance-hierarchy mask composition (09_mask.ja.md §2-6). The rule that
+ * Instance-hierarchy mask composition. The rule that
  * matters is that neither side of an instance call wins outright: the caller
  * and the callee are combined, with AND for mask_influence and OR for
  * visible_inside_mask. The defect these replaced was a "callee wins if it has

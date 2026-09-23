@@ -749,7 +749,7 @@ describe('registerSSTags', () => {
     vi.unstubAllGlobals();
   });
 
-  // --- Part overrides (65_override_layer) ---------------------------------
+  // --- Part overrides -----------------------------------------------------
   //
   // Each tag has to do two things: drive the live player now, and mirror the
   // change into the save slot so [ss_restore] can put it back on a player whose

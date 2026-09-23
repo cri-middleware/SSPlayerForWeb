@@ -67,7 +67,7 @@ async function main() {
 
     console.log("SSPlayer initialized successfully.");
 
-    // --- Animation event listeners (06_playback_control) ---
+    // --- Animation event listeners ---
     // The runtime fires UserData / Signal / Audio events on the frames they were
     // authored; end/loop are derived from playback state. Drag-drop e.g.
     // UserData.ssab / Signal.ssab / Sound.ssab to see these fire. The runtime

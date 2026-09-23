@@ -3,7 +3,7 @@ import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 import type { SSTextureEntry } from './SSWebGLTextureCache.js';
 import type { SSSurface } from './SSSurface.js';
 
-// --- Animation event payloads (06_playback_control.ja.md) ---
+// --- Animation event payloads ---
 // Event extraction lives here in the renderer package (not core): it reads the
 // SSAB events table for the current animation via the runtime manager's
 // introspection accessors, parses the FlatBuffer payloads, and dispatches typed
@@ -34,7 +34,7 @@ export interface SSUserDataEvent {
 /**
  * A signal event fired by a part. `params` maps each command parameter id to
  * its authored value (bool / int / float / string). Only **active** signals are
- * dispatched (mirroring the Godot / Unity players and the porting guide).
+ * dispatched (mirroring the Godot / Unity players).
  */
 export interface SSSignalEvent {
   partIndex: number;
@@ -52,7 +52,7 @@ export interface SSSignalEvent {
 /**
  * An audio event fired by a part: the SSAB sound reference (hashes + alias
  * name) plus loop count. The runtime plays no audio — the host resolves the
- * sound and plays it on its own audio engine (11_optional_features.ja.md).
+ * sound and plays it on its own audio engine.
  * Attach an {@link IAudioManager} (e.g. `SSWebAudioManager`) to actually play it.
  */
 export interface SSAudioEvent {
@@ -663,7 +663,7 @@ export class SSPlayer {
     }
   }
 
-  // --- Part overrides (65_override_layer) ---
+  // --- Part overrides ---
   //
   // Thin pass-throughs to the core player, which owns the contract (see
   // InternalPlayerBase): part is a name or an index, false means the part is
@@ -831,7 +831,7 @@ export class SSPlayer {
     return this.internalPlayer.isPartSkinnedMesh(part);
   }
 
-  // --- Animation events (06_playback_control.ja.md) ---
+  // --- Animation events ---
   //
   // Listeners are drained each frame by update() via pollEvents(). Each
   // registration returns an unsubscribe function. The runtime plays no audio —

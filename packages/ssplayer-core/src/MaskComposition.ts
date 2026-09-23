@@ -1,5 +1,5 @@
-// Composition of mask settings down an instance-part hierarchy
-// (09_mask.ja.md §2-6). When a part calls a sub-animation, the caller's mask
+// Composition of mask settings down an instance-part hierarchy.
+// When a part calls a sub-animation, the caller's mask
 // settings do NOT replace the callee's, nor the other way round — they compose:
 //
 //   effective mask_influence      = caller's effective && own mask_influence
@@ -33,7 +33,7 @@ export const ROOT_MASK_INFLUENCE = true;
 export const ROOT_VISIBLE_INSIDE = false;
 
 /**
- * AND-compose `mask_influence` (§2-6). Once a caller is not a mask target the
+ * AND-compose `mask_influence`. Once a caller is not a mask target the
  * result is false for good — it can never return to true further down — so a
  * whole subtree below an opted-out instance part is settled as non-target.
  *
@@ -45,7 +45,7 @@ export function composeMaskInfluence(callerInfluence: boolean, partFlags: number
 }
 
 /**
- * OR-compose `visible_inside_mask` (§2-6). Once any level asks to be drawn
+ * OR-compose `visible_inside_mask`. Once any level asks to be drawn
  * inside the mask, everything below it is drawn inside too.
  */
 export function composeVisibleInside(callerVisibleInside: boolean, partFlags: number): boolean {

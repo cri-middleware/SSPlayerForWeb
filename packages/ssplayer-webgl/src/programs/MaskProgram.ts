@@ -1,10 +1,10 @@
 import { ATTR_LOC, createGLProgram } from './PartsColorProgram.js';
 
-// Mask *coverage write* program (09_mask.ja.md §3-1).
+// Mask *coverage write* program.
 // Rasterises a mask writer's geometry into the hardware stencil buffer. Colour
 // output is irrelevant — the renderer disables colour writes and only the
 // stencil op (increment / invert) takes effect — so the fragment just performs
-// the §2-5 cutout: discard where the writer's texture alpha is at or below the
+// the cutout: discard where the writer's texture alpha is at or below the
 // threshold, leaving the covered texels to update the stencil.
 //
 // Shares aPosition/aUV with PartsColorProgram at the same ATTR_LOC slots so the
@@ -36,7 +36,7 @@ uniform float uThreshold;   // (255 - mask) / 255; < 0 => no cutout (whole geome
 
 void main() {
   // uThreshold < 0 marks a textureless / pure-shape writer: its whole geometry
-  // is the mask, so never discard (§2-5). Otherwise cut out texels whose alpha
+  // is the mask, so never discard. Otherwise cut out texels whose alpha
   // fails the threshold before they reach the stencil.
   if (uThreshold >= 0.0 && texture2D(uTexture, vUV).a <= uThreshold) discard;
   gl_FragColor = vec4(1.0);   // colour masked off; value irrelevant

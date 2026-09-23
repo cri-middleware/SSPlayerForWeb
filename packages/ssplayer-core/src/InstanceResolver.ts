@@ -12,7 +12,7 @@ import { composeMaskInfluence, composeVisibleInside } from './MaskComposition.js
 export interface ResolvedInstance<T> {
     /** Part index of the instance part itself. */
     partIdx: number;
-    /** Its rank in the OWNER's draw order — where §2-1 scope is judged (§2-7). */
+    /** Its rank in the OWNER's draw order — where scope is judged. */
     rank: number;
     /** The child player and its slot state. */
     child: InstanceChildState<T>;
@@ -22,9 +22,9 @@ export interface ResolvedInstance<T> {
     childAlpha: number;
     /** owner parentMatrix ∘ instance world ∘ child local. Aliases `child.parentMatrix`. */
     composed: Float32Array;
-    /** Composed `mask_influence` handed to the sub-animation (§2-6). */
+    /** Composed `mask_influence` handed to the sub-animation. */
     influence: boolean;
-    /** Composed `visible_inside_mask` polarity handed down (§2-6). */
+    /** Composed `visible_inside_mask` polarity handed down. */
     visibleInside: boolean;
     /** The child's playhead, honouring `subFrameEnabled` (see `getFrameNo`). */
     frameNo: number;
@@ -110,7 +110,7 @@ export class InstanceResolver<T extends InternalPlayerBase<T>> {
         out.alpha = alpha;
         out.childAlpha = parentAlpha * alpha;
         out.composed = composed;
-        // Caller side of the §2-6 composition, resolved BEFORE the child builds
+        // Caller side of the composition, resolved BEFORE the child builds
         // anything so it settles its own parts' roles itself and its output is
         // never patched after the fact. `mask_write` deliberately takes no part:
         // writing your own mask is a local fact, not something descendants inherit.

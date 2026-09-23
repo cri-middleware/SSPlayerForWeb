@@ -4,7 +4,7 @@ import { MaskProgram } from './programs/MaskProgram.js';
 import { SS_SHADER_SOURCES, SsShaderProgram } from './programs/SSShaderLib.js';
 import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 
-// Stencil bit planes for mask writers (09_mask.ja.md §3-1-4). INVERT and
+// Stencil bit planes for mask writers. INVERT and
 // INCR/DECR are each self-inverse but do NOT commute, so letting them share bits
 // makes the coverage of an overlap depend on the order the writers were drawn,
 // and leaves residue that the cancelling pass can never take back to 0.
@@ -25,13 +25,13 @@ import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 export const MASK_PLANE_PARITY = 0x80;  // INVERT writers (mask_influence 1): parity, no overlap limit
 export const MASK_PLANE_COUNTER = 0x7F; // INCR/DECR writers (mask_influence 0): up to 127 overlaps
 
-/** Stencil write mask for one op — each op owns exactly one plane (§3-1-4). */
+/** Stencil write mask for one op — each op owns exactly one plane. */
 export function maskPlaneForOp(gl: WebGLRenderingContext | WebGL2RenderingContext, op: number): number {
   return op === gl.INVERT ? MASK_PLANE_PARITY : MASK_PLANE_COUNTER;
 }
 
 /**
- * Mask context an instance part hands to the sub-animation it calls (§2-6).
+ * Mask context an instance part hands to the sub-animation it calls.
  * The caller's settings do not replace the callee's — they COMPOSE:
  * `mask_influence` with AND, `visible_inside_mask` with OR. Passing the already
  * composed value down lets each sub-animation resolve its own parts, so nesting
@@ -69,7 +69,7 @@ export class SSWebGLRenderer {
   private maskPlanner = new MaskPlanner();
   private maskSource = new FrameDataMaskSource();
   // A SECOND planner/source, used only to plan a visible instance child's writers
-  // when carrying its clipping masks up into this context (§2-7). Kept separate
+  // when carrying its clipping masks up into this context. Kept separate
   // so it never clobbers `maskPlanner`, whose plan + `_maskCursor` this context is
   // still walking when it reaches the instance batch.
   private bubblePlanner = new MaskPlanner();
@@ -137,7 +137,7 @@ export class SSWebGLRenderer {
   // in. Has to stay valid for the whole call, so it is never used as scratch.
   private rootedTransform = new Float32Array(6);
   // Engine-agnostic per-instance-part resolution (core), shared with
-  // ssplayer-pixi: slot visibility, alpha, composed placement, §2-6 mask context
+  // ssplayer-pixi: slot visibility, alpha, composed placement, mask context
   // and the child's subframe-aware playhead. Only the drawing that follows is
   // ours. Its record is reused across calls (including across the recursion), so
   // the call site reads out what it needs immediately.
@@ -146,7 +146,7 @@ export class SSWebGLRenderer {
   // (re-`__init`s into this instead of `new`-ing per call).
   private _scratchBatch = new DrawBatch();
   // Zero-copy raw reader for the per-part struct-vector fields (part_state /
-  // parts_color) — bypasses the per-element accessors (07_render_loop.ja.md §2).
+  // parts_color) — bypasses the per-element accessors.
   // Read via its `*Of(fd, …)` helpers so it stays correct across instance-child
   // recursion (shared `this`, rebinds it) and post-recursion re-fetches.
   private _raw = new FrameDataRaw();
@@ -437,7 +437,7 @@ export class SSWebGLRenderer {
     gl.useProgram(this.partsColorProgram.program);
 
     // Orthographic projection: canvas pixel space (origin top-left, Y-down) ->
-    // clip space. Written into a reused scratch to avoid per-frame allocation (§6/§9).
+    // clip space. Written into a reused scratch to avoid per-frame allocation.
     // `flipY` inverts the vertical axis for render targets whose framebuffer Y is
     // opposite the default framebuffer — e.g. RPG Maker MZ's shared context, where
     // SS otherwise draws upside-down. Standalone canvases pass flipY = false.
@@ -498,7 +498,7 @@ export class SSWebGLRenderer {
    * documented limitation of the single-stencil path (the pixi coverage method,
    * with a per-context coverage texture, is the general solution).
    *
-   * `inherited` carries the caller chain's composed mask context (§2-6). A child
+   * `inherited` carries the caller chain's composed mask context. A child
    * applies it per part rather than the caller wrapping the whole recursion in
    * one stencil test: the AND means a sub-animation part that opted out is not
    * clipped even when its caller was a target, which a single enclosing test
@@ -522,7 +522,7 @@ export class SSWebGLRenderer {
 
     // Static per-part mask flags (JS-cached, stable across WASM growth): 0x01
     // visibleInsideMask, 0x08 drawAsMask. Used to skip pure-mask colour and to
-    // resolve masked-content polarity (§2-4). Null only before an animation is set.
+    // resolve masked-content polarity. Null only before an animation is set.
     const maskFlags = player.runtimeManager.getPartMaskFlags();
 
     const pcp = this.partsColorProgram;
@@ -549,7 +549,7 @@ export class SSWebGLRenderer {
     // pre-write the PURE masks into the stencil (they scope to lower/earlier ranks, so
     // all are in scope for the first content). As content is drawn in ascending rank
     // order, syncMasksTo() removes each pure writer at its rank and adds clipping
-    // writers at theirs (§2-1 scope). maskWriterCount == 0 → content draws unclipped.
+    // writers at theirs. maskWriterCount == 0 → content draws unclipped.
     let maskWriterCount = 0;
     if (this._stencilSupported && maskingAllowed) {
       this.maskSource.bind(fd, drawOrder, player.runtimeManager);
@@ -558,11 +558,11 @@ export class SSWebGLRenderer {
       if (maskWriterCount > 0) this._prewritePureMasks(player, resourceManager, fd, gb);
     }
     // Set once a visible instance child carries its clipping mask up into this
-    // context's stencil (§2-7): this player's parts drawn after that instance then
+    // context's stencil: this player's parts drawn after that instance then
     // become stencil-test targets even when it owns no writers of its own.
     let carriedOpen = false;
 
-    // Caller chain's composed mask context (§2-6). Root identity: influence
+    // Caller chain's composed mask context. Root identity: influence
     // true / visibleInside false, so a top-level animation evaluates every part
     // by its own flags alone. `inheritedActive` folds in the AND, so a subtree
     // whose caller opted out clips nothing regardless of the ancestor coverage.
@@ -576,7 +576,7 @@ export class SSWebGLRenderer {
       if (!b) continue;
       const kind = b.kind();
 
-      // Mask batch (pure-mask writers): coverage only, no colour (§8-5). Pre-written
+      // Mask batch (pure-mask writers): coverage only, no colour. Pre-written
       // into the stencil above and removed lazily by syncMasksTo() as content passes
       // its rank; nothing to draw here. (Clipping writers live in Normal/Shape/Mesh
       // batches, not here — they're added by syncMasksTo at their own rank.)
@@ -618,11 +618,11 @@ export class SSWebGLRenderer {
       const count = b.count();
 
       // Masked content (FLAG_MASK_INFLUENCE, 0x01): clip each part against the
-      // stencil coverage (§2-4 polarity per part). Handled per-part (not batched),
+      // stencil coverage. Handled per-part (not batched),
       // so skip the batched build/draw. The coverage is either this context's own
       // (we planned writers) or an ancestor's standing across an instance
       // recursion; the batch flag is the parts' own mask_influence, so requiring
-      // it alongside ctxInfluence is the §2-6 AND. Without either coverage the
+      // it alongside ctxInfluence is the AND. Without either coverage the
       // content draws unclipped.
       const batchInfluence = (b.flags() & 0x01) !== 0;
       // Last read out of `b`: the instance recursion below re-points the shared
@@ -632,7 +632,7 @@ export class SSWebGLRenderer {
       if (this._stencilSupported && isContentKind && batchInfluence && ctxInfluence &&
           (maskWriterCount > 0 || inheritedActive || carriedOpen)) {
         // Only a context that owns writers may advance the cursor; a child has no
-        // plan of its own, and coverage carried up from an instance child (§2-7) is
+        // plan of its own, and coverage carried up from an instance child is
         // already standing in the stencil — the caller positioned neither via a plan.
         this.drawMaskedContent(player, resourceManager, b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts, maskWriterCount > 0, ctxVisibleInside);
         continue;
@@ -655,7 +655,7 @@ export class SSWebGLRenderer {
 
       for (let c = 0; c < count; c++) {
         const partIdx = drawOrder[startRank + c];
-        // draw_as_mask parts are pure masks — coverage only, never their colour (§3-3).
+        // draw_as_mask parts are pure masks — coverage only, never their colour.
         if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
         if (kind === DrawBatchKind.Normal) {
           totalVerts += 5;
@@ -824,7 +824,7 @@ export class SSWebGLRenderer {
       if (kind === DrawBatchKind.Instance) {
         for (let c = 0; c < count; c++) {
           // Engine-agnostic resolution (core), shared with ssplayer-pixi: slot
-          // visibility, alpha, the composed placement and the §2-6 mask context
+          // visibility, alpha, the composed placement and the mask context
           // handed down. Its record is reused, so read out everything still
           // needed after the recursion below (the carry-over reads `child`,
           // `composed` and `instInfluence`).
@@ -838,7 +838,7 @@ export class SSWebGLRenderer {
           const instVisibleInside = inst.visibleInside;
 
           // Coverage reaching the sub-animation: ours, brought up to the instance
-          // part's rank (§2-1 — the sub-anime sits at that slot in our draw
+          // part's rank (the sub-anime sits at that slot in our draw
           // order), or an ancestor's already standing in the stencil. Being
           // screen-space, it clips the child's draws with no per-child UV.
           const coverageReachesChild = this._stencilSupported && instInfluence &&
@@ -873,7 +873,7 @@ export class SSWebGLRenderer {
           shapeVertexCounts = player.runtimeManager.getShapeVertexCounts();
 
           // Carry the child's own clipping masks up into this context's stencil so
-          // they clip this player's parts drawn after the instance (§2-7). Only at
+          // they clip this player's parts drawn after the instance. Only at
           // maskingAllowed contexts (single-level: a sub-animation's grandchildren
           // are not bubbled through). Writes in `composed` screen space; the state
           // restore below returns to this context's transform/program.
@@ -1087,7 +1087,7 @@ export class SSWebGLRenderer {
   /**
    * Rasterise one planned writer (maskPlanner index `w`) into the stencil with
    * `stencilOp`. The mask program must be active (beginMaskWrite) with colour writes
-   * off. Binds the writer's cutout texture, applies its precomputed §2-5 threshold
+   * off. Binds the writer's cutout texture, applies its precomputed threshold
    * (`< 0` → whole geometry), and builds its geometry from the planner's kind
    * (0 Normal / 1 Shape / 2 Mesh).
    */
@@ -1101,7 +1101,7 @@ export class SSWebGLRenderer {
     const texInfo = this.bindMaskTexture(mp, resourceManager, p.textureHash[w] >>> 0);
     if (mp.uThreshold) gl.uniform1f(mp.uThreshold, p.threshold[w]);
     gl.stencilOp(gl.KEEP, gl.KEEP, stencilOp);
-    // Confine this op to its own bit plane (§3-1-4). Set per writer because a
+    // Confine this op to its own bit plane. Set per writer because a
     // single pass interleaves both ops as the planner ordered them.
     gl.stencilMask(maskPlaneForOp(gl, stencilOp));
 
@@ -1128,7 +1128,7 @@ export class SSWebGLRenderer {
     gl.enable(gl.STENCIL_TEST);
     gl.colorMask(false, false, false, false);
     // The write mask is NOT set here: it is per-writer, derived from that
-    // writer's op by _writePlannedWriter (§3-1-4 bit planes).
+    // writer's op by _writePlannedWriter.
     gl.stencilFunc(gl.ALWAYS, 0, 0xFF);
     gl.activeTexture(gl.TEXTURE0);
   }
@@ -1151,14 +1151,14 @@ export class SSWebGLRenderer {
 
   /**
    * Pre-write every PURE mask writer's coverage into the stencil (per-rank scope
-   * matches the editor-verified coverage replay — 09_mask.ja.md
-   * §2-1/§2-4). Pure masks scope to LOWER/earlier ranks, so all are in scope for the
+   * matches the editor-verified coverage replay).
+   * Pure masks scope to LOWER/earlier ranks, so all are in scope for the
    * first content; syncMasksTo() then removes each at its own rank. Clipping writers
    * (which scope FORWARD) are NOT pre-written — syncMasksTo adds them at their rank.
    * Writers come from maskPlanner (already planned by the caller).
    *
    * Overlapping writers that mix the increment and invert ops are exact: the two
-   * ops write disjoint bit planes (§3-1-4), so neither the ordering nor the
+   * ops write disjoint bit planes, so neither the ordering nor the
    * cancellation of one can disturb the other.
    */
   private _prewritePureMasks(
@@ -1182,7 +1182,7 @@ export class SSWebGLRenderer {
 
   /**
    * Carry a visible instance child's CLIPPING writers up into this context's
-   * shared stencil (§2-7): they must keep clipping this player's parts drawn after
+   * shared stencil: they must keep clipping this player's parts drawn after
    * the instance. Written in the child's composed screen transform, so no per-child
    * UV is needed (the stencil is screen-space). Each writer's op/plane follows its
    * EFFECTIVE maskInfluence — its own AND the influence handed down to the instance
@@ -1227,7 +1227,7 @@ export class SSWebGLRenderer {
     this.setTransformUniform(composed);
     this.beginMaskWrite(mp);
     for (let w = 0; w < n; w++) {
-      if (p.isClipping[w] === 0) continue; // only clipping carries out (§2-7)
+      if (p.isClipping[w] === 0) continue; // only clipping carries out
       const effOpInvert = p.opInvert[w] !== 0 && instInfluence;
       const op = effOpInvert ? gl.INVERT : gl.INCR_WRAP;
       this._writePlannedWriter(p, mp, resourceManager, w, cfd, cgb, op, cMeshVOff, cMeshIOff, cShapeVC);
@@ -1241,7 +1241,7 @@ export class SSWebGLRenderer {
    * writer with `rank < rank` not yet processed (maskCursor), apply its transition —
    * clipping writers are ADDED (forward scope begins), pure writers REMOVED (backward
    * scope ended). Removal uses the inverse op (INVERT is self-inverse; INCR_WRAP →
-   * DECR_WRAP — the wrapping pair is exact within the counter plane, §3-1-4).
+   * DECR_WRAP — the wrapping pair is exact within the counter plane).
    * Only switches to the mask program when there is work; restores the parts-color
    * program (and disables the stencil test) on return, so the caller must re-establish
    * its own draw state afterwards.
@@ -1273,11 +1273,11 @@ export class SSWebGLRenderer {
    * Draw a masked content batch (parts with FLAG_MASK_INFLUENCE). For each part, in
    * ascending rank order, first advance the stencil coverage to its rank
    * (syncMasksTo — adds clipping / removes pure writers), then draw it clipped by the
-   * current coverage. Polarity is per-part (§2-4): visible_inside_mask (mask flag
+   * current coverage. Polarity is per-part: visible_inside_mask (mask flag
    * 0x01) keeps texels where the stencil is set (NOTEQUAL 0), else where it is clear
    * (EQUAL 0). Per-part because both the coverage AND the polarity can change within a
    * batch (the batch key groups by texture/blend/mask-influence, not rank or polarity).
-   * draw_as_mask parts (0x08) are pure masks and never draw their colour (§3-3).
+   * draw_as_mask parts (0x08) are pure masks and never draw their colour.
    */
   private drawMaskedContent(
     player: DirectInternalPlayer, resourceManager: SSWebGLResourceManager,
@@ -1295,7 +1295,7 @@ export class SSWebGLRenderer {
 
     for (let c = 0; c < count; c++) {
       const partIdx = drawOrder[startRank + c];
-      if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue; // pure mask: coverage only (§3-3)
+      if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue; // pure mask: coverage only
       const alpha = this._raw.partAlphaOf(fd, partIdx);
       if (alpha <= 0) continue;
 
@@ -1315,8 +1315,8 @@ export class SSWebGLRenderer {
       if (iCount === 0) continue;
       this.uploadPart(this._builtVerts, iCount);
 
-      // §2-6 OR: a caller that asked for "inside" wins for everything below it,
-      // otherwise the part decides for itself (§2-4).
+      // OR: a caller that asked for "inside" wins for everything below it,
+      // otherwise the part decides for itself.
       const visInside = composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0);
       gl.enable(gl.STENCIL_TEST);
       gl.stencilMask(0x00); // content never modifies the stencil

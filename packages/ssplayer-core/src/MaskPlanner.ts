@@ -2,7 +2,7 @@ import { DrawBatchKind } from './ss/runtime/draw-batch-kind.js';
 
 // Max simultaneous mask writers per context: one bit each, packed into the
 // R/G/B channels of an RGBA8 coverage texture (8 bits x 3 = 24). Matches the
-// runtime contract in 09_mask.ja.md §3-2.
+// runtime contract.
 export const MAX_MASK_WRITERS = 24;
 
 // Geometry kind a mask writer is rendered with.
@@ -31,7 +31,7 @@ export interface MaskPlanSource {
     readBatch(i: number, out: MaskBatch): void;
     /** Part index at the given draw-order rank. */
     drawOrderAt(rank: number): number;
-    /** FrameData per-frame mask value (0..255); `<= 0` means the writer is inert (§2-2). */
+    /** FrameData per-frame mask value (0..255); `<= 0` means the writer is inert. */
     partMask(partIdx: number): number;
     /** Packed static mask-flags byte: 0x01 visibleInside, 0x02 maskWrite, 0x04 maskInfluence, 0x08 drawAsMask. 0 when unavailable. */
     maskFlag(partIdx: number): number;
@@ -41,7 +41,7 @@ export interface MaskPlanSource {
 }
 
 /**
- * Engine-agnostic SpriteStudio mask planner (09_mask.ja.md §3-2-1). Given one
+ * Engine-agnostic SpriteStudio mask planner. Given one
  * context's frame (via a {@link MaskPlanSource}), produces the writer set a
  * renderer needs to rasterise the coverage bitmap and replay it: per-writer
  * draw rank, packed bit, OP (increment/invert), clipping flag, cutout texture
@@ -85,7 +85,7 @@ export class MaskPlanner {
         const selTex = this._candTex;
         const b = this._batch;
 
-        // Pass 1: select candidate writers in draw order (09_mask.ja.md §1-2):
+        // Pass 1: select candidate writers in draw order:
         //   pure masks  — DrawBatchKind.Mask batches (PartTypeMask / draw_as_mask);
         //                 OP rides in the batch flag (0x01: 0 = increment, 1 = invert).
         //   clipping    — drawn parts with mask_write (no twin batch emitted),
@@ -133,7 +133,7 @@ export class MaskPlanner {
             }
         }
 
-        // Pass 2: finalize — drop inert (mask <= 0, §2-2) and degenerate-geometry
+        // Pass 2: finalize — drop inert (mask <= 0) and degenerate-geometry
         // writers, assign a dense coverage bit, and resolve cutout threshold +
         // geometry kind.
         let count = 0;
@@ -143,7 +143,7 @@ export class MaskPlanner {
             if (maskVal <= 0) continue;
 
             const texHash = selTex[w];
-            // Cutout threshold (§2-5). texHash 0 (pure masks / shapes) = no cutout.
+            // Cutout threshold. texHash 0 (pure masks / shapes) = no cutout.
             const threshold = texHash !== 0 ? (255 - maskVal) / 255 : -1.0;
 
             // Resolve geometry kind (the Mask batch doesn't carry it): shape

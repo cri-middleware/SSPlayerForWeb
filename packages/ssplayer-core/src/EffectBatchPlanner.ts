@@ -24,7 +24,7 @@ export interface EffectDrawItem {
 
 /**
  * Gathers a `DrawBatchKind.Effect` batch's particle commands in draw order and
- * says where the mergeable runs are (08_advanced_rendering §2 dynamic batching).
+ * says where the mergeable runs are (dynamic batching).
  *
  * Particle geometry is simulated in the WASM runtime and returned as an
  * `EffectDrawPlan` per effect part, one command per (cell-map, blend) emitter

@@ -385,7 +385,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     this.internalPlayer.audioManager = value;
   }
 
-  // --- Part overrides (65_override_layer) ---
+  // --- Part overrides ---
   //
   // Thin pass-throughs to the core player, which owns the contract (see
   // InternalPlayerBase): part is a name or an index, false means the part is
