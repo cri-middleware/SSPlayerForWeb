@@ -51,6 +51,10 @@ Write-Host "Copying generated WASM files..."
 if (-not (Test-Path $OutDir)) {
     New-Item -ItemType Directory -Path $OutDir | Out-Null
 }
+# wasm\VERSION names the SDK release download-sdk installed, and what follows
+# replaces the WASM with this local build. Stamp it "local" first, so a later
+# download:wasm sees a mismatch and reinstalls instead of skipping as up to date.
+Set-Content -Path (Join-Path $OutDir "VERSION") -Value "local"
 Copy-Item -Path (Join-Path $SdkReleaseDir "*") -Destination $OutDir -Recurse -Force
 
 # No-SIMD runtime variant for RPG Maker MZ / NW.js (bundled Chromium lacks WASM
