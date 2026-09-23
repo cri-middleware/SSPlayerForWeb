@@ -3,7 +3,7 @@ import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPart
 
 /**
  * The coverage replay carries the same rule as the GPU-stencil path: invert and
- * increment must accumulate separately (09_mask.ja.md §3-1-4), because folding
+ * increment must accumulate separately, because folding
  * them together makes an overlap of writers with differing mask_influence depend
  * on the order they were replayed in.
  *

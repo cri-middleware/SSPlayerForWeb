@@ -16,7 +16,7 @@ import { SS_MIX_BLEND, SS_ADD_BLEND, SS_BLEND_MODE_NAMES, registerSSBlendModesGL
 
 // MAX_MASK_WRITERS is defined alongside the planner in ssplayer-core.
 
-// --- Animation event payloads (06_playback_control.ja.md) ---
+// --- Animation event payloads ---
 // Event extraction lives here in the renderer package (not core): it reads the
 // SSAB events table for the current animation via the runtime manager's
 // introspection accessors, parses the FlatBuffer payloads, and dispatches typed
@@ -46,7 +46,7 @@ export interface SSUserDataEvent {
 /**
  * A signal event fired by a part. `params` maps each command parameter id to
  * its authored value (bool / int / float / string). Only **active** signals are
- * dispatched (mirroring the Godot / Unity players and the porting guide).
+ * dispatched (mirroring the Godot / Unity players).
  */
 export interface SSSignalEvent {
     partIndex: number;
@@ -64,7 +64,7 @@ export interface SSSignalEvent {
 /**
  * An audio event fired by a part: the SSAB sound reference (hashes + alias
  * name) plus loop count. The runtime plays no audio — the host resolves the
- * sound and plays it on its own audio engine (11_optional_features.ja.md).
+ * sound and plays it on its own audio engine.
  */
 export interface SSAudioEvent {
     partIndex: number;
@@ -104,8 +104,8 @@ interface MaskCoverage {
     count: number;
 }
 
-// Mask context an instance part hands to the sub-animation it calls
-// (09_mask.ja.md §2-6 / §3-2-2). The caller's settings do NOT replace the
+// Mask context an instance part hands to the sub-animation it calls.
+// The caller's settings do NOT replace the
 // callee's — they COMPOSE: `mask_influence` with AND, `visible_inside_mask`
 // with OR. Every part in the sub-animation then resolves its own role against
 // the composed value, so a caller can never silently discard what a callee part
@@ -120,11 +120,11 @@ interface InheritedMask {
     // reaches it (the child then falls back to its own coverage, if it has one).
     cov: MaskCoverage | null;
     // Rank of the instance part in the draw order of whoever OWNS `cov`. The
-    // scope test (§2-1) is judged at the instance part's slot, not the child
+    // scope test is judged at the instance part's slot, not the child
     // part's, because that is where the sub-animation sits in the caller.
     rank: number;
     // Composed caller-chain values. `influence: false` is absorbing: once a
-    // caller is not a mask target, nothing below it is either (§2-6).
+    // caller is not a mask target, nothing below it is either.
     influence: boolean;
     visibleInside: boolean;
 }
@@ -141,7 +141,7 @@ export class SSPlayer extends Container {
 
     // Reused per-frame scratch so the render hot path allocates nothing: a
     // zero-copy raw reader for the FlatBuffers struct vectors (bypasses the
-    // per-element accessors — 07_render_loop.ja.md §2) and a reused DrawBatch
+    // per-element accessors) and a reused DrawBatch
     // accessor. The raw reader is bound via its `*Of(frameData, …)` helpers at
     // each read so it stays correct across instance-child recursion (which
     // rebinds it) and re-fetches.
@@ -151,7 +151,7 @@ export class SSPlayer extends Container {
     // param0..7 and the cell UV rect derived from the quad's corners.
     private readonly _shaderAttr = new ShaderAttributeResolver();
     // Engine-agnostic per-instance-part resolution (core), shared with
-    // ssplayer-webgl: slot visibility, alpha, composed placement, §2-6 mask
+    // ssplayer-webgl: slot visibility, alpha, composed placement, mask
     // context and the child's subframe-aware playhead. Only the drawing that
     // follows is ours. Its record is reused across calls (including across the
     // recursion), so each call site reads out what it needs immediately.
@@ -171,7 +171,7 @@ export class SSPlayer extends Container {
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
 
-    // --- Animation event listeners (06_playback_control.ja.md) ---
+    // --- Animation event listeners ---
     private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
     private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
     private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
@@ -227,7 +227,7 @@ export class SSPlayer extends Container {
     private ssShaderPools: Map<string, Shader[]> = new Map();
     private ssShaderActive: Map<string, number> = new Map();
 
-    // --- Mask coverage state (see 09_mask.ja.md §3-2) ---
+    // --- Mask coverage state ---
     // The renderer, captured lazily on the first render via onRender; the
     // coverage pre-pass needs it to rasterise into RenderTextures, and it runs
     // before the stage render (in the ticker) so coverage is ready by draw time.
@@ -253,7 +253,7 @@ export class SSPlayer extends Container {
     // rasterises the resulting plan into the coverage bitmap.
     private readonly maskPlanner = new MaskPlanner();
     private readonly maskSource = new FrameDataMaskSource();
-    // Carry-over (§2-7) scratch: the running coverage bbox shared by every baked
+    // Carry-over scratch: the running coverage bbox shared by every baked
     // writer, and a pooled candidate list of visible instance children whose
     // clipping writers are carried up into this context's coverage.
     private readonly _covBBox = new Float32Array(4);
@@ -837,7 +837,7 @@ export class SSPlayer extends Container {
         return this.internalPlayer.isPartSkinnedMesh(part);
     }
 
-    // --- Part overrides (65_override_layer) ---
+    // --- Part overrides ---
     //
     // Thin pass-throughs to the core player, which owns the contract (see
     // InternalPlayerBase): part is a name or an index, false means the part is
@@ -956,7 +956,7 @@ export class SSPlayer extends Container {
         return applied;
     }
 
-    // --- Animation events (06_playback_control.ja.md) ---
+    // --- Animation events ---
     //
     // Listeners are drained each frame by the ticker via pollEvents() (see
     // update()). Each registration returns an unsubscribe function. The runtime
@@ -1113,7 +1113,7 @@ export class SSPlayer extends Container {
             const sig = events.signals(j);
             const val = sig?.value();
             if (!sig || !val) continue;
-            // Skip inactive signals (Godot / Unity / porting-guide behaviour).
+            // Skip inactive signals (Godot / Unity behaviour).
             if (!val.active()) continue;
 
             const params: Record<string, boolean | number | string> = {};
@@ -1313,7 +1313,7 @@ export class SSPlayer extends Container {
         // (DrawBatchKind.Mask batches) into an offscreen coverage texture, then
         // masked content samples it below. Null when the context has no masks.
         // Runs here, in the ticker, so coverage is ready before the stage render
-        // draws our children. See buildMaskCoverage / 09_mask.ja.md.
+        // draws our children. See buildMaskCoverage.
         //
         // Without a renderer we cannot rasterise at all. That happens on the
         // first drawn frame of a player the host did not attachRenderer() to —
@@ -1324,11 +1324,11 @@ export class SSPlayer extends Container {
         // anyway (pure CPU, no renderer needed) and, if this frame does have
         // masks, hold their targets back until coverage can be produced —
         // one missing frame instead of one wrong one.
-        // Composed mask context from the caller chain (§2-6). The root identity
+        // Composed mask context from the caller chain. The root identity
         // is influence = true / visibleInside = false, which makes every part of
         // a top-level animation evaluate exactly by its own flags. Resolved here,
         // ahead of the coverage pass, because carry-over composes each bubbled
-        // writer's op with this influence (§2-7).
+        // writer's op with this influence.
         const ctxInfluence = inheritedMask ? inheritedMask.influence : ROOT_MASK_INFLUENCE;
         const ctxVisibleInside = inheritedMask ? inheritedMask.visibleInside : ROOT_VISIBLE_INSIDE;
 
@@ -1338,7 +1338,7 @@ export class SSPlayer extends Container {
             if (this.renderer) {
                 cov = this.buildMaskCoverage(player, manager, geometryBuilder, frameData, drawOrder, ctxInfluence);
                 // buildMaskCoverage reads instance children's frames to carry their
-                // clipping masks up (§2-7), which can grow WASM memory and detach
+                // clipping masks up, which can grow WASM memory and detach
                 // our frameData / drawOrder views. Re-derive before the batch loop
                 // reads them; only runs on an actual grow.
                 if (getWasmMemory().buffer !== memBuf) {
@@ -1366,7 +1366,7 @@ export class SSPlayer extends Container {
         // coverage texture. Composing two would need a second sampler.
         const effCov = ctxInfluence ? (inheritedMask?.cov ?? cov) : null;
 
-        /** Polarity for one part: the caller chain's OR its own (§2-4 / §2-6). */
+        /** Polarity for one part: the caller chain's OR its own. */
         const polarityOf = (partIdx: number): number =>
             composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0) ? 1 : 0;
 
@@ -1394,7 +1394,7 @@ export class SSPlayer extends Container {
             if (kind === DrawBatchKind.Instance) {
                 for (let c = 0; c < count; c++) {
                     // Engine-agnostic resolution (core): slot visibility, alpha,
-                    // the composed placement, the §2-6 mask context handed down
+                    // the composed placement, the mask context handed down
                     // and the child's subframe-aware playhead. Its record is
                     // reused, so read out what must survive the recursion below.
                     const inst = this._instanceResolver.resolve(
@@ -1416,7 +1416,7 @@ export class SSPlayer extends Container {
                     const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
                     if (!childFrameData) continue;
 
-                    // §3-2-2 instance mask inheritance. The child's composited
+                    // Instance mask inheritance. The child's composited
                     // positions are already in this coverage's space, so its
                     // parts sample `effCov` directly; the scope test stays at
                     // the rank that owns that coverage, which is this instance
@@ -1461,7 +1461,7 @@ export class SSPlayer extends Container {
             const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE) : Texture.WHITE;
 
             // SpriteStudio framebuffer-composite blend (alpha_blend_type, 12 values)
-            // → PixiJS blend mode. See 10_parts_color §1-0: this is the framebuffer
+            // → PixiJS blend mode. This is the framebuffer
             // composite stage (after parts_color is applied in the shader).
             // All blend modes are mapped to custom states (SS_*_BLEND) defined in
             // SSBlendModes.ts. This ensures 100% parity with the fixed-function
@@ -1477,7 +1477,7 @@ export class SSPlayer extends Container {
             // Parts in this batch are clipped when coverage reaches them AND the
             // runtime set the batch's FLAG_MASK_INFLUENCE (0x01). That flag is
             // the parts' own mask_influence (batches are keyed by it), so this
-            // conjunction IS the §2-6 AND: `effCov` already carries the caller
+            // conjunction IS the AND: `effCov` already carries the caller
             // chain's half, and a sub-animation part that opted out is not
             // clipped even though its caller was a mask target. Masked parts use
             // a separate pool (carrying aMaskUV) and shader.
@@ -1614,7 +1614,7 @@ export class SSPlayer extends Container {
                 // group, slicing shared flat buffers. The per-vertex math lives in core's
                 // GeometryBuilder.buildEffectCommand.
                 //
-                // Dynamic batching (08_advanced_rendering §2): we gather every particle
+                // Dynamic batching: we gather every particle
                 // command in this batch in draw order — folding each effect part's own
                 // opacity into the vertex alpha — then merge consecutive commands sharing
                 // the same (cellmap, blend) into a single pooled Mesh / draw call. Only
@@ -1688,7 +1688,7 @@ export class SSPlayer extends Container {
      * GeometryBuilder — pre-multiplied into parts_color by the runtime, or written
      * directly for the default path — and the shader's output alpha is
      * texColor.a * vColor.a. Folding state.alpha() into mesh.alpha here as well
-     * would double-apply it (10_parts_color §1-3).
+     * would double-apply it.
      */
     private finishPart(
         mesh: Mesh<any>,
@@ -1735,8 +1735,8 @@ export class SSPlayer extends Container {
 
     /**
      * Rasterise this context's mask contributors (DrawBatchKind.Mask batches)
-     * into an offscreen coverage texture using the bit-packed bitmap method
-     * (09_mask.ja.md §3-2): each writer gets one bit (0..23) packed into the
+     * into an offscreen coverage texture using the bit-packed bitmap method:
+     * each writer gets one bit (0..23) packed into the
      * R/G/B channels via additive blending, cut out by its alpha threshold.
      * Returns the coverage texture, the bbox→UV mapping, and the per-writer
      * metadata replayed by the masked shader; null when there are no active
@@ -1765,7 +1765,7 @@ export class SSPlayer extends Container {
             console.warn(`[SSPlayer] mask writers exceeded ${MAX_MASK_WRITERS}; extra masks ignored.`);
         }
 
-        // Carry-over (§2-7): a mask written *inside* a visible instance child
+        // Carry-over: a mask written *inside* a visible instance child
         // reaches out to the parent's parts drawn after that instance. Snapshot
         // the instance placements now — before any child getFrameData() below can
         // grow WASM memory and detach `drawOrder` — then bake each child's
@@ -1781,7 +1781,7 @@ export class SSPlayer extends Container {
 
         // Own writers: rasterise each into the coverage bitmap (its coverage bit
         // pre-encoded into one R/G/B channel, cutout threshold in aVarg.x,
-        // additive-blended so disjoint bits OR together — 09_mask.ja.md §3-2).
+        // additive-blended so disjoint bits OR together).
         for (let w = 0; w < count; w++) {
             this.bakeCoverageWriter(geometryBuilder, frameData, planner.partIdx[w], planner.geomKind[w],
                 planner.numVerts[w], planner.numIndices[w], planner.textureHash[w], planner.threshold[w],
@@ -1790,13 +1790,13 @@ export class SSPlayer extends Container {
 
         // The planner's `meta` is reusable scratch (overwritten by the child
         // plan() below). Copy the own writers' entries into the pooled per-slot
-        // record before that happens, so an inheriting child (§3-2-2) can replay
+        // record before that happens, so an inheriting child can replay
         // this coverage at draw time.
         covObj.meta.set(planner.meta.subarray(0, count * 4));
 
         // Bubble each visible instance child's clipping writers up. `total`
         // continues the own writers' bit numbering; the shared 24-bit budget
-        // covers both (09_mask.ja.md §3-2-2 carry-over).
+        // covers both (carry-over).
         let total = count;
         for (let bi = 0; bi < bubbleCount && total < MAX_MASK_WRITERS; bi++) {
             const cand = this._bubbleCands[bi];
@@ -1813,20 +1813,20 @@ export class SSPlayer extends Container {
 
             // The child's geometry is built in this coverage's space via the
             // composed instance matrix, matching where the child's parts land
-            // when it draws normally (§3-2-2).
+            // when it draws normally.
             const cgb = cand.child.player.geometryBuilder;
             cgb.parentMatrix = cand.composed;
             cgb.updateWorldPositions();
 
             for (let w = 0; w < cCount && total < MAX_MASK_WRITERS; w++) {
                 // Only clipping writers carry out; a pure mask closes within the
-                // sub-animation (§2-7).
+                // sub-animation.
                 if (!planner.isClipping[w]) continue;
                 const bit = total;
                 // Ranked at the instance part so it clips the owner parts drawn
                 // after it; op composed with the influence handed down — a
                 // mask_influence == 0 instance drops its writers onto the union
-                // (increment) plane (op_invert = false), §2-7.
+                // (increment) plane (op_invert = false).
                 covObj.meta[bit * 4 + 0] = cand.rank;
                 covObj.meta[bit * 4 + 1] = bit;
                 covObj.meta[bit * 4 + 2] = (planner.opInvert[w] && cand.influence) ? 1 : 0;
@@ -1878,7 +1878,7 @@ export class SSPlayer extends Container {
      * writer's extent into `bbox` [minX,minY,maxX,maxY], and add the mesh to the
      * coverage render root (additive-blended). `gb` is this context's builder for
      * an own writer, or an instance child's builder placed into owner space for a
-     * bubbled one (§2-7). Cutout texture comes from the planner's DrawBatch
+     * bubbled one. Cutout texture comes from the planner's DrawBatch
      * textureHash (0 = pure mask / shape → no cutout, the geometry is the mask).
      */
     private bakeCoverageWriter(
@@ -1934,7 +1934,7 @@ export class SSPlayer extends Container {
 
     /**
      * Snapshot the visible instance children whose clipping writers carry up into
-     * this context's coverage (§2-7). Fills the pooled `_bubbleCands` with, per
+     * this context's coverage. Fills the pooled `_bubbleCands` with, per
      * child: its `rank` in the owner draw order (where the carried mask starts
      * clipping), the child state, the composed `mask_influence` handed down (which
      * decides each bubbled writer's op plane), and the composed instance matrix
@@ -1946,7 +1946,7 @@ export class SSPlayer extends Container {
      * Which instance parts qualify is the core resolver's call, so a fully
      * transparent one is skipped here exactly as it is in the draw loop: an
      * instance the renderer never draws contributes no coverage either. It is
-     * also the shared reading of §2-7's "visible instance child" — ssplayer-webgl
+     * also the shared reading of "visible instance child" — ssplayer-webgl
      * reaches the same point by carrying the writers up from inside its draw loop.
      */
     private collectClipBubbles(
@@ -1999,7 +1999,7 @@ export class SSPlayer extends Container {
     }
 
     // Coverage resolution: 1:1 with the bbox, rounded up to a power of two and
-    // clamped to [64, 1024] per axis (09_mask.ja.md §3-2 sizing note).
+    // clamped to [64, 1024] per axis.
     private static quantizeMaskSize(v: number): number {
         let s = Math.ceil(v);
         if (s < 64) s = 64;

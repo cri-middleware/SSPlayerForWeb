@@ -356,7 +356,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             // The wasm boundary throws the Brain's error enum as a bare string —
             // "AnimationNotFound", naming neither the pack nor what was asked of
             // it. Only this layer knows either, so only this layer can make the
-            // failure legible (SDK: `20_design/40_api_conventions`, §7). The
+            // failure legible. The
             // reason goes in verbatim because it separates a name the pack does
             // not have from a player that has no pack bound at all.
             throw new Error(
@@ -734,7 +734,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * The *instantaneous heading*, not the configured direction: a ping-pong on
      * its return leg reads false while {@link getPlaybackDirection} still reads
      * Forward. It is what an audio backend gates on — SpriteStudio has no
-     * reverse audio (SDK: 10_introduction/20_limitations) — mirroring the Godot
+     * reverse audio — mirroring the Godot
      * and Unity players' `is_playing_forward`.
      *
      * Note this says nothing about {@link getSpeed}: the runtime clamps a zero
@@ -801,7 +801,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Where the playhead is, fractional — the value the conventions call
-     * `frameNo` (SDK: 20_design/40_api_conventions §3).
+     * `frameNo`.
      *
      * Reports the playhead itself, **not** the frame being drawn: with
      * {@link subFrameEnabled} off the renderer shows frame 12 while this still
@@ -894,7 +894,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.context.get_skip_frames();
     }
 
-    // --- Part overrides (SDK docs: 40_components/65_override_layer) ---
+    // --- Part overrides ---
     //
     // Per-part runtime overrides (colour / cell / visibility): an imperative
     // "make this part this colour / cell / hidden now" that wins over both the
@@ -950,7 +950,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * call still returns true, so success does not mean the part changed.
      *
      * The colour comes first and `blendOp` trails with a default, which is the
-     * family's order (SDK: `20_design/40_api_conventions`). The C ABI puts the
+     * family's order. The C ABI puts the
      * blend first; this face deliberately does not.
      */
     public setPartColorOverride(
@@ -1058,7 +1058,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // resolves `DrawBatch.texture_hash` against that map every frame, so a swap
     // takes effect on the next draw with no batch re-planning.
     //
-    // Two things to know (see 70_external_resources.md): the replacement must be
+    // Two things to know: the replacement must be
     // the SAME size and layout as the original atlas (UVs stay in the original
     // cell-map's pixel space, normalized by the BOUND texture's size); and a
     // frame under an authored TextureChange (`TCHG`) binds through the texture

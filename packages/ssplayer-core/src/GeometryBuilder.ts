@@ -27,7 +27,7 @@ export class GeometryBuilder {
 
     // Zero-copy raw reader for the FlatBuffers struct vectors (parts /
     // parts_color) — bypasses the per-element accessors that dominate frame-data
-    // cost in JS hosts (07_render_loop.ja.md §2). Bound per build call; the bind
+    // cost in JS hosts. Bound per build call; the bind
     // is cached by FlatBuffer identity so per-part rebinds are ~free.
     private readonly _raw = new FrameDataRaw();
     // Reused per-build scratch so the render hot path allocates nothing: the
@@ -143,7 +143,7 @@ export class GeometryBuilder {
             pc_blendType = raw.pcBlendType(pcIdx);
             // PartColor blend is only valid for Mix/Mul/Add/Sub (0..3). Any other
             // BlendType value (Mulalpha, Screen, …) must clamp to Mix, else no
-            // flag below matches and the shader outputs black (10_parts_color §1-1).
+            // flag below matches and the shader outputs black.
             if (pc_blendType > BlendType.Sub) pc_blendType = BlendType.Mix;
             // Resolve each corner in place, then derive the center as the average.
             raw.readCornerInto(pcIdx, 0, colors, rates);
@@ -166,8 +166,7 @@ export class GeometryBuilder {
         // into parts_color.rgba.a; for the default path we put state.alpha() here
         // so the shader's output alpha (texColor.a * vColor.a) is the single alpha
         // source and the renderer's mesh.alpha need only carry the parent chain
-        // (avoids double-applying state.alpha(); 10_parts_color §1-3 "do not
-        // re-multiply state->alpha()").
+        // (avoids double-applying state.alpha()).
         const stateAlpha = raw.partAlpha(partIdx);
 
         const pm = this.parentMatrix;
@@ -249,8 +248,7 @@ export class GeometryBuilder {
         if (hasPc) {
             // Shape bypasses the PartColor blend formula: blend is forced to Mix
             // and rate to 1.0, so the shape renders as the (bilinearly
-            // interpolated) parts colour itself, ignoring parts_color.blend_type
-            // (10_parts_color.ja.md §1-2 table / §1-2-3).
+            // interpolated) parts colour itself, ignoring parts_color.blend_type.
             raw.readCornerInto(pcIdx, 0, cc, cr);
             raw.readCornerInto(pcIdx, 1, cc, cr);
             raw.readCornerInto(pcIdx, 2, cc, cr);
@@ -394,7 +392,7 @@ export class GeometryBuilder {
 
         if (hasPc) {
             pc_blendType = raw.pcBlendType(pcIdx);
-            // Clamp invalid PartColor blend modes (>=4) to Mix (10_parts_color §1-1).
+            // Clamp invalid PartColor blend modes (>=4) to Mix.
             if (pc_blendType > BlendType.Sub) pc_blendType = BlendType.Mix;
             // Mesh uses only the LT corner (index 0) as a flat tint.
             pc_rate = raw.pcCornerRate(pcIdx, 0);
@@ -453,7 +451,7 @@ export class GeometryBuilder {
      * runtime and copied through unchanged. Indices are command-local 0-based.
      *
      * `vertexOffset` / `indexOffset` let several commands be packed into a single
-     * shared buffer (effect dynamic batching, 08_advanced_rendering §2): each
+     * shared buffer (effect dynamic batching): each
      * command writes its vertices starting at `vertexOffset`, and its indices —
      * rebased by `vertexOffset` — starting at `indexOffset`. `partAlpha` folds the
      * effect part's own opacity into the per-vertex alpha so one merged Mesh can

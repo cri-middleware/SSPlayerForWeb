@@ -206,7 +206,7 @@ describe('SSSurface', () => {
 
       const tint = (surface.renderer.render as ReturnType<typeof vi.fn>).mock.calls[0][4];
       // uColor multiplies an already-premultiplied fragment, so RGB has to be
-      // scaled by alpha too (§6.10) — at alpha 1 that is the tint unchanged.
+      // scaled by alpha too — at alpha 1 that is the tint unchanged.
       expect(Array.from(tint).map((v) => Math.round(v * 255))).toEqual([128, 128, 128, 255]);
     });
 
@@ -274,7 +274,7 @@ describe('SSPlayer box', () => {
 
     const m = player.renderTransform();
     // [m00, m01, m10, m11, tx, ty] — centred means tx/ty are the box centre, which
-    // is what removed the manual half-canvas maths every host used to carry (§6.9).
+    // is what removed the manual half-canvas maths every host used to carry.
     expect(m[4]).toBe(400);
     expect(m[5]).toBe(300);
   });

@@ -60,7 +60,7 @@ async function main() {
   // The onAudio listener below is OPTIONAL — only for showing which sound fired.
   // Playback happens automatically regardless of whether you listen.
 
-  // --- Animation event listeners (06_playback_control) ---
+  // --- Animation event listeners ---
   player.onAnimationFinished(() => console.log('[SS][end] animation finished'));
   player.onAnimationLooped(() => console.log('[SS][loop] animation looped'));
   player.onUserData((e) => {
@@ -130,7 +130,7 @@ async function main() {
 
     // Every ssab whose textures must be loaded up front = root + the instance packs it
     // references, transitively. Provider-served packs are NOT URL-addressable, so the
-    // runtime won't load their textures for us — we must (09_mask peer: PackResolver §87).
+    // runtime won't load their textures for us — we must.
     const involved: { buf: Uint8Array; baseDir: string }[] = [{ buf: rootBuf, baseDir: dirOf(ssabObj.path) }];
     const visited = new Set<number>([SSRuntimeManager.extractPackInfo(rootBuf).hash >>> 0]);
     const queue = [...rootRefs];

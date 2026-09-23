@@ -17,7 +17,7 @@
 // Outside the coverage bbox a fragment is treated as "no writer" (kept unless
 // visibleInside).
 //
-// The two ops are accumulated SEPARATELY (09_mask.ja.md §3-1-4): invert and
+// The two ops are accumulated SEPARATELY: invert and
 // increment/decrement are each self-inverse but do not commute, so folding both
 // into one accumulator makes a mixed overlap depend on writer order. Unlike the
 // GPU-stencil path there is no bit budget to divide here — these are shader
@@ -121,7 +121,7 @@ ${MASKED_GLSL_REPLAY}
         vec3 straightTexRGB = texColor.rgb / max(texColor.a, 0.0001);
 
         // 2. Base blend colors. Blend strength is 'rate' ALONE; parts-color alpha
-        // (vColor.a) drives output alpha, not tint strength (10_parts_color §1-4).
+        // (vColor.a) drives output alpha, not tint strength.
         vec3 mixColor = mix(straightTexRGB, vColor.rgb, rate);
         vec3 mulColor = straightTexRGB * mix(vec3(1.0), vColor.rgb, rate);
         vec3 addSubColor = straightTexRGB + (vColor.rgb * rate * sign(isAddSub));
@@ -129,7 +129,7 @@ ${MASKED_GLSL_REPLAY}
         // 3. Output straight color
         vec3 outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
 
-        // 4. Output alpha = texture alpha x parts-color alpha (§1-4); re-premultiply,
+        // 4. Output alpha = texture alpha x parts-color alpha; re-premultiply,
         //    then fold hierarchy alpha / world tint via uColor.
         float outA = texColor.a * vColor.a;
         finalColor = vec4(outRgb * outA, outA) * uColor;
@@ -213,7 +213,7 @@ struct VertexOutput {
   @location(3) vMaskUV: vec4<f32>,
 }
 
-// Mirrors MASKED_GLSL_REPLAY, including the §3-1-4 split of the invert and
+// Mirrors MASKED_GLSL_REPLAY, including the split of the invert and
 // increment ops into two independent accumulators.
 fn maskPasses(cov: vec4<f32>, cuv: vec2<f32>, thisRank: f32, visInside: f32) -> bool {
   let writerCount = i32(maskUniforms.uMaskCount + 0.5);
@@ -268,7 +268,7 @@ fn mainFrag(in: VertexOutput) -> @location(0) vec4<f32> {
   let straightTexRGB = texColor.rgb / max(texColor.a, 0.0001);
 
   // 2. Blend strength is 'rate' ALONE; parts-color alpha (vColor.a) drives
-  // output alpha, not tint strength (10_parts_color §1-4).
+  // output alpha, not tint strength.
   let mixColor = mix(straightTexRGB, in.vColor.rgb, rate);
   let mulColor = straightTexRGB * mix(vec3<f32>(1.0, 1.0, 1.0), in.vColor.rgb, rate);
   let addSubColor = straightTexRGB + (in.vColor.rgb * rate * sign(isAddSub));
@@ -276,7 +276,7 @@ fn mainFrag(in: VertexOutput) -> @location(0) vec4<f32> {
   // 3. Output straight color
   let outRgb = mixColor * isMix + mulColor * isMul + addSubColor * abs(isAddSub);
 
-  // 4. Output alpha = texture alpha x parts-color alpha (§1-4); re-premultiply,
+  // 4. Output alpha = texture alpha x parts-color alpha; re-premultiply,
   //    then fold hierarchy alpha / world tint via uColor.
   let outA = texColor.a * in.vColor.a;
   return vec4<f32>(outRgb * outA, outA) * localUniforms.uColor;

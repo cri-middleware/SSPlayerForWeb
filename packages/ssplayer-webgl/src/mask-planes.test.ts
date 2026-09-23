@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MASK_PLANE_COUNTER, MASK_PLANE_PARITY, maskPlaneForOp } from './SSWebGLRenderer.js';
 
 /**
- * The stencil bit-plane split (09_mask.ja.md §3-1-4). INVERT and INCR/DECR are
+ * The stencil bit-plane split. INVERT and INCR/DECR are
  * each self-inverse but do not commute, so if they ever share a bit again the
  * failure is silent and data-dependent: coverage flips with the order the
  * writers happened to be drawn in, and the cancelling pass leaves residue that

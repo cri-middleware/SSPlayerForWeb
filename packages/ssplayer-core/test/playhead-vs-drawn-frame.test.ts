@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 
-// `frameNo` is the playhead and it is fractional (SDK:
-// 20_design/40_api_conventions §3). The frame that gets DRAWN is a separate
+// `frameNo` is the playhead and it is fractional.
+// The frame that gets DRAWN is a separate
 // question, and turning sub-frame off is the whole of the difference between
 // them.
 //
