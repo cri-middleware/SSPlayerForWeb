@@ -23,6 +23,6 @@
     "cytoscape-cose-bilkent": "^4.1.0",
     "@braintree/sanitize-url": "^7.1.2",
     "debug": "^4.4.3",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   }
 }
