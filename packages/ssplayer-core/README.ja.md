@@ -4,8 +4,7 @@
 
 **SpriteStudio** プレイヤーのためのエンジン非依存な WebAssembly コアです。
 
-> **対象読者:** 自分でレンダラーを作る開発者 / 上級インテグレーター — 新しいエンジンをバインドするための、エンジン非依存な WASM 再生コアです。
-> **インストール:** `npm install @spritestudio/ssplayer-core@beta`
+> **対象読者:** 自分でレンダラーを作る開発者 / 上級インテグレーター — 新しいエンジンをバインドするための、エンジン非依存な WASM 再生コアです。**インストール:** `npm install @spritestudio/ssplayer-core@beta`
 > **目的が違う場合:** → [ssplayer-pixi](../ssplayer-pixi) / [ssplayer-webgl](../ssplayer-webgl) — アニメーションを描画したいだけなら、すぐ使えるレンダラーをどうぞ。
 
 > **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
@@ -59,8 +58,7 @@
 
 [`@spritestudio/ssplayer-pixi`](../ssplayer-pixi) がリファレンス実装です。
 
-> ドローバッチを直接発行するのではなく、既存のシーングラフ / `Sprite` ツリーへ描画したい
-> エンジン向けの `SceneGraphInternalPlayer` ファサードは**対応予定**です。当面は
+> ドローバッチを直接発行するのではなく、既存のシーングラフ / `Sprite` ツリーへ描画したいエンジン向けの `SceneGraphInternalPlayer` ファサードは**対応予定**です。当面は
 > `DirectInternalPlayer` の上に構築してください。
 
 ## メモリモデル

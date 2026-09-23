@@ -27,16 +27,12 @@ pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
 - 破棄は `player.destroy()` で行い、WASM 側リソースも解放されます。
 
 最小コードは [クイックスタート](/ja/setup/quickstart)、再生制御は
-[基本的な再生](/ja/usage/basic) を参照してください。自前の表示オブジェクト（武器・
-エフェクト・当たり判定など）を毎フレームパーツに追従させる方法は
-[パーツトラッキング](/ja/customize/part-following) を参照してください。実行時に特定パーツの色・
-表示・セルを差し替えるには [パーツ制御](/ja/customize/part-overrides) を参照してください。
-`SSPlayer` は WebGL 版と同じ上書きメソッドを持ち、停止中に上書きした場合は現在のフレームを
-描画し直します。
+[基本的な再生](/ja/usage/basic) を参照してください。自前の表示オブジェクト（武器・エフェクト・当たり判定など）を毎フレームパーツに追従させる方法は
+[パーツトラッキング](/ja/customize/part-following) を参照してください。実行時に特定パーツの色・表示・セルを差し替えるには [パーツ制御](/ja/customize/part-overrides) を参照してください。
+`SSPlayer` は WebGL 版と同じ上書きメソッドを持ち、停止中に上書きした場合は現在のフレームを描画し直します。
 
 ## ブレンドモードと背景
 
-SpriteStudio の「背景を読み取る」ブレンドモード（Screen / Exclusion / Invert）は、
-実際のフレームバッファを読む固定機能 GPU ブレンドとして実装されています。つまり
+SpriteStudio の「背景を読み取る」ブレンドモード（Screen / Exclusion / Invert）は、実際のフレームバッファを読む固定機能 GPU ブレンドとして実装されています。つまり
 `Application` の `backgroundColor` が合成対象の背景になります。詳細は
 [シェーダーとブレンドモード](/ja/customize/shaders) を参照してください。
