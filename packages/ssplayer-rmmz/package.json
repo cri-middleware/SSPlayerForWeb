@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "jsdom": "^30.1.1",
-    "pixi.js": "^5.3.12",
+    "pixi.js": "^8.21.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   },
