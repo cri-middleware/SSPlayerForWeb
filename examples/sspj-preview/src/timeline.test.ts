@@ -19,6 +19,12 @@ function fakePlayer() {
     audio: [] as ((e: SSAudioEvent) => void)[],
   };
   const calls: string[] = [];
+  // A real unsubscribe, so a test can tell a player the timeline has let go of
+  // from one it is still listening to.
+  const subscribe = <T>(list: T[], fn: T) => {
+    list.push(fn);
+    return () => void list.splice(list.indexOf(fn), 1);
+  };
 
   const player = {
     startFrame: 0,
@@ -29,10 +35,10 @@ function fakePlayer() {
     play: () => void calls.push('play'),
     pause: () => void calls.push('pause'),
     resume: () => void calls.push('resume'),
-    onFrame: (fn: (frame: number) => void) => (listeners.frame.push(fn), () => {}),
-    onUserData: (fn: (e: SSUserDataEvent) => void) => (listeners.userData.push(fn), () => {}),
-    onSignal: (fn: (e: SSSignalEvent) => void) => (listeners.signal.push(fn), () => {}),
-    onAudio: (fn: (e: SSAudioEvent) => void) => (listeners.audio.push(fn), () => {}),
+    onFrame: (fn: (frame: number) => void) => subscribe(listeners.frame, fn),
+    onUserData: (fn: (e: SSUserDataEvent) => void) => subscribe(listeners.userData, fn),
+    onSignal: (fn: (e: SSSignalEvent) => void) => subscribe(listeners.signal, fn),
+    onAudio: (fn: (e: SSAudioEvent) => void) => subscribe(listeners.audio, fn),
   };
 
   return {
@@ -86,11 +92,12 @@ const userData = (over: Partial<SSUserDataEvent> = {}): SSUserDataEvent => ({
 
 let el: TimelineElements;
 let fake: ReturnType<typeof fakePlayer>;
+let timeline: Timeline;
 
 beforeEach(() => {
   el = elements();
   fake = fakePlayer();
-  new Timeline(fake.player, el);
+  timeline = new Timeline(fake.player, el);
 });
 
 describe('the transport', () => {
@@ -234,5 +241,36 @@ describe('the event strip', () => {
     expect(el.markers.children).toHaveLength(0);
     expect(el.events.textContent).toContain('Events appear here');
     expect(el.seek.max).toBe('40');
+  });
+});
+
+describe('a player swapped in', () => {
+  // The renderer menu replaces the player; the controls on the page stay.
+  it('takes the events, the transport and the settings the controls show', () => {
+    el.speed.value = '2';
+    el.speed.dispatchEvent(new Event('input'));
+    el.subFrame.checked = false;
+    el.subFrame.dispatchEvent(new Event('change'));
+    fake.fire.userData(userData());
+
+    const next = fakePlayer();
+    next.raw.endFrame = 40;
+    timeline.attach(next.player);
+
+    // A new player starts at its own defaults; the controls still say 2 and off.
+    expect(next.raw.speedScale).toBe(2);
+    expect(next.raw.subFrameEnabled).toBe(false);
+    // Its range, and an empty table: what the old one fired is not its.
+    expect(el.seek.max).toBe('40');
+    expect(el.markers.children).toHaveLength(0);
+
+    fake.fire.userData(userData({ frameNo: 9 }));
+    expect(el.markers.children).toHaveLength(0);
+    next.fire.userData(userData({ frameNo: 9 }));
+    expect(el.markers.children).toHaveLength(1);
+
+    el.playPause.click();
+    expect(next.calls).toEqual(['pause']);
+    expect(fake.calls).toEqual([]);
   });
 });

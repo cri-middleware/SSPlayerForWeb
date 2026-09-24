@@ -90,6 +90,7 @@
         max-width: 260px;
       }
       select:disabled { opacity: 0.55; }
+      #backend { font-size: 12px; }
       #pick { display: none; }
       #pick-label {
         color: var(--text);
@@ -203,8 +204,8 @@
       </p>
     </header>
 
+    <!-- The canvas is the renderer's: main.ts puts one in ahead of the drop zone. -->
     <div id="stage">
-      <canvas id="view"></canvas>
       <div id="drop-zone">Drop the project folder</div>
     </div>
 
@@ -215,6 +216,16 @@
       <label hidden>Project <select id="project" disabled></select></label>
       <label>Pack <select id="pack" disabled></select></label>
       <label>Animation <select id="anime" disabled></select></label>
+      <!-- An option is what to ask for; the note beside the menu is what the
+           browser gave, since PixiJS drops to WebGL when WebGPU is not there. -->
+      <label>Renderer
+        <select id="renderer">
+          <option value="webgl">ssplayer-webgl</option>
+          <option value="pixi-webgpu">ssplayer-pixi · WebGPU</option>
+          <option value="pixi-webgl">ssplayer-pixi · WebGL</option>
+        </select>
+        <span id="backend"></span>
+      </label>
     </div>
 
     <div id="transport">
@@ -237,7 +248,8 @@
     <footer>
       <p>
         Conversion by <code>@spritestudio/ssconverter-core</code>, playback by
-        <code>@spritestudio/ssplayer-webgl</code>. Need the <code>.ssab</code> as a file?
+        <code>@spritestudio/ssplayer-webgl</code> or <code>@spritestudio/ssplayer-pixi</code>.
+        Need the <code>.ssab</code> as a file?
         Use the <a href="../../ssconverter/">browser converter</a>.
       </p>
       <p id="build"></p>

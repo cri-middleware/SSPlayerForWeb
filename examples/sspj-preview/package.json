@@ -2,7 +2,7 @@
   "name": "sspj-preview",
   "private": true,
   "version": "1.0.0",
-  "description": "Drop a SpriteStudio project (.sspj) folder and play it — conversion (ssconverter-core) and playback (ssplayer-webgl) in one page, no build step",
+  "description": "Drop a SpriteStudio project (.sspj) folder and play it — conversion (ssconverter-core) and playback (ssplayer-webgl or ssplayer-pixi) in one page, no build step",
   "scripts": {
     "test": "tsc --noEmit && vitest run",
     "dev": "vite",
@@ -13,7 +13,9 @@
   "type": "module",
   "dependencies": {
     "@spritestudio/ssconverter-core": "workspace:*",
-    "@spritestudio/ssplayer-webgl": "workspace:*"
+    "@spritestudio/ssplayer-pixi": "workspace:*",
+    "@spritestudio/ssplayer-webgl": "workspace:*",
+    "pixi.js": "^8.21.0"
   },
   "devDependencies": {
     "@spritestudio/ssplayer-core": "workspace:*",
