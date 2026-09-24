@@ -526,18 +526,15 @@ export class SSPlayer extends Container {
         if (this.internalPlayer) {
             this.internalPlayer.destroy();
         }
+        // The shaders and pooled meshes first: they hold the textures and mask
+        // render targets freed below, and PixiJS warns for every one freed while
+        // still bound.
+        this.releaseTextureBindings();
         // Free this instance's owned (embedded-mode) textures; never invoked
         // before, so those textures leaked on every player teardown.
         this.pixiResourceManager.destroy();
         for (const rt of this.rtPool) rt.destroy(true);
         this.rtPool.length = 0;
-
-        for (const m of this.meshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.maskedMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.maskMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        this.meshPool.length = 0;
-        this.maskedMeshPool.length = 0;
-        this.maskMeshPool.length = 0;
 
         super.destroy(options);
     }
