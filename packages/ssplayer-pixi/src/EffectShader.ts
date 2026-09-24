@@ -1,10 +1,11 @@
 // Minimal shader for SpriteStudio Effect (particle) rendering.
 //
-// Unlike PartsColorShader, effects carry no PartsColor overlay (no per-vertex
-// blend-mode flags in aVarg): each particle's per-vertex color (aColor, straight
-// RGBA 0..1) simply modulates the texture, with the particle alpha (aColor.a)
-// driving output coverage so particles fade in/out. Effects therefore use this
-// dedicated minimal path rather than the parts-color blend machinery.
+// Unlike PartsColorShader, effects carry no PartsColor overlay, so their
+// meshes have no aVarg at all (see MeshLayout in SSPlayer.ts): each particle's
+// per-vertex color (aColor, straight RGBA 0..1) simply modulates the texture,
+// with the particle alpha (aColor.a) driving output coverage so particles fade
+// in/out. Effects therefore use this dedicated minimal path rather than the
+// parts-color blend machinery.
 //
 // Textures are premultiplied-alpha (PixiJS default). For a premultiplied texel
 // and a straight vertex color the modulated premultiplied result is:
@@ -18,7 +19,6 @@ export const EffectShader = {
     in vec2 aPosition;
     in vec2 aUV;
     in vec4 aColor;
-    in vec4 aVarg;
 
     uniform mat3 uProjectionMatrix;
     uniform mat3 uWorldTransformMatrix;
@@ -69,7 +69,6 @@ struct VertexInput {
   @location(0) aPosition: vec2<f32>,
   @location(1) aUV: vec2<f32>,
   @location(2) aColor: vec4<f32>,
-  @location(3) aVarg: vec4<f32>,
 }
 
 struct VertexOutput {

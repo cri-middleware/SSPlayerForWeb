@@ -129,6 +129,15 @@ interface InheritedMask {
     visibleInside: boolean;
 }
 
+/**
+ * Which vertex attributes a pooled mesh carries, matched to the shader that
+ * draws it. Every mesh has position, uv and colour; `parts` adds aVarg for
+ * PartsColor, the ss-* shaders and MaskWrite, and `masked` adds aMaskUV on top.
+ * `effect` has neither, since EffectShader reads neither — and on WebGL a
+ * geometry attribute the program lacks costs a PixiJS warning per mesh.
+ */
+type MeshLayout = 'parts' | 'masked' | 'effect';
+
 export class SSPlayer extends Container {
     public static async initialize(wasmUrl?: string | URL) {
         await initializeWasm(wasmUrl);
@@ -235,11 +244,14 @@ export class SSPlayer extends Container {
     private maskRenderRoot = new Container();
     // Separate pools so each pool's vertex layout matches its shader exactly:
     // coverage meshes (MaskWrite) share the normal layout; masked-content
-    // meshes carry the extra aMaskUV attribute (MaskedPartsColor).
+    // meshes carry the extra aMaskUV attribute (MaskedPartsColor); effect
+    // meshes drop aVarg (EffectShader). See MeshLayout.
     private maskMeshPool: Mesh<any>[] = [];
     private activeMaskMeshes: number = 0;
     private maskedMeshPool: Mesh<any>[] = [];
     private activeMaskedMeshes: number = 0;
+    private effectMeshPool: Mesh<any>[] = [];
+    private activeEffectMeshes: number = 0;
     // Pooled offscreen coverage textures (one per mask-bearing context per frame).
     private rtPool: RenderTexture[] = [];
     // Pooled per-context coverage records, indexed in lockstep with rtPool.
@@ -526,18 +538,15 @@ export class SSPlayer extends Container {
         if (this.internalPlayer) {
             this.internalPlayer.destroy();
         }
+        // The shaders and pooled meshes first: they hold the textures and mask
+        // render targets freed below, and PixiJS warns for every one freed while
+        // still bound.
+        this.releaseTextureBindings();
         // Free this instance's owned (embedded-mode) textures; never invoked
         // before, so those textures leaked on every player teardown.
         this.pixiResourceManager.destroy();
         for (const rt of this.rtPool) rt.destroy(true);
         this.rtPool.length = 0;
-
-        for (const m of this.meshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.maskedMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.maskMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        this.meshPool.length = 0;
-        this.maskedMeshPool.length = 0;
-        this.maskMeshPool.length = 0;
 
         super.destroy(options);
     }
@@ -580,10 +589,13 @@ export class SSPlayer extends Container {
         for (const m of this.meshPool) m.destroy({ children: true, texture: false, textureSource: false });
         for (const m of this.maskedMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
         for (const m of this.maskMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        for (const m of this.effectMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
         this.meshPool.length = 0;
         this.maskedMeshPool.length = 0;
         this.maskMeshPool.length = 0;
+        this.effectMeshPool.length = 0;
         this.activeMeshes = 0;
+        this.activeEffectMeshes = 0;
     }
 
     /**
@@ -1226,9 +1238,13 @@ export class SSPlayer extends Container {
         for (let i = 0; i < this.maskedMeshPool.length; i++) {
             this.maskedMeshPool[i].visible = false;
         }
+        for (let i = 0; i < this.effectMeshPool.length; i++) {
+            this.effectMeshPool[i].visible = false;
+        }
 
         this.activeMeshes = 0;
         this.activeMaskedMeshes = 0;
+        this.activeEffectMeshes = 0;
         this.activeMaskMeshes = 0;
         this.activeRTs = 0;
         // Per-frame reset of the integration-shader pool hand-out counters so
@@ -1492,8 +1508,8 @@ export class SSPlayer extends Container {
                     if (alpha <= 0) continue;
 
                     const mesh = masked
-                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, 5, 12, true)
-                        : this.acquireMesh(this.meshPool, this.activeMeshes++, 5, 12, false);
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, 5, 12, 'masked')
+                        : this.acquireMesh(this.meshPool, this.activeMeshes++, 5, 12, 'parts');
 
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
@@ -1539,8 +1555,8 @@ export class SSPlayer extends Container {
 
                     const numIndices = (numVerts - 2) * 3;
                     const mesh = masked
-                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, numVerts, numIndices, true)
-                        : this.acquireMesh(this.meshPool, this.activeMeshes++, numVerts, numIndices, false);
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, numVerts, numIndices, 'masked')
+                        : this.acquireMesh(this.meshPool, this.activeMeshes++, numVerts, numIndices, 'parts');
 
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
@@ -1584,8 +1600,8 @@ export class SSPlayer extends Container {
                     if (pCount === 0 || iCount === 0) continue;
 
                     const mesh = masked
-                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, pCount, iCount, true)
-                        : this.acquireMesh(this.meshPool, this.activeMeshes++, pCount, iCount, false);
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, pCount, iCount, 'masked')
+                        : this.acquireMesh(this.meshPool, this.activeMeshes++, pCount, iCount, 'parts');
 
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
@@ -1635,8 +1651,7 @@ export class SSPlayer extends Container {
 
                     const pCount = totalQuads * 4;
                     const iCount = totalQuads * 6;
-                    const mesh = this.getMeshFromPool(this.activeMeshes, pCount, iCount);
-                    this.activeMeshes++;
+                    const mesh = this.acquireMesh(this.effectMeshPool, this.activeEffectMeshes++, pCount, iCount, 'effect');
 
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
@@ -1890,7 +1905,7 @@ export class SSPlayer extends Container {
         const invTexW = 1.0 / texture.width;
         const invTexH = 1.0 / texture.height;
 
-        const mesh = this.acquireMesh(this.maskMeshPool, this.activeMaskMeshes++, numVerts, numIndices, false);
+        const mesh = this.acquireMesh(this.maskMeshPool, this.activeMaskMeshes++, numVerts, numIndices, 'parts');
         const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
         const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
         const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
@@ -2054,18 +2069,14 @@ export class SSPlayer extends Container {
         return shader;
     }
 
-    private getMeshFromPool(index: number, requiredVertices: number = 5, requiredIndices: number = 12): Mesh {
-        return this.acquireMesh(this.meshPool, index, requiredVertices, requiredIndices, false);
-    }
-
-    private acquireMesh(pool: Mesh<any>[], index: number, requiredVertices: number, requiredIndices: number, withMaskUV: boolean): Mesh {
+    private acquireMesh(pool: Mesh<any>[], index: number, requiredVertices: number, requiredIndices: number, layout: MeshLayout): Mesh {
         if (index < pool.length) {
             let m = pool[index];
             const pBuf = m.geometry.getBuffer('aPosition');
             const iBuf = m.geometry.getIndex();
             if (pBuf.data.length !== requiredVertices * 2 || iBuf.data.length !== requiredIndices) {
                 m.destroy({ children: true, texture: false, textureSource: false });
-                m = this.createNewMesh(requiredVertices, requiredIndices, withMaskUV);
+                m = this.createNewMesh(requiredVertices, requiredIndices, layout);
                 pool[index] = m;
             }
             if (requiredIndices === 12) {
@@ -2079,13 +2090,13 @@ export class SSPlayer extends Container {
             return m;
         }
 
-        const m = this.createNewMesh(requiredVertices, requiredIndices, withMaskUV);
+        const m = this.createNewMesh(requiredVertices, requiredIndices, layout);
         (m as any).size = requiredIndices;
         pool.push(m);
         return m;
     }
 
-    private createNewMesh(requiredVertices: number, requiredIndices: number, withMaskUV: boolean = false): Mesh<any> {
+    private createNewMesh(requiredVertices: number, requiredIndices: number, layout: MeshLayout): Mesh<any> {
         const positionsBuffer = new Buffer({
             data: new Float32Array(requiredVertices * 2),
             usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
@@ -2111,17 +2122,19 @@ export class SSPlayer extends Container {
             }),
             size: 4
         } as any);
-        geometry.addAttribute('aVarg', {
-            buffer: new Buffer({
-                data: new Float32Array(requiredVertices * 4),
-                usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
-            }),
-            size: 4
-        } as any);
+        if (layout !== 'effect') {
+            geometry.addAttribute('aVarg', {
+                buffer: new Buffer({
+                    data: new Float32Array(requiredVertices * 4),
+                    usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+                }),
+                size: 4
+            } as any);
+        }
 
         // Masked-content meshes carry an extra per-vertex attribute (coverage
         // uv + rank + polarity) consumed by MaskedPartsColorShader at location 4.
-        if (withMaskUV) {
+        if (layout === 'masked') {
             geometry.addAttribute('aMaskUV', {
                 buffer: new Buffer({
                     data: new Float32Array(requiredVertices * 4),
