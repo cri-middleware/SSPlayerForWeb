@@ -329,9 +329,15 @@ importers:
       '@spritestudio/ssconverter-core':
         specifier: workspace:*
         version: link:../../packages/ssconverter-core
+      '@spritestudio/ssplayer-pixi':
+        specifier: workspace:*
+        version: link:../../packages/ssplayer-pixi
       '@spritestudio/ssplayer-webgl':
         specifier: workspace:*
         version: link:../../packages/ssplayer-webgl
+      pixi.js:
+        specifier: ^8.21.0
+        version: 8.21.0
     devDependencies:
       '@spritestudio/ssplayer-core':
         specifier: workspace:*

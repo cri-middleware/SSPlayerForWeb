@@ -47,7 +47,7 @@ features:
 - ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト
 - ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン
 - 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
-- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。インストール不要
+- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能。インストール不要
 
 ## 概要（.sspj → 描画まで）
 

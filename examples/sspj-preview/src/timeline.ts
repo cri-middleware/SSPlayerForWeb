@@ -27,6 +27,26 @@ import type {
   Unsubscribe,
 } from '@spritestudio/ssplayer-webgl';
 
+/**
+ * What the timeline drives: the part of a player every renderer on this page
+ * shares, so ssplayer-pixi's player fits it as well as ssplayer-webgl's.
+ */
+export type TimelinePlayer = Pick<
+  SSPlayer,
+  | 'startFrame'
+  | 'endFrame'
+  | 'frameNo'
+  | 'play'
+  | 'pause'
+  | 'resume'
+  | 'speedScale'
+  | 'subFrameEnabled'
+  | 'onFrame'
+  | 'onUserData'
+  | 'onSignal'
+  | 'onAudio'
+>;
+
 /** The three things a part can fire, as the strip colours them. */
 type EventKind = 'userData' | 'signal' | 'audio';
 
@@ -86,7 +106,7 @@ export class Timeline {
   private end = 0;
 
   constructor(
-    private readonly player: SSPlayer,
+    private player: TimelinePlayer,
     private readonly el: TimelineElements,
   ) {
     this.wireTransport();
@@ -192,7 +212,24 @@ export class Timeline {
     );
   }
 
-  /** Stop listening — for a page that replaces its player rather than its pack. */
+  /**
+   * Drive a different player — the page's renderer switch replaces the player,
+   * not just its pack.
+   *
+   * The transport is wired once and reads `this.player` when clicked, so only
+   * the event subscriptions move. The speed and sub-frame the controls still
+   * show are handed over, since the new player starts at its own defaults.
+   */
+  attach(player: TimelinePlayer): void {
+    this.dispose();
+    this.player = player;
+    this.player.speedScale = Number(this.el.speed.value);
+    this.player.subFrameEnabled = this.el.subFrame.checked;
+    this.wireEvents();
+    this.reset();
+  }
+
+  /** Stop listening to the player. */
   dispose(): void {
     for (const off of this.subscriptions.splice(0)) off();
   }

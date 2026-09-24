@@ -1,14 +1,16 @@
 // Drop a SpriteStudio project, see it move.
 //
-// Two packages, one page: `@spritestudio/ssconverter-core` turns the dropped
-// `.sspj` into a `.ssab` in the browser, and `@spritestudio/ssplayer-webgl`
-// plays the bytes that come out. Nothing is uploaded and nothing is written to
-// disk — the pack never leaves the tab.
+// `@spritestudio/ssconverter-core` turns the dropped `.sspj` into a `.ssab` in
+// the browser, and a player plays the bytes that come out — ssplayer-webgl, or
+// ssplayer-pixi on WebGPU or WebGL, whichever the Renderer menu picks. Nothing
+// is uploaded and nothing is written to disk — the pack never leaves the tab.
 //
-// This is deliberately NOT a feature of the WebGL example. That one shows how
-// to put a player on a page and keeps its code readable as the answer to that
-// one question; conversion is a second question, and mixing them makes both
-// harder to read. The two examples share nothing but the packages.
+// This is deliberately NOT a feature of the WebGL or the PixiJS example. Those
+// show how to put a player on a page and keep their code readable as the answer
+// to that one question; conversion is a second question, and mixing them makes
+// both harder to read. The examples share nothing but the packages. The
+// renderer menu is here instead because this is the page a project gets checked
+// on, and each renderer draws it with code of its own (see `renderers.ts`).
 //
 // If you want the `.ssab` as a file rather than as a frame on screen, the
 // hosted converter (`/ssconverter/`) is the tool for that — it writes a ZIP.
@@ -22,7 +24,7 @@ import {
 } from '@spritestudio/ssconverter-core';
 // Vite serves the wasm as an asset and hands us its URL; `init` fetches it.
 import wasmUrl from '@spritestudio/ssconverter-core/wasm/ssconverter_bg.wasm?url';
-import { SSRuntimeManager, SSSurface } from '@spritestudio/ssplayer-webgl';
+import { SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 
 import {
   collectDroppedFiles,
@@ -32,6 +34,7 @@ import {
   type FoundProject,
   type ProjectFile,
 } from './projectDrop.js';
+import { mountRenderer, type MountedRenderer, type RendererKind } from './renderers.js';
 import { Timeline } from './timeline.js';
 
 /**
@@ -48,8 +51,10 @@ const SAMPLE_SSAB = 'Ringo/Ringo.ssab';
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
 async function main(): Promise<void> {
-  const canvas = $<HTMLCanvasElement>('view');
+  const stage = $<HTMLDivElement>('stage');
   const dropZone = $<HTMLDivElement>('drop-zone');
+  const rendererSelect = $<HTMLSelectElement>('renderer');
+  const backendNote = $<HTMLSpanElement>('backend');
   const pickInput = $<HTMLInputElement>('pick');
   const projectSelect = $<HTMLSelectElement>('project');
   const packSelect = $<HTMLSelectElement>('pack');
@@ -62,15 +67,15 @@ async function main(): Promise<void> {
     statusLine.dataset.kind = kind;
   };
 
-  // Fixed drawing buffer, as in the other examples: the effect-heavy test
-  // projects are fill-rate bound, so the pixel count is capped here rather
-  // than following the window.
-  canvas.width = 1280;
-  canvas.height = 960;
-
-  await SSSurface.initialize();
-  const surface = new SSSurface(canvas, { autoStart: true, backgroundColor: 0x1a1a2e });
-  const player = surface.createPlayer();
+  // The canvas is the renderer's, so it goes in ahead of the drop zone that
+  // sits over it.
+  let mounted: MountedRenderer | null = await mountRenderer(
+    rendererSelect.value as RendererKind,
+    stage,
+    dropZone,
+  );
+  let player = mounted.player;
+  backendNote.textContent = mounted.backend;
 
   // The seek bar, the marker strip and the event list, ported from
   // SSPlayerForWgpu's preview shell so both previews read the same way.
@@ -88,6 +93,8 @@ async function main(): Promise<void> {
 
   /** The packs the last conversion produced, by file name. Empty until one runs. */
   let packs = new Map<string, Uint8Array>();
+  /** The pack on screen, or null for the sample, so a renderer switch can put it back. */
+  let shownPack: string | null = null;
   /** What was dropped, kept so a second project in the same drop can be picked. */
   let dropped: ProjectFile[] = [];
 
@@ -118,6 +125,7 @@ async function main(): Promise<void> {
   const showPack = async (name: string): Promise<void> => {
     const bytes = packs.get(name);
     if (!bytes) return;
+    shownPack = name;
 
     // Every pack this conversion produced is in memory, so an instance part
     // pointing at a sibling pack resolves without a fetch. The runtime asks by
@@ -128,7 +136,7 @@ async function main(): Promise<void> {
 
     // No texture map: the conversion below inlines the images into the pack,
     // so the runtime decodes them out of these same bytes.
-    await player.loadBuffer(bytes, new Map());
+    await player.loadBuffer(bytes, new Map<number, never>());
 
     const animations = SSRuntimeManager.extractAnimationNames(bytes);
     fillSelect(animeSelect, animations, animations[0]);
@@ -269,25 +277,64 @@ async function main(): Promise<void> {
     if (pickInput.files) void takeFiles(collectPickedFiles(pickInput.files)).catch(fail('Conversion failed'));
   });
 
+  // --- renderer ---------------------------------------------------------------
+
+  const switchRenderer = async (kind: RendererKind): Promise<void> => {
+    const animation = animeSelect.value;
+    rendererSelect.disabled = true;
+    try {
+      mounted?.destroy();
+      mounted = null;
+      backendNote.textContent = '';
+      mounted = await mountRenderer(kind, stage, dropZone);
+      player = mounted.player;
+      backendNote.textContent = mounted.backend;
+      timeline.attach(player);
+
+      // The same pack and animation as before: the rasteriser is the one thing
+      // a switch should change, or the two pictures stop being comparable.
+      if (shownPack === null) await showSample();
+      else await showPack(shownPack);
+      if (player.getAnimationNames().includes(animation)) {
+        animeSelect.value = animation;
+        showAnimation(animation);
+      }
+    } finally {
+      rendererSelect.disabled = false;
+    }
+  };
+
+  rendererSelect.addEventListener('change', () => {
+    void switchRenderer(rendererSelect.value as RendererKind).catch(
+      fail('Could not start that renderer'),
+    );
+  });
+
   // --- the sample it opens on ------------------------------------------------
 
-  try {
-    await player.load(SAMPLE_SSAB);
-    const animations = player.getAnimationNames();
-    fillSelect(packSelect, [SAMPLE_SSAB]);
-    fillSelect(animeSelect, [...animations], animations[0]);
-    showAnimation(animations[0] ?? '');
-    say('Sample: Ringo. Drop your own project folder to convert and play it.');
-  } catch (error) {
-    // Almost always the one cause: a checkout where the example assets have not
-    // been generated yet. Saying which command fixes it beats a blank canvas.
-    say(
-      `Could not load the bundled sample (${SAMPLE_SSAB}) — run \`pnpm run deploy-examples\`. ` +
-        'Dropping a project folder works regardless.',
-      'error',
-    );
-    console.error(error);
-  }
+  const showSample = async (): Promise<void> => {
+    shownPack = null;
+    try {
+      await player.load(SAMPLE_SSAB);
+      const animations = player.getAnimationNames();
+      fillSelect(packSelect, [SAMPLE_SSAB]);
+      fillSelect(animeSelect, [...animations], animations[0]);
+      showAnimation(animations[0] ?? '');
+      say('Sample: Ringo. Drop your own project folder to convert and play it.');
+    } catch (error) {
+      // Almost always the one cause: a checkout where the example assets have
+      // not been generated yet. Saying which command fixes it beats a blank
+      // canvas.
+      say(
+        `Could not load the bundled sample (${SAMPLE_SSAB}) — run \`pnpm run deploy-examples\`. ` +
+          'Dropping a project folder works regardless.',
+        'error',
+      );
+      console.error(error);
+    }
+  };
+
+  await showSample();
 }
 
 void main().catch(console.error);
