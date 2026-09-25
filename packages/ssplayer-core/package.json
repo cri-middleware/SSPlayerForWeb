@@ -61,7 +61,7 @@
   "devDependencies": {
     "copyfiles": "^2.4.1",
     "flatbuffers": "^25.9.23",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.2"
   },
   "license": "BSD-3-Clause"
 }
