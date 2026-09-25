@@ -2,9 +2,9 @@
 #
 # Build the whole GitHub Pages site into one directory: the docs (VitePress) at
 # the root, ssconverter-web (every schema version in versions.json) under
-# /ssconverter/, and the examples -- pixi, webgl, override, the static RPG Maker
-# MZ SampleProject (rmmz) and the static TyranoScript project -- under
-# /examples/.
+# /ssconverter/, and the six examples -- pixi, webgl, override, sspj-preview,
+# the static RPG Maker MZ SampleProject (rmmz) and the static TyranoScript
+# project -- under /examples/.
 # PowerShell twin of build-pages.sh.
 #
 #   scripts/build-pages.ps1                            # -> _site, base /<repo>/

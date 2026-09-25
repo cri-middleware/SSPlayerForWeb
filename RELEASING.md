@@ -27,13 +27,13 @@ deliberately not from `base`, which is `/` during local dev.
 
 `scripts/build-pages.sh` builds everything into one directory (`_site` by default): the docs at the
 root, `ssconverter-web` for every schema version in `versions.json` under `/ssconverter/`, and the
-five examples under `/examples/`. `pages.yml` runs this same script, keeping only what is GitHub's
+six examples under `/examples/`. `pages.yml` runs this same script, keeping only what is GitHub's
 — the checkout, the toolchain, the artifact upload and the deploy.
 
 `base=` defaults to `/<repo>/`, because a project site is served under it and a site built for `/`
 looks fine locally and 404s once deployed. `skip=<stages>` is what makes the script usable while
-iterating (`skip=install,wasm,packages,assets,rmmz,tyranoscript,ssconverter` rebuilds the docs
-alone); a skipped stage leaves its part out with a warning, while a stage that ran and produced
+iterating (`skip=install,wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter` rebuilds the
+docs alone); a skipped stage leaves its part out with a warning, while a stage that ran and produced
 nothing is an error. `sdk=download`, the default, takes the prebuilt wasm for
 `scripts/SDK_VERSION.txt`; `sdk=build` compiles it from the submodule and is the way through while
 that SDK release does not exist yet — but it reaches the `ssconverter` stage **only as far as the
@@ -42,7 +42,7 @@ downloading the release it pins, which is the point of pinning it. Each version 
 two it took.
 
 Three things it needs that `pnpm install` does not: the SpriteStudio-SDK submodule, network
-access, and — on the `.sh` path only — `jq`, which the `.ps1` twin does without.
+access, and — on the `.sh` path only — `jq`, which the `.ps1` twin does without (it uses `ConvertFrom-Json`).
 
 ## Cutting a release
 
@@ -108,9 +108,9 @@ TypeDoc が読む `packages/*/src` がバインディングを import してい�
 ## 公開サイト全体のビルド
 
 `scripts/build-pages.sh` が全体を 1 つのディレクトリ（既定 `_site`）に組み立てます。ルートに docs、
-`/ssconverter/` に `versions.json` の各スキーマバージョンの `ssconverter-web`、`/examples/` にサンプル 5 本です。`pages.yml` も同じスクリプトを実行し、GitHub 側の仕事（チェックアウト、ツールチェイン、アーティファクトのアップロード、デプロイ）だけを持ちます。
+`/ssconverter/` に `versions.json` の各スキーマバージョンの `ssconverter-web`、`/examples/` にサンプル 6 本です。`pages.yml` も同じスクリプトを実行し、GitHub 側の仕事（チェックアウト、ツールチェイン、アーティファクトのアップロード、デプロイ）だけを持ちます。
 
-`base=` の既定は `/<repo>/` です。プロジェクトサイトはその下で配信されるため、`/` 向けに建てたサイトはローカルでは問題なく見えて、デプロイすると 404 します。`skip=<stages>` が反復作業を可能にします（`skip=install,wasm,packages,assets,rmmz,tyranoscript,ssconverter` で docs だけ建て直せます）。スキップした段はその部分をサイトから外し警告を出しますが、走ったのに何も出さなかった段はエラーです。既定の `sdk=download` は `scripts/SDK_VERSION.txt` のビルド済み wasm を取得します。`sdk=build` は
+`base=` の既定は `/<repo>/` です。プロジェクトサイトはその下で配信されるため、`/` 向けに建てたサイトはローカルでは問題なく見えて、デプロイすると 404 します。`skip=<stages>` が反復作業を可能にします（`skip=install,wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter` で docs だけ建て直せます）。スキップした段はその部分をサイトから外し警告を出しますが、走ったのに何も出さなかった段はエラーです。既定の `sdk=download` は `scripts/SDK_VERSION.txt` のビルド済み wasm を取得します。`sdk=build` は
 submodule からコンパイルし、その SDK リリースがまだ無いときの回避路ですが、`ssconverter` 段に届くのは **`sdk` タグが `SDK_VERSION.txt` と一致するスキーマバージョン 1 つだけ**です。他のバージョンは自分がピンしたリリースをダウンロードし続けます（それがピンの意味です）。どちらを取ったかは各バージョンがログに出します。
 
 `pnpm install` では足りないものが 3 つあります。SpriteStudio-SDK submodule、ネットワーク、そして
