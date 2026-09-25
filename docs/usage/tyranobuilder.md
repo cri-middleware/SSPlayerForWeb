@@ -115,7 +115,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 ```
 
 Subfolders are searched too, so you can group sources however you like — the whole tree is
-walked for `.sspj` files, and only the folder name of the `.sspj` itself decides the output
+walked for `.sspj` files, and only the file name of the `.sspj` itself decides the output
 name.
 
 ### Picking up a change

@@ -33,7 +33,7 @@ const bmp = ImageManager.loadBitmap('spritestudio/', 'sailor_uniform');
 player.setCellmapTexture('Clothes', bmp); // deferred until the bitmap is ready
 ```
 
-Prepare one atlas per part per pattern and you never need it — one texture swap dresses the whole character, which is what makes an efficient avatar system.
+Prepare one atlas per part per pattern, and one texture swap dresses the whole character — which is what makes an efficient avatar system.
 
 ## Discovering the targets
 

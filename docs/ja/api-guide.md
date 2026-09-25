@@ -22,7 +22,7 @@ await SSSurface.initialize();  // または SSPlayer.initialize()
 ::: tip 同じシンボルが 3 回出てくる理由
 各レンダラーパッケージは **`ssplayer-core` を再エクスポート**しています。そのため
 `SSRuntimeManager` / `IResourceManager` / `BlendType` などは、生成リファレンスの 3 つのパッケージページすべてに現れます。実体は同じ宣言です。**インストールしたパッケージから
-import** してください。コアの型を使いたいだけの理由で、レンダラーと併せて `ssplayer-core` を追加インストールする必要はありません。
+import** してください。コアの型を使いたいだけの理由で、レンダラーと併せて `ssplayer-core` を追加インストールしないでください。
 :::
 
 ## 下に何があるか
