@@ -11,7 +11,7 @@ distributed on **GitHub Releases** — for now, [build it from source](#building
 
 Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
 code to write. Drop a SpriteStudio project into a folder in your game and the editor converts
-it for you — on every save, while you keep working.
+it for you — when the project opens, and again whenever you ask.
 
 Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
 animations as `[ss_*]` tags.
@@ -115,7 +115,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 ```
 
 Subfolders are searched too, so you can group sources however you like — the whole tree is
-walked for `.sspj` files, and only the folder name of the `.sspj` itself decides the output
+walked for `.sspj` files, and only the file name of the `.sspj` itself decides the output
 name.
 
 ### Picking up a change

@@ -90,7 +90,7 @@ data/others/ssdata/<project>.ssab
 
 動く最小プロジェクトは `examples/tyranoscript-example` にあります。
 
-## 4. 提供タグ
+## 4. 提供タグ {#_4-tags}
 
 | タグ | 役割 | 主な属性 |
 | --- | --- | --- |
@@ -217,7 +217,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 `[cm]` / `[clearfix]` 自動フック・frame 精密復元・Tyrano 音量スライダー連動は今後の対応予定です。進捗は [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
 
 ティラノビルダーについては専用プラグイン `@spritestudio/ssplayer-tyranobuilder` があり、`.tbp` として配布され、コンポーネントパレットへの追加に加えて `.sspj` の変換もエディタ内で行います（[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照）。どちらの統合でも未対応の範囲は
-[制約と適用範囲](/ja/limitations#tyranoscript-ティラノビルダー) を参照してください。
+[制約と適用範囲](/ja/limitations#tyranoscript-tyranobuilder) を参照してください。
 
 ## ソースからビルドする {#building-from-source}
 

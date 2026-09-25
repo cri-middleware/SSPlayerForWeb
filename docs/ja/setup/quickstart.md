@@ -90,6 +90,6 @@ main().catch(console.error);
 - **`initialize()` は一度だけ**：WASM ランタイムはアプリ起動時に 1 回初期化すれば十分です（`SSSurface.initialize()` / `SSPlayer.initialize()`）。
 - **Pixi では `update()` を呼ばない**：`SSPlayer` は `Ticker.shared` に自動登録されます。
 - **`.ssab` が無い**：`.sspj` からの変換は [アセットの準備](/ja/usage/assets) を参照してください。
-- **テクスチャが表示されない**：テクスチャは `.ssab` と同じディレクトリから読み込まれます。テクスチャファイルを `.ssab` の隣に置く（または `--embedded` の `.ssab` を使う）でください。
+- **テクスチャが表示されない**：テクスチャは `.ssab` と同じディレクトリから読み込まれます。テクスチャファイルを `.ssab` の隣に置くか、`--embedded` の `.ssab` を使ってください。
 
 次は [基本的な再生](/ja/usage/basic) で再生制御 API を見ていきます。

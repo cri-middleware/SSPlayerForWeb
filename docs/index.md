@@ -60,7 +60,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 - 🎨 **<a href="./examples/override/" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
 - 📂 **<a href="./examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>** — convert **your own** project in the tab and scrub it, user-data / signal / sound keys marked on the timeline, in the WebGL or the PixiJS player. No tool to install
 
-## Overview (.sspj → on screen)
+## Overview (.sspj → on screen) {#overview-from-sspj-to-rendering}
 
 You convert a `.sspj` to a `.ssab` **once, at build time**, and at **runtime** you simply load that `.ssab` and render it. There are three conversion paths: the **browser tool (`ssconverter-web`)**, the **GUI tool ([`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases))**, and the **CLI ([`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases))**.
 

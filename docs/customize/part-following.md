@@ -25,12 +25,12 @@ import { Container } from 'pixi.js';
 
 const sword = new Container();  // the target is yours
 
-// Follow the "FrontHand" part (position, rotation and scale by default).
-const attachment = player.attachToPart('FrontHand', sword);
+// Follow the "FrontHand" part. Position and rotation are driven by default;
+// a sword is part of the artwork, so drive its scale too.
+const attachment = player.attachToPart('FrontHand', sword, { scale: true });
 
-// Follow position and rotation only, and hide the target on hidden frames.
+// Follow position and rotation only (the default), and hide the target on hidden frames.
 player.attachToPart('effect_root', effect, {
-  scale: false,
   onHide: 'hide',
 });
 
@@ -76,14 +76,14 @@ When all three axes (`position` / `rotation` / `scale`) are on, the affine is ap
 
 The player's [flip and offset](/usage/basic#flip-and-offset) work with following rather than against it. `getPartTransform()` reports the part's mirrored pose, so **a target stays pinned to its part across a flip**.
 
-With the default of all three axes on, the affine is written as-is and **the match is exact, mirroring included** — which also means **the target's own artwork is mirrored** (the mirror arrives as a negative scale). That is usually what you want from something meant to match the part exactly, but text or an asymmetric icon on the target will come out backwards.
+With all three axes on (`scale: true`), the affine is written as-is and **the match is exact, mirroring included** — which also means **the target's own artwork is mirrored** (the mirror arrives as a negative scale). That is usually what you want from something meant to match the part exactly, but text or an asymmetric icon on the target will come out backwards.
 
 To keep the target upright, either:
 
-- turn `scale: false` off — at the cost of the 180-degree residual described below, or
+- set `scale: false` (the default) — at the cost of the 180-degree residual described below, or
 - wrap the target in one `Container`: follow with the outer one, put the artwork in the inner one, and cancel the mirror there with `scale.x = -1`.
 
-Under the default options this is the same result `player.scale.x = -1` would give, so the flip is no advantage here. Where it does pay off is `addAsChild: false` — see below.
+With all three axes on, this is the same result `player.scale.x = -1` would give, so the flip is no advantage here. Where it does pay off is `addAsChild: false` — see below.
 
 > **With `scale: false`, `flipX` leaves a 180-degree difference in the orientation** (`flipY` does not). A mirror cannot be expressed as a rotation — only as a negative scale — so it never reaches a target whose scale is not driven. The two axes differ because `decomposePartAffine()` puts the sign on the Y axis when it splits a mirror into rotation plus negative scale; a horizontal mirror needs an extra 180-degree rotation to fit that form, and it is the rotation that keeps it.
 > **The position is exact regardless of the determinant.**
