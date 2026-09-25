@@ -1031,15 +1031,14 @@ export class SSPlayer extends Container {
      * Make `target` follow `part` (a name or index) every frame — a weapon,
      * effect or hitbox tracking a null part. By default the target is parented
      * under the player (so it inherits the player's own transform and lands
-     * exactly on the part) and its position, rotation and scale are all driven;
-     * see {@link SSPartFollowOptions} to change any of that. When all three axes
-     * are driven the full affine is applied, so a mirrored part is reproduced
-     * exactly; otherwise only the enabled axes are written and the target keeps
-     * its own value for the rest. A part's own skew is not carried — the runtime
-     * keeps it out of the world matrix (matching SpriteStudio). Attaching the
-     * same target twice
-     * replaces the earlier attachment. Returns a handle whose `detach()` stops
-     * the following.
+     * exactly on the part) and its position and rotation are driven, its scale
+     * only on request; see {@link SSPartFollowOptions} to change any of that.
+     * When all three axes are driven the full affine is applied, so a mirrored
+     * part is reproduced exactly; otherwise only the enabled axes are written
+     * and the target keeps its own value for the rest. A part's own skew is not
+     * carried — the runtime keeps it out of the world matrix (matching
+     * SpriteStudio). Attaching the same target twice replaces the earlier
+     * attachment. Returns a handle whose `detach()` stops the following.
      */
     public attachToPart(part: number | string, target: Container, options: SSPartFollowOptions = {}): SSPartAttachment {
         return this._follower.attach(part, target, options);

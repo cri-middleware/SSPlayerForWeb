@@ -99,7 +99,7 @@ What differs is **who knows the player was mirrored**.
 
 The value of `flipX` is that **things outside the player do not have to know about the flip**: a DOM overlay, a hitbox coordinate, an object in another container, a target from `attachToPart(..., { addAsChild: false })` — each of them lands correctly just by reading `getPartTransform()`. With `scale.x = -1` the host has to re-apply the mirror to every one of them.
 
-Conversely, for `attachToPart()` under its default options **there is no visible difference**. All three axes are driven by default, so either way the target sits on the mirrored part and the target's own artwork is mirrored with it (see [part tracking](/customize/part-following)).
+Conversely, for `attachToPart()` with all three axes driven (`scale: true`) **there is no visible difference**: either way the target sits on the mirrored part and the target's own artwork is mirrored with it. Under the default `scale: false` they do differ — `scale.x = -1` still mirrors a child target through the hierarchy, while `flipX` leaves it a 180-degree difference in orientation (see [part tracking](/customize/part-following)).
 
 > **PixiJS note**: `SSPlayer` (PixiJS) rebuilds its own children every frame, so anything a host adds with `player.addChild()` is gone on the next one. Put it beside the player as a sibling, or use `attachToPart()`. The RPG Maker MZ player draws through raw GL instead and has no such restriction, so it keeps host children.
 
