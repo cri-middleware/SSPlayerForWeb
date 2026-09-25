@@ -49,7 +49,7 @@ features:
 - 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
 - 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能。インストール不要
 
-## 概要（.sspj → 描画まで）
+## 概要（.sspj → 描画まで） {#overview-from-sspj-to-rendering}
 
 `.sspj` は **ビルド時に一度** `.ssab` へ変換し、**実行時**はその `.ssab` を読み込んで描画するだけです。変換は **ブラウザツール（`ssconverter-web`）**、**GUI ツール（[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)）** と
 **CLI（[`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases)）** の 3 経路があります。

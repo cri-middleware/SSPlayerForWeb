@@ -44,9 +44,9 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-webgl` | npm | beta |
 | `@spritestudio/ssplayer-pixi` | npm | beta |
 | `@spritestudio/ssconverter-core` | npm | beta |
-| `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#ソースからビルドする) | **alpha** |
-| `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#ソースからビルドする) | beta |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#ソースからビルドする) | beta |
+| `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#building-from-source) | **alpha** |
+| `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#building-from-source) | beta |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#building-from-source) | beta |
 | `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI | beta |
 
 ## RPG ツクール MZ（alpha）
@@ -64,7 +64,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 
 `SSWebGLRenderer` はワールド色調を受け取るようになり、不透明度の継承はこれで解決しました。ツクールの**色調**をそこへ繋ぐことと、残る投影の制約に対する投影行列の注入は、今後の対応予定です。
 
-## TyranoScript / ティラノビルダー
+## TyranoScript / ティラノビルダー {#tyranoscript-tyranobuilder}
 
 どちらも **beta** です。オーサリング用のタグ体系は揃っていますが、`7.0.0` までに名称や挙動が変更される可能性があります。[TyranoScript で使う](/ja/usage/tyrano) および
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。

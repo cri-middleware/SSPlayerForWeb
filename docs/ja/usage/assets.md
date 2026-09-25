@@ -21,7 +21,7 @@
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 | [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
 
-全体の流れは [トップページの概要図](/ja/#概要-sspj-描画まで) を参照してください。
+全体の流れは [トップページの概要図](/ja/#overview-from-sspj-to-rendering) を参照してください。
 
 ## ssconverter-web（ブラウザツール） {#ssconverter-web-browser-tool}
 
