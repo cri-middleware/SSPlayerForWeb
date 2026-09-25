@@ -176,15 +176,15 @@ leaving the animation stuck loading.
 
 ## Known limitations
 
-- The picture's **opacity / tint don't affect** the SS animation — it always draws fully
-  opaque. *Move* and *scale* **do** apply.
+- The picture's **tint doesn't affect** the SS animation. *Opacity*, *move* and *scale*
+  **do** apply.
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
   can shift the animation out of place; looped sound effects play only once). MZ's own
   flash / tint overlays are unaffected.
 
-The opacity/tint and projection limitations would both be fixed by a small enhancement to
-`SSWebGLRenderer` (an injected projection matrix plus an alpha/tint uniform) — a planned
-follow-up.
+`SSWebGLRenderer` now takes a world tint, which is what made opacity inheritance work. Wiring
+MZ's *tint* through it, and injecting a projection matrix for the remaining projection
+limitation, are planned follow-ups.
 
 ## Building from source
 

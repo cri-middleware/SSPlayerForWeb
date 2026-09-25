@@ -151,8 +151,8 @@ output** afterward.
 
 ## Known limitations
 
-- The picture's **opacity / tint don't affect** the SS animation — it always draws
-  fully opaque. *Move* and *scale* **do** apply.
+- The picture's **tint doesn't affect** the SS animation. *Opacity*, *move* and *scale*
+  **do** apply.
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
   can shift the animation out of place; looped sound effects play only once). MZ's own
   flash/tint overlays are unaffected.
@@ -195,17 +195,16 @@ sit in correct Z-order with characters and pictures.
 **Known limitations (technical).** The plain-language summary is in
 [Known limitations](#known-limitations) above; the internals:
 
-- MZ **opacity / tint** are not forwarded to the SS draw (it renders at full opacity);
-  *Move* and *scale* are.
+- MZ **tint** is not forwarded to the SS draw. *Opacity* is — `SSPlayerRenderer` passes
+  Pixi's `worldAlpha` to `SSWebGLRenderer` as a world tint — and so are *move* and *scale*.
 - A **PIXI filter placed directly on the SS sprite** can misplace it — the projection
   is **fixed full-screen**. MZ screen effects (flash, tint) are separate overlays and
   are unaffected.
 - Looped SE (`loopNum`) play once; **stencil masks** need a stencil buffer on MZ's
   canvas (present by default).
 
-The opacity/tint and projection limitations would both be fixed by a small enhancement
-to `SSWebGLRenderer` (accept an injected projection matrix + alpha/tint uniform) — a
-planned follow-up.
+Wiring MZ's tint into the world tint `SSWebGLRenderer` already takes for opacity, and
+injecting a projection matrix for the projection limitation, are planned follow-ups.
 
 ## Build & try it
 
