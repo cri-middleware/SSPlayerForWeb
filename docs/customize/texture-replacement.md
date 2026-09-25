@@ -80,11 +80,11 @@ The `texture` argument is engine-native: a `Texture` on PixiJS, an image source 
 
 ## When the change reaches the screen
 
-Like a part override, a texture swap changes the output **without changing the frame number**, so an implementation that only redraws when the frame advances could miss it. Every ForWeb player handles this for you:
+Like a part override, a texture swap changes the output **without changing the frame number**, so an implementation that only redraws when the frame advances could miss it. How each ForWeb player handles it:
 
 | Player | Behaviour |
 |---|---|
-| `SSPlayer` (PixiJS) | The next tick renders the current frame with the new texture; if you have stopped playback, request a redraw as you would after any override |
+| `SSPlayer` (PixiJS) | The next tick renders the current frame with the new texture. Its ticker early-returns while stopped, and unlike an override a swap does not re-render the current frame by itself, so a swap made while stopped shows the next time the player plays |
 | `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself do you need to call `draw()` |
 | RPG Maker MZ | MZ redraws every game frame, so it just shows |
 
