@@ -43,10 +43,10 @@ in that shared core. Report it here all the same and say so; we will route it.
 
 The players load binary animation data (`.ssab`) and hand it to the runtime's WebAssembly build.
 
-**Nothing verifies a pack before the runtime parses it.** The bytes go straight to the runtime, which
-parses without validating; the identifier checks in the TypeScript layer run only after that. A
-malformed or deliberately crafted `.ssab` can make the runtime read outside the pack — within the
-WebAssembly module's memory — or trap.
+**Only the file identifier is checked before the runtime sees the bytes.** `SSABResource` rejects a
+buffer without the `"SSAB"` identifier, which catches a truncated download or the wrong file. The
+runtime then parses without validating, so a deliberately crafted `.ssab` can still make it read outside
+the pack — within the WebAssembly module's memory — or trap.
 
 **Packs can come from the network.** `load(url)` fetches a pack, and instance parts fetch further packs
 by the names stored inside it, under the same prefix. Serve `.ssab` from an origin you control and treat
@@ -93,7 +93,7 @@ SSPlayerForWeb はリリース前です。まだ何も公開されておらず�
 
 各プレイヤーはバイナリのアニメーションデータ（`.ssab`）を読み込み、ランタイムの WebAssembly 版へ渡します。
 
-**ランタイムが解析する前にパックを検証する処理はありません。** バイト列はそのままランタイムへ渡り、ランタイムは検証を行わずに解析します。TypeScript 層の識別子チェックが走るのはその後です。破損した、あるいは意図的に細工された `.ssab` は、ランタイムにパックの外（WebAssembly モジュールのメモリ内）を読ませたり、トラップを起こしたりする可能性があります。
+**ランタイムに渡す前に確認するのはファイル識別子だけです。** `SSABResource` は `"SSAB"` 識別子の無いバッファを拒否するため、途中で切れたダウンロードや別のファイルは弾かれます。その後ランタイムは検証を行わずに解析するため、意図的に細工された `.ssab` は、ランタイムにパックの外（WebAssembly モジュールのメモリ内）を読ませたり、トラップを起こしたりする可能性があります。
 
 **パックはネットワークから読み込めます。** `load(url)` はパックを取得し、インスタンスパーツはパック内に記録された名前で、同じプレフィックスの下から別のパックを取得します。`.ssab` は自社管理のオリジンから配信し、内容を保証できるコンテンツとして扱ってください。信頼できない入手元のパックの読み込みはサポート対象外です。
 

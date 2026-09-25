@@ -127,6 +127,17 @@ export class SSABResource {
     public raw: SSRuntimeResource;
 
     constructor(data: Uint8Array) {
+        // The runtime parses a pack without verifying it, so gate here, the one
+        // place bytes enter it, on the "SSAB" file identifier: a truncated
+        // download or the wrong file becomes this error instead of the runtime
+        // walking offsets it read from the wrong bytes. It is not a structural
+        // check — a crafted pack still passes (see SECURITY.md).
+        if (!SsAnimeBinary.bufferHasIdentifier(new flatbuffers.ByteBuffer(data))) {
+            throw new Error(
+                `[SSPlayer] Not a .ssab buffer: expected the "SSAB" file identifier at bytes 4..8 ` +
+                `(got ${data.length} bytes). The .ssab may be truncated, the wrong file, or a different format.`,
+            );
+        }
         this.raw = new SSRuntimeResource(data);
         // 3rd arg is the unregister token; without it destroy()'s unregister(this)
         // is a no-op and the GC finalizer would double-free the raw handle.
