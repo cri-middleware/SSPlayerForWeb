@@ -5,9 +5,13 @@ kinds of contributions, including bug reports, feature requests, documentation
 improvements, and code contributions.
 
 ## Table of Contents
+- [Code of Conduct](#code-of-conduct)
 - [How Can I Contribute?](#how-can-i-contribute)
 - [Development Environment](#development-environment)
 - [Coding Standards](#coding-standards)
+
+## Code of Conduct
+Please refer to [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
 
 ## How Can I Contribute?
 
@@ -136,9 +140,13 @@ licensed under the project's [LICENSE.md](./LICENSE.md).
 SSPlayerForWeb にご関心をお寄せいただき、ありがとうございます！ バグ報告、機能提案、ドキュメントの改善、コードの提供など、あらゆる形での貢献を歓迎します。
 
 ## 目次
+- [行動規範](#行動規範)
 - [貢献する方法](#貢献する方法)
 - [開発環境のセットアップ](#開発環境のセットアップ)
 - [コーディング規約](#コーディング規約)
+
+## 行動規範
+[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) を参照してください。
 
 ## 貢献する方法
 
