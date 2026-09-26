@@ -66,7 +66,8 @@ export interface SSSignalEvent {
    */
   frameNo: number;
   active: boolean;
-  commandId: number;
+  /** The command ID set in SpriteStudio, e.g. `"hit"`. */
+  commandId: string;
   params: Record<string, boolean | number | string>;
 }
 export interface SSAudioEvent {
@@ -742,7 +743,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
         partName: mgr.getPartName(partIndex) ?? '',
         frameNo: events.frameIndex(),
         active: true,
-        commandId: Number(val.commandId() ?? 0),
+        commandId: val.commandId() ?? '',
         params,
       });
     }
