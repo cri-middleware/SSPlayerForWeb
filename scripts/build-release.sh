@@ -245,9 +245,9 @@ if ! command -v pnpm > /dev/null 2>&1; then
   exit 1
 fi
 
-# `zip` packs the plugin archives (each pack script shells out to it); `unzip`
-# and `tar` are how the verification reads the finished artifacts back.
-for tool in zip unzip tar; do
+# `unzip` and `tar` are how the verification reads the finished artifacts
+# back. Packing needs neither: the pack scripts write their zips with fflate.
+for tool in unzip tar; do
   command -v "$tool" > /dev/null 2>&1 || {
     echo "$APP: $tool not found -- it is what packages or re-opens the archives" >&2
     exit 1

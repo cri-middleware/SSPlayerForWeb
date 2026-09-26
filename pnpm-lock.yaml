@@ -451,6 +451,9 @@ importers:
         specifier: workspace:^
         version: link:../ssplayer-webgl
     devDependencies:
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       jsdom:
         specifier: ^30.1.1
         version: 30.1.1
@@ -473,6 +476,9 @@ importers:
         specifier: workspace:^
         version: link:../ssplayer-core
     devDependencies:
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -486,6 +492,9 @@ importers:
         specifier: workspace:^
         version: link:../ssplayer-webgl
     devDependencies:
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       jsdom:
         specifier: ^30.1.1
         version: 30.1.1

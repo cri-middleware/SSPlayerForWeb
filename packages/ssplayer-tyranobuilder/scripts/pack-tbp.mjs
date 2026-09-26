@@ -19,11 +19,12 @@
 // install silently looks for `ssplayer-1.2.0/ssplayer-1.2.0.builder.js`, which
 // is not there. The version therefore belongs in the release, not the filename.
 //
-// Run after building this package and ssplayer-tyranoscript. Requires `zip` on PATH.
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
+// Run after building this package and ssplayer-tyranoscript.
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { unzipSync, zipSync } from 'fflate';
 
 import {
   PLUGIN_ID,
@@ -46,31 +47,18 @@ const files = [...pluginFiles(repoRoot, pkgRoot), ...langFiles(pkgRoot)];
 requireAll(files, fail);
 await verifyBundle(files[0].path, fail);
 
-try {
-  execFileSync('zip', ['--version'], { stdio: 'ignore' });
-} catch {
-  fail('`zip` is required on PATH.');
-}
-
 const outDir = join(pkgRoot, 'dist/pack');
-const stage = join(outDir, 'stage');
-const pluginDir = join(stage, PLUGIN_ID);
-rmSync(stage, { recursive: true, force: true });
-mkdirSync(pluginDir, { recursive: true });
-
-for (const { name, path } of files) copyFileSync(path, join(pluginDir, name));
-
+mkdirSync(outDir, { recursive: true });
 const tbp = join(outDir, `${PLUGIN_ID}.tbp`);
 rmSync(tbp, { force: true });
-// Zip from the stage dir so the archive root is `<PLUGIN_ID>/`.
-execFileSync('zip', ['-r', '-q', tbp, PLUGIN_ID], { cwd: stage });
+// Every entry is stamped 1980-01-01 00:00, the earliest time a zip holds, so
+// the archive depends on its inputs alone: the same files give the same bytes.
+const plugin = Object.fromEntries(files.map(({ name, path }) => [name, readFileSync(path)]));
+writeFileSync(tbp, zipSync({ [PLUGIN_ID]: plugin }, { level: 9, mtime: new Date(1980, 0, 1) }));
 
 // The layout is the whole contract with the host, and a wrong one fails at
 // install time with a message that points nowhere. Verify it from the artefact.
-const listing = execFileSync('zip', ['-sf', tbp], { encoding: 'utf8' })
-  .split('\n')
-  .map((line) => line.trim())
-  .filter((line) => line && !line.endsWith(':') && !line.startsWith('Total'));
+const listing = Object.keys(unzipSync(readFileSync(tbp)));
 
 const required = `${PLUGIN_ID}/${PLUGIN_ID}.builder.js`;
 if (!listing.includes(required)) {
@@ -80,8 +68,6 @@ const stray = listing.filter((entry) => !entry.startsWith(`${PLUGIN_ID}/`));
 if (stray.length > 0) {
   fail(`the archive must hold only ${PLUGIN_ID}/, but also has: ${stray.join(', ')}`);
 }
-
-rmSync(stage, { recursive: true, force: true });
 
 console.log(`[pack-tbp] wrote dist/pack/${PLUGIN_ID}.tbp`);
 for (const { name } of files) console.log(`           ${PLUGIN_ID}/${name}`);

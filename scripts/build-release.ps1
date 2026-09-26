@@ -59,12 +59,9 @@
 #   and then reads <id>/<id>.builder.js out of the archive it just extracted, so
 #   a version in the name installs nothing at all.
 #
-# One thing this twin needs that the .sh one takes for granted: `zip` on PATH.
-# Every plugin pack script shells out to it, and Windows does not ship one (Git
-# for Windows does not bring it either) -- so on Windows the plugins stage needs
-# one installed, or skip=plugins and build the npm channel alone. Reading the
-# archives back needs no such thing: that goes through .NET and `tar`, which
-# Windows 10 1803 and later do ship.
+# The pack scripts write their zips with fflate, so the plugins stage needs no
+# `zip`, which Windows does not ship. Reading the archives back goes through
+# .NET and `tar` rather than `unzip`; Windows 10 1803 and later ship both.
 $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -213,8 +210,6 @@ Write-Host "  -h | --help             Show this help"
     Write-Host "This builds a release; it does not make one. Nothing here publishes, tags,"
     Write-Host "commits, or bumps a version: the artifacts carry the versions the working"
     Write-Host "tree has right now, and the release bumps them itself (changeset version)."
-    Write-Host ""
-    Write-Host "The plugins stage needs 'zip' on PATH, which Windows does not ship."
 }
 
 foreach ($item in $args) {
@@ -306,12 +301,6 @@ if (!(Get-Command pnpm -ErrorAction SilentlyContinue)) {
 # `tar` reads the npm tarballs back (Windows 10 1803 and later ship bsdtar).
 if (!(Get-Command tar -ErrorAction SilentlyContinue)) {
     Fail "tar not found -- it is what re-opens the npm tarballs"
-}
-
-# Every plugin pack script shells out to `zip`, and Windows ships none.
-if (!(Test-Skipped "plugins") -and !(Get-Command zip -ErrorAction SilentlyContinue)) {
-    [Console]::Error.WriteLine("${APP}: zip not found -- every plugin pack script shells out to it")
-    Fail "install one (Windows ships none, and Git for Windows does not bring it), or pass skip=plugins"
 }
 
 # sdk=build compiles the Rust runtime in the submodule. (wasm-pack itself is not
