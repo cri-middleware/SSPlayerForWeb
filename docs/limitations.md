@@ -70,13 +70,15 @@ host framework's plugin system, so they are **not installable from npm**.
 ::: warning
 - **A picture's tint does not affect the animation.** *Opacity*, *move* and *scale* do apply.
 - **Some screen effects behave differently** from a normal picture: a few PIXI filters can shift
-  the animation out of place, and looped sound effects play only once. MZ's own flash / tint
-  overlays are unaffected.
+  the animation out of place. MZ's own flash / tint overlays are unaffected.
 - **Deployment's "Exclude unused files" deletes anything you put under `img/`.** The `.ssab` files
   and textures are loaded dynamically, so MZ treats them as unused — but the option only prunes
   `img/`, `audio/` and `effects/`, so keeping SS assets in a project-root `spritestudio/` folder
   sidesteps it entirely. The cost is that MZ's image encryption, also limited to `img/`, no longer
   covers them.
+- **The same option deletes the sound files only an animation plays.** MZ plays them from
+  `audio/se/`, which it prunes; register them with the official MaterialBase.js plugin
+  ([Sound](/usage/rmmz#_5-sound)).
 :::
 
 `SSWebGLRenderer` now takes a world tint, which is what made opacity inheritance work. Wiring
