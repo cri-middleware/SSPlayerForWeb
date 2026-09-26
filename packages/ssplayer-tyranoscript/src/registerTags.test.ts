@@ -978,6 +978,33 @@ describe('registerSSTags', () => {
     await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
   });
 
+  it('ss_play atframe= still chains at the end when the animation stops short of that frame', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    p.setAnimation.mockClear();
+
+    // Frame 20 never comes: the animation plays once and ends first.
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', loop: 'false', next: 'Anime_1', atframe: 20 }, h.nextOrder);
+    p._fireFrame(19);
+    expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_2');
+    p._fireEnd();
+    await vi.waitFor(() => expect(p.setAnimation).toHaveBeenLastCalledWith('Anime_1'));
+  });
+
+  it('an unstated loop= is the default, not the single play a pending next= set', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
+    expect(p._loopWrites.at(-1)).toBe(1);
+    // The entrance has not ended yet — a quick click gets here before it does.
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_1', next: 'Anime_2', atframe: 10 }, h.nextOrder);
+    expect(p._loopWrites.at(-1)).toBe(-1);
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2' }, h.nextOrder);
+    expect(p._loopWrites.at(-1)).toBe(-1);
+    expect(savedSlot(h).chr.loop).toBe(-1);
+  });
+
   it('a new ss_play cancels a follow-up that has not fired yet', async () => {
     const h = await withPlayer();
     const p = FakeSSPlayer.instances[0];

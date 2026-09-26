@@ -206,7 +206,8 @@ player itself, so the scenario never stops:
   would never reach its end and the follow-up would never fire).
 - `nextloop=` sets the follow-up's loop count (default: infinite).
 - `atframe=` switches at that frame instead of waiting for the end — useful to
-  overlap the tail of one animation with the start of the next.
+  overlap the tail of one animation with the start of the next. An animation that
+  ends before reaching the frame switches at its end.
 - The queued follow-up is cancelled by the next `[ss_play]` / `[ss_show anime=]`.
 
 ## Speaker-linked talk animations
