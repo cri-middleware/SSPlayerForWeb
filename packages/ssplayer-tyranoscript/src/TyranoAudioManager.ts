@@ -13,8 +13,8 @@ import { resolveDataPath } from './storagePath.js';
 // path in this adapter is, unless a custom `resolve` is given.
 //
 // One manager per player. The player's own teardown calls `stopAll()` on its
-// manager, which is right for its sounds and wrong for anyone else's — a shared
-// manager let `[ss_free]` on one character silence every other one.
+// manager, which is right for its sounds and wrong for anyone else's — with a
+// shared manager, `[ss_free]` on one character would silence every other one.
 
 /** The engine's SE volume (0..1), read the way `[playse]` reads it. */
 function engineSeVolume(): number {
@@ -35,7 +35,8 @@ interface HowlLike {
   stop(): HowlLike;
   volume(v: number): HowlLike;
   on(event: 'end', listener: () => void, id?: number): HowlLike;
-  off(event: 'end', listener: () => void, id?: number): HowlLike;
+  /** Without a listener, drops every `end` listener. */
+  off(event: 'end', listener?: () => void, id?: number): HowlLike;
   unload(): void;
 }
 interface HowlCtor {
@@ -142,8 +143,9 @@ export class TyranoAudioManager implements IAudioManager {
     this.howls.clear();
   }
 
+  /** Stop every sound this manager is playing, and the plays still due after them. */
   stopAll(): void {
-    for (const h of this.howls.values()) h.stop();
+    for (const h of this.howls.values()) h.off('end').stop();
   }
 
   /**

@@ -713,9 +713,13 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       },
     ),
 
-    ss_stop: entry('game-stop', 'SpriteStudio: stop', 'Stops playback and rewinds.', byName, {
-      name: playerRef(),
-    }),
+    ss_stop: entry(
+      'game-stop',
+      'SpriteStudio: stop',
+      'Ends playback on the current frame. Sounds already playing finish.',
+      byName,
+      { name: playerRef() },
+    ),
 
     ss_pause: entry(
       's-icon-pause',
@@ -729,6 +733,14 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       's-icon-play',
       'SpriteStudio: resume',
       'Resumes a paused animation.',
+      byName,
+      { name: playerRef() },
+    ),
+
+    ss_stop_audio: entry(
+      'sound-stop',
+      'SpriteStudio: stop sound',
+      'Stops the sounds this animation started. Other sounds keep playing.',
       byName,
       { name: playerRef() },
     ),
