@@ -944,6 +944,7 @@ export class SSPlayer extends Container {
      */
     public setCellmapTexture(cellmapName: string, texture: Texture | null): void {
         this.internalPlayer.setCellmapTexture(cellmapName, texture);
+        this.afterOverride(true);
     }
 
     /** The current runtime texture override for `cellmapName` (never the original), or undefined. */
@@ -957,9 +958,9 @@ export class SSPlayer extends Container {
     }
 
     /**
-     * Repaint after an override took effect while the ticker is not advancing.
-     * Overrides change the output without changing the frame number, so a
-     * stopped player would otherwise keep showing its last drawn frame.
+     * Repaint after an override or a texture swap took effect while the ticker is
+     * not advancing. Both change the output without changing the frame number, so
+     * a stopped player would otherwise keep showing its last drawn frame.
      */
     private afterOverride(applied: boolean): boolean {
         if (applied && !this.internalPlayer.isPlaying) {

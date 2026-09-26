@@ -84,7 +84,7 @@ player.getReplaceableTextureNames(); // → ["Clothes", "common", "common.png", 
 
 | プレイヤー | 挙動 |
 |---|---|
-| `SSPlayer`（PixiJS） | 次の tick で現在フレームを新しいテクスチャで再描画します。停止中は ticker が早期 return し、オーバーライドと違って差し替えだけでは現在フレームを再描画しないため、停止中の差し替えは次に再生したときに反映されます |
+| `SSPlayer`（PixiJS） | 停止中は ticker が早期 return しますが、オーバーライドと同じく、差し替えると現在フレームを自動で再描画します |
 | `SSPlayer`（WebGL） | 内蔵の RAF ループが毎フレーム無条件に `draw()` するため、そのまま反映されます。**フレームを自前で駆動している場合**のみ `draw()` を呼んでください |
 | RPG ツクール MZ | MZ が毎フレーム描画するため、そのまま反映されます |
 
