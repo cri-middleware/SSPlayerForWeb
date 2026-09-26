@@ -315,6 +315,10 @@ component, using the [`[ss_*]` tags](/usage/tyrano#_4-tags).
 A conversion that fails says why on screen. The same reason, and every conversion that worked,
 is in `ss_import_log.txt` at your project root — the plugin manager panel opens it for you.
 
+While you preview, a component that cannot do its job — a name no *show* created, an animation
+the pack no longer has — says why in a dialog naming the scene file and line. An exported game
+never shows it: the export turns the engine's debug switch off.
+
 - **The animation is not in the dropdown** — check the `.sspj` is inside `SpriteStudio_Source/`
   together with the rest of its folder, and look for a `FAILED` line in the log.
 - **The palette has no SpriteStudio components** — the plugin did not load. Re-add the `.tbp`,
