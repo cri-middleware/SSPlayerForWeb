@@ -265,3 +265,5 @@ node packages/ssplayer-tyranobuilder/scripts/install.mjs mygame --sample
 
 `~/TyranoBuilder/myproject` 以下のプロジェクト名を指定するか、任意の場所のパスを渡します。名前を省略すると、プロジェクトが 1 つならそれを使い、複数あれば一覧を表示します。`--sample` は SDK
 サブモジュールから `SpriteStudio_Source/Ringo/` を用意するので、初回から変換対象があります。あとはプロジェクトを開く（または開き直す）だけです。
+
+`examples/tyranobuilderexample` は、すぐに開けるサンプルプロジェクトです。Ringo にコンポーネントを使うシーンが 1 つ入っています。ビルダーで雛形用の新規プロジェクトを作り、`pnpm --filter tyranobuilderexample run setup <そのプロジェクト>` を実行します。詳しくはその README を参照してください。

@@ -364,6 +364,12 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@26.6.2)(jsdom@30.1.1)(vite@8.3.1(@types/node@26.6.2)(terser@5.51.2))
 
+  examples/tyranobuilderexample:
+    dependencies:
+      '@spritestudio/ssplayer-tyranobuilder':
+        specifier: workspace:*
+        version: link:../../packages/ssplayer-tyranobuilder
+
   examples/tyranoscript-example:
     dependencies:
       '@spritestudio/ssplayer-tyranoscript':

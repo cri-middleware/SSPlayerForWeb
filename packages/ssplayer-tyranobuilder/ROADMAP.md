@@ -119,7 +119,7 @@ conversion, the palette, preview, and save/load.
   ever serve this scan — the freshness walk needs the stats. Undocumented, so
   it would need proving first.
 - **Windows.** The plugin has not been tried in the Windows builder.
-- **A sample builder project**, and a submission to plugin.tyrano.jp.
+- **A submission to plugin.tyrano.jp.**
 - **More languages.** The component labels are already localised: the source
   strings are English and `lang/ja.json` translates them, picked up because the
   builder loads `<plugin>/<global_lang>.json` before importing a plugin. English

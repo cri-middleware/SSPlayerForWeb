@@ -1,0 +1,15 @@
+{
+  "name": "tyranobuilderexample",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TyranoBuilder project showing the ssplayer-tyranobuilder components",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "build": "echo \"tyranobuilderexample is a TyranoBuilder project; no build step\""
+  },
+  "dependencies": {
+    "@spritestudio/ssplayer-tyranobuilder": "workspace:*"
+  },
+  "license": "BSD-3-Clause"
+}

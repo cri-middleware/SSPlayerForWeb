@@ -1,0 +1,17 @@
+# A TyranoBuilder project, of which only what this example authors is
+# committed: the project settings and the scene. Everything else — the
+# TyranoScript engine and the builder's template (index.html, tyrano/, the rest
+# of data/), the plugin, the SpriteStudio source and the packs converted from
+# it — `pnpm run setup` puts in place. See README.md.
+/*
+!/.gitignore
+!/package.json
+!/README.md
+!/README.ja.md
+!/scripts/
+!/builder_config.json
+!/data/
+/data/*
+!/data/scenario/
+/data/scenario/*
+!/data/scenario/scene1.ks

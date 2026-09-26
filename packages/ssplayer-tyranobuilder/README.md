@@ -175,6 +175,9 @@ Then open (or reopen) the project. There is no DevTools in TyranoBuilder's main
 window, so `<project>/ss_import_log.txt` is where to look — it records the host
 environment and every conversion, and appends across sessions.
 
+[`examples/tyranobuilderexample`](../../examples/tyranobuilderexample) is a
+project to open straight away: one scene that uses the components on Ringo.
+
 [ROADMAP.md](./ROADMAP.md) covers what is left to build and how the editor works
 inside, including the parts the vendor does not document.
 
