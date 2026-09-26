@@ -91,9 +91,9 @@ The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration p
     Nothing fits the animation into its box: the element sizes its canvas and the player draws at authored
     scale, so CSS decides the box and the art ignores it.
     *   *Target*: `fit` (`contain` / `cover` / `none`) + `align`, spelled in `object-fit` / `object-position`
-        vocabulary on the element and in the family's on the player. `SSPlayerForReactNative` has the
-        reference implementation (`src/core/fit.ts`), including the choice of measuring the content box over
-        one animation or the whole pack.
+        vocabulary on the element and in the family's on the player. The contract — names, defaults, the
+        arithmetic, and where the box comes from — is the porting guide's
+        [Placement: Fit and Align](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/50_features/70_placement.md).
     *   Also give the element an intrinsic aspect ratio from that box, so `height: auto` and CSS
         `aspect-ratio` behave as they do on `<img>`.
 
