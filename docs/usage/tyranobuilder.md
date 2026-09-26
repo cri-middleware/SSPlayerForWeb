@@ -284,6 +284,11 @@ Under **Plugin** in the palette:
 | **SpriteStudio: stop / pause / resume** | Playback control |
 | **SpriteStudio: wait** | Hold the story until the animation finishes |
 | **SpriteStudio: wait for signal** | Hold the story until the animation fires a signal, such as the moment an attack lands |
+| **SpriteStudio: speed / jump to frame** | Change the playback speed, or move to a frame |
+| **SpriteStudio: play a section / direction** | Loop a range of frames; play forwards, backwards or back and forth |
+| **SpriteStudio: talk animation** | Play a talk animation while a character's lines are shown |
+| **SpriteStudio: part colour / hide part / part image** | Change one part: tint it, hide it, or swap the cell it draws |
+| **SpriteStudio: reset parts** | Undo those part changes |
 | **SpriteStudio: place / move** | Place it, or slide it over time |
 | **SpriteStudio: remove / remove all** | Unload one, or all of them |
 | **SpriteStudio: fade out all / fade in all** | All of them at once, for a scene change |
@@ -301,15 +306,11 @@ A few things the fields do that are worth knowing:
 - **Animation** lists what is actually inside the selected pack, read from the `.ssab`.
 - **Then play** hands over to another animation when this one ends — an entrance into an idle
   loop, say. It needs *loop forever* off, because an animation that loops forever never ends.
+- **Part**, **Cell map** and **Cell** list what is in that player's pack, and **Part** offers only
+  the parts the change applies to: a colour takes normal parts, an image normal and mask parts.
 
 Each component writes the matching `[ss_*]` tag verbatim, so the
 [tag reference](/usage/tyrano#_4-tags) describes exactly what they do.
-
-::: warning Not every tag has a component yet
-Per-part colour and visibility (`[ss_part_*]`) and linking an animation to a speaker
-(`[ss_chara]`) have no palette entry. Write those with TyranoBuilder's own TyranoScript-code
-component, using the [`[ss_*]` tags](/usage/tyrano#_4-tags).
-:::
 
 ## Troubleshooting
 

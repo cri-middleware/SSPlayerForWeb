@@ -7,10 +7,14 @@
 // tag, that package executes it at run time.
 //
 // Two consequences of `$.tag` worth knowing:
-//   - every declared param is emitted, blank ones included, so a field left
-//     empty becomes `attr=""`. The runtime treats `""` as "not given" for every
-//     optional attribute (`num()`, `bool()`, `loopCount()` in registerTags.ts),
-//     so blanks fall back to the same defaults a hand-written scenario gets.
+//   - it writes the keys the component's `pm` holds, and a placed component's
+//     `pm` starts with only the params whose `default_val` is truthy. A falsy
+//     default — `0`, `''`, `false` — leaves the attribute out until the author
+//     touches the field, which is harmless for an optional attribute and fatal
+//     for a vital one: TyranoScript refuses a tag missing it. So every vital
+//     param here has a truthy default (a string `'0'`, not `0`). A field the
+//     author empties is written as `attr=""`, which the runtime reads as "not
+//     given" (`num()`, `bool()`, `loopCount()` in registerTags.ts).
 //   - there is no escaping, so a value containing `"` would break the tag. The
 //     fields here are names, paths and numbers; nothing invites quotes.
 
@@ -21,6 +25,7 @@ import type {
   BuilderParam,
   TB,
 } from './builderTypes.js';
+import type { PackContents, PackPart } from './packContents.js';
 
 /** One converted `.ssab`, as a `[ss_new storage=]` value. */
 export interface PackChoice {
@@ -39,6 +44,8 @@ export interface ComponentContext {
   listPacks(): PackChoice[];
   /** Animation names inside one pack; empty when it cannot be read from disk. */
   listAnimations(storage: unknown): string[];
+  /** Animations, parts and cells inside one pack; empty when it cannot be read. */
+  packContents(storage: unknown): PackContents;
   /**
    * Rebuild the pack a `storage=` value names. Fire-and-forget: it reports to
    * the author itself, because the inspector control that calls it cannot wait
@@ -294,6 +301,79 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       { name: t(leading), val: '' },
       ...names.map((anime) => ({ name: anime, val: anime })),
     ];
+  };
+
+  /**
+   * The packs a tag that only names a player can be about: the one its
+   * `[ss_new]` loaded when that is in this scenario, every pack otherwise —
+   * the same widening {@link playerAnimeOptions} does.
+   */
+  const packsOfPlayer = (view: unknown): PackContents[] => {
+    const component = componentOf(view);
+    const pack = packOfPlayer(String(component?.data?.pm?.name ?? ''), component);
+    return pack ? [ctx.packContents(pack)] : ctx.listPacks().map((p) => ctx.packContents(p.val));
+  };
+
+  /** Names from `packs`, deduplicated in first-seen order. */
+  const unique = (names: Iterable<string>): PackChoice[] =>
+    [...new Set(names)].map((name) => ({ name, val: name }));
+
+  const notInPack = (value: string): string => `${value} ${t('(not in this pack)')}`;
+
+  /**
+   * The pack behind a freshly placed component's player — the one `playerRef`
+   * defaults to. `default_val` is called without the component, so this is the
+   * closest it can get; it is what lets a vital part / cell field start out
+   * filled (see the note on `$.tag` at the top).
+   */
+  const defaultPack = (): PackContents | undefined => {
+    const pack = packOfPlayer(placedPlayerNames()[0] ?? '');
+    return pack ? ctx.packContents(pack) : undefined;
+  };
+
+  /** The first cell map of the default pack, and its first cell. */
+  const defaultCellmap = (): string => Object.keys(defaultPack()?.cellmaps ?? {})[0] ?? '';
+  const defaultCell = (): string => defaultPack()?.cellmaps[defaultCellmap()]?.[0] ?? '';
+
+  /**
+   * A part picker, offering only the parts `accepts` lets the tag change — the
+   * runtime skips the rest without a word, so offering them would be a trap.
+   */
+  const partParam = (help: string, accepts: (part: PackPart) => boolean): BuilderParam => ({
+    type: 'Select',
+    name: t('Part'),
+    help: t(help),
+    select_list: (view) => {
+      const parts = unique(packsOfPlayer(view).flatMap((pack) => pack.parts.filter(accepts).map((p) => p.name)));
+      const options = parts.length > 0 ? parts : [{ name: t('(no such part in this pack)'), val: '' }];
+      return withCurrent(options, paramsOf(view).part, notInPack);
+    },
+    default_val: () => defaultPack()?.parts.find(accepts)?.name ?? '',
+    validate: { required: true },
+  });
+
+  /** How long an override holds; the runtime's three priorities in words. */
+  const priorityParam: BuilderParam = {
+    type: 'Select',
+    name: t('Keep until'),
+    help: t('"Removed" survives an animation change; the other two do not.'),
+    // Short labels: a select is as wide as its longest option, and the
+    // inspector is about 240 px.
+    select_list: () => [
+      { name: t('the animation changes'), val: 'anime' },
+      { name: t('the next keyframe'), val: 'keyframe' },
+      { name: t('removed'), val: 'permanent' },
+    ],
+    default_val: 'anime',
+  };
+
+  /** Marks `[ss_part_cell]`'s cell dropdown so the cell-map picker can refill it. */
+  const CELL_CLASS = 'select_param_ss_cell';
+
+  /** Cells of `cellmap` in `packs`; the map name is all a cell override carries. */
+  const cellOptions = (packs: PackContents[], cellmap: unknown): PackChoice[] => {
+    const cells = unique(packs.flatMap((pack) => pack.cellmaps[String(cellmap ?? '')] ?? []));
+    return cells.length > 0 ? cells : [{ name: t('(pick a cell map first)'), val: '' }];
   };
 
   /**
@@ -681,6 +761,249 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
           type: 'Text',
           name: t('Store in variable'),
           help: t('Optional. A variable such as f.signal receives the command ID.'),
+          default_val: '',
+        },
+      },
+    ),
+
+    ss_speed: entry(
+      's-icon-meter',
+      'SpriteStudio: speed',
+      'Changes the playback speed. Stays when the animation changes.',
+      (c) => `${String(pm(c).name ?? '')} ×${String(pm(c).speed ?? '')}`,
+      {
+        name: playerRef(),
+        speed: {
+          type: 'Num',
+          name: t('Speed'),
+          help: t('1 = as made, 2 = twice as fast, 0.5 = half speed.'),
+          validate: { number: true },
+          default_val: 1,
+        },
+      },
+    ),
+
+    ss_seek: entry(
+      's-icon-forward',
+      'SpriteStudio: jump to frame',
+      'Moves the animation to a frame. A playing animation carries on from there.',
+      (c) => `${String(pm(c).name ?? '')} @${String(pm(c).frame ?? '')}`,
+      {
+        name: playerRef(),
+        frame: {
+          type: 'Num',
+          name: t('Frame'),
+          help: t('Counted from 0, as SpriteStudio shows it.'),
+          validate: { number: true },
+          default_val: '0', // a string: `0` would be dropped, and frame= is vital
+        },
+      },
+    ),
+
+    ss_section: entry(
+      's-icon-loop',
+      'SpriteStudio: play a section',
+      'Plays only a range of frames, looping within it. Changing the animation ends it.',
+      byName,
+      {
+        name: playerRef(),
+        // Text rather than Num: empty is a meaningful value here, and a Num
+        // field would not take it.
+        start: {
+          type: 'Text',
+          name: t('First frame'),
+          help: t('Leave empty for the start of the animation. Both empty plays the whole animation again.'),
+          default_val: '',
+        },
+        end: {
+          type: 'Text',
+          name: t('Last frame'),
+          help: t('Leave empty for the end of the animation.'),
+          default_val: '',
+        },
+      },
+    ),
+
+    ss_direction: entry(
+      's-icon-backward',
+      'SpriteStudio: direction',
+      'Plays forwards or backwards, once through or back and forth. Stays when the animation changes.',
+      byName,
+      {
+        name: playerRef(),
+        direction: {
+          type: 'Select',
+          name: t('Direction'),
+          select_list: () => [
+            { name: t('Forwards'), val: 'forward' },
+            { name: t('Backwards'), val: 'backward' },
+          ],
+          default_val: 'forward',
+        },
+        style: {
+          type: 'Select',
+          name: t('Style'),
+          select_list: () => [
+            { name: t('Once through'), val: 'normal' },
+            { name: t('Back and forth'), val: 'pingpong' },
+          ],
+          default_val: 'normal',
+        },
+      },
+    ),
+
+    // -----------------------------------------------------------------------
+    // Speaker
+    // -----------------------------------------------------------------------
+    ss_chara: entry(
+      's-icon-bubble',
+      'SpriteStudio: talk animation',
+      "Plays a talk animation while this character's lines are shown, then returns to idle.",
+      (c) => {
+        const name = String(pm(c).name ?? '');
+        const talk = String(pm(c).talk ?? '');
+        return talk ? `${name} — ${talk}` : name;
+      },
+      {
+        name: playerRef(),
+        jname: {
+          type: 'Text',
+          name: t('Speaker'),
+          help: t("The name shown for the speaker, or the character's ID. Leave empty to use the player name."),
+          default_val: '',
+        },
+        talk: {
+          type: 'Select',
+          name: t('Talk animation'),
+          help: t("Played while the speaker's text is shown. \"(off)\" unlinks the speaker."),
+          select_list: (view) =>
+            withCurrent(playerAnimeOptions('(off)', view), paramsOf(view).talk, notInPack),
+          default_val: '',
+        },
+        idle: {
+          type: 'Select',
+          name: t('Idle animation'),
+          help: t('Returned to after each line.'),
+          select_list: (view) =>
+            withCurrent(
+              playerAnimeOptions('(the animation playing before)', view),
+              paramsOf(view).idle,
+              notInPack,
+            ),
+          default_val: '',
+        },
+      },
+    ),
+
+    // -----------------------------------------------------------------------
+    // Parts — override what the animation draws, part by part
+    // -----------------------------------------------------------------------
+    ss_part_color: entry(
+      's-icon-droplet',
+      'SpriteStudio: part colour',
+      'Tints one part, over whatever colour the animation gives it.',
+      (c) => `${String(pm(c).name ?? '')} — ${String(pm(c).part ?? '')}`,
+      {
+        name: playerRef(),
+        part: partParam('Only normal parts can be tinted.', (part) => part.takesColor),
+        color: {
+          type: 'Color',
+          name: t('Colour'),
+          default_val: '0xff0000',
+          validate: { required: true },
+        },
+        blend: {
+          type: 'Select',
+          name: t('Blend'),
+          select_list: () => [
+            { name: t('Mix'), val: 'mix' },
+            { name: t('Multiply'), val: 'mul' },
+            { name: t('Add'), val: 'add' },
+            { name: t('Subtract'), val: 'sub' },
+          ],
+          default_val: 'mix',
+        },
+        priority: priorityParam,
+      },
+    ),
+
+    ss_part_visible: entry(
+      's-icon-eye-minus',
+      'SpriteStudio: hide part',
+      'Hides one part, or shows it again.',
+      (c) => `${String(pm(c).name ?? '')} — ${String(pm(c).part ?? '')}`,
+      {
+        name: playerRef(),
+        part: partParam('The part to hide or show.', () => true),
+        hide: {
+          type: 'Check',
+          text: t('Hide it'),
+          help: t('Off shows the part again.'),
+          default_val: true,
+        },
+        cascade: {
+          type: 'Check',
+          text: t('Its child parts too'),
+          default_val: false,
+        },
+      },
+    ),
+
+    ss_part_cell: entry(
+      's-icon-images',
+      'SpriteStudio: part image',
+      'Makes one part draw another cell, e.g. to swap an expression or an item.',
+      (c) => `${String(pm(c).name ?? '')} — ${String(pm(c).part ?? '')}`,
+      {
+        name: playerRef(),
+        part: partParam('Only normal and mask parts can change image.', (part) => part.takesCell),
+        cellmap: {
+          type: 'Select',
+          name: t('Cell map'),
+          select_list: (view) => {
+            const maps = unique(packsOfPlayer(view).flatMap((pack) => Object.keys(pack.cellmaps)));
+            const options = maps.length > 0 ? maps : [{ name: t('(no cell maps in this pack)'), val: '' }];
+            return withCurrent(options, paramsOf(view).cellmap, notInPack);
+          },
+          default_val: () => defaultCellmap(),
+          validate: { required: true },
+          // Only the value comes through here, so the cells are looked up by map
+          // name across every pack; the map name is all the tag carries anyway.
+          onChange: (value) =>
+            refillSelect(`.${CELL_CLASS}`, cellOptions(ctx.listPacks().map((p) => ctx.packContents(p.val)), value)),
+        },
+        cell: {
+          type: 'Select',
+          className: CELL_CLASS,
+          name: t('Cell'),
+          select_list: (view) =>
+            withCurrent(cellOptions(packsOfPlayer(view), paramsOf(view).cellmap), paramsOf(view).cell, notInPack),
+          default_val: () => defaultCell(),
+          validate: { required: true },
+        },
+        priority: priorityParam,
+      },
+    ),
+
+    ss_part_clear: entry(
+      's-icon-undo',
+      'SpriteStudio: reset parts',
+      'Removes the colour, visibility and image changes made to a part, or to all of them.',
+      byName,
+      {
+        name: playerRef(),
+        part: {
+          type: 'Select',
+          name: t('Part'),
+          select_list: (view) =>
+            withCurrent(
+              [
+                { name: t('(all parts)'), val: '' },
+                ...unique(packsOfPlayer(view).flatMap((pack) => pack.parts.map((p) => p.name))),
+              ],
+              paramsOf(view).part,
+              notInPack,
+            ),
           default_val: '',
         },
       },

@@ -34,7 +34,6 @@
 // untouched; keying off the manifest would miss the most ordinary edit there
 // is. Ren'Py's `latest_source_mtime()` walks the folder for the same reason.
 
-import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
 
 import {
   convertProjectAt,
@@ -43,6 +42,7 @@ import {
   type Converter,
 } from './converter.js';
 import type { HostFs, WalkedFile } from './hostFs.js';
+import { EMPTY_PACK, readPackContents, type PackContents } from './packContents.js';
 
 /**
  * Import bookkeeping, at the project root.
@@ -190,10 +190,10 @@ export class AutoImporter {
   private readonly projectRoot: string;
   /** `<project>/data` — `storage=` attributes are written relative to it. */
   private readonly dataDir: string;
-  /** Parsed animation lists, invalidated by a pack's mtime/size. */
-  private readonly animationCache = new Map<
+  /** Parsed pack contents, invalidated by a pack's mtime/size. */
+  private readonly packCache = new Map<
     string,
-    { mtimeMs: number; size: number; names: string[] }
+    { mtimeMs: number; size: number; contents: PackContents }
   >();
   /**
    * The pack scan, for the current task only.
@@ -202,7 +202,7 @@ export class AutoImporter {
    * `default_val` on the pack picker, and the widened animation picker on top
    * of that — and the host renders those params in a single synchronous loop.
    *
-   * Scoped to a task rather than validated the way `animationCache` is, because
+   * Scoped to a task rather than validated the way `packCache` is, because
    * nothing cheaper than the walk itself can answer "has a `.ssab` appeared";
    * a directory mtime would need the same traversal to be read. A task is
    * precisely the window in which the answer cannot have changed.
@@ -277,34 +277,38 @@ export class AutoImporter {
     });
   }
 
-  /**
-   * Animation names inside a pack, for the `anime=` picker. Reads the `.ssab`
-   * directly — it is the artefact the runtime will load, so it is the only
-   * honest source for what can be played.
-   *
-   * Returns nothing for a pack this process cannot read (a remote URL, a path
-   * built from a variable); the caller keeps a free-form escape in that case.
-   */
+  /** Animation names inside a pack, for the `anime=` picker. */
   listAnimations(storage: unknown): string[] {
+    return this.packContents(storage).animations;
+  }
+
+  /**
+   * Animations, parts and cells inside a pack, for the inspector's pickers.
+   * Reads the `.ssab` directly — it is the artefact the runtime will load, so
+   * it is the only honest source for what a tag can name.
+   *
+   * Empty for a pack this process cannot read (a remote URL, a path built from
+   * a variable); the caller keeps a free-form escape in that case.
+   */
+  packContents(storage: unknown): PackContents {
     const abs = this.resolvePack(storage);
-    if (!abs) return [];
+    if (!abs) return EMPTY_PACK;
 
     const st = this.fs.statOf(abs);
-    if (!st || st.isDir) return [];
+    if (!st || st.isDir) return EMPTY_PACK;
 
-    const cached = this.animationCache.get(abs);
-    if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) return cached.names;
+    const cached = this.packCache.get(abs);
+    if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) return cached.contents;
 
-    let names: string[] = [];
+    let contents = EMPTY_PACK;
     try {
-      names = SSRuntimeManager.extractAnimationNames(this.fs.readBinary(abs));
+      contents = readPackContents(this.fs.readBinary(abs));
     } catch {
       // A half-written or corrupt pack is not worth an error dialog; an empty
       // picker plus the free-form option is a good enough signal.
-      names = [];
     }
-    this.animationCache.set(abs, { mtimeMs: st.mtimeMs, size: st.size, names });
-    return names;
+    this.packCache.set(abs, { mtimeMs: st.mtimeMs, size: st.size, contents });
+    return contents;
   }
 
   /** A `storage=` value → an absolute path, or null when it is not on disk. */

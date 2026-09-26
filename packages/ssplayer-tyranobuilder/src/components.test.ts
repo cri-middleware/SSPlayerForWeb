@@ -72,12 +72,29 @@ const animations: Record<string, string[]> = {
   'others/ssdata/Ringo/Ringo.ssab': ['idle', 'walk'],
   'image/hand-made.ssab': ['blink'],
 };
+const contents: Record<string, PackContents> = {
+  'others/ssdata/Ringo/Ringo.ssab': {
+    animations: animations['others/ssdata/Ringo/Ringo.ssab'],
+    parts: [
+      { name: 'root', takesColor: false, takesCell: false },
+      { name: 'body', takesColor: true, takesCell: true },
+      { name: 'window', takesColor: false, takesCell: true },
+    ],
+    cellmaps: { Ringo: ['face_a', 'face_b'], Effect: ['spark'] },
+  },
+  'image/hand-made.ssab': {
+    animations: animations['image/hand-made.ssab'],
+    parts: [{ name: 'hat', takesColor: true, takesCell: true }],
+    cellmaps: { Hand: ['h1'] },
+  },
+};
 
 function build(overrides: Partial<Parameters<typeof defineSSComponents>[0]> = {}) {
   return defineSSComponents({
     $: undefined as never,
     listPacks: () => packs,
     listAnimations: (storage) => animations[String(storage)] ?? [],
+    packContents: (storage) => contents[String(storage)] ?? { animations: [], parts: [], cellmaps: {} },
     reconvert: () => {},
     buttonType: BUTTON_PARAM_TYPE,
     ...overrides,
@@ -139,6 +156,24 @@ describe('defineSSComponents', () => {
         ).toContain(name);
       }
     }
+  });
+
+  it.skipIf(!existsSync(REGISTER_TAGS))('starts every vital attribute out filled', () => {
+    // The host seeds a placed component with the truthy defaults only, and
+    // writes only what it holds: a falsy default on a vital attribute is a tag
+    // TyranoScript refuses until the author happens to touch that field.
+    (globalThis as { app?: unknown }).app = {
+      tyrano: { component: [{ data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[0].val } } }] },
+    };
+    const tags = runtimeTags();
+    for (const [tag, { component }] of Object.entries(build())) {
+      for (const name of tags.get(tag)?.vital ?? []) {
+        const d = component.param[name]?.default_val;
+        const value = typeof d === 'function' ? (d as () => unknown)() : d;
+        expect(value, `[${tag} ${name}=] default`).toBeTruthy();
+      }
+    }
+    delete (globalThis as { app?: unknown }).app;
   });
 
   /** Seeded as if the host had stored a value from a default. */
@@ -358,6 +393,66 @@ describe('registerButtonParam', () => {
     const list = components.ss_play.component.param.anime.select_list?.(view({ name: 'chr' })) ?? [];
     expect(list[0].val).toBe('');
     expect(list.slice(1).map((o) => o.val)).toEqual(['blink', 'idle', 'walk']);
+  });
+
+  // --- Part overrides: pickers fed from the pack's own tables ----------------
+
+  /** A scenario with player `chr` created from the Ringo pack, then `tag` on it. */
+  const scenarioWith = (tag: string, pm: Record<string, unknown> = {}) => {
+    const created = { data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[0].val } } };
+    const placed = { data: { tag_name: tag, pm: { name: 'chr', ...pm } } };
+    (globalThis as { app?: unknown }).app = { tyrano: { component: [created, placed] } };
+    return { get: () => placed };
+  };
+
+  it('starts part and cell pickers on the first entry the player\'s pack offers', () => {
+    (globalThis as { app?: unknown }).app = {
+      tyrano: { component: [{ data: { tag_name: 'ss_new', pm: { name: 'chr', storage: packs[0].val } } }] },
+    };
+    const first = (tag: string, param: string) => {
+      const d = build()[tag].component.param[param].default_val;
+      return typeof d === 'function' ? (d as () => unknown)() : d;
+    };
+    expect(first('ss_part_color', 'part')).toBe('body'); // the first normal part, not 'root'
+    expect(first('ss_part_visible', 'part')).toBe('root');
+    expect(first('ss_part_cell', 'cellmap')).toBe('Ringo');
+    expect(first('ss_part_cell', 'cell')).toBe('face_a');
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('offers only the parts each override applies to, from the player\'s pack', () => {
+    const list = (tag: string) =>
+      build()[tag].component.param.part.select_list?.(scenarioWith(tag))?.map((o) => o.val);
+
+    expect(list('ss_part_color')).toEqual(['body']); // normal parts only
+    expect(list('ss_part_cell')).toEqual(['body', 'window']); // normal and mask
+    expect(list('ss_part_visible')).toEqual(['root', 'body', 'window']);
+    expect(list('ss_part_clear')).toEqual(['', 'root', 'body', 'window']); // '' = every part
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('offers the cell maps of the player\'s pack, and the cells of the chosen one', () => {
+    const param = build().ss_part_cell.component.param;
+    expect(param.cellmap.select_list?.(scenarioWith('ss_part_cell'))?.map((o) => o.val)).toEqual([
+      'Ringo',
+      'Effect',
+    ]);
+    const cells = param.cell.select_list?.(scenarioWith('ss_part_cell', { cellmap: 'Ringo' }));
+    expect(cells?.map((o) => o.val)).toEqual(['face_a', 'face_b']);
+    delete (globalThis as { app?: unknown }).app;
+  });
+
+  it('offers every pack\'s parts when the player\'s pack cannot be told', () => {
+    delete (globalThis as { app?: unknown }).app;
+    const part = build().ss_part_color.component.param.part;
+    expect(part.select_list?.(view({ name: 'chr' }))?.map((o) => o.val)).toEqual(['body', 'hat']);
+  });
+
+  it('writes the colour the way the builder\'s colour picker stores it', () => {
+    // TyranoScript's own notation; [ss_part_color] reads it as well as #RRGGBB.
+    const color = build().ss_part_color.component.param.color;
+    expect(color.type).toBe('Color');
+    expect(color.default_val).toBe('0xff0000');
   });
 
   it('offers the players already placed in the scenario', () => {
