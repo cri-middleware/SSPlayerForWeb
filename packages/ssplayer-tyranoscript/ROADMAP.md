@@ -150,12 +150,9 @@ Found by comparing this adapter against `ssplayer-rmmz` tag-for-tag rather than
 against the Spine / Live2D plugins. The runtime already has all of it; the gap
 is entirely in what the tags expose.
 
-- [ ] **Nothing carries an animation event back to the scenario.** RPG Maker MZ
-      has `signalSwitch`; here neither signals nor user data reach the author, so
-      "the moment the attack connects, shake the screen / branch / play a sound"
-      cannot be written at all. The largest functional gap in this package.
-      Shape to aim for: `[ss_signal name= f=]` writing the engine's own variable,
-      plus an `[ss_wait_signal]` for the blocking case.
+- [ ] **Signal parameters and user data do not reach the scenario.**
+      `[ss_wait_signal var=]` stores the command ID and nothing else. RPG Maker
+      MZ's `signalSwitch` passes less still, so this waits for a request.
 - [ ] **No `[ss_speed]`.** `SSPlayer.speedScale` reads and writes since #42;
       rmmz has exposed `setSSSpeed` from the start. Persisting it needs a `speed`
       field on the saved player, next to `loop`.

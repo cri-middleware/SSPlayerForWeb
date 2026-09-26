@@ -128,6 +128,13 @@ function bool(value: unknown, fallback: boolean): boolean {
   return value === true || String(value) === 'true';
 }
 
+/**
+ * A scenario variable an author can name: `f.hit`, `sf.seen.intro`, `tf.x`.
+ * Checked before it is spliced into the script that writes it, since
+ * `evalScript` would run anything else as code.
+ */
+const VARIABLE_NAME = /^(f|sf|tf)(\.[A-Za-z_$][\w$]*)+$/;
+
 /** Log a failure with its stack, for anyone who has a console open. */
 function logFailure(label: string, err: unknown): void {
   console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err);
@@ -563,6 +570,25 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
    */
   const effectTime = (ms: number): number =>
     skippingEffects() ? Math.min(ms, num(kag.cutTimeWithSkip?.(ms), 0)) : ms;
+
+  /** Throw unless `name` is a variable {@link writeVariable} can write. */
+  const requireVariable = (name: string): void => {
+    if (!VARIABLE_NAME.test(name)) {
+      throw new Error(`var="${name}" is not a variable name (write f.name, sf.name or tf.name).`);
+    }
+    if (typeof kag.evalScript !== 'function') {
+      throw new Error('this TyranoScript build cannot set variables (no evalScript).');
+    }
+  };
+
+  /**
+   * Store a string in the variable an author named, the way `[input name=]`
+   * does: through `evalScript`, which also saves `sf` and notifies
+   * TyranoStudio. `name` must have passed {@link requireVariable}.
+   */
+  const writeVariable = (name: string, value: string): void => {
+    kag.evalScript?.(`${name} = ${JSON.stringify(value)};`);
+  };
 
   /** Look up a player by name or throw a clear "call [ss_new] first" error. */
   const lookup = (name: string): SSPlayerEntry => {
@@ -1092,6 +1118,79 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       };
       const unsubEnd = player.onAnimationFinished(finish);
       const unsubLoop = player.onAnimationLooped(finish);
+    },
+  };
+
+  // [ss_wait_signal name= command= var=] — pause the scenario until the
+  // animation fires a signal (one whose command is `command`, when given), so
+  // "the moment the attack connects" can be written: a [quake], a sound, a
+  // branch. `var` receives the command, for a wait on any of several.
+  //
+  // Waits while skipping too, unlike [ss_wait]: a branch on `var` needs the
+  // signal to have fired, and the wait lasts one animation at most. An
+  // animation that finishes, or plays a whole loop, without the signal never
+  // will fire it — that is a misspelt command or the wrong animation, so it is
+  // reported against this line and the scenario moves on.
+  ftag.master_tag['ss_wait_signal'] = {
+    vital: ['name'],
+    pm: { command: '', var: '' },
+    start(pm) {
+      let entry: SSPlayerEntry;
+      const variable = String(pm.var ?? '');
+      try {
+        entry = lookup(String(pm.name));
+        if (variable) requireVariable(variable);
+      } catch (err) {
+        report('ss_wait_signal', err);
+        nextOrder();
+        return;
+      }
+      const { player } = entry;
+      // A held or stopped player fires nothing, as for [ss_wait].
+      if (!player.isPlaying || player.isPausing) {
+        nextOrder();
+        return;
+      }
+      const command = String(pm.command ?? '');
+      const wanted = command ? `signal "${command}"` : 'a signal';
+      let done = false;
+      let loops = 0;
+      const finish = (err?: Error): void => {
+        if (done) return;
+        done = true;
+        unsubSignal();
+        unsubEnd();
+        unsubLoop();
+        if (err) report('ss_wait_signal', err);
+        nextOrder();
+      };
+      // One tick reports the end (or a loop) before the signals it stepped
+      // over, so a signal keyed on the last frame arrives after the end. Give
+      // up only once the tick has finished dispatching.
+      const giveUp = (what: string): void => {
+        queueMicrotask(() => {
+          if (done) return;
+          // A `next=` follow-up starts on that same end; its signals count too.
+          if (player.isPlaying && !player.isPausing && what === 'finished') {
+            loops = 0;
+            return;
+          }
+          finish(new Error(
+            `"${entry.meta.name}" ${what} "${player.currentAnimation}" without firing ${wanted}.`,
+          ));
+        });
+      };
+      const unsubSignal = player.onSignal((e) => {
+        if (command && e.commandId !== command) return;
+        if (variable) writeVariable(variable, e.commandId ?? '');
+        finish();
+      });
+      const unsubEnd = player.onAnimationFinished(() => giveUp('finished'));
+      // The first loop boundary can come before the signal's frame comes round
+      // again; by the second, a whole cycle has played since the wait began.
+      const unsubLoop = player.onAnimationLooped(() => {
+        if (++loops >= 2) giveUp('played a whole loop of');
+      });
     },
   };
 

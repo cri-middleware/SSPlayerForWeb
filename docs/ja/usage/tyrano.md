@@ -103,6 +103,7 @@ data/others/ssdata/<project>.ssab
 | `[ss_chara]` | 話者と連動し、発話中はトークアニメを再生 | `name=`(必須) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | 個別プレイヤーの停止 / 一時停止 / 再開 | `name=`(必須) |
 | `[ss_wait]` | アニメ終了（ループ時は 1 周）までシナリオを待つ | `name=`(必須) |
+| `[ss_wait_signal]` | アニメがシグナル（`command=` 指定時はそのコマンド）を出すまでシナリオを待つ | `name=`(必須) `command=` `var=` |
 | `[ss_pos]` | 瞬間移動 / スケール / 重なり順（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` `zindex=` |
 | `[ss_move]` | 補間移動 / スケール（easeOut・既定は非ブロッキング） | `name=`(必須) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | パーツの色をアニメより優先して上書き（通常パーツのみ） | `name=`(必須) `part=`(必須) `color=`(必須) `blend=` `priority=` |
@@ -141,6 +142,18 @@ data/others/ssdata/<project>.ssab
 
 `next=` を指定して `loop=` を省略すると 1 回再生になります（無限ループには終わりが来ないため）。
 `nextloop=` は連鎖先のループ回数です。予約された連鎖は次の `[ss_play]` で取り消されます。
+
+### シグナルを待つ
+
+シグナルは、アニメーターが SpriteStudio 上でフレームに置く目印で、コマンド ID と任意のパラメータを持ちます。`[ss_wait_signal]` はアニメがシグナルを出すまでシナリオを止めるので、「攻撃が当たった瞬間」をシナリオに書けます:
+
+```
+[ss_play name="akane" anime="attack" loop="false"]
+[ss_wait_signal name="akane" command="hit"]   ; 攻撃が当たるまで待つ
+[quake count="3" time="300" hmax="20"]
+```
+
+`command=` は SpriteStudio で設定したコマンド ID です。省略するとどのシグナルでも進みます。`var="f.sig"` を指定すると待ちを終えたシグナルのコマンド ID が入るので、`[if]` でどれだったかを分岐できます。`next=` で予約した続きのアニメも待つ対象に含まれます。シグナルが出ないままアニメが終わるか 1 周ループした場合は待ちを終え、ほかのタグの失敗と同じように原因を表示します。多くはコマンド ID の書き間違いです。シグナルのパラメータは受け渡しません。
 
 ### 話者と連動したトークアニメ
 
@@ -208,7 +221,7 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 - **通常のテキスト待ち（`[l]` / `[p]`）中も再生は継続します** — これが期待挙動です。メニューやセーブ画面で止めたい場合は `[ss_pause_all]` / `[ss_resume_all]` を使います。画面外・タブ非表示では自動的に一時停止します。
 - **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。セーブした時点のフレームから再開します。
 - **シーン切替**: レイヤーをクリアすると（`[freeimage]` など、原因を問わず）そのレイヤー上のプレイヤーは自動的に解放されます。`[ss_free]` / `[ss_free_all]` は、レイヤーに触れずに個別に解放したい場合に使います。
-- **スキップ**: `data/system/Config.tjs` の `skipEffectIgnore = true`（既定）のままスキップしている間は、`[chara_show]` と同じく SS の演出も短縮されます。`[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` / `[ss_move]` の `time=` はエンジンのスキップ時の長さになり、`[ss_wait]` は待ちません。アニメ自体は再生を続けます。
+- **スキップ**: `data/system/Config.tjs` の `skipEffectIgnore = true`（既定）のままスキップしている間は、`[chara_show]` と同じく SS の演出も短縮されます。`[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` / `[ss_move]` の `time=` はエンジンのスキップ時の長さになり、`[ss_wait]` は待ちません。アニメ自体は再生を続けます。`[ss_wait_signal]` は、続く処理がシグナルで分岐しうるため、スキップ中も待ちます。
 
 ## 7. 音声
 
