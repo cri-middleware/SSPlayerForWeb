@@ -40,8 +40,9 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     box = { x: 0, y: 0, w: 1280, h: 720 };
     load = vi.fn().mockResolvedValue(undefined);
     // Read out of the pack when it is bound, so the adapter can pick a default
-    // animation without downloading the .ssab a second time.
-    getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2']);
+    // animation without downloading the .ssab a second time, and can reject a
+    // name the pack does not have before changing anything.
+    getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2', 'Talk', 'Idle']);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
     // The runtime's three states, as the real player reports them: a pause is a
@@ -181,6 +182,8 @@ const FakeSSPlayer = SSOverlayMock as unknown as {
 interface Harness {
   tyrano: TyranoGlobal;
   nextOrder: ReturnType<typeof vi.fn>;
+  /** The engine's author-error dialog (`kag.error`). */
+  error: ReturnType<typeof vi.fn>;
   /** Create a layer div, register it under `layer_page`, and attach to the DOM. */
   addLayer(layer?: string, page?: string): HTMLElement;
   /** Stand-in for the engine's `[text]` lip-sync bracket, wrapped by [ss_chara]. */
@@ -200,6 +203,7 @@ interface Harness {
 
 function makeTyrano(): Harness {
   const nextOrder = vi.fn();
+  const error = vi.fn();
   const layerEls = new Map<string, HTMLElement>();
 
   // TyranoScript's own [text] tag brackets character-by-character output with
@@ -247,6 +251,7 @@ function makeTyrano(): Harness {
       stat: { f: {}, current_speaker: '', charas: {}, jcharas: {} },
       variable: { f: {}, sf: {}, tf: {} },
       layer: { getLayer },
+      error,
       on: (names: string, callback: () => void, options?: Record<string, unknown>) => {
         for (const name of names.split(' ')) {
           listeners.set(name, [...(listeners.get(name) ?? []), callback]);
@@ -265,6 +270,7 @@ function makeTyrano(): Harness {
   return {
     tyrano,
     nextOrder,
+    error,
     text: textProto, // the engine's originals, which the wrappers must still call
     addLayer(layer = '0', page = 'fore') {
       const el = document.createElement('div');
@@ -403,7 +409,7 @@ describe('registerSSTags', () => {
     const p = FakeSSPlayer.instances[0];
     expect(p.load).toHaveBeenCalledWith('data/others/ssdata/Basic.ssab');
     expect(p.getAnimationNames).toHaveBeenCalled();
-    // getAnimationNames mock → ['Anime_1', 'Anime_2']; first is chosen.
+    // getAnimationNames mock → ['Anime_1', …]; first is chosen.
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
     // The regression this guards: a second download of the same pack.
     expect(fetchMock).not.toHaveBeenCalled();
@@ -648,6 +654,127 @@ describe('registerSSTags', () => {
   });
 
   // --- PT3: ss_wait / ss_pos / ss_move / audio ----------------------------
+
+  // --- Author-facing errors ------------------------------------------------
+  //
+  // TyranoBuilder's preview has no console, so a failure has to reach the
+  // engine's own error dialog — and while the scenario is still on the tag's
+  // line, because that dialog names whatever line the scenario is on.
+
+  /** Whether `error` was shown before the scenario advanced past the tag. */
+  const reportedBeforeAdvancing = (h: Harness): boolean =>
+    h.error.mock.invocationCallOrder[0] < h.nextOrder.mock.invocationCallOrder.at(-1)!;
+
+  it('shows a tag failure in the engine error dialog, then advances', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runTag(h.tags.ss_play, { name: 'ghost' }, h.nextOrder);
+
+    expect(h.error).toHaveBeenCalledWith('[ss_play] player "ghost" not found (call [ss_new] first).');
+    expect(reportedBeforeAdvancing(h)).toBe(true);
+    expect(errSpy).toHaveBeenCalled(); // the stack still goes to the console
+    errSpy.mockRestore();
+  });
+
+  it('reports an unwaited ss_show against its own line', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runTag(h.tags.ss_show, { name: 'ghost', time: 500, wait: 'false' }, h.nextOrder);
+
+    expect(h.error).toHaveBeenCalledWith(expect.stringContaining('[ss_show] player "ghost"'));
+    expect(reportedBeforeAdvancing(h)).toBe(true);
+    errSpy.mockRestore();
+  });
+
+  it('rejects a misspelt next= at the tag, and changes nothing', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    p.setAnimation.mockClear();
+
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Wiat' }, h.nextOrder);
+
+    expect(h.error).toHaveBeenCalledWith('[ss_play] next="Wiat" is not in others/ssdata/a.ssab.');
+    // Neither half of the tag happened: no switch now, no follow-up later.
+    expect(p.setAnimation).not.toHaveBeenCalled();
+    p._fireEnd();
+    expect(p.setAnimation).not.toHaveBeenCalled();
+    expect(savedSlot(h).chr.anime).toBe('Anime_1');
+    errSpy.mockRestore();
+  });
+
+  it('rejects a misspelt talk= when ss_chara runs, not when the line is spoken', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runTag(h.tags.ss_chara, { name: 'chr', talk: 'Tlak' }, h.nextOrder);
+
+    expect(h.error).toHaveBeenCalledWith(expect.stringContaining('[ss_chara] talk="Tlak" is not in'));
+    expect(savedSlot(h).chr.chara).toBeUndefined();
+    errSpy.mockRestore();
+  });
+
+  it('frees what a failed ss_new had built', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const layer = document.getElementsByClassName('0_fore')[0]; // `.0_fore` is not a valid selector
+
+    await runTag(h.tags.ss_new, { name: 'bad', storage: 'others/ssdata/a.ssab', anime: 'Nope' }, h.nextOrder);
+
+    const bad = FakeSSPlayer.instances[1];
+    const overlay = (SSOverlayMock as unknown as {
+      live: Map<string, { detach: ReturnType<typeof vi.fn> }>;
+    }).live.get('ss_0_fore')!;
+    expect(h.error).toHaveBeenCalledWith(expect.stringContaining('[ss_new] anime="Nope" is not in'));
+    expect(getRegistry().has('bad')).toBe(false);
+    // Otherwise `[anim name="bad"]` would still find an element on the layer.
+    expect(layer.querySelector('.bad')).toBeNull();
+    expect(overlay.detach).toHaveBeenCalledWith(bad);
+    expect(bad.destroy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it('restores the players it can and reports the one it cannot', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_new, { name: 'bg', storage: 'others/ssdata/b.ssab', anime: 'Anime_2' }, h.nextOrder);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // The pack changed after the save: its animation is gone.
+    savedSlot(h).chr.anime = 'Removed';
+
+    FakeSSPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    expect(getRegistry().names()).toEqual(['bg']);
+    expect(h.error).toHaveBeenCalledWith(expect.stringContaining('[ss_restore] could not restore "chr"'));
+    errSpy.mockRestore();
+  });
+
+  it('only logs a failed automatic restore, which no line caused', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    savedSlot(h).chr.anime = 'Removed';
+
+    h.fire('load-beforemaking');
+
+    await vi.waitFor(() => expect(errSpy).toHaveBeenCalledWith(
+      '[ss] automatic restore failed:', expect.stringContaining('could not restore "chr"'),
+    ));
+    expect(h.error).not.toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it('still advances on an engine without an error dialog', async () => {
+    const h = await withPlayer();
+    delete (h.tyrano.kag as { error?: unknown }).error;
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runTag(h.tags.ss_stop, { name: 'ghost' }, h.nextOrder);
+
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
 
   it('ss_wait defers nextOrder until the animation ends', async () => {
     const h = await withPlayer();

@@ -132,6 +132,11 @@ A conversion that fails says why on screen, and the same reason is written to
 `ss_import_log.txt` in your project folder, together with every conversion that
 worked. The plugin manager panel opens that file for you.
 
+While you preview, a component that cannot do its job — a name no *show* created,
+an animation the pack no longer has — says why in a dialog naming the scene file
+and line. An exported game never shows it: the export turns the engine's debug
+switch off.
+
 - **The animation does not appear in the dropdown** — check the `.sspj` is inside
   `SpriteStudio_Source/`, together with the rest of its folder.
 - **The palette has no SpriteStudio components** — the plugin did not load.

@@ -142,6 +142,12 @@ Coordinates use Tyrano's normal top-left pixels (`config.scWidth × scHeight`), 
 as any other on-screen element. `loop`: `true` → infinite / `false` → once / a number →
 that many loops.
 
+A tag that fails never stops the scenario. With the engine's debug switch on
+(`;debugMenu.visible = true` in `data/system/Config.tjs`), the reason appears in the
+engine's own error dialog with the scenario file and line — for example
+`[ss_play] next="Wiat" is not in others/ssdata/Chara.ssab.`
+Turn the switch off for release; the reason then goes only to the browser console.
+
 ### Preload, show, hide
 
 `[ss_new visible="false"]` loads a player **without displaying it**, so a heavy `.ssab`

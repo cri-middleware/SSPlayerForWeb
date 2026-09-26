@@ -4,6 +4,7 @@ import {
   SSPartOverrideStore,
   SSOverlay,
   SSSurface,
+  type SSPlayer,
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
@@ -125,6 +126,24 @@ function loopCount(value: unknown): number {
 function bool(value: unknown, fallback: boolean): boolean {
   if (value === undefined || value === null || value === '') return fallback;
   return value === true || String(value) === 'true';
+}
+
+/** Log a failure with its stack, for anyone who has a console open. */
+function logFailure(label: string, err: unknown): void {
+  console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err);
+}
+
+/**
+ * Throw unless `anime` is one of the pack's animations.
+ *
+ * Checked when the tag runs, before anything changes. `next=` and `[ss_chara]`
+ * switch animations later, after the scenario has moved past the tag, so a
+ * misspelt name would surface where no line can be blamed for it; and a switch
+ * failing halfway leaves the player changed by a tag that reported failure.
+ */
+function requireAnimation(player: SSPlayer, storage: string, attr: string, anime: string): void {
+  if (player.getAnimationNames().includes(anime)) return;
+  throw new Error(`${attr}="${anime}" is not in ${storage}.`);
 }
 
 // Part-override attributes are written by hand in a scenario, so the tags take
@@ -303,10 +322,10 @@ interface CreateOpts {
  */
 async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerEntry> {
   if (!state.initialized) {
-    throw new Error('[ss] call [ss_init] before creating players.');
+    throw new Error('call [ss_init] before creating players.');
   }
   const layerEl = getLayerElement(kag, opts.layer, opts.page);
-  if (!layerEl) throw new Error(`[ss] layer "${opts.layer}" (${opts.page}) not found on the page.`);
+  if (!layerEl) throw new Error(`layer "${opts.layer}" (${opts.page}) not found on the page.`);
 
   const storageUrl = resolveDataPath(opts.storage);
   const { w, h } = gameResolution(kag);
@@ -336,21 +355,32 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   }
   ensureAudioManager()?.bindToPlayer(player);
 
-  await player.load(storageUrl);
-
-  // Pick the animation: the given name, else the pack's first animation. The
-  // player already read the names when it bound the pack, so this no longer
-  // costs a second download of the same `.ssab`.
   let anime = opts.anime;
-  if (!anime) anime = player.getAnimationNames()[0] ?? '';
-  if (!anime) throw new Error(`[ss] no animation found in "${opts.storage}".`);
-  player.setAnimation(anime);
+  try {
+    await player.load(storageUrl);
 
-  player.loopCount = opts.loop;
-  // A fresh player means a fresh WASM context, whose override table starts
-  // empty — so a restore has to put the saved overrides back. Must run after
-  // setAnimation: before that, part names cannot resolve.
-  applyPartOverrides(player, opts.overrides);
+    // Pick the animation: the given name, else the pack's first animation. The
+    // player already read the names when it bound the pack, so this no longer
+    // costs a second download of the same `.ssab`.
+    if (anime) requireAnimation(player, opts.storage, 'anime', anime);
+    else anime = player.getAnimationNames()[0] ?? '';
+    if (!anime) throw new Error(`no animation found in "${opts.storage}".`);
+    player.setAnimation(anime);
+
+    player.loopCount = opts.loop;
+    // A fresh player means a fresh WASM context, whose override table starts
+    // empty — so a restore has to put the saved overrides back. Must run after
+    // setAnimation: before that, part names cannot resolve.
+    applyPartOverrides(player, opts.overrides);
+  } catch (err) {
+    // Not registered yet, so nothing else will ever free these: the element
+    // would stay on the layer answering `[anim name=]`, and the player would
+    // keep its WASM allocation on the overlay.
+    overlay.detach(player);
+    player.destroy();
+    element.remove();
+    throw err;
+  }
 
   const entry: SSPlayerEntry = {
     player,
@@ -416,7 +446,7 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
       player.play();
       persist();
     } catch (err) {
-      console.error('[ss] next animation failed:', (err as Error)?.stack ?? err);
+      logFailure('next animation', err);
     }
   };
 
@@ -455,43 +485,73 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     persistGlobalState(kag, { layerHidden: state.layerHidden });
   };
 
+  /**
+   * Report a tag's failure to the author, not only to the console.
+   *
+   * TyranoBuilder's ordinary preview has no console, so a failure logged and
+   * nothing else — a mistyped `storage=`, a `[ss_play]` before its `[ss_new]` —
+   * did nothing and said nothing. `kag.error` is how the engine reports its own
+   * tags' mistakes, and it decides whether anyone sees it: only with
+   * `debugMenu.visible` on, which a TyranoBuilder project has and its export
+   * turns off. It names the line the scenario is on, so call this before
+   * advancing past the tag.
+   */
+  const report = (label: string, err: unknown): void => {
+    logFailure(label, err);
+    kag.error?.(`[${label}] ${(err as Error)?.message ?? String(err)}`);
+  };
+
   /** Run async tag work, then advance — even on error, so the scenario never stalls. */
   const runThenAdvance = (label: string, work: () => Promise<void>): void => {
     work()
-      .catch((err) => console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err))
+      .catch((err) => report(label, err))
       .finally(nextOrder);
   };
 
   /**
-   * Async tag work whose tail is a visual effect: `wait="true"` advances the
+   * Tag work whose tail is a visual effect: `wait="true"` advances the
    * scenario only once the effect has finished (the `[spine_fadein wait=]` /
    * `[live2d_fadein wait=]` convention), `wait="false"` advances at once and
    * lets it play out behind the following tags.
+   *
+   * `work` does the tag's own work synchronously and returns the effect, so a
+   * mistake in the tag is reported while the scenario is still on its line even
+   * when the effect is not waited for.
    */
-  const runThenAdvanceOrNot = (label: string, wait: boolean, work: () => Promise<void>): void => {
-    if (wait) {
-      runThenAdvance(label, work);
+  const runThenAdvanceOrNot = (label: string, wait: boolean, work: () => Promise<unknown>): void => {
+    let effect: Promise<unknown>;
+    try {
+      effect = work();
+    } catch (err) {
+      report(label, err);
+      nextOrder();
       return;
     }
-    work().catch((err) => console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err));
+    if (wait) {
+      effect.catch((err) => report(label, err)).finally(nextOrder);
+      return;
+    }
+    // Settles after the scenario has moved on, where `report` would name the
+    // wrong line.
+    effect.catch((err) => logFailure(label, err));
     nextOrder();
   };
 
-  /** Run synchronous tag work, then advance (errors logged, never stalls). */
+  /** Run synchronous tag work, then advance (errors reported, never stalls). */
   const runSync = (label: string, work: () => void): void => {
     try {
       work();
     } catch (err) {
-      console.error(`[ss] ${label} failed:`, (err as Error)?.stack ?? err);
+      report(label, err);
     } finally {
       nextOrder();
     }
   };
 
   /** Look up a player by name or throw a clear "call [ss_new] first" error. */
-  const lookup = (label: string, name: string): SSPlayerEntry => {
+  const lookup = (name: string): SSPlayerEntry => {
     const entry = registry.get(name);
-    if (!entry) throw new Error(`[${label}] player "${name}" not found (call [ss_new] first).`);
+    if (!entry) throw new Error(`player "${name}" not found (call [ss_new] first).`);
     return entry;
   };
 
@@ -521,13 +581,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
    * so `[ss_show anime=]` behaves exactly like `[ss_play]` — an entrance
    * animation that hands over to an idle loop is the common case for both.
    */
-  const applyPlayback = async (entry: SSPlayerEntry, pm: PlaybackAttrs): Promise<void> => {
+  const applyPlayback = (entry: SSPlayerEntry, pm: PlaybackAttrs): void => {
     const { player, meta } = entry;
-    // Whatever follow-up the previous [ss_play] armed is superseded by this one.
-    clearChain(entry);
-
     const nextAnime = String(pm.next ?? '');
     const hasAtframe = pm.atframe !== undefined && pm.atframe !== '';
+
+    if (pm.anime) requireAnimation(player, meta.storage, 'anime', String(pm.anime));
+    if (nextAnime) requireAnimation(player, meta.storage, 'next', nextAnime);
+
+    // Whatever follow-up the previous [ss_play] armed is superseded by this one.
+    clearChain(entry);
 
     if (pm.anime) {
       meta.anime = String(pm.anime);
@@ -581,7 +644,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       player.loopCount = loop;
       player.play();
     } catch (err) {
-      console.error('[ss_chara] animation switch failed:', (err as Error)?.stack ?? err);
+      logFailure('ss_chara animation switch', err);
     }
   };
 
@@ -702,8 +765,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     vital: ['name'],
     pm: { anime: '', loop: '', start: '', next: '', nextloop: '', atframe: '' },
     start(pm) {
-      runThenAdvance('ss_play', async () => {
-        await applyPlayback(lookup('ss_play', String(pm.name)), pm);
+      runSync('ss_play', () => {
+        applyPlayback(lookup(String(pm.name)), pm);
         persist();
       });
     },
@@ -720,9 +783,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       next: '', nextloop: '', atframe: '', time: 0, wait: 'true',
     },
     start(pm) {
-      runThenAdvanceOrNot('ss_show', bool(pm.wait, true), async () => {
-        const entry = lookup('ss_show', String(pm.name));
+      runThenAdvanceOrNot('ss_show', bool(pm.wait, true), () => {
+        const entry = lookup(String(pm.name));
         const m = entry.meta;
+        // First, so a misspelt animation fails the tag before anything moves.
+        if (pm.anime) applyPlayback(entry, pm);
         // Placement before the fade, so a fade-in never shows the old position.
         if (pm.zindex !== undefined && pm.zindex !== '') {
           m.zindex = num(pm.zindex, 0);
@@ -732,10 +797,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         m.y = num(pm.y, m.y);
         m.scale = num(pm.scale, m.scale);
         applyPlacement(entry);
-        if (pm.anime) await applyPlayback(entry, pm);
         m.visible = true;
         persist();
-        await applyVisibility(entry, num(pm.time, 0));
+        return applyVisibility(entry, num(pm.time, 0));
       });
     },
   };
@@ -748,11 +812,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     vital: ['name'],
     pm: { time: 0, wait: 'true' },
     start(pm) {
-      runThenAdvanceOrNot('ss_hide', bool(pm.wait, true), async () => {
-        const entry = lookup('ss_hide', String(pm.name));
+      runThenAdvanceOrNot('ss_hide', bool(pm.wait, true), () => {
+        const entry = lookup(String(pm.name));
         entry.meta.visible = false;
         persist();
-        await applyVisibility(entry, num(pm.time, 0));
+        return applyVisibility(entry, num(pm.time, 0));
       });
     },
   };
@@ -764,22 +828,22 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   ftag.master_tag['ss_fadeout'] = {
     pm: { time: 1000, wait: 'true' },
     start(pm) {
-      runThenAdvanceOrNot('ss_fadeout', bool(pm.wait, true), async () => {
+      runThenAdvanceOrNot('ss_fadeout', bool(pm.wait, true), () => {
         state.layerHidden = true;
         persist();
         const time = num(pm.time, 1000);
-        await Promise.all(allEntries().map((e) => applyVisibility(e, time)));
+        return Promise.all(allEntries().map((e) => applyVisibility(e, time)));
       });
     },
   };
   ftag.master_tag['ss_fadein'] = {
     pm: { time: 1000, wait: 'true' },
     start(pm) {
-      runThenAdvanceOrNot('ss_fadein', bool(pm.wait, true), async () => {
+      runThenAdvanceOrNot('ss_fadein', bool(pm.wait, true), () => {
         state.layerHidden = false;
         persist();
         const time = num(pm.time, 1000);
-        await Promise.all(allEntries().map((e) => applyVisibility(e, time)));
+        return Promise.all(allEntries().map((e) => applyVisibility(e, time)));
       });
     },
   };
@@ -795,7 +859,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     pm: { jname: '', talk: '', idle: '' },
     start(pm) {
       runSync('ss_chara', () => {
-        const entry = lookup('ss_chara', String(pm.name));
+        const entry = lookup(String(pm.name));
         const talk = String(pm.talk ?? '');
         if (!talk) {
           if (state.talking === entry.meta.name) state.talking = null;
@@ -803,11 +867,10 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           persist();
           return;
         }
-        entry.meta.chara = {
-          jname: String(pm.jname || entry.meta.name),
-          talk,
-          idle: String(pm.idle ?? ''),
-        };
+        const idle = String(pm.idle ?? '');
+        requireAnimation(entry.player, entry.meta.storage, 'talk', talk);
+        if (idle) requireAnimation(entry.player, entry.meta.storage, 'idle', idle);
+        entry.meta.chara = { jname: String(pm.jname || entry.meta.name), talk, idle };
         ensureTalkHooks();
         persist();
       });
@@ -819,7 +882,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     vital: ['name'],
     start(pm) {
       runSync('ss_stop', () => {
-        lookup('ss_stop', String(pm.name)).player.stop();
+        lookup(String(pm.name)).player.stop();
         persist();
       });
     },
@@ -828,7 +891,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     vital: ['name'],
     start(pm) {
       runSync('ss_pause', () => {
-        lookup('ss_pause', String(pm.name)).player.pause();
+        lookup(String(pm.name)).player.pause();
         persist();
       });
     },
@@ -837,7 +900,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     vital: ['name'],
     start(pm) {
       runSync('ss_resume', () => {
-        lookup('ss_resume', String(pm.name)).player.resume();
+        lookup(String(pm.name)).player.resume();
         persist();
       });
     },
@@ -854,8 +917,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // the raw runtime numbers, since they are written by hand in a scenario.
 
   /** Apply one override now and remember it for save/restore. */
-  const setOverride = (label: string, name: string, entry: SSPartOverride): void => {
-    overridesOf(lookup(label, name), persist).set(entry);
+  const setOverride = (name: string, entry: SSPartOverride): void => {
+    overridesOf(lookup(name), persist).set(entry);
   };
 
   // [ss_part_color name= part= color= blend= priority=] — tint one part.
@@ -867,9 +930,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       runSync('ss_part_color', () => {
         const rgba = parsePartOverrideColor(String(pm.color));
         if (rgba === null) {
-          throw new Error(`[ss_part_color] cannot read color "${pm.color}" (try #FF0000 or #FF0000BF).`);
+          throw new Error(`cannot read color "${pm.color}" (try #FF0000 or #FF0000BF).`);
         }
-        setOverride('ss_part_color', String(pm.name), {
+        setOverride(String(pm.name), {
           kind: 'color',
           part: String(pm.part),
           blendOp: blendOp(pm.blend),
@@ -888,7 +951,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     pm: { hide: 'true', cascade: 'false' },
     start(pm) {
       runSync('ss_part_visible', () => {
-        setOverride('ss_part_visible', String(pm.name), {
+        setOverride(String(pm.name), {
           kind: 'visibility',
           part: String(pm.part),
           hide: bool(pm.hide, true),
@@ -905,7 +968,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     pm: { priority: 'anime' },
     start(pm) {
       runSync('ss_part_cell', () => {
-        setOverride('ss_part_cell', String(pm.name), {
+        setOverride(String(pm.name), {
           kind: 'cell',
           part: String(pm.part),
           cellmap: String(pm.cellmap),
@@ -923,7 +986,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     pm: { part: '' },
     start(pm) {
       runSync('ss_part_clear', () => {
-        const entry = lookup('ss_part_clear', String(pm.name));
+        const entry = lookup(String(pm.name));
         overridesOf(entry, persist).clear(String(pm.part ?? '') || undefined);
       });
     },
@@ -986,9 +1049,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start(pm) {
       let entry: SSPlayerEntry;
       try {
-        entry = lookup('ss_wait', String(pm.name));
+        entry = lookup(String(pm.name));
       } catch (err) {
-        console.error(`[ss] ss_wait failed:`, (err as Error)?.stack ?? err);
+        report('ss_wait', err);
         nextOrder();
         return;
       }
@@ -1023,7 +1086,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     pm: { x: '', y: '', scale: '', zindex: '' },
     start(pm) {
       runSync('ss_pos', () => {
-        const entry = lookup('ss_pos', String(pm.name));
+        const entry = lookup(String(pm.name));
         if (entry.tween) {
           cancelAnimationFrame(entry.tween);
           entry.tween = 0;
@@ -1060,7 +1123,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         else nextOrder();
       };
       try {
-        const entry = lookup('ss_move', String(pm.name));
+        const entry = lookup(String(pm.name));
         const m = entry.meta;
         const fromX = m.x;
         const fromY = m.y;
@@ -1107,7 +1170,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         entry.tween = raf(step);
         finish();
       } catch (err) {
-        console.error('[ss] ss_move failed:', (err as Error)?.stack ?? err);
+        report('ss_move', err);
         nextOrder();
       }
     },
@@ -1176,24 +1239,34 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     state.layerHidden = readGlobalState(kag).layerHidden;
     const saved = readSavedPlayers(kag);
     let needsTalkHooks = false;
+    // One player that cannot come back — a pack renamed since the save — must
+    // not take the rest of the scene with it.
+    const failed: string[] = [];
     for (const s of saved) {
-      const entry = await createPlayer(kag, {
-        name: s.name,
-        storage: s.storage,
-        anime: s.anime,
-        layer: s.layer,
-        page: s.page as LayerPage,
-        x: s.x,
-        y: s.y,
-        scale: s.scale,
-        loop: s.loop,
-        // Saves written before these fields existed default to "shown".
-        visible: s.visible !== false,
-        zindex: s.zindex,
-        next: s.next,
-        chara: s.chara,
-        overrides: s.overrides,
-      });
+      let entry: SSPlayerEntry;
+      try {
+        entry = await createPlayer(kag, {
+          name: s.name,
+          storage: s.storage,
+          anime: s.anime,
+          layer: s.layer,
+          page: s.page as LayerPage,
+          x: s.x,
+          y: s.y,
+          scale: s.scale,
+          loop: s.loop,
+          // Saves written before these fields existed default to "shown".
+          visible: s.visible !== false,
+          zindex: s.zindex,
+          next: s.next,
+          chara: s.chara,
+          overrides: s.overrides,
+        });
+      } catch (err) {
+        logFailure(`restoring "${s.name}"`, err);
+        failed.push(`"${s.name}" (${(err as Error)?.message ?? String(err)})`);
+        continue;
+      }
       observeLayerOf(entry);
       if (s.playing) entry.player.play();
       else entry.player.pause();
@@ -1207,6 +1280,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     }
     if (needsTalkHooks) ensureTalkHooks();
     persist();
+    if (failed.length) throw new Error(`could not restore ${failed.join(', ')}.`);
   };
 
   // Restore without the scenario having to ask.
@@ -1240,11 +1314,13 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       () => {
         // `trigger` does not await, so the scenario resumes while this runs;
         // a `[ss_restore]` still sitting in make.ks awaits it below.
-        state.restorePromise = restoreSavedPlayers()
-          .catch((err) => {
-            console.error('[ss] automatic restore failed:', (err as Error)?.stack ?? err);
-          })
-          .then(() => undefined);
+        //
+        // Logged only: the scenario is already moving, so the engine's error
+        // dialog would name whatever line it has reached. A `[ss_restore]` that
+        // adopts this pass reports the failure against its own line.
+        const pass = restoreSavedPlayers();
+        pass.catch((err) => logFailure('automatic restore', err));
+        state.restorePromise = pass;
       },
       { system: true },
     );

@@ -219,6 +219,11 @@ An export is three unfiltered copies — `index.html`, `data/`, `tyrano/` — wi
 exclusion mechanism. Everything under `data/` ships inside the built game and
 nothing else does, which is why author-time files live at the project root.
 
+The one file it rewrites is `data/system/Config.tjs`, with
+`;debugMenu.visible=false` where the project has `true`. That switch gates
+`kag.error`, so the dialog a failing `[ss_*]` tag opens in preview never reaches
+a built game.
+
 `<id>.builder.js` and `<lang>.json` cannot move: the editor looks for them at
 fixed paths under `data/`. Their size is the only thing negotiable, hence the
 minified bundle.

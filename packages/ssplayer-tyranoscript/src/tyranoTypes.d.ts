@@ -85,6 +85,14 @@ export interface TyranoKag {
   /** Optional: absent in tests / very old engines, so `[ss_chara]` guards it. */
   chara?: TyranoChara;
   /**
+   * The engine's author-error display, the one its own tags use for an
+   * undefined tag or label. Shows `message` in a dialog headed with the current
+   * scenario file and line — only while `debugMenu.visible` is on. It reads the
+   * position when called, so a failure reported after the scenario has advanced
+   * names the wrong line. Optional: every caller guards it.
+   */
+  error?: (message: string, replace_map?: Record<string, unknown>) => void;
+  /**
    * Engine event bus. Optional: older TyranoScript builds have none, so every
    * caller guards it.
    *

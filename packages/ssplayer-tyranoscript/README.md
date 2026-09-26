@@ -289,8 +289,11 @@ disable with `audio="false"`).
 
 ## Troubleshooting
 
-Tags never stall the scenario on failure — they **log the reason to the browser
-console (dev tools)**, so check the console first.
+Tags never stall the scenario on failure. With the engine's debug switch on —
+`;debugMenu.visible = true` in `data/system/Config.tjs` — the reason appears in
+the **engine's own error dialog**, with the scenario file and line, just as a
+misspelt tag's does. Turn the switch off for release, as that file says. The
+full stack always goes to the browser console (dev tools).
 
 - **Nothing shows / an error appears**: make sure `[plugin name="ssplayer"]` runs
   before `[ss_new]` — it is what starts the runtime (you'll see messages like
@@ -301,7 +304,7 @@ console (dev tools)**, so check the console first.
   in `data/others/plugin/ssplayer/` — `init.ks` loads it from there. A WebGL-capable
   browser (whatever runs TyranoScript) is assumed.
 - **`[anim]` shows it barely visible**: `opacity` is **0–255** (not 0–1); full opacity is `255`.
-- **The animation won't switch**: check that the `anime=` name exists inside the `.ssab` (empty = first animation).
+- **An animation name is rejected**: check it against the animation names in SpriteStudio. Names are case-sensitive; an empty `anime=` picks the first.
 - **Characters vanish after loading a save**: restore is automatic, so this should not happen. If it does, the engine is too old to have an event bus — put `[ss_restore]` in `make.ks`.
 
 Known limitations and planned work are tracked in [`ROADMAP.md`](./ROADMAP.md).
