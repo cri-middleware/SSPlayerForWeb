@@ -242,12 +242,11 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 
 ## 7. 音声
 
-SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howler）で再生されます。音声ファイルは
-`data/sound/` 前提で、SS のサウンド名は `data/<dir>/<name>.<ext>` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
+SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howler）で、ゲームの SE 音量で再生されます。コンフィグ画面のスライダー（`[seopt]`）は、再生中の音にも反映されます。音声ファイルは `data/sound/` 前提で、SS のサウンド名はほかのファイル指定と同じ方法で `data/<dir>/<name>.<ext>` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
+
+音はキーに指定された回数だけ鳴って止まります。SpriteStudio の音声に無限ループはありません。アニメの停止・一時停止・切り替えでは、鳴っている音は止めません。`[ss_free]` は、そのプレイヤーが鳴らした音だけを止めます。
 
 ## 既知の制限
-
-`[cm]` / `[clearfix]` 自動フック・frame 精密復元・Tyrano 音量スライダー連動は今後の対応予定です。進捗は [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
 
 ティラノビルダーについては専用プラグイン `@spritestudio/ssplayer-tyranobuilder` があり、`.tbp` として配布され、コンポーネントパレットへの追加に加えて `.sspj` の変換もエディタ内で行います（[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照）。どちらの統合でも未対応の範囲は
 [制約と適用範囲](/ja/limitations#tyranoscript-tyranobuilder) を参照してください。

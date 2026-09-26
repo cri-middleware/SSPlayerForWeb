@@ -6,6 +6,7 @@ import type {
   WebPlaybackStyle,
 } from '@spritestudio/ssplayer-webgl';
 import { cancelElementFade } from './LayerCanvas.js';
+import type { TyranoAudioManager } from './TyranoAudioManager.js';
 
 /**
  * A queued follow-up animation armed by `[ss_play next=]` — the Spine plugin's
@@ -70,6 +71,11 @@ export interface SSPlayerEntry {
    * its name class (see LayerCanvas).
    */
   element: HTMLElement;
+  /**
+   * This player's own audio manager, when audio is on. The player's teardown
+   * stops its sounds; the registry unloads them.
+   */
+  audio?: TyranoAudioManager;
   /**
    * The game's logical width (`config.scWidth`), the denominator of the
    * buffer-scale conversion. The numerator — the overlay's drawing-buffer width
@@ -182,6 +188,7 @@ export class PlayerRegistry {
     // belong to the layer and outlive every character on it.
     entry.overlay.detach(entry.player);
     entry.player.destroy();
+    entry.audio?.releaseAll();
     entry.element.remove();
     this.entries.delete(name);
   }

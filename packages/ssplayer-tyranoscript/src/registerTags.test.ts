@@ -58,7 +58,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     pause = vi.fn(() => { if (this._playing) this._pausing = true; });
     resume = vi.fn(() => { this._pausing = false; });
     stop = vi.fn(() => { this._playing = false; this._pausing = false; });
-    destroy = vi.fn();
+    // Like the core: teardown stops every sound on the player's audio manager.
+    destroy = vi.fn(() => { (this.audioManager as { stopAll?: () => void } | null)?.stopAll?.(); });
     // Part overrides: the real player returns false when the runtime rejects a
     // call; the fake accepts everything so the adapter's own bookkeeping is what
     // these tests exercise.
@@ -868,15 +869,15 @@ describe('registerSSTags', () => {
   });
 
   it('audio: onAudio events play through window.Howl (howler)', async () => {
-    const played: Array<{ src: string[]; loop: boolean }> = [];
+    const played: string[][] = [];
     class FakeHowl {
-      _loop = false;
       constructor(public opts: { src: string[] }) {}
-      loop(v: boolean) { this._loop = v; return this; }
       volume() { return this; }
       stop() { return this; }
+      on() { return this; }
+      off() { return this; }
       unload() {}
-      play() { played.push({ src: this.opts.src, loop: this._loop }); return 1; }
+      play() { played.push(this.opts.src); return 1; }
     }
     vi.stubGlobal('Howl', FakeHowl);
 
@@ -886,10 +887,10 @@ describe('registerSSTags', () => {
     expect(p.audioManager).toBeTruthy();
 
     p._fireAudio({ soundName: 'attack_se', loopNum: 1 });
-    expect(played).toEqual([{ src: ['data/sound/attack_se.ogg'], loop: false }]);
+    expect(played).toEqual([['data/sound/attack_se.ogg']]);
 
-    p._fireAudio({ soundName: 'bgm_loop', loopNum: 0 }); // 0 → loop
-    expect(played[1]).toEqual({ src: ['data/sound/bgm_loop.ogg'], loop: true });
+    p._fireAudio({ soundName: 'hit', loopNum: 1 });
+    expect(played[1]).toEqual(['data/sound/hit.ogg']);
 
     // Reverse (or a ping-pong return leg): the player still reports the key —
     // it is an observation channel — but nothing sounds, because SpriteStudio
@@ -899,6 +900,111 @@ describe('registerSSTags', () => {
     expect(played).toHaveLength(2);
     p._playingForward = true;
 
+    vi.unstubAllGlobals();
+  });
+
+  /** A howler stand-in recording what each sound was asked to do. */
+  class RecordingHowl {
+    static all: RecordingHowl[] = [];
+    played = 0;
+    stopped = 0;
+    unloaded = false;
+    volumes: number[] = [];
+    constructor(public opts: { src: string[]; volume?: number }) {
+      RecordingHowl.all.push(this);
+      if (opts.volume !== undefined) this.volumes.push(opts.volume);
+    }
+    on() { return this; }
+    off() { return this; }
+    volume(v: number) { this.volumes.push(v); return this; }
+    stop() { this.stopped++; return this; }
+    unload() { this.unloaded = true; }
+    play() { this.played++; return 1; }
+  }
+
+  it('audio: plays a sound loopNum times, never forever', async () => {
+    // A howler stand-in that can end a sound, the way a finished clip does.
+    const plays: number[] = [];
+    let ends: Array<() => void> = [];
+    class EndingHowl {
+      constructor(public opts: { src: string[] }) {}
+      volume() { return this; }
+      stop() { return this; }
+      unload() {}
+      on(_event: string, listener: () => void) { ends.push(listener); return this; }
+      off(_event: string, listener: () => void) { ends = ends.filter((l) => l !== listener); return this; }
+      play(id?: number) { plays.push(id ?? 7); return 7; }
+      end() { for (const l of [...ends]) l(); }
+    }
+    vi.stubGlobal('Howl', EndingHowl);
+    await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    // loop_num is a play count (SDK: no infinite loop), so 3 is three plays.
+    p._fireAudio({ soundName: 'step', loopNum: 3 });
+    const howl = (p.audioManager as unknown as { howls: Map<string, EndingHowl> }).howls.get('data/sound/step.ogg')!;
+    howl.end();
+    howl.end();
+    howl.end(); // the third play ends: nothing more
+    expect(plays).toEqual([7, 7, 7]);
+    expect(ends).toHaveLength(0);
+
+    // And 0, which the old code looped forever on, plays once.
+    plays.length = 0;
+    p._fireAudio({ soundName: 'step', loopNum: 0 });
+    howl.end();
+    expect(plays).toEqual([7]);
+    vi.unstubAllGlobals();
+  });
+
+  it('audio: freeing one player stops and unloads its sounds, and nobody else\'s', async () => {
+    RecordingHowl.all = [];
+    vi.stubGlobal('Howl', RecordingHowl);
+    const h = await withPlayer();
+    await runTag(h.tags.ss_new, { name: 'bg', storage: 'others/ssdata/b.ssab' }, h.nextOrder);
+    const [chr, bg] = FakeSSPlayer.instances;
+    chr._fireAudio({ soundName: 'engine', loopNum: 0 }); // a looping SE each
+    bg._fireAudio({ soundName: 'rain', loopNum: 0 });
+    const [engine, rain] = RecordingHowl.all;
+
+    await runTag(h.tags.ss_free, { name: 'chr' }, h.nextOrder);
+
+    expect(engine.stopped).toBeGreaterThan(0);
+    expect(engine.unloaded).toBe(true);
+    // A shared manager used to take the other character's sound down too.
+    expect(rain.stopped).toBe(0);
+    expect(rain.unloaded).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('audio: resolves sound files the way the engine resolves every other path', async () => {
+    RecordingHowl.all = [];
+    vi.stubGlobal('Howl', RecordingHowl);
+    vi.stubGlobal('$', { parseStorage: (path: string, folder: string) => `./${folder}/${path}` });
+    await withPlayer();
+    FakeSSPlayer.instances[0]._fireAudio({ soundName: 'attack_se', loopNum: 1 });
+    expect(RecordingHowl.all[0].opts.src).toEqual(['./data/sound/attack_se.ogg']);
+    vi.unstubAllGlobals();
+  });
+
+  it('audio: plays at the game\'s SE volume, and follows [seopt] while looping', async () => {
+    RecordingHowl.all = [];
+    vi.stubGlobal('Howl', RecordingHowl);
+    const h = await withPlayer();
+    // The engine global the manager reads, with the config screen at 50.
+    h.tyrano.kag.config.defaultSeVolume = '50';
+    vi.stubGlobal('TYRANO', h.tyrano);
+    vi.stubGlobal('$', { parseVolume: (v: string) => Number(v) / 100 });
+
+    FakeSSPlayer.instances[0]._fireAudio({ soundName: 'engine', loopNum: 0 });
+    const engine = RecordingHowl.all[0];
+    expect(engine.volumes.at(-1)).toBe(0.5);
+
+    // The slider moves: [seopt] sets the volume, then the looping sound follows.
+    h.tyrano.kag.config.defaultSeVolume = '20';
+    h.fire('tag-seopt');
+    await Promise.resolve();
+    expect(engine.volumes.at(-1)).toBe(0.2);
     vi.unstubAllGlobals();
   });
 

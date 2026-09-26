@@ -316,15 +316,17 @@ than the anchor, so they were never accurate for this anyway.
 
 ## 7. Audio
 
-SpriteStudio sound events play through TyranoScript's bundled audio (howler). Sound files
-are expected under `data/sound/`; an SS sound name resolves to `data/<dir>/<name>.<ext>`
-(tune with `[ss_init sounddir= soundext= sevolume=]`, disable with `audio="false"`).
+SpriteStudio sound events play through TyranoScript's bundled audio (howler), at the game's SE
+volume: the config screen's slider (`[seopt]`) applies, to a sound already playing as well. Sound
+files are expected under `data/sound/`; an SS sound name resolves to `data/<dir>/<name>.<ext>`,
+the way other storage paths do (tune with `[ss_init sounddir= soundext= sevolume=]`, disable with
+`audio="false"`).
+
+A sound plays as many times as its key says, and then stops: SpriteStudio audio has no endless
+loop. Stopping, pausing or switching the animation leaves a sound that is already playing alone;
+`[ss_free]` stops the sounds that player started, and only those.
 
 ## Known limitations
-
-`[cm]` / `[clearfix]` auto-hooks, frame-precise restore, and Tyrano volume-slider integration are
-still on the roadmap. Track progress in
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
 
 TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships
 as a `.tbp`, adds SpriteStudio components to the palette, and converts your `.sspj` from inside

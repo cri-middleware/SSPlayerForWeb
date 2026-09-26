@@ -89,16 +89,7 @@ Both integrations are **beta**: the authoring surface is complete, but names and
 still change before `7.0.0`. See [Using TyranoScript](/usage/tyrano) and
 [Using TyranoBuilder](/usage/tyranobuilder).
 
-::: warning TyranoScript
-`[cm]` / `[clearfix]` auto-hooks, frame-precise restore, and Tyrano volume-slider integration are
-still on the roadmap. Track progress in
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
-:::
-
 ::: warning TyranoBuilder
-- **Some features have no component yet** — per-part colour and visibility, and linking an
-  animation to a speaker. Write those with TyranoBuilder's own TyranoScript-code component, using
-  the [`[ss_*]` tags](/usage/tyrano).
 - **The free version loads at most two plugins**, and this counts as one.
 - **Do not rename `ssplayer.tbp`.** TyranoBuilder takes the plugin's name from the file name.
 :::
