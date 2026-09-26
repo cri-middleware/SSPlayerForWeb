@@ -126,6 +126,10 @@ A runnable minimal project lives at `examples/tyranoscript-example`.
 | `[ss_fadein]` / `[ss_fadeout]` | Fade every player at once (scene changes) | `time=` `wait=` |
 | `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
+| `[ss_speed]` | Playback speed (`1` = as authored) | `name=`(req) `speed=`(req) |
+| `[ss_seek]` | Move the playhead to a frame | `name=`(req) `frame=`(req) |
+| `[ss_section]` | Play only a range of frames (omit both ends to clear) | `name=`(req) `start=` `end=` |
+| `[ss_direction]` | Forward / backward, once through / ping-pong | `name=`(req) `direction=` `style=` |
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
 | `[ss_wait_signal]` | Wait until the animation fires a signal (the one `command=` names, if given) | `name=`(req) `command=` `var=` |
 | `[ss_pos]` | Instant move / scale / reorder (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` `zindex=` |
@@ -178,6 +182,25 @@ exactly the players that were on screen before the fade-out.
 `next=` with no `loop=` plays the current animation once (an infinite loop would never
 reach its end). `nextloop=` sets the follow-up's loop count; the next `[ss_play]`
 cancels a queued follow-up.
+
+### Speed, seeking and sections
+
+```
+[ss_speed name="akane" speed="0.5"]             ; half speed
+[ss_seek name="akane" frame="12"]               ; jump to frame 12
+[ss_section name="akane" start="10" end="30"]   ; loop frames 10–30 only
+[ss_direction name="akane" direction="backward" style="pingpong"]
+```
+
+Frame numbers count from 0, as SpriteStudio shows them. `[ss_seek]` keeps a playing
+animation playing and a paused one paused. `[ss_section]` moves the playhead to the
+start of the section; leave out `start=` or `end=` for that edge of the animation, and
+both to go back to the whole of it. `direction=` is `forward` or `backward`, and
+`style=` is `normal` (once through) or `pingpong`.
+
+Speed and direction stay when the animation changes. A section does not, because a
+frame number means nothing in another animation: `[ss_play anime=]` and a `next=`
+follow-up both drop it. All three are saved.
 
 ### Waiting for a signal
 
@@ -279,7 +302,8 @@ than the anchor, so they were never accurate for this anyway.
   expected behavior. To freeze animations for a menu or save screen, use
   `[ss_pause_all]` / `[ss_resume_all]`. Off-screen / hidden-tab playback auto-pauses.
 - **Save / load**: players are restored on load automatically — there is nothing
-  to add to `make.ks` — and resume on the frame the save was taken on.
+  to add to `make.ks` — and resume on the frame the save was taken on, with their speed,
+  direction and section.
 - **Scene changes**: clearing a layer (e.g. `[freeimage]`) releases the players on
   it automatically, whatever cleared it. `[ss_free]` / `[ss_free_all]` are for
   letting a player go without touching the layer.

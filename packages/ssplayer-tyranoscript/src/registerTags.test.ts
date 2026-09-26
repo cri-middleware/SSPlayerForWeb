@@ -34,6 +34,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     get loopCount() { return this._loopWrites[this._loopWrites.length - 1] ?? -1; }
     set loopCount(v: number) { this._loopWrites.push(v); }
     frameNo = 0;
+    speedScale = 1;
     order = 0;
     alpha = 1;
     // The overlay drives this from the element rect; tests only need the size,
@@ -46,6 +47,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2', 'Talk', 'Idle']);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
+    setAnimationSection = vi.fn();
+    setPlaybackDirection = vi.fn();
     // The runtime's three states, as the real player reports them: a pause is a
     // hold, so `isPlaying` stays true across one and `isPausing` is what tells
     // "held" from "stopped". A fake that folded the two into one flag would let
@@ -162,6 +165,10 @@ const FakeSSPlayer = SSOverlayMock as unknown as {
     load: ReturnType<typeof vi.fn>;
     setAnimation: ReturnType<typeof vi.fn>;
     setTransform: ReturnType<typeof vi.fn>;
+    setAnimationSection: ReturnType<typeof vi.fn>;
+    setPlaybackDirection: ReturnType<typeof vi.fn>;
+    speedScale: number;
+    frameNo: number;
     play: ReturnType<typeof vi.fn>;
     pause: ReturnType<typeof vi.fn>;
     resume: ReturnType<typeof vi.fn>;
@@ -342,6 +349,7 @@ describe('registerSSTags', () => {
     // `text` is the engine's own tag, present in the harness; only ss_* are ours.
     expect(Object.keys(tags).filter((n) => n.startsWith('ss_')).sort()).toEqual([
       'ss_chara',
+      'ss_direction',
       'ss_fadein',
       'ss_fadeout',
       'ss_free',
@@ -361,7 +369,10 @@ describe('registerSSTags', () => {
       'ss_restore',
       'ss_resume',
       'ss_resume_all',
+      'ss_section',
+      'ss_seek',
       'ss_show',
+      'ss_speed',
       'ss_stop',
       'ss_wait',
       'ss_wait_signal',
@@ -1224,6 +1235,115 @@ describe('registerSSTags', () => {
     expect(h.nextOrder.mock.calls.length).toBe(before); // still moving
 
     await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1));
+  });
+
+  // --- Speed, seek, section, direction ---------------------------------------
+  //
+  // The runtime keeps speed and direction across an animation change and drops
+  // the section, and the save has to mirror exactly that.
+
+  it('ss_speed sets the speed, keeps it across an animation change, and saves it', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    await runTag(h.tags.ss_speed, { name: 'chr', speed: '0.5' }, h.nextOrder);
+    expect(p.speedScale).toBe(0.5);
+
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2' }, h.nextOrder);
+    expect(savedSlot(h).chr.speed).toBe(0.5);
+
+    FakeSSPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+    expect(FakeSSPlayer.instances[0].speedScale).toBe(0.5);
+  });
+
+  it('ss_speed refuses a speed that is not a number', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await runTag(h.tags.ss_speed, { name: 'chr', speed: 'fast' }, h.nextOrder);
+    expect(h.error).toHaveBeenCalledWith('[ss_speed] speed="fast" is not a number.');
+    expect(FakeSSPlayer.instances[0].speedScale).toBe(1);
+    errSpy.mockRestore();
+  });
+
+  it('ss_seek moves the playhead', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_seek, { name: 'chr', frame: '12' }, h.nextOrder);
+    expect(FakeSSPlayer.instances[0].frameNo).toBe(12);
+  });
+
+  it('ss_section limits playback, taking an omitted side as the edge', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    await runTag(h.tags.ss_section, { name: 'chr', start: '5' }, h.nextOrder);
+    expect(p.setAnimationSection).toHaveBeenLastCalledWith(5, -1);
+    expect(savedSlot(h).chr.section).toEqual({ start: 5, end: -1 });
+
+    await runTag(h.tags.ss_section, { name: 'chr' }, h.nextOrder); // back to the whole animation
+    expect(p.setAnimationSection).toHaveBeenLastCalledWith(-1, -1);
+    expect(savedSlot(h).chr.section).toBeUndefined();
+  });
+
+  it('an animation change drops the section, as the runtime does', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_section, { name: 'chr', start: '5', end: '9' }, h.nextOrder);
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
+    expect(savedSlot(h).chr.section).toBeUndefined();
+
+    // …and so does the follow-up the chain switches to.
+    await runTag(h.tags.ss_section, { name: 'chr', start: '2', end: '3' }, h.nextOrder);
+    FakeSSPlayer.instances[0]._fireEnd();
+    expect(savedSlot(h).chr.section).toBeUndefined();
+  });
+
+  it('restores the section after the animation is set up, which resets it', async () => {
+    const h = await withPlayer();
+    await runTag(h.tags.ss_section, { name: 'chr', start: '5', end: '9' }, h.nextOrder);
+
+    FakeSSPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+
+    const p = FakeSSPlayer.instances[0];
+    expect(p.setAnimationSection).toHaveBeenCalledWith(5, 9);
+    expect(p.setAnimationSection.mock.invocationCallOrder[0])
+      .toBeGreaterThan(p.setAnimation.mock.invocationCallOrder.at(-1)!);
+  });
+
+  it('puts the section back when a talk animation returns to the scenario\'s own', async () => {
+    const h = await withPlayer(); // showing Anime_1
+    const p = FakeSSPlayer.instances[0];
+    await runTag(h.tags.ss_section, { name: 'chr', start: '5', end: '9' }, h.nextOrder);
+    await runTag(h.tags.ss_chara, { name: 'chr', jname: 'あかね', talk: 'Talk' }, h.nextOrder);
+    p.setAnimationSection.mockClear();
+
+    h.speak('あかね');
+    expect(p.setAnimationSection).not.toHaveBeenCalled(); // not on the talk animation
+    h.endSpeaking();
+    expect(p.setAnimationSection).toHaveBeenCalledWith(5, 9);
+  });
+
+  it('ss_direction takes Godot\'s words, keeps them across a change, and restores them', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    await runTag(h.tags.ss_direction, { name: 'chr', direction: 'backward', style: 'pingpong' }, h.nextOrder);
+    expect(p.setPlaybackDirection).toHaveBeenLastCalledWith(1, 1);
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2' }, h.nextOrder);
+    expect(savedSlot(h).chr.playback).toEqual({ direction: 1, style: 1 });
+
+    FakeSSPlayer.instances.length = 0;
+    await runTag(h.tags.ss_restore, {}, h.nextOrder);
+    expect(FakeSSPlayer.instances[0].setPlaybackDirection).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('ss_direction refuses a word it does not know', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await runTag(h.tags.ss_direction, { name: 'chr', direction: 'reverse' }, h.nextOrder);
+    expect(h.error).toHaveBeenCalledWith('[ss_direction] direction="reverse" must be forward or backward.');
+    expect(FakeSSPlayer.instances[0].setPlaybackDirection).not.toHaveBeenCalled();
+    errSpy.mockRestore();
   });
 
   // --- [ss_wait_signal] -----------------------------------------------------

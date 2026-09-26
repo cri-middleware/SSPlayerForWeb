@@ -8,13 +8,17 @@ import {
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
+  type WebPlaybackDirection,
+  type WebPlaybackStyle,
 } from '@spritestudio/ssplayer-webgl';
 import {
   clearChain,
   PlayerRegistry,
   type SSCharaBinding,
   type SSNextAnime,
+  type SSPlayback,
   type SSPlayerEntry,
+  type SSSection,
 } from './PlayerRegistry.js';
 import {
   boxOrigin,
@@ -179,6 +183,30 @@ function priorityMode(value: unknown): SSOverridePriority {
   return (named !== undefined ? named : num(value, 1)) as SSOverridePriority;
 }
 
+// `[ss_direction]` takes the words Godot's player uses; the runtime takes numbers.
+const DIRECTIONS = new Map<string, number>([['forward', 0], ['backward', 1]]);
+const STYLES = new Map<string, number>([['normal', 0], ['pingpong', 1]]);
+
+/** Look `value` up in `words`, or throw naming the attribute and what it takes. */
+function oneOf(words: Map<string, number>, attr: string, value: unknown): number {
+  const key = String(value ?? '').trim().toLowerCase();
+  const found = words.get(key);
+  if (found !== undefined) return found;
+  throw new Error(`${attr}="${value}" must be ${[...words.keys()].join(' or ')}.`);
+}
+
+/** Read a numeric attribute the author must give, or throw naming it. */
+function requireNumber(attr: string, value: unknown): number {
+  const n = num(value, NaN);
+  if (Number.isNaN(n)) throw new Error(`${attr}="${value}" is not a number.`);
+  return n;
+}
+
+/** Push a section to the player; `undefined` is the whole animation. */
+function applySection(player: SSPlayer, section: SSSection | undefined): void {
+  player.setAnimationSection(section?.start ?? -1, section?.end ?? -1);
+}
+
 /**
  * Resolve a `storage=` value the way TyranoScript resolves every other one.
  *
@@ -318,6 +346,10 @@ interface CreateOpts {
   chara?: SSCharaBinding;
   /** Per-part overrides to re-apply once the animation is set up (restore path). */
   overrides?: SSPartOverride[];
+  /** `[ss_speed]` / `[ss_direction]` / `[ss_section]` to re-apply (restore path). */
+  speed?: number;
+  playback?: SSPlayback;
+  section?: SSSection;
 }
 
 /**
@@ -379,6 +411,10 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     // empty — so a restore has to put the saved overrides back. Must run after
     // setAnimation: before that, part names cannot resolve.
     applyPartOverrides(player, opts.overrides);
+    // The section after setAnimation too, which resets it.
+    if (opts.section) applySection(player, opts.section);
+    if (opts.speed !== undefined) player.speedScale = opts.speed;
+    if (opts.playback) player.setPlaybackDirection(opts.playback.direction, opts.playback.style);
   } catch (err) {
     // Not registered yet, so nothing else will ever free these: the element
     // would stay on the layer answering `[anim name=]`, and the player would
@@ -409,6 +445,9 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
       next: opts.next,
       chara: opts.chara,
       overrides: opts.overrides,
+      speed: opts.speed,
+      playback: opts.playback,
+      section: opts.section,
     },
   };
   registry.set(entry);
@@ -444,6 +483,7 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
     meta.next = undefined;
     meta.anime = next.anime;
     meta.loop = next.loop;
+    meta.section = undefined; // the runtime drops it with the animation
     try {
       player.setAnimation(next.anime);
       // The author DID ask for this animation change (they wrote `next=`), so
@@ -636,6 +676,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
     if (pm.anime) {
       meta.anime = String(pm.anime);
+      meta.section = undefined; // the runtime drops it with the animation
       player.setAnimation(meta.anime);
       // Setting up an animation makes the runtime drop every override but the
       // Permanent ones; keep the saved mirror in step so a later [ss_restore]
@@ -680,9 +721,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     const { player, meta } = entry;
     try {
       player.setAnimation(anime);
-      // setAnimation drops the non-Permanent overrides; the author never
-      // asked for that here, so put them straight back.
+      // setAnimation drops the non-Permanent overrides and the section; the
+      // author never asked for that here, so put them straight back — the
+      // section only on the scenario's own animation, the one it was set for.
       overridesOf(entry, persist).reapply();
+      if (anime === meta.anime && meta.section) applySection(player, meta.section);
       player.loopCount = loop;
       player.play();
     } catch (err) {
@@ -943,6 +986,71 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     start(pm) {
       runSync('ss_resume', () => {
         lookup(String(pm.name)).player.resume();
+        persist();
+      });
+    },
+  };
+
+  // [ss_speed name= speed=] — playback speed, 1 as authored, 2 twice as fast.
+  // The runtime keeps it across animation changes, so it is saved as-is.
+  ftag.master_tag['ss_speed'] = {
+    vital: ['name', 'speed'],
+    start(pm) {
+      runSync('ss_speed', () => {
+        const entry = lookup(String(pm.name));
+        const speed = requireNumber('speed', pm.speed);
+        entry.player.speedScale = speed;
+        entry.meta.speed = speed;
+        persist();
+      });
+    },
+  };
+
+  // [ss_seek name= frame=] — move the playhead. A playing animation carries on
+  // from there and a paused one stays paused; a frame outside the section lands
+  // on its edge. The save records the frame when it is taken, not here.
+  ftag.master_tag['ss_seek'] = {
+    vital: ['name', 'frame'],
+    start(pm) {
+      runSync('ss_seek', () => {
+        const entry = lookup(String(pm.name));
+        entry.player.frameNo = requireNumber('frame', pm.frame);
+      });
+    },
+  };
+
+  // [ss_section name= start= end=] — play only frames start..end, looping
+  // within them. An omitted side is that edge of the animation, so omitting
+  // both goes back to the whole of it. Setting one moves the playhead to its
+  // start. The next animation change drops it, as the runtime does.
+  ftag.master_tag['ss_section'] = {
+    vital: ['name'],
+    pm: { start: '', end: '' },
+    start(pm) {
+      runSync('ss_section', () => {
+        const entry = lookup(String(pm.name));
+        const side = (attr: string, value: unknown): number =>
+          value === undefined || value === '' ? -1 : requireNumber(attr, value);
+        const section = { start: side('start', pm.start), end: side('end', pm.end) };
+        applySection(entry.player, section);
+        entry.meta.section = section.start < 0 && section.end < 0 ? undefined : section;
+        persist();
+      });
+    },
+  };
+
+  // [ss_direction name= direction= style=] — play forward or backward, once
+  // through or ping-ponging. Kept across animation changes, like the speed.
+  ftag.master_tag['ss_direction'] = {
+    vital: ['name'],
+    pm: { direction: 'forward', style: 'normal' },
+    start(pm) {
+      runSync('ss_direction', () => {
+        const entry = lookup(String(pm.name));
+        const direction = oneOf(DIRECTIONS, 'direction', pm.direction) as WebPlaybackDirection;
+        const style = oneOf(STYLES, 'style', pm.style) as WebPlaybackStyle;
+        entry.player.setPlaybackDirection(direction, style);
+        entry.meta.playback = direction === 0 && style === 0 ? undefined : { direction, style };
         persist();
       });
     },
@@ -1378,6 +1486,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           next: s.next,
           chara: s.chara,
           overrides: s.overrides,
+          speed: s.speed,
+          playback: s.playback,
+          section: s.section,
         });
       } catch (err) {
         logFailure(`restoring "${s.name}"`, err);

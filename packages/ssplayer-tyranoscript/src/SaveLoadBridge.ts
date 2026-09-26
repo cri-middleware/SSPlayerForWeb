@@ -1,5 +1,11 @@
 import type { SSPartOverride } from '@spritestudio/ssplayer-webgl';
-import type { PlayerRegistry, SSCharaBinding, SSNextAnime } from './PlayerRegistry.js';
+import type {
+  PlayerRegistry,
+  SSCharaBinding,
+  SSNextAnime,
+  SSPlayback,
+  SSSection,
+} from './PlayerRegistry.js';
 import type { TyranoKag } from './tyranoTypes.js';
 
 // Save/load bridge. SS players live in the DOM + WASM, neither of which
@@ -68,6 +74,10 @@ export interface SavedPlayer {
    * the rebuilt player, whose WASM context starts with an empty override table.
    */
   overrides?: SSPartOverride[];
+  /** `[ss_speed]`, `[ss_direction]` and `[ss_section]`, re-applied on restore. */
+  speed?: number;
+  playback?: SSPlayback;
+  section?: SSSection;
 }
 
 function saveSlot(kag: TyranoKag): Record<string, SavedPlayer> {
@@ -115,6 +125,9 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       next: meta.next,
       chara: meta.chara,
       overrides: meta.overrides,
+      speed: meta.speed,
+      playback: meta.playback,
+      section: meta.section,
     };
   }
   const stat = kag.stat as { f?: Record<string, unknown> };

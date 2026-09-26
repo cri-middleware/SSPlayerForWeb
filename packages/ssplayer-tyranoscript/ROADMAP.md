@@ -153,12 +153,6 @@ is entirely in what the tags expose.
 - [ ] **Signal parameters and user data do not reach the scenario.**
       `[ss_wait_signal var=]` stores the command ID and nothing else. RPG Maker
       MZ's `signalSwitch` passes less still, so this waits for a request.
-- [ ] **No `[ss_speed]`.** `SSPlayer.speedScale` reads and writes since #42;
-      rmmz has exposed `setSSSpeed` from the start. Persisting it needs a `speed`
-      field on the saved player, next to `loop`.
-- [ ] **No seek / section / reverse tags.** `frame`, `setAnimationSection` and
-      `setPlaybackDirection` all exist on the core player and none is reachable
-      from a scenario.
 
 ### PT8 — audio
 

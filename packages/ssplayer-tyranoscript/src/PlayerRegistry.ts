@@ -1,4 +1,10 @@
-import type { SSPlayer, SSOverlay, SSPartOverride } from '@spritestudio/ssplayer-webgl';
+import type {
+  SSPlayer,
+  SSOverlay,
+  SSPartOverride,
+  WebPlaybackDirection,
+  WebPlaybackStyle,
+} from '@spritestudio/ssplayer-webgl';
 import { cancelElementFade } from './LayerCanvas.js';
 
 /**
@@ -13,6 +19,21 @@ export interface SSNextAnime {
   loop: number;
   /** Frame that triggers the switch early; omitted → wait for the end. */
   atframe?: number;
+}
+
+/** Playback heading set by `[ss_direction]`. */
+export interface SSPlayback {
+  direction: WebPlaybackDirection;
+  style: WebPlaybackStyle;
+}
+
+/**
+ * Frame range set by `[ss_section]`. `-1` on either side means that edge of
+ * the animation, which is how the runtime reads an out-of-range value.
+ */
+export interface SSSection {
+  start: number;
+  end: number;
 }
 
 /**
@@ -92,6 +113,16 @@ export interface SSPlayerEntry {
      * scratch — so the list is mirrored here to be re-applied then.
      */
     overrides?: SSPartOverride[];
+    /** `[ss_speed]`; absent means as authored. The runtime keeps it across animation changes. */
+    speed?: number;
+    /** `[ss_direction]`; absent means forward, once through. Kept across animation changes too. */
+    playback?: SSPlayback;
+    /**
+     * `[ss_section]`. Unlike speed and direction, the runtime drops it on an
+     * animation change — a frame number means nothing in another animation —
+     * so every path that switches animations drops it here as well.
+     */
+    section?: SSSection;
   };
 }
 
