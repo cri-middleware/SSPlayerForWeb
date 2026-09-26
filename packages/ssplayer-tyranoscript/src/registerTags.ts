@@ -548,6 +548,22 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     }
   };
 
+  /**
+   * Whether the engine is skipping effects: skip mode, with the project's
+   * `skipEffectIgnore` on (the default in both TyranoScript and TyranoBuilder).
+   * Read when a tag starts, as the engine's own tags do.
+   */
+  const skippingEffects = (): boolean =>
+    kag.stat.is_skip === true && String(kag.config['skipEffectIgnore']) === 'true';
+
+  /**
+   * An effect duration, cut the way the engine cuts `[chara_show]`'s while
+   * skipping. Never lengthened: the engine's short duration would turn an
+   * instant `time=0` into a fade.
+   */
+  const effectTime = (ms: number): number =>
+    skippingEffects() ? Math.min(ms, num(kag.cutTimeWithSkip?.(ms), 0)) : ms;
+
   /** Look up a player by name or throw a clear "call [ss_new] first" error. */
   const lookup = (name: string): SSPlayerEntry => {
     const entry = registry.get(name);
@@ -799,7 +815,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         applyPlacement(entry);
         m.visible = true;
         persist();
-        return applyVisibility(entry, num(pm.time, 0));
+        return applyVisibility(entry, effectTime(num(pm.time, 0)));
       });
     },
   };
@@ -816,7 +832,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const entry = lookup(String(pm.name));
         entry.meta.visible = false;
         persist();
-        return applyVisibility(entry, num(pm.time, 0));
+        return applyVisibility(entry, effectTime(num(pm.time, 0)));
       });
     },
   };
@@ -831,7 +847,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       runThenAdvanceOrNot('ss_fadeout', bool(pm.wait, true), () => {
         state.layerHidden = true;
         persist();
-        const time = num(pm.time, 1000);
+        const time = effectTime(num(pm.time, 1000));
         return Promise.all(allEntries().map((e) => applyVisibility(e, time)));
       });
     },
@@ -842,7 +858,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       runThenAdvanceOrNot('ss_fadein', bool(pm.wait, true), () => {
         state.layerHidden = false;
         persist();
-        const time = num(pm.time, 1000);
+        const time = effectTime(num(pm.time, 1000));
         return Promise.all(allEntries().map((e) => applyVisibility(e, time)));
       });
     },
@@ -1043,7 +1059,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // [ss_wait name=] — pause the scenario until the animation finishes. Does NOT
   // call nextOrder in start(); instead advances on the next animation end (or,
   // for a looping animation that never "ends", on the next loop) — the async-tag
-  // idiom. No-op advance if the player isn't currently playing.
+  // idiom. No-op advance if the player isn't currently playing, or while the
+  // engine is skipping effects: the animation plays on, but a skip that stops
+  // for it would stop for the one effect the engine did not cut.
   ftag.master_tag['ss_wait'] = {
     vital: ['name'],
     start(pm) {
@@ -1060,7 +1078,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       // (a pause is a hold, not a stop), and a held player's animation-end
       // listener can never fire — so waiting on one would block the scenario
       // until something else resumed it.
-      if (!player.isPlaying || player.isPausing) {
+      if (!player.isPlaying || player.isPausing || skippingEffects()) {
         nextOrder();
         return;
       }
@@ -1131,7 +1149,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const toX = num(pm.x, m.x);
         const toY = num(pm.y, m.y);
         const toS = num(pm.scale, m.scale);
-        const time = num(pm.time, 500);
+        const time = effectTime(num(pm.time, 500));
         // Commit the destination to meta/save up front.
         m.x = toX;
         m.y = toY;
