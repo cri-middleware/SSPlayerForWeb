@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-SSPlayerForWeb is pre-release: nothing is published yet, and fixes are issued against `main`.
+SpriteStudio Player for Web is pre-release: nothing is published yet, and fixes are issued against `main`.
 Once there are releases, this becomes "the latest one".
 
 | Version | Supported |
@@ -63,7 +63,7 @@ impact beyond it is more useful.
 
 ## サポート対象バージョン
 
-SSPlayerForWeb はリリース前です。まだ何も公開されておらず、修正は `main` に対して提供されます。リリースが始まった時点で「最新リリース」に切り替わります。
+SpriteStudio Player for Web はリリース前です。まだ何も公開されておらず、修正は `main` に対して提供されます。リリースが始まった時点で「最新リリース」に切り替わります。
 
 | バージョン | サポート |
 |---|---|

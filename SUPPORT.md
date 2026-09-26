@@ -1,10 +1,10 @@
 # Support Guide
 
-Thank you for using SSPlayerForWeb! We want to ensure you have the best experience possible. Please use the following channels to get help, report issues, or suggest improvements.
+Thank you for using SpriteStudio Player for Web! We want to ensure you have the best experience possible. Please use the following channels to get help, report issues, or suggest improvements.
 
 ## 🛠️ GitHub Issues (Public)
 For Bug Reports and Feature Requests, please use [GitHub Issues](https://github.com/cri-middleware/SSPlayerForWeb/issues). This is the best place for:
-- **Bug Reports**: If you've found a problem in SSPlayerForWeb (any of its packages).
+- **Bug Reports**: If you've found a problem in SpriteStudio Player for Web (any of its packages).
 - **Feature Requests**: If you have ideas for new features or improvements.
 
 *Note: Please do NOT use GitHub Issues for questions about how to use the player. See the community forum below.*
@@ -14,7 +14,7 @@ Before opening a new issue, please search existing issues to see if your topic h
 *If the same problem reproduces on other SpriteStudio players, it most likely belongs to the shared core — say so in your issue, and we will route it.*
 
 ## ❓ Questions on How to Use It
-If you have questions about how to use SSPlayerForWeb, need implementation advice, or want to share tips with other developers, please use our official community forum:
+If you have questions about how to use SpriteStudio Player for Web, need implementation advice, or want to share tips with other developers, please use our official community forum:
 
 👉 [**SpriteStudio Community**](https://spritestudio.jp/community/)
 
@@ -32,11 +32,11 @@ Please do **not** report security vulnerabilities through public GitHub Issues. 
 
 ## 日本語でのサポート (Support in Japanese)
 
-SSPlayerForWeb をご利用いただきありがとうございます。ご質問や不具合の報告は、以下の窓口をご利用ください。
+SpriteStudio Player for Web をご利用いただきありがとうございます。ご質問や不具合の報告は、以下の窓口をご利用ください。
 
 ### 🛠️ GitHub Issues (公開)
 不具合のご報告や新機能のご要望は [GitHub Issues](https://github.com/cri-middleware/SSPlayerForWeb/issues) へ投稿してください。
-- **不具合**: SSPlayerForWeb（各パッケージ）の動作に問題がある場合。
+- **不具合**: SpriteStudio Player for Web（各パッケージ）の動作に問題がある場合。
 - **要望**: 新機能や改善のアイデアがある場合。
 
 *注: 使い方に関するご質問は、GitHub Issues では受け付けておりません。以下の公式コミュニティをご利用ください。*

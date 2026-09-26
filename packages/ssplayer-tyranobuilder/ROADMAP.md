@@ -19,11 +19,11 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   manifest alone.
 - **Reconvert.** A momentary tick box on `[ss_new]`'s inspector, rebuilding the
   one pack that component's `storage` names — per-asset, like
-  SSPlayerForGodot's inspector button, and forced, because the author pressing
-  it has already decided the pack is wrong. This is the only way to refresh a
-  pack without reopening the project; an earlier revision watched the window's
-  focus events instead, and that was dropped to keep the family of players
-  behaving the same way.
+  SpriteStudio Player for Godot's inspector button, and forced, because the
+  author pressing it has already decided the pack is wrong. This is the only
+  way to refresh a pack without reopening the project; an earlier revision
+  watched the window's focus events instead, and that was dropped to keep the
+  family of players behaving the same way.
 - **Converter-version invalidation.** `PackState.converter` had been recorded
   since the first release and never read, so a plugin update shipping a new
   converter never reached packs whose sources had not moved. A project open now
@@ -59,7 +59,7 @@ they ship in one plugin folder, so a change to the tags usually touches both.
 - **Failures say why, on screen.** The editor has no DevTools, so a toast naming
   the log file left the reason in a text file nobody was looking at; the
   converter's message is now in a dialog, beside any name clash from the pass.
-  SSPlayerForRenPy's importer reached the same conclusion.
+  SpriteStudio Player for Ren'Py's importer reached the same conclusion.
 - **The panel is a place to work from.** `preload.js` publishes Electron's
   `shell` — undocumented, unused until now — so the panel opens the source
   folder and the import log, and carries the build line

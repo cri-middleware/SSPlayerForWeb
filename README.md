@@ -1,6 +1,6 @@
 [**English**](./README.md) | [**日本語**](./README.ja.md)
 
-# SSPlayerForWeb
+# SpriteStudio Player for Web
 
 **Professional 2D animation for the Web — one WebAssembly-powered core, rendered through modern PixiJS or a zero-dependency standalone WebGL engine.**
 
@@ -69,7 +69,7 @@ No Rust or WASM toolchain needed — the WASM ships inside each renderer package
 
 ### Running the examples from a checkout
 
-🚧 This is the second door — evaluating SSPlayerForWeb before the packages ship, or working on it.
+🚧 This is the second door — evaluating SpriteStudio Player for Web before the packages ship, or working on it.
 
 **Prerequisites:** [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) (this repo uses pnpm workspaces). The steps below fetch the **pre-built** WASM core, so no Rust toolchain is required.
 

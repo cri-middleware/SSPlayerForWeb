@@ -1,12 +1,12 @@
-# SSPlayerForWeb Roadmap
+# SpriteStudio Player for Web Roadmap
 
-This document outlines the planned features and architectural updates for the `SSPlayerForWeb` project (the TypeScript/JavaScript wrappers and rendering integrations). 
+This document outlines the planned features and architectural updates for SpriteStudio Player for Web (the TypeScript/JavaScript wrappers and rendering integrations). 
 
 For the roadmap of the underlying Rust WebAssembly engine, please refer to the submodule's roadmap: [`SpriteStudio-SDK/ROADMAP.md`](./SpriteStudio-SDK/ROADMAP.md).
 
 ## Planned Features & SDK Integrations
 
-The following features were present in previous JavaScript-only versions (e.g., `SS6Player`) but require updates to the underlying `SpriteStudio-SDK` WebAssembly FFI before they can be fully implemented in `SSPlayerForWeb`.
+The following features were present in previous JavaScript-only versions (e.g., `SS6Player`) but require updates to the underlying `SpriteStudio-SDK` WebAssembly FFI before they can be fully implemented in SpriteStudio Player for Web.
 
 *   [x] **Part Property Override API Integration** — *done*
     Dynamic runtime modification of specific parts, covering the legacy `SS6Player`
@@ -47,9 +47,9 @@ describes and the official players implement, but this one does not yet.
         (RPG Maker MZ).
     *   *Restore*: passing `null` restores the original. The overrides shadow the loaded textures
         rather than replacing them, so restoring drops the shadow and the original reappears with
-        no reload — cheaper than `SSPlayerForGodot`'s reload-from-path, and it works for embedded
-        (`--embedded`) textures too.
-    *   *Naming*: `setCellmapTexture` (camelCase) rather than `SSPlayerForGodot`'s
+        no reload — cheaper than SpriteStudio Player for Godot's reload-from-path, and it works
+        for embedded (`--embedded`) textures too.
+    *   *Naming*: `setCellmapTexture` (camelCase) rather than SpriteStudio Player for Godot's
         `set_cellmap_texture` — each engine in its own idiom, as the Flip / offset entry notes.
     *   *Note*: instance children share the parent's resource manager here, so replacing a name a
         child's sub-animation uses affects the child too — unlike engines whose children keep
@@ -58,9 +58,10 @@ describes and the official players implement, but this one does not yet.
 *   [x] **Flip / offset** (`flipX` / `flipY` / `offsetX` / `offsetY`) — *done*
     Mirror or shift what the player draws without touching the host display object, so anything
     parented to it — including part-following targets — stays put. Available on every player.
-    *   *Naming*: `flipX` / `flipY` rather than `SSPlayerForGodot`'s `flip_h` / `flip_v`, and
-        scalar `offsetX` / `offsetY` rather than a `Vector2` — each engine in its own idiom, as
-        `SSPlayerForUnity` also does (`FlipX` / `FlipY`, after `SpriteRenderer`).
+    *   *Naming*: `flipX` / `flipY` rather than SpriteStudio Player for Godot's `flip_h` /
+        `flip_v`, and scalar `offsetX` / `offsetY` rather than a `Vector2` — each engine in its
+        own idiom, as SpriteStudio Player for Unity also does (`FlipX` / `FlipY`, after
+        `SpriteRenderer`).
     *   *Not exposed*: TyranoScript / TyranoBuilder tags. `[ss_pos]` would need matching
         attributes **and** the save/load bridge would have to persist them, or a restored save
         would silently drop the flip.
@@ -74,7 +75,7 @@ describes and the official players implement, but this one does not yet.
     Layer and cross-fade animations on one player through the runtime's track stack. The runtime
     side is complete and the WASM build already exports the track calls; what is missing is the
     JS surface in `ssplayer-core` and the renderers on top of it.
-    *   *Reference*: `SSPlayerForWgpu`, the one official player that surfaces it
+    *   *Reference*: SpriteStudio Player for wgpu, the one official player that surfaces it
         (`set_track_animation` / `crossfade` / `fade_track` / …). The names follow the stems in
         the SDK's [Player API Conventions](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/20_design/30_api_conventions.md)
         §3-2 — `setTrackAnimation`, `crossfade`, `addTrackSource`, `fadeTrack`, … — and the

@@ -1,6 +1,6 @@
 [**English**](./README.md) | [**日本語**](./README.ja.md)
 
-# SSPlayerForWeb
+# SpriteStudio Player for Web
 
 **Web のためのプロ品質 2D アニメーション。WebAssembly 製の単一コアを、モダンな PixiJS や依存ゼロの単体 WebGL エンジンで描画する。**
 

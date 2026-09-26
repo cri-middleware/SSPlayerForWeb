@@ -1,4 +1,4 @@
-# Releasing SSPlayerForWeb
+# Releasing SpriteStudio Player for Web
 
 Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
@@ -84,7 +84,7 @@ the plugins stage, which Windows does not ship.
 
 ---
 
-# SSPlayerForWeb のリリース手順
+# SpriteStudio Player for Web のリリース手順
 
 維持者向けです。コントリビューターがこの手順を実行することはありません（[CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください）。
 
