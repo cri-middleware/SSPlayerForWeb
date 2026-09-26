@@ -9,12 +9,13 @@
 // file must sit together in js/plugins/. A user extracts the zip's contents
 // straight into js/plugins/ and enables the plugin(s) in the editor.
 //
-// Run after `pnpm --filter @spritestudio/ssplayer-rmmz run build`. Requires `zip`.
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+// Run after `pnpm --filter @spritestudio/ssplayer-rmmz run build`.
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { zipSync } from 'fflate';
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -39,27 +40,19 @@ for (const [label, p] of [
   }
 }
 
-try {
-  execFileSync('zip', ['--version'], { stdio: 'ignore' });
-} catch {
-  console.error('[pack] `zip` is required on PATH.');
-  process.exit(1);
-}
-
 const outDir = join(pkgRoot, 'dist/pack');
-const stage = join(outDir, 'stage');
-rmSync(stage, { recursive: true, force: true });
-mkdirSync(stage, { recursive: true });
-
-copyFileSync(runtimeJs, join(stage, 'ssplayer-rpgmakermz.js'));
-copyFileSync(runtimeWasm, join(stage, 'ssruntime_bg.wasm'));
-
+mkdirSync(outDir, { recursive: true });
 const zipName = `ssplayer-rmmz-plugin-${version}.zip`;
 const zipPath = join(outDir, zipName);
 rmSync(zipPath, { force: true });
-// Zip the stage contents flat (no wrapper dir) — they drop into js/plugins/.
-execFileSync('zip', ['-r', '-q', '-j', zipPath, stage], { cwd: stage });
-rmSync(stage, { recursive: true, force: true });
+// Flat, with no wrapper folder: the files drop straight into js/plugins/.
+// Every entry is stamped 1980-01-01 00:00, the earliest time a zip holds, so
+// the archive depends on its inputs alone: the same files give the same bytes.
+const files = {
+  'ssplayer-rpgmakermz.js': readFileSync(runtimeJs),
+  'ssruntime_bg.wasm': readFileSync(runtimeWasm),
+};
+writeFileSync(zipPath, zipSync(files, { level: 9, mtime: new Date(1980, 0, 1) }));
 
 console.log(`[pack] wrote dist/pack/${zipName}`);
 console.log(`[pack] runtime: ssplayer-rpgmakermz.js + ssruntime_bg.wasm`);

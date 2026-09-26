@@ -8,12 +8,13 @@
 //          readme.txt           (from plugin/readme.txt, {{VERSION}} filled in)
 //
 // A user drops the `ssplayer/` folder into `data/others/plugin/`. Run after
-// `pnpm --filter @spritestudio/ssplayer-tyranoscript run build`. Requires `zip`.
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+// `pnpm --filter @spritestudio/ssplayer-tyranoscript run build`.
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { strToU8, zipSync } from 'fflate';
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -38,23 +39,6 @@ for (const [label, p] of [
   }
 }
 
-try {
-  execFileSync('zip', ['--version'], { stdio: 'ignore' });
-} catch {
-  console.error('[pack] `zip` is required on PATH.');
-  process.exit(1);
-}
-
-const outDir = join(pkgRoot, 'dist/pack');
-const stage = join(outDir, 'stage');
-const pluginDir = join(stage, 'ssplayer');
-rmSync(stage, { recursive: true, force: true });
-mkdirSync(pluginDir, { recursive: true });
-
-copyFileSync(initKs, join(pluginDir, 'init.ks'));
-copyFileSync(mainJs, join(pluginDir, 'main.js'));
-copyFileSync(wasm, join(pluginDir, 'ssruntime_bg.wasm'));
-
 // The plugin library (plugin.tyrano.jp) and TyranoScript's own plugin guide both
 // expect a readme in the folder. Keep the version out of the committed template
 // so a release bump can't leave a stale number in the shipped file.
@@ -63,14 +47,22 @@ if (!readme.includes('{{VERSION}}')) {
   console.error('[pack] plugin/readme.txt no longer contains the {{VERSION}} placeholder.');
   process.exit(1);
 }
-writeFileSync(join(pluginDir, 'readme.txt'), readme.replaceAll('{{VERSION}}', version));
 
+const outDir = join(pkgRoot, 'dist/pack');
+mkdirSync(outDir, { recursive: true });
 const zipName = `ssplayer-tyranoscript-plugin-${version}.zip`;
 const zipPath = join(outDir, zipName);
 rmSync(zipPath, { force: true });
-// Zip from the stage dir so the archive root is `ssplayer/`.
-execFileSync('zip', ['-r', '-q', zipPath, 'ssplayer'], { cwd: stage });
-rmSync(stage, { recursive: true, force: true });
+// The archive root is `ssplayer/`, the folder a user drops into place.
+// Every entry is stamped 1980-01-01 00:00, the earliest time a zip holds, so
+// the archive depends on its inputs alone: the same files give the same bytes.
+const plugin = {
+  'init.ks': readFileSync(initKs),
+  'main.js': readFileSync(mainJs),
+  'ssruntime_bg.wasm': readFileSync(wasm),
+  'readme.txt': strToU8(readme.replaceAll('{{VERSION}}', version)),
+};
+writeFileSync(zipPath, zipSync({ ssplayer: plugin }, { level: 9, mtime: new Date(1980, 0, 1) }));
 
 console.log(`[pack] wrote dist/pack/${zipName}`);
 console.log('[pack] attach this to a GitHub Release; users extract `ssplayer/` into data/others/plugin/.');

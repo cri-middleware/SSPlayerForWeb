@@ -76,9 +76,9 @@ the TyranoScript readme; and the docs' version pins disagreeing with the manifes
 package with a `pack` script fails the run until it is listed in `PLUGIN_ROWS`, the only place the
 plugin artifact names live.
 
-The npm tarballs are reproducible run to run; the plugin archives are not, because `zip` stores
-mtimes, so compare those by content rather than by hash. The Windows twin needs `zip` on PATH for
-the plugins stage, which Windows does not ship.
+Both channels are reproducible run to run. The pack scripts write the plugin archives with
+fflate and stamp every entry 1980-01-01, so the same inputs give the same bytes, and the plugins
+stage needs no `zip` on any platform.
 
 <br>
 
@@ -134,5 +134,4 @@ packed manifest に残った `workspace:`、tarball から欠けた `files` エ�
 フォルダ以外を含む `ssplayer.tbp`（ビルダーはファイル名からプラグイン ID を導きます）、
 TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
 
-npm の tarball は実行ごとに再現可能ですが、プラグインのアーカイブは再現しません（`zip` が mtime を格納するため）。そちらはハッシュではなく中身で比較してください。Windows 双子は plugins 段で PATH 上の
-`zip` を必要とします（Windows には同梱されていません）。
+どちらのチャネルも実行ごとに再現可能です。プラグインのアーカイブは pack スクリプトが fflate で書き出し、全エントリの日時を 1980-01-01 に固定しているので、入力が同じならバイト列も同じになります。plugins 段はどのプラットフォームでも `zip` を必要としません。

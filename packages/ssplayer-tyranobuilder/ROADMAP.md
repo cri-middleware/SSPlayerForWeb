@@ -127,8 +127,7 @@ conversion, the palette, preview, and save/load.
   377 crossings become one. It carries no `mtime` and no `size`, so it can only
   ever serve this scan — the freshness walk needs the stats. Undocumented, so
   it would need proving first.
-- **Windows.** Untested, and `pack-tbp.mjs` shells out to `zip`, so a release
-  cannot currently be cut from a Windows machine.
+- **Windows.** The plugin has not been tried in the Windows builder.
 - **A sample builder project**, and a submission to plugin.tyrano.jp.
 - **More languages.** The component labels are already localised: the source
   strings are English and `lang/ja.json` translates them, picked up because the
