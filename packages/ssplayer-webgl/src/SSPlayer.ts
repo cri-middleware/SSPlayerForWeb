@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, hashString, IAudioManager, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 import type { SSTextureEntry } from './SSWebGLTextureCache.js';
 import type { SSSurface } from './SSSurface.js';
@@ -188,13 +188,13 @@ export class SSPlayer {
    */
   public visible = true;
 
-  private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
-  private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
-  private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
-  private readonly _animStartedListeners = new Set<() => void>();
-  private readonly _animFinishedListeners = new Set<() => void>();
-  private readonly _animLoopedListeners = new Set<() => void>();
-  private readonly _frameListeners = new Set<(frame: number) => void>();
+  private readonly _userDataListeners = new ListenerSet<SSUserDataEvent>();
+  private readonly _signalListeners = new ListenerSet<SSSignalEvent>();
+  private readonly _audioListeners = new ListenerSet<SSAudioEvent>();
+  private readonly _animStartedListeners = new ListenerSet();
+  private readonly _animFinishedListeners = new ListenerSet();
+  private readonly _animLoopedListeners = new ListenerSet();
+  private readonly _frameListeners = new ListenerSet<number>();
   // Guards the one-time default-audio auto-wire (see ensureAutoAudio).
   private _audioAutoWired = false;
 
@@ -411,7 +411,7 @@ export class SSPlayer {
   /** Head-out: rewinds to the section start (or `startFrame`) and re-arms the loop count. */
   public play(startFrame?: number): void {
     this.internalPlayer.play(startFrame);
-    this._animStartedListeners.forEach(cb => cb());
+    this._animStartedListeners.emit();
   }
 
   /** Holds playback in place. Idempotent, and ignored while nothing is playing. */
@@ -659,7 +659,7 @@ export class SSPlayer {
     // point getPartTransform is valid for the new frame).
     if (this._frameListeners.size > 0) {
       const f = this.internalPlayer.getFrameNo();
-      this._frameListeners.forEach(cb => cb(f));
+      this._frameListeners.emit(f);
     }
   }
 
@@ -840,20 +840,17 @@ export class SSPlayer {
 
   /** Registers a user-data event listener. Returns an unsubscribe function. */
   public onUserData(listener: (e: SSUserDataEvent) => void): Unsubscribe {
-    this._userDataListeners.add(listener);
-    return () => { this._userDataListeners.delete(listener); };
+    return this._userDataListeners.add(listener);
   }
 
   /** Registers a signal event listener (active signals only). Returns an unsubscribe function. */
   public onSignal(listener: (e: SSSignalEvent) => void): Unsubscribe {
-    this._signalListeners.add(listener);
-    return () => { this._signalListeners.delete(listener); };
+    return this._signalListeners.add(listener);
   }
 
   /** Registers an audio event listener. Returns an unsubscribe function. */
   public onAudio(listener: (e: SSAudioEvent) => void): Unsubscribe {
-    this._audioListeners.add(listener);
-    return () => { this._audioListeners.delete(listener); };
+    return this._audioListeners.add(listener);
   }
 
   /**
@@ -862,20 +859,17 @@ export class SSPlayer {
    * carries on, it does not start.
    */
   public onAnimationStarted(listener: () => void): Unsubscribe {
-    this._animStartedListeners.add(listener);
-    return () => { this._animStartedListeners.delete(listener); };
+    return this._animStartedListeners.add(listener);
   }
 
   /** Fires once every configured loop has played. Never under an infinite loop count, nor on stop(). */
   public onAnimationFinished(listener: () => void): Unsubscribe {
-    this._animFinishedListeners.add(listener);
-    return () => { this._animFinishedListeners.delete(listener); };
+    return this._animFinishedListeners.add(listener);
   }
 
   /** Fires on each loop boundary crossing. */
   public onAnimationLooped(listener: () => void): Unsubscribe {
-    this._animLoopedListeners.add(listener);
-    return () => { this._animLoopedListeners.delete(listener); };
+    return this._animLoopedListeners.add(listener);
   }
 
   /**
@@ -884,8 +878,7 @@ export class SSPlayer {
    * valid for the new frame. Returns an unsubscribe function.
    */
   public onFrame(listener: (frame: number) => void): Unsubscribe {
-    this._frameListeners.add(listener);
-    return () => { this._frameListeners.delete(listener); };
+    return this._frameListeners.add(listener);
   }
 
   /**
@@ -900,10 +893,10 @@ export class SSPlayer {
 
     const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
     if (finished && this._animFinishedListeners.size > 0) {
-      this._animFinishedListeners.forEach(cb => cb());
+      this._animFinishedListeners.emit();
     }
     if (looped && this._animLoopedListeners.size > 0) {
-      this._animLoopedListeners.forEach(cb => cb());
+      this._animLoopedListeners.emit();
     }
 
     const count = ctx.get_passed_event_count();
@@ -948,7 +941,7 @@ export class SSPlayer {
       if (rect) ev.rect = { left: rect.left(), top: rect.top(), right: rect.right(), bottom: rect.bottom() };
       const point = val.point();
       if (point) ev.point = { x: point.v1(), y: point.v2() };
-      this._userDataListeners.forEach(cb => cb(ev));
+      this._userDataListeners.emit(ev);
     }
   }
 
@@ -996,7 +989,7 @@ export class SSPlayer {
         commandId: val.commandId(),
         params,
       };
-      this._signalListeners.forEach(cb => cb(ev));
+      this._signalListeners.emit(ev);
     }
   }
 
@@ -1017,7 +1010,7 @@ export class SSPlayer {
         soundName: val.soundName(),
         loopNum: val.loopNum(),
       };
-      this._audioListeners.forEach(cb => cb(ev));
+      this._audioListeners.emit(ev);
     }
   }
 

@@ -41,7 +41,10 @@ vi.mock('./SSWebGLResourceManager.js', () => ({
   },
 }));
 
-vi.mock('@spritestudio/ssplayer-core', () => ({
+vi.mock('@spritestudio/ssplayer-core', async () => ({
+  // The real one, from source: listener dispatch is behaviour these tests pin
+  // (onAnimationStarted), not something to fake.
+  ListenerSet: (await import('../../ssplayer-core/src/ListenerSet.js')).ListenerSet,
   initializeWasm: vi.fn().mockResolvedValue(undefined),
   DirectInternalPlayer: class {
     currentAnimation = 'Anime_1';
@@ -380,6 +383,25 @@ describe('SSPlayer onAnimationStarted', () => {
     player.play();
     expect(a).toHaveLength(1);
     expect(b).toHaveLength(2);
+  });
+
+  it('keeps the start in flight from a listener added while it is dispatched', () => {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+
+    // A host that reacts to one event by waiting for the next must not be
+    // handed the one it is reacting to.
+    const seen: string[] = [];
+    const off = player.onAnimationStarted(() => {
+      seen.push('first');
+      off();
+      player.onAnimationStarted(() => seen.push('next'));
+    });
+
+    player.play();
+    expect(seen).toEqual(['first']);
+    player.play();
+    expect(seen).toEqual(['first', 'next']);
   });
 
   it('does not fire on resume — a resume carries on, it does not start', () => {

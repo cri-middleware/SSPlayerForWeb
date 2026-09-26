@@ -23,6 +23,11 @@ off(); // unsubscribe
 playback state. User data, signals, and sounds are fired frame-by-frame by the
 runtime.
 
+A listener added while an event is being dispatched — from inside another listener —
+hears the next event, not the one in flight, and a listener removed during a dispatch
+is not called for it. This is how DOM `EventTarget` behaves, and it is what lets a
+callback that ends one wait start the next.
+
 `onAnimationStarted` fires when playback **heads out** — a `play()`, including one
 the `autoplay` attribute or a host script issued rather than your own code. A
 `resume()` does not fire it: lifting a pause carries on, it does not start.
