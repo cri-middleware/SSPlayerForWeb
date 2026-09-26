@@ -745,6 +745,26 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Parse the SSAB buffer and list its parts in table order, each with its
+     * type. The names are what the part overrides take; the type is what decides
+     * which override applies (colour: normal parts; cell: normal and mask parts),
+     * so a host UI can offer only the parts a given override can change.
+     */
+    public static extractParts(ssabBuffer: Uint8Array): { name: string, type: PartType }[] {
+        const bb = new flatbuffers.ByteBuffer(ssabBuffer);
+        // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
+        if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const out: { name: string, type: PartType }[] = [];
+        for (let i = 0; i < ssab.partsLength(); i++) {
+            const part = ssab.parts(i);
+            const name = part?.name();
+            if (part && name) out.push({ name, type: part.partTypeType() });
+        }
+        return out;
+    }
+
+    /**
      * Parse the SSAB buffer and list its cell-map names in table order (without
      * the `.ssce` extension, as the runtime stores them). These are the names a
      * cell override takes — see {@link extractCellNames} for the cells inside one.
