@@ -126,6 +126,7 @@ A runnable minimal project lives at `examples/tyranoscript-example`.
 | `[ss_fadein]` / `[ss_fadeout]` | Fade every player at once (scene changes) | `time=` `wait=` |
 | `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
+| `[ss_stop_audio]` | Stop the sounds a player started, now | `name=`(req) |
 | `[ss_speed]` | Playback speed (`1` = as authored) | `name=`(req) `speed=`(req) |
 | `[ss_seek]` | Move the playhead to a frame | `name=`(req) `frame=`(req) |
 | `[ss_section]` | Play only a range of frames (omit both ends to clear) | `name=`(req) `start=` `end=` |
@@ -323,8 +324,9 @@ the way other storage paths do (tune with `[ss_init sounddir= soundext= sevolume
 `audio="false"`).
 
 A sound plays as many times as its key says, and then stops: SpriteStudio audio has no endless
-loop. Stopping, pausing or switching the animation leaves a sound that is already playing alone;
-`[ss_free]` stops the sounds that player started, and only those.
+loop. Stopping, pausing or switching the animation leaves a sound that is already playing alone.
+`[ss_stop_audio]` stops the sounds a player started, and `[ss_free]` stops them as it releases
+the player; neither touches any other sound. `[stopse]` does not reach these sounds.
 
 ## Known limitations
 

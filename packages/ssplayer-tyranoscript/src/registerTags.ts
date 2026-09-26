@@ -968,6 +968,18 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
+  // [ss_stop_audio name=] — silence the sounds this player started, now. The
+  // tags above end the animation and leave a sound already playing to finish;
+  // short of [ss_free], this is the one way to cut it.
+  ftag.master_tag['ss_stop_audio'] = {
+    vital: ['name'],
+    start(pm) {
+      runSync('ss_stop_audio', () => {
+        lookup(String(pm.name)).audio?.stopAll();
+      });
+    },
+  };
+
   // [ss_speed name= speed=] — playback speed, 1 as authored, 2 twice as fast.
   // The runtime keeps it across animation changes, so it is saved as-is.
   ftag.master_tag['ss_speed'] = {

@@ -282,6 +282,7 @@ Under **Plugin** in the palette:
 | **SpriteStudio: fade in / fade out** | Show or hide one |
 | **SpriteStudio: change animation** | Switch to another animation in the same pack |
 | **SpriteStudio: stop / pause / resume** | Playback control |
+| **SpriteStudio: stop sound** | Cut the sounds an animation started |
 | **SpriteStudio: wait** | Hold the story until the animation finishes |
 | **SpriteStudio: wait for signal** | Hold the story until the animation fires a signal, such as the moment an attack lands |
 | **SpriteStudio: speed / jump to frame** | Change the playback speed, or move to a frame |

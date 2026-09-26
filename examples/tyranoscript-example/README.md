@@ -139,6 +139,7 @@ projectID = ssplayer_tyrano_example;
 | `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ canvas 挿入 → 再生 |
 | `[ss_play name= anime= loop= start=]` | 再生 / アニメ切替 |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` `name=` | 個別の停止 / 一時停止 / 再開 |
+| `[ss_stop_audio name=]` | そのプレイヤーが鳴らした音をすぐ止める |
 | `[ss_wait name=]` | アニメ終了（ループ時は1周）まで待つ |
 | `[ss_pos name= x= y= scale=]` / `[ss_move name= x= y= scale= time=]` | 内部 transform で瞬間/補間移動（アンカー基準・絶対） |
 | `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + canvas 除去） |

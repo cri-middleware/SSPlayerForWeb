@@ -375,6 +375,7 @@ describe('registerSSTags', () => {
       'ss_show',
       'ss_speed',
       'ss_stop',
+      'ss_stop_audio',
       'ss_wait',
       'ss_wait_signal',
     ]);
@@ -963,8 +964,8 @@ describe('registerSSTags', () => {
     const h = await withPlayer();
     await runTag(h.tags.ss_new, { name: 'bg', storage: 'others/ssdata/b.ssab' }, h.nextOrder);
     const [chr, bg] = FakeSSPlayer.instances;
-    chr._fireAudio({ soundName: 'engine', loopNum: 0 }); // a looping SE each
-    bg._fireAudio({ soundName: 'rain', loopNum: 0 });
+    chr._fireAudio({ soundName: 'engine', loopNum: 1 }); // a sound each
+    bg._fireAudio({ soundName: 'rain', loopNum: 1 });
     const [engine, rain] = RecordingHowl.all;
 
     await runTag(h.tags.ss_free, { name: 'chr' }, h.nextOrder);
@@ -974,6 +975,44 @@ describe('registerSSTags', () => {
     // A shared manager used to take the other character's sound down too.
     expect(rain.stopped).toBe(0);
     expect(rain.unloaded).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('[ss_stop_audio] cuts one player\'s sounds, repeats included, and nobody else\'s', async () => {
+    class RepeatingHowl {
+      static all: RepeatingHowl[] = [];
+      stopped = 0;
+      ends: Array<() => void> = [];
+      constructor(public opts: { src: string[] }) {
+        RepeatingHowl.all.push(this);
+      }
+      volume() { return this; }
+      unload() {}
+      stop() { this.stopped++; return this; }
+      on(_event: string, listener: () => void) { this.ends.push(listener); return this; }
+      off(_event: string, listener?: () => void) {
+        this.ends = listener ? this.ends.filter((l) => l !== listener) : [];
+        return this;
+      }
+      play() { return 1; }
+    }
+    vi.stubGlobal('Howl', RepeatingHowl);
+    const h = await withPlayer();
+    await runTag(h.tags.ss_new, { name: 'bg', storage: 'others/ssdata/b.ssab' }, h.nextOrder);
+    const [chr, bg] = FakeSSPlayer.instances;
+    chr._fireAudio({ soundName: 'engine', loopNum: 3 });
+    bg._fireAudio({ soundName: 'rain', loopNum: 3 });
+    const [engine, rain] = RepeatingHowl.all;
+
+    await runTag(h.tags.ss_stop_audio, { name: 'chr' }, h.nextOrder);
+
+    expect(engine.stopped).toBe(1);
+    // Each repeat waits on the `end` of the play before it. howler fires no
+    // `end` on a stop, so they would not play anyway, but their listeners
+    // would stay behind.
+    expect(engine.ends).toHaveLength(0);
+    expect(rain.stopped).toBe(0);
+    expect(rain.ends).toHaveLength(1);
     vi.unstubAllGlobals();
   });
 

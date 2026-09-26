@@ -102,6 +102,7 @@ data/others/ssdata/<project>.ssab
 | `[ss_fadein]` / `[ss_fadeout]` | 全プレイヤーを一括フェード（シーン切替向け） | `time=` `wait=` |
 | `[ss_chara]` | 話者と連動し、発話中はトークアニメを再生 | `name=`(必須) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | 個別プレイヤーの停止 / 一時停止 / 再開 | `name=`(必須) |
+| `[ss_stop_audio]` | プレイヤーが鳴らした音をすぐ止める | `name=`(必須) |
 | `[ss_speed]` | 再生速度（`1` = 等速） | `name=`(必須) `speed=`(必須) |
 | `[ss_seek]` | 指定フレームへ移動 | `name=`(必須) `frame=`(必須) |
 | `[ss_section]` | 指定範囲のフレームだけを再生（両端とも省略で解除） | `name=`(必須) `start=` `end=` |
@@ -244,7 +245,7 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 
 SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howler）で、ゲームの SE 音量で再生されます。コンフィグ画面のスライダー（`[seopt]`）は、再生中の音にも反映されます。音声ファイルは `data/sound/` 前提で、SS のサウンド名はほかのファイル指定と同じ方法で `data/<dir>/<name>.<ext>` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
 
-音はキーに指定された回数だけ鳴って止まります。SpriteStudio の音声に無限ループはありません。アニメの停止・一時停止・切り替えでは、鳴っている音は止めません。`[ss_free]` は、そのプレイヤーが鳴らした音だけを止めます。
+音はキーに指定された回数だけ鳴って止まります。SpriteStudio の音声に無限ループはありません。アニメの停止・一時停止・切り替えでは、鳴っている音は止めません。プレイヤーが鳴らした音は `[ss_stop_audio]` ですぐ止まり、`[ss_free]` でもプレイヤーの解放と一緒に止まります。どちらもほかの音には触れません。`[stopse]` はこれらの音には効きません。
 
 ## 既知の制限
 
