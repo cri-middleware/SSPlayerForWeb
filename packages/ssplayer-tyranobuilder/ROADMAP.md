@@ -17,8 +17,9 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   rule. The folder and not the `.sspj`, because SpriteStudio writes only the
   files a save changed: an edited animation moves its `.ssae` and leaves the
   manifest alone.
-- **Reconvert.** A momentary tick box on `[ss_new]`'s inspector, rebuilding the
-  one pack that component's `storage` names — per-asset, like
+- **Reconvert.** A button on `[ss_new]`'s inspector (on a builder that cannot
+  take the button, a tick box that unticks itself), rebuilding the one pack
+  that component's `storage` names — per-asset, like
   SpriteStudio Player for Godot's inspector button, and forced, because the
   author pressing it has already decided the pack is wrong. This is the only
   way to refresh a pack without reopening the project; an earlier revision
@@ -103,12 +104,6 @@ conversion, the palette, preview, and save/load.
   next project's reads with the current one's conversion would hide most of
   what is left, at the cost of a pipeline in `importPass`; not obviously worth
   it while the number is this size.
-- **`type: 'PreviewButton'` instead of a momentary `Check`.** The host has a
-  real button param — `js/app/component/default.js:1149` uses one — which would
-  read better than a tick box that unticks itself. Untried because the built-in
-  uses go through `bound_type: 'camera'`, so whether it will call an arbitrary
-  `onChange` is unknown and `js/app/param/param.js` is obfuscated. It is a
-  one-line swap to find out on a running builder.
 - **One pack scan per inspector render is what remains.** The scan is a walk of
   the whole of `data/` — 43 `readdir` plus 334 `stat` across the bridge on a
   small project, about 9 ms, growing with the project's total assets rather
