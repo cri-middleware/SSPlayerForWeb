@@ -355,3 +355,7 @@ Name a project under `~/TyranoBuilder/myproject`, or give a path to one anywhere
 it takes the only project there, or lists them. `--sample` seeds `SpriteStudio_Source/Ringo/`
 from the SDK submodule so the first run has something to convert. Then open (or reopen) the
 project.
+
+`examples/tyranobuilderexample` is a project to open straight away: one scene that uses the
+components on Ringo. Create a new project in the builder for its template, then run
+`pnpm --filter tyranobuilderexample run setup <that project>`; its README has the details.

@@ -124,6 +124,8 @@ Ringo を `SpriteStudio_Source/` に置くので、初回から変換対象が�
 その後プロジェクトを開き直してください。TyranoBuilder のメインウィンドウには DevTools
 が無いので、確認先は `<project>/ss_import_log.txt` です（実行環境と全変換履歴がセッションをまたいで追記されます）。
 
+[`examples/tyranobuilderexample`](../../examples/tyranobuilderexample) は、すぐに開けるサンプルプロジェクトです。Ringo にコンポーネントを使うシーンが 1 つ入っています。
+
 エディタ内部の仕組み（ベンダー非公開の部分を含む）と残タスクは
 [ROADMAP.md](./ROADMAP.md) にあります。
 
