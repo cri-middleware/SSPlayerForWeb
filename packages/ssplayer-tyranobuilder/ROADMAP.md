@@ -83,8 +83,10 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   `data/`. Failing to start one falls back to converting in-thread, which is
   the old behaviour rather than a broken one, and the `converter:` line in the
   log says which happened and why.
-- **Components.** Eighteen of the runtime's twenty-four `[ss_*]` tags, with
-  packs, animations and player names as dropdowns rather than text fields.
+- **Components.** Every `[ss_*]` tag but `[ss_restore]`, which restore makes
+  unnecessary. Packs, animations, player names, parts, cell maps and cells are
+  dropdowns read out of the `.ssab`, and a part picker offers only the parts
+  its override applies to.
 - **`.tbp` packaging**, installed from the editor's own plugin dialog.
 - **Export hygiene.** Author-time files live outside `data/`, which is what an
   export copies.
@@ -94,12 +96,6 @@ conversion, the palette, preview, and save/load.
 
 ## Next
 
-- **Components for the last six tags.** `[ss_chara]` and the four `[ss_part_*]`
-  need part and cell names to be worth a picker; `SSRuntimeManager`'s
-  `extractCellMapNames` / `extractCellNames` can supply them the same way
-  animation names are read today. (`[ss_restore]` deliberately has none — it is
-  not a timeline step, and restore is automatic.) Until then those tags are
-  written with the builder's own TyranoScript-code component.
 - **File I/O still runs on the UI thread.** The conversion moved to a Worker;
   the reads and writes around it cannot, because a plugin reaches the
   filesystem only through `window.studio_api`, which the preload publishes into
@@ -198,8 +194,14 @@ A component is serialised as `$.tag(key, pm)` → `[<key> attr="value" …]`, so
 map key **is** the KAG tag name and the param keys **are** its attributes. No
 macro is needed for a tag implemented in JS.
 
-Every declared param is emitted, blank ones included, so an empty field becomes
-`attr=""`; the runtime treats that as "not given" for every optional attribute.
+Only the keys in the component's `pm` are written, and a placed component's
+`pm` starts with just the params whose `default_val` is truthy. A falsy default
+(`0`, `''`, `false`) leaves the attribute out until the author touches the
+field — harmless for an optional attribute, but a vital one is then missing and
+TyranoScript refuses the tag. Hence `'0'`, not `0`, for a vital number, and
+part / cell pickers that default to the first entry of the player's pack. A
+field the author empties is written as `attr=""`, which the runtime treats as
+"not given".
 There is no escaping, so a value containing `"` would break the tag.
 
 `select_list` is handed the param *view*, which reaches the component through

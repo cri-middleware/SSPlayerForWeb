@@ -535,6 +535,7 @@ export class plugin_setting {
       $: this.TB?.$ ?? (undefined as unknown as TB['$']),
       listPacks: () => host.importer.listPacks(),
       listAnimations: (storage) => host.importer.listAnimations(storage),
+      packContents: (storage) => host.importer.packContents(storage),
       reconvert: (storage) => reconvert(this.TB, host.importer, storage),
       buttonType: hasButton ? BUTTON_PARAM_TYPE : 'Check',
     });

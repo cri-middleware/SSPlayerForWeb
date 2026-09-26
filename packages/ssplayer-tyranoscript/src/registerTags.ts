@@ -1072,15 +1072,17 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   };
 
   // [ss_part_color name= part= color= blend= priority=] — tint one part.
-  // `color` is #RRGGBB or #RRGGBBAA (alpha defaults to opaque). Normal parts only.
+  // `color` is #RRGGBB or #RRGGBBAA (alpha defaults to opaque), or 0xRRGGBB —
+  // TyranoScript's own way of writing a colour ([ptext color=]), and what
+  // TyranoBuilder's colour picker stores. Normal parts only.
   ftag.master_tag['ss_part_color'] = {
     vital: ['name', 'part', 'color'],
     pm: { blend: 'mix', priority: 'anime' },
     start(pm) {
       runSync('ss_part_color', () => {
-        const rgba = parsePartOverrideColor(String(pm.color));
+        const rgba = parsePartOverrideColor(String(pm.color).trim().replace(/^0x/i, '#'));
         if (rgba === null) {
-          throw new Error(`cannot read color "${pm.color}" (try #FF0000 or #FF0000BF).`);
+          throw new Error(`cannot read color "${pm.color}" (try #FF0000, #FF0000BF or 0xFF0000).`);
         }
         setOverride(String(pm.name), {
           kind: 'color',

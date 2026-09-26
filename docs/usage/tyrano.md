@@ -250,7 +250,7 @@ keyframes** (the SS6 PartsColorChange / CellChangeParts / HideSet equivalents).
 [ss_part_clear   name="chr"]
 ```
 
-- `color=` is `#RRGGBB` / `#RRGGBBAA` (alpha defaults to opaque); the `#RGB` shorthand works too.
+- `color=` is `#RRGGBB` / `#RRGGBBAA` (alpha defaults to opaque); the `#RGB` shorthand works too, and so does TyranoScript's own `0xRRGGBB`.
 - `blend=` is `mix` (default) / `mul` / `add` / `sub`, or the numbers `0`–`3`.
 - `priority=` is `keyframe` (yield to the next keyframe) / `anime` (default — hold until the
   animation changes) / `permanent` (survives animation changes), or the numbers `0`–`2`.

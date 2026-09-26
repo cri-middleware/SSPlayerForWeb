@@ -932,6 +932,15 @@ describe('registerSSTags', () => {
     expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 0xff0000ff, 3, 0);
   });
 
+  it('ss_part_color reads TyranoScript\'s own 0xRRGGBB colours', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    // What [ptext color=] takes, and what TyranoBuilder's colour picker stores.
+    await runTag(h.tags.ss_part_color, { name: 'chr', part: 'apple', color: '0x0033ff' }, h.nextOrder);
+    expect(p.setPartColorOverride).toHaveBeenLastCalledWith('apple', 0x0033ffff, 0, 1);
+  });
+
   it('ss_part_color leaves the player alone when the colour cannot be read', async () => {
     const h = await withPlayer();
     const p = FakeSSPlayer.instances[0];
