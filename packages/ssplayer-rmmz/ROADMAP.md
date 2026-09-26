@@ -39,7 +39,7 @@ point, not "unimplemented."
 | §7.2 | Attach as CHILD of `Sprite_Picture` (no monkey-patch of updateBitmap internals) | ✅ Done (aliases `updateBitmap`, adds `Sprite_SpriteStudio` child) |
 | §7.3 | No private Ticker; driven from host `Sprite.update()` | ✅ Done (`MS_PER_FRAME` step) |
 | §7.4 | DI: `RMMZResourceManager` (image via `ImageManager`) | ✅ Done |
-| §7.4 | DI: `RMMZAudioManager` (SE via `AudioManager`) | ✅ Done — bound on SS child mount in `Sprite_SpriteStudio` (`loopNum` still ignored; default SE volume/pitch/pan) |
+| §7.4 | DI: `RMMZAudioManager` (SE via `AudioManager`) | ✅ Done — bound on SS child mount in `Sprite_SpriteStudio` (default SE volume/pitch/pan) |
 | §8.1 | IIFE single-file plugin build | ✅ Done (`dist/browser/ssplayer-rpgmakermz.js`) |
 | §8.2 | WASM approach A (external `.wasm` beside plugin) | ✅ Done (`getSelfScriptDir()`) |
 | §8.2 | WASM approach B (inline base64) | ❌ Not done (optional) — see R5 |
@@ -64,10 +64,8 @@ registry (`liveRegistry.ts`) backs the imperative commands.
 `Sprite_SpriteStudio` now constructs an `RMMZAudioManager` and calls
 `bindToPlayer(this.player)` at mount (before any `loadAnimation`), and
 unsubscribes on `destroy()`. SS `onAudio` events reach MZ's `AudioManager`.
-Follow-ups still open:
+Follow-up still open:
 - Expose a plugin param for default SE volume/pitch/pan (currently 90/100/0).
-- `loopNum` (looping SE) is still ignored (see `RMMZAudioManager` header) — route
-  looped sounds to a channel we own, or document the limitation.
 
 ### R2 — In-MZ visual verification (§4.1) — **partly confirmed**
 

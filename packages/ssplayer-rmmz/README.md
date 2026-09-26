@@ -135,7 +135,8 @@ as it does for every other picture state).
 official MZ help, that option only ever prunes `img/`, `audio/` and `effects/`. This
 plugin loads `.ssab` files and textures dynamically, so MZ can't tell they're in use and
 deletes anything under `img/` — but a project-root `spritestudio/` folder is outside its
-reach, exactly like `js/plugins/`. Nothing to register, no extra setup.
+reach, exactly like `js/plugins/`. Nothing to register, no extra setup. Sound files are the
+exception — see [5. Sound](#5-sound).
 
 > **Migrating:** if your assets are still under `img/spritestudio/`, move the whole folder
 > up one level to `spritestudio/` and drop the leading `img/` from the `SSAB File`
@@ -149,13 +150,28 @@ get encrypted and are decrypted automatically via `ImageManager`. In exchange yo
 **turn "Exclude unused files" off**, or **copy `img/spritestudio/` into the deployed
 output** afterward.
 
+## 5. Sound
+
+Sound keys play as sound effects through MZ's `AudioManager`, at the game's SE volume. A
+key's sound name — its name in SpriteStudio's sound list — is the file
+`audio/se/<name>.ogg`, so convert the source files to Ogg Vorbis as for any MZ SE.
+*Encrypt Audio Files* covers them like the rest.
+
+A key plays its sound as many times as it sets, one after another; SpriteStudio audio has
+no endless loop. Erasing the picture stops the sounds it started and no others, and the
+event command *Stop SE* stops them along with every other SE.
+
+**Deployment.** MZ can't see into an `.ssab`, so *Exclude unused files* deletes the sound
+files only an animation plays. Register each one in the *Audio File Material List* of the
+official MaterialBase.js plugin, or deploy with the option off. MaterialBase.js ships with
+MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it needs.
+
 ## Known limitations
 
 - The picture's **tint doesn't affect** the SS animation. *Opacity*, *move* and *scale*
   **do** apply.
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
-  can shift the animation out of place; looped sound effects play only once). MZ's own
-  flash/tint overlays are unaffected.
+  can shift the animation out of place). MZ's own flash/tint overlays are unaffected.
 
 The technical reasons and planned fixes are in
 [For contributors → How it works](#how-it-works).
@@ -200,8 +216,7 @@ sit in correct Z-order with characters and pictures.
 - A **PIXI filter placed directly on the SS sprite** can misplace it — the projection
   is **fixed full-screen**. MZ screen effects (flash, tint) are separate overlays and
   are unaffected.
-- Looped SE (`loopNum`) play once; **stencil masks** need a stencil buffer on MZ's
-  canvas (present by default).
+- **Stencil masks** need a stencil buffer on MZ's canvas (present by default).
 
 Wiring MZ's tint into the world tint `SSWebGLRenderer` already takes for opacity, and
 injecting a projection matrix for the projection limitation, are planned follow-ups.

@@ -157,6 +157,9 @@ in use and deletes anything it finds under `img/`. A project-root `spritestudio/
 is outside its reach — exactly like `js/plugins/`, which is why the plugin `.js` and
 `ssruntime_bg.wasm` already survive. Nothing to register, no extra setup.
 
+Sound files are the exception: MZ plays sound effects only from `audio/se/`, inside the
+option's reach — see [5. Sound](#_5-sound).
+
 ::: warning Migrating an existing project
 If your assets are still under `img/spritestudio/`, move the whole folder up one level to
 `spritestudio/` and update the `SSAB File` argument of each `Show SS` / `Set SS As
@@ -174,13 +177,28 @@ off**, or **copy `img/spritestudio/` into the deployed output** afterward.
 If a texture does go missing, the plugin now reports it by name in the console instead of
 leaving the animation stuck loading.
 
+## 5. Sound
+
+Sound keys play as sound effects through MZ's `AudioManager`, at the game's SE volume. A
+key's sound name — its name in SpriteStudio's sound list — is the file
+`audio/se/<name>.ogg`, so convert the source files to Ogg Vorbis as for any MZ SE.
+*Encrypt Audio Files* covers them like the rest.
+
+A key plays its sound as many times as it sets, one after another; SpriteStudio audio has
+no endless loop. Erasing the picture stops the sounds it started and no others, and the
+event command *Stop SE* stops them along with every other SE.
+
+**Deployment.** MZ can't see into an `.ssab`, so *Exclude unused files* deletes the sound
+files only an animation plays. Register each one in the *Audio File Material List* of the
+official MaterialBase.js plugin, or deploy with the option off. MaterialBase.js ships with
+MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it needs.
+
 ## Known limitations
 
 - The picture's **tint doesn't affect** the SS animation. *Opacity*, *move* and *scale*
   **do** apply.
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
-  can shift the animation out of place; looped sound effects play only once). MZ's own
-  flash / tint overlays are unaffected.
+  can shift the animation out of place). MZ's own flash / tint overlays are unaffected.
 
 `SSWebGLRenderer` now takes a world tint, which is what made opacity inheritance work. Wiring
 MZ's *tint* through it, and injecting a projection matrix for the remaining projection
