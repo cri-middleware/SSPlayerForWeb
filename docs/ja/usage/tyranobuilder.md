@@ -209,6 +209,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 | **SpriteStudio アニメ変更** | 同じデータ内の別アニメーションに切り替え |
 | **SpriteStudio 停止 / 一時停止 / 再開** | 再生の制御 |
 | **SpriteStudio 待機** | アニメが終わるまでストーリーを止める |
+| **SpriteStudio シグナル待機** | 攻撃が当たった瞬間など、アニメがシグナルを出すまでストーリーを止める |
 | **SpriteStudio 位置変更 / 移動** | 即座に配置、または時間をかけて移動 |
 | **SpriteStudio 削除 / 全削除** | 1 つ、またはすべて破棄 |
 | **SpriteStudio 全体フェードアウト / 全体フェードイン** | 場面転換用にまとめて |

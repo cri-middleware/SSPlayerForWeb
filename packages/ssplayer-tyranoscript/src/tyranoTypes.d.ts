@@ -100,6 +100,12 @@ export interface TyranoKag {
    */
   cutTimeWithSkip?: (time: number) => number | string;
   /**
+   * Run a script with `f` / `sf` / `tf` in scope — the engine's `[eval]`, and
+   * how `[input name=]` stores into the variable an author names. Saves `sf`
+   * afterwards. Optional: every caller guards it.
+   */
+  evalScript?: (script: string) => void;
+  /**
    * Engine event bus. Optional: older TyranoScript builds have none, so every
    * caller guards it.
    *

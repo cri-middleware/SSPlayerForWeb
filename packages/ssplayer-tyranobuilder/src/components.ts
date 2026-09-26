@@ -661,6 +661,31 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
       { name: playerRef() },
     ),
 
+    ss_wait_signal: entry(
+      's-icon-flag',
+      'SpriteStudio: wait for signal',
+      'Holds the scenario until the animation fires a signal, such as the moment an attack lands.',
+      byName,
+      {
+        name: playerRef(),
+        // Free text: a command ID is whatever the animator typed in
+        // SpriteStudio, and the .ssab keeps no list of them, only the frames
+        // that fire each one.
+        command: {
+          type: 'Text',
+          name: t('Signal command'),
+          help: t('The command ID set in SpriteStudio. Leave empty to take any signal.'),
+          default_val: '',
+        },
+        var: {
+          type: 'Text',
+          name: t('Store in variable'),
+          help: t('Optional. A variable such as f.signal receives the command ID.'),
+          default_val: '',
+        },
+      },
+    ),
+
     // -----------------------------------------------------------------------
     // Placement
     // -----------------------------------------------------------------------

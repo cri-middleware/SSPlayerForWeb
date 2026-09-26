@@ -283,6 +283,7 @@ Under **Plugin** in the palette:
 | **SpriteStudio: change animation** | Switch to another animation in the same pack |
 | **SpriteStudio: stop / pause / resume** | Playback control |
 | **SpriteStudio: wait** | Hold the story until the animation finishes |
+| **SpriteStudio: wait for signal** | Hold the story until the animation fires a signal, such as the moment an attack lands |
 | **SpriteStudio: place / move** | Place it, or slide it over time |
 | **SpriteStudio: remove / remove all** | Unload one, or all of them |
 | **SpriteStudio: fade out all / fade in all** | All of them at once, for a scene change |

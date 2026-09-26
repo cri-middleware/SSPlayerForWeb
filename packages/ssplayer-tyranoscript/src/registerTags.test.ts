@@ -25,6 +25,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _loopListeners = new Set<() => void>();
     _frameListeners = new Set<(frame: number) => void>();
     _audioListeners = new Set<(e: unknown) => void>();
+    _signalListeners = new Set<(e: { commandId: string | null }) => void>();
     audioManager: unknown = null;
     // `loopCount` is a real accessor on the player, so the fake records writes
     // through one too — asserting on a plain field would not catch the adapter
@@ -72,9 +73,13 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     onAnimationLooped(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
     onFrame(cb: (frame: number) => void) { this._frameListeners.add(cb); return () => this._frameListeners.delete(cb); }
     onAudio(cb: (e: unknown) => void) { this._audioListeners.add(cb); return () => this._audioListeners.delete(cb); }
+    onSignal(cb: (e: { commandId: string | null }) => void) { this._signalListeners.add(cb); return () => this._signalListeners.delete(cb); }
+    get currentAnimation() { return String(this.setAnimation.mock.calls.at(-1)?.[0] ?? ''); }
     _fireEnd() { for (const cb of [...this._endListeners]) cb(); }
     _fireFrame(frame: number) { for (const cb of [...this._frameListeners]) cb(frame); }
     _fireAudio(e: unknown) { for (const cb of [...this._audioListeners]) cb(e); }
+    _fireLoop() { for (const cb of [...this._loopListeners]) cb(); }
+    _fireSignal(commandId: string) { for (const cb of [...this._signalListeners]) cb({ commandId }); }
 
     // The character's element, exposed here so the existing assertions can reach
     // it from the player they were handed. It is a plain div now: the overlay
@@ -174,6 +179,8 @@ const FakeSSPlayer = SSOverlayMock as unknown as {
     _fireEnd(): void;
     _fireFrame(frame: number): void;
     _fireAudio(e: unknown): void;
+    _fireLoop(): void;
+    _fireSignal(commandId: string): void;
   }>;
 };
 
@@ -256,6 +263,9 @@ function makeTyrano(): Harness {
       // skipping with `skipEffectIgnore` on, the given one otherwise.
       cutTimeWithSkip: (time: number) =>
         tyrano.kag.stat.is_skip === true && tyrano.kag.config.skipEffectIgnore === 'true' ? 70 : time,
+      // `[eval]`: the script runs with the three variable scopes in reach.
+      evalScript: (script: string) =>
+        new Function('f', 'sf', 'tf', script)(tyrano.kag.stat.f, tyrano.kag.variable.sf, tyrano.kag.variable.tf),
       on: (names: string, callback: () => void, options?: Record<string, unknown>) => {
         for (const name of names.split(' ')) {
           listeners.set(name, [...(listeners.get(name) ?? []), callback]);
@@ -354,6 +364,7 @@ describe('registerSSTags', () => {
       'ss_show',
       'ss_stop',
       'ss_wait',
+      'ss_wait_signal',
     ]);
     expect(tags.ss_new.vital).toEqual(['name', 'storage']);
   });
@@ -1215,6 +1226,124 @@ describe('registerSSTags', () => {
     await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1));
   });
 
+  // --- [ss_wait_signal] -----------------------------------------------------
+
+  /** Start `[ss_wait_signal]` and report whether it has advanced yet. */
+  const startWaitSignal = (h: Harness, pm: Record<string, unknown>): (() => boolean) => {
+    const before = h.nextOrder.mock.calls.length;
+    h.tags.ss_wait_signal.start({ ...h.tags.ss_wait_signal.pm, ...pm } as Record<string, any>);
+    return () => h.nextOrder.mock.calls.length > before;
+  };
+
+  /** Let a deferred give-up run. */
+  const settle = () => new Promise<void>((r) => setTimeout(r, 0));
+
+  it('ss_wait_signal holds until the named signal, and stores its command', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const advanced = startWaitSignal(h, { name: 'chr', command: 'hit', var: 'f.sig' });
+
+    p._fireSignal('step');
+    await settle();
+    expect(advanced()).toBe(false); // another command does not count
+
+    p._fireSignal('hit');
+    expect(advanced()).toBe(true);
+    expect(h.tyrano.kag.stat.f.sig).toBe('hit');
+  });
+
+  it('ss_wait_signal with no command takes the first signal', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const advanced = startWaitSignal(h, { name: 'chr', var: 'tf.sig' });
+
+    p._fireSignal('step');
+    expect(advanced()).toBe(true);
+    expect(h.tyrano.kag.variable.tf.sig).toBe('step');
+    p._fireSignal('hit'); // after the wait, signals write nothing
+    expect(h.tyrano.kag.variable.tf.sig).toBe('step');
+  });
+
+  it('ss_wait_signal refuses a var that is not a variable, without waiting', async () => {
+    const h = await withPlayer();
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runTag(h.tags.ss_wait_signal, { name: 'chr', var: 'f.x; alert(1)' }, h.nextOrder);
+
+    expect(h.error).toHaveBeenCalledWith(expect.stringContaining('[ss_wait_signal] var="f.x; alert(1)" is not a variable name'));
+    errSpy.mockRestore();
+  });
+
+  it('ss_wait_signal reports an animation that finishes without the signal', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const advanced = startWaitSignal(h, { name: 'chr', command: 'hti' });
+
+    p.stop();
+    p._fireEnd();
+    await settle();
+
+    expect(advanced()).toBe(true);
+    expect(h.error).toHaveBeenCalledWith('[ss_wait_signal] "chr" finished "Anime_1" without firing signal "hti".');
+    errSpy.mockRestore();
+  });
+
+  it('ss_wait_signal takes a signal on the last frame, reported after the end', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const advanced = startWaitSignal(h, { name: 'chr', command: 'hit', var: 'f.sig' });
+
+    // One tick: the end first, then the signals the tick stepped over.
+    p.stop();
+    p._fireEnd();
+    p._fireSignal('hit');
+    await settle();
+
+    expect(advanced()).toBe(true);
+    expect(h.error).not.toHaveBeenCalled();
+    expect(h.tyrano.kag.stat.f.sig).toBe('hit');
+  });
+
+  it('ss_wait_signal gives up after a whole loop without the signal', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const advanced = startWaitSignal(h, { name: 'chr', command: 'hit' });
+
+    p._fireLoop(); // may have started after the signal's frame
+    await settle();
+    expect(advanced()).toBe(false);
+
+    p._fireLoop();
+    await settle();
+    expect(advanced()).toBe(true);
+    expect(h.error).toHaveBeenCalledWith(expect.stringContaining('played a whole loop of "Anime_1"'));
+    errSpy.mockRestore();
+  });
+
+  it('ss_wait_signal keeps waiting through a next= follow-up', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', next: 'Anime_1' }, h.nextOrder);
+    const advanced = startWaitSignal(h, { name: 'chr', command: 'hit' });
+
+    p.stop();
+    p._fireEnd(); // the follow-up starts on this end
+    await settle();
+    expect(advanced()).toBe(false);
+    expect(h.error).not.toHaveBeenCalled();
+
+    p._fireSignal('hit');
+    expect(advanced()).toBe(true);
+  });
+
+  it('ss_wait_signal does not wait on a player that is not playing', async () => {
+    const h = await withPlayer();
+    FakeSSPlayer.instances[0].stop();
+    await runTag(h.tags.ss_wait_signal, { name: 'chr', command: 'hit' }, h.nextOrder);
+  });
+
   // --- Skip mode -----------------------------------------------------------
   //
   // While the engine skips with `skipEffectIgnore` on, it cuts its own effects
@@ -1266,6 +1395,18 @@ describe('registerSSTags', () => {
 
     await runTag(h.tags.ss_fadeout, { wait: 'false' }, h.nextOrder);
     expect(p.element.style.transition).toBe('opacity 1000ms linear');
+  });
+
+  it('ss_wait_signal still waits while skipping', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    startSkipping(h);
+    const advanced = startWaitSignal(h, { name: 'chr', command: 'hit', var: 'f.sig' });
+
+    await settle();
+    expect(advanced()).toBe(false); // a branch on f.sig needs the signal
+    p._fireSignal('hit');
+    expect(advanced()).toBe(true);
   });
 
   it('ss_wait does not hold a skip', async () => {

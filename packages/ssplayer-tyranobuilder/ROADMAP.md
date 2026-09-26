@@ -83,7 +83,7 @@ they ship in one plugin folder, so a change to the tags usually touches both.
   `data/`. Failing to start one falls back to converting in-thread, which is
   the old behaviour rather than a broken one, and the `converter:` line in the
   log says which happened and why.
-- **Components.** Seventeen of the runtime's twenty-three `[ss_*]` tags, with
+- **Components.** Eighteen of the runtime's twenty-four `[ss_*]` tags, with
   packs, animations and player names as dropdowns rather than text fields.
 - **`.tbp` packaging**, installed from the editor's own plugin dialog.
 - **Export hygiene.** Author-time files live outside `data/`, which is what an

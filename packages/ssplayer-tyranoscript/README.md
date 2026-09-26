@@ -136,6 +136,7 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 | `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
+| `[ss_wait_signal]` | Wait until the animation fires a signal (the one `command=` names, if given) | `name=`(req) `command=` `var=` |
 | `[ss_pos]` | Instant move/scale/reorder (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` `zindex=` |
 | `[ss_move]` | Tweened move/scale (easeOut, non-blocking by default) | `name=`(req) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | Tint a part, winning over the animation (Normal parts only) | `name=`(req) `part=`(req) `color=`(req) `blend=` `priority=` |
@@ -167,6 +168,7 @@ the contributor section.
 - `time`: fade duration in ms (`[ss_show]` / `[ss_hide]` default `0` = instant; `[ss_fadein]` / `[ss_fadeout]` default `1000`).
 - `wait`: `true` = hold the scenario until the effect finishes. Default `true` for the fades, `false` for `[ss_move]`.
 - `next` / `nextloop` / `atframe`: see [Chaining animations](#chaining-animations-without-stopping-the-scenario).
+- `command` / `var`: see [Waiting for a signal](#waiting-for-a-signal).
 
 ## Preload, show, hide
 
@@ -209,6 +211,25 @@ player itself, so the scenario never stops:
   overlap the tail of one animation with the start of the next. An animation that
   ends before reaching the frame switches at its end.
 - The queued follow-up is cancelled by the next `[ss_play]` / `[ss_show anime=]`.
+
+## Waiting for a signal
+
+A signal is a marker an animator places on a frame in SpriteStudio, with a command ID
+and optional parameters. `[ss_wait_signal]` holds the scenario until the animation
+fires one, so "the moment the attack lands" can be written in the scenario:
+
+```
+[ss_play name="akane" anime="attack" loop="false"]
+[ss_wait_signal name="akane" command="hit"]   ; hold until the attack lands
+[quake count="3" time="300" hmax="20"]
+```
+
+`command=` is the command ID set in SpriteStudio; leave it out to take any signal.
+`var="f.sig"` stores the command ID of the signal that ended the wait, so an `[if]` can
+branch on which one it was. A queued `next=` follow-up counts as part of the wait. If
+the animation finishes, or plays a whole loop, without the signal, the wait ends and
+the reason is reported like any other tag failure — usually a misspelt command ID.
+Signal parameters are not passed on.
 
 ## Speaker-linked talk animations
 
@@ -281,7 +302,8 @@ just like any character:
   `data/system/Config.tjs` (the default), SS effects are cut the way `[chara_show]`'s
   are. `time=` on `[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` /
   `[ss_move]` becomes the engine's skip duration, and `[ss_wait]` does not wait. The
-  animations themselves keep playing.
+  animations themselves keep playing. `[ss_wait_signal]` still waits, since what follows
+  may branch on the signal.
 - Visibility, stacking order, a queued `next=` follow-up and `[ss_chara]` bindings
   all survive a save/load, so `[ss_restore]` puts the scene back as it was.
 
