@@ -84,7 +84,7 @@ Like a part override, a texture swap changes the output **without changing the f
 
 | Player | Behaviour |
 |---|---|
-| `SSPlayer` (PixiJS) | The next tick renders the current frame with the new texture. Its ticker early-returns while stopped, and unlike an override a swap does not re-render the current frame by itself, so a swap made while stopped shows the next time the player plays |
+| `SSPlayer` (PixiJS) | Its ticker early-returns while stopped, so a swap automatically re-renders the current frame, the same as an override |
 | `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself do you need to call `draw()` |
 | RPG Maker MZ | MZ redraws every game frame, so it just shows |
 
