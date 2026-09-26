@@ -36,6 +36,7 @@ import {
 } from './SaveLoadBridge.js';
 import { attachTalkHooks, speakerMatches } from './CharaTalkBridge.js';
 import { TyranoAudioManager } from './TyranoAudioManager.js';
+import { resolveDataPath } from './storagePath.js';
 import type { TyranoGlobal, TyranoKag } from './tyranoTypes.js';
 
 // ---------------------------------------------------------------------------
@@ -85,20 +86,20 @@ const state: AdapterState = {
 /** Audio routing config (set by `[ss_init]`; see TyranoAudioManager). */
 interface AudioState {
   enabled: boolean;
-  manager: TyranoAudioManager | null;
   dir?: string;
   ext?: string;
   volume?: number;
 }
-const audio: AudioState = { enabled: true, manager: null };
+const audio: AudioState = { enabled: true };
 
-/** Lazily build the shared Tyrano audio manager (null when audio is disabled). */
-function ensureAudioManager(): TyranoAudioManager | null {
+/**
+ * A new audio manager for one player (null when audio is disabled), built from
+ * the current `[ss_init]` settings. One each, not one shared: a player's
+ * teardown stops everything on its manager.
+ */
+function newAudioManager(): TyranoAudioManager | null {
   if (!audio.enabled) return null;
-  if (!audio.manager) {
-    audio.manager = new TyranoAudioManager({ dir: audio.dir, ext: audio.ext, volume: audio.volume });
-  }
-  return audio.manager;
+  return new TyranoAudioManager({ dir: audio.dir, ext: audio.ext, volume: audio.volume });
 }
 
 // ---------------------------------------------------------------------------
@@ -205,31 +206,6 @@ function requireNumber(attr: string, value: unknown): number {
 /** Push a section to the player; `undefined` is the whole animation. */
 function applySection(player: SSPlayer, section: SSSection | undefined): void {
   player.setAnimationSection(section?.start ?? -1, section?.end ?? -1);
-}
-
-/**
- * Resolve a `storage=` value the way TyranoScript resolves every other one.
- *
- * `$.parseStorage(path, folder)` is the engine's own resolver — the same call
- * behind `[image]`, `[bg]` and the rest. Passing `data` as the folder keeps the
- * meaning this adapter has always had (a bare path hangs off `data/`), while
- * handing the engine the parts that are easy to get subtly wrong: `..` and `.`
- * segments, doubled slashes, and http(s) pass-through.
- *
- * The early exits come first because `parseStorage` would rewrite them: it
- * treats its result as project-relative, so a root-absolute or protocol-relative
- * URL must not go through it. Older engines have no `parseStorage`, hence the
- * fallback.
- */
-function resolveDataPath(p: string): string {
-  if (/^(https?:)?\/\//.test(p) || p.startsWith('/')) return p;
-
-  const parse = (globalThis as { $?: { parseStorage?: (s: string, folder?: string) => string } }).$
-    ?.parseStorage;
-  if (typeof parse === 'function') return parse(p, 'data');
-
-  if (p.startsWith('./') || p.startsWith('data/')) return p;
-  return `data/${p}`;
 }
 
 function gameResolution(kag: TyranoKag): { w: number; h: number } {
@@ -392,7 +368,8 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     player.order = opts.zindex;
     overlay.surface.invalidateOrder();
   }
-  ensureAudioManager()?.bindToPlayer(player);
+  const audioManager = newAudioManager();
+  audioManager?.bindToPlayer(player);
 
   let anime = opts.anime;
   try {
@@ -429,6 +406,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     player,
     overlay,
     element,
+    audio: audioManager ?? undefined,
     logicalWidth: w,
     meta: {
       name: opts.name,
@@ -776,13 +754,12 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   ftag.master_tag['ss_init'] = {
     pm: { wasm: '', audio: 'true', sounddir: '', soundext: '', sevolume: '' },
     start(pm) {
-      // Audio routing config (TyranoAudioManager via howler). Re-buildable, so
-      // reset the cached manager if settings changed.
+      // Audio routing config (TyranoAudioManager via howler), taken by every
+      // player created from here on.
       audio.enabled = String(pm.audio) !== 'false';
       if (pm.sounddir) audio.dir = String(pm.sounddir);
       if (pm.soundext) audio.ext = String(pm.soundext);
       if (pm.sevolume !== undefined && pm.sevolume !== '') audio.volume = num(pm.sevolume, 1);
-      audio.manager = null;
       if (state.initialized) {
         nextOrder();
         return;
@@ -1538,6 +1515,17 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     // later is too late: `storage-save` fires after the write, and the menu
     // saves a snapshot captured earlier rather than reading `stat` again.
     kag.on('snapsave-start', () => persist(), { system: true });
+
+    // The config screen's SE slider runs [seopt]. A sound starting later reads
+    // the new volume by itself; one already looping needs telling. The event
+    // fires just before the tag runs, so the volume is re-read after it.
+    kag.on(
+      'tag-seopt',
+      () => queueMicrotask(() => {
+        for (const entry of allEntries()) entry.audio?.refreshVolume();
+      }),
+      { system: true },
+    );
 
     kag.on(
       'load-beforemaking',

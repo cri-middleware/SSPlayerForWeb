@@ -253,7 +253,9 @@
 
 ## 音声
 
-SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howler）で再生されます。音声ファイルは `data/sound/` 前提で、SS のサウンド名 → `data/<dir>/<name>.<ext>` に解決します（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
+SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howler）で、ゲームの SE 音量で再生されます。コンフィグ画面のスライダー（`[seopt]`）は、再生中の音にも反映されます。音声ファイルは `data/sound/` 前提で、SS のサウンド名はほかのファイル指定と同じ方法で `data/<dir>/<name>.<ext>` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。
+
+音はキーに指定された回数だけ鳴って止まります。SpriteStudio の音声に無限ループはありません。アニメの停止・一時停止・切り替えでは、鳴っている音は止めません。`[ss_free]` は、そのプレイヤーが鳴らした音だけを止めます。
 
 既知の制限と残課題は [`ROADMAP.md`](./ROADMAP.md) にまとめています。
 
@@ -304,7 +306,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 - **セーブ対象**: 各プレイヤーの復元情報を `TYRANO.kag.stat.f.__ssplayers` へミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝`make.ks` と同じ隙間）でプラグインが自動的に再構築します。`[ss_restore]` は同じ処理を明示的に行うタグで、自動復元が実行中ならそれを待ち合わせて二重実行を避けます。
 - **解放**: `[ss_free]` / `[ss_free_all]` が `destroy()` を呼びます。`FinalizationRegistry`
   任せにしないでください。
-- **音声**: SS の `onAudio` イベントは `TyranoAudioManager` 経由で howler（`window.Howl`）へ流します。`[playse]` ではなく howler を直接使うのは、KAG タグだと `nextOrder` でシナリオが進んでしまうためです。`TyranoAudioManager` はプログラムから直接利用も可能です。
+- **音声**: SS の `onAudio` イベントは `TyranoAudioManager` 経由で howler（`window.Howl`）へ流します。`[playse]` ではなく howler を直接使うのは、KAG タグだと `nextOrder` でシナリオが進んでしまうためです。プレイヤーの破棄はそのマネージャーの音をすべて止めるので、マネージャーはプレイヤーごとに 1 つ持ちます。`TyranoAudioManager` はプログラムから直接利用も可能です。
 
 ### 配布（GitHub Releases）
 

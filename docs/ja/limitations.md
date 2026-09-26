@@ -69,13 +69,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 どちらも **beta** です。オーサリング用のタグ体系は揃っていますが、`7.0.0` までに名称や挙動が変更される可能性があります。[TyranoScript で使う](/ja/usage/tyrano) および
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
-::: warning TyranoScript
-`[cm]` / `[clearfix]` の自動フック、frame 精密復元、Tyrano 音量スライダー連動は今後の対応予定です。進捗は [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
-:::
-
 ::: warning ティラノビルダー
-- **コンポーネントが未提供の機能があります** — パーツ単位の色・表示切り替えと、アニメーションと話者の紐付けです。これらはティラノビルダーの TyranoScript コード用コンポーネントから
-  [`[ss_*]` タグ](/ja/usage/tyrano) で記述してください。
 - **無料版が読み込めるプラグインは 2 つまで**で、本プラグインはその 1 つを消費します。
 - **`ssplayer.tbp` はリネームしないでください。** ティラノビルダーはファイル名からプラグイン名を取得します。
 :::

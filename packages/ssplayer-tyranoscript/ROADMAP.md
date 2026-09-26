@@ -154,23 +154,10 @@ is entirely in what the tags expose.
       `[ss_wait_signal var=]` stores the command ID and nothing else. RPG Maker
       MZ's `signalSwitch` passes less still, so this waits for a request.
 
-### PT8 — audio
-
-- [ ] **A looping SE outlives the player that started it.** `[ss_free]` tears the
-      player down but nothing stops its sounds, and the manager is shared at
-      module scope, so the sound plays on for the rest of the session. At minimum
-      `stopAll()` on `[ss_free_all]` / restore; properly, per-player tracking.
-- [ ] **`TyranoAudioManager.urlFor` hard-codes `data/`** instead of going through
-      `resolveDataPath` / `$.parseStorage` like every other path in this adapter,
-      so it is the one asset kind that breaks under a different base path.
-- [ ] Respect Tyrano's SE volume slider — see "Open questions" below; the volume
-      is fixed when the manager is constructed.
-
 ---
 
 ## Open questions / known limitations
 
-- [ ] Respect Tyrano's SE volume slider (currently a fixed howler volume)
 - [ ] Interaction of Tyrano CSS transitions (fades, etc.) with the overlaid `<canvas>`
 - [ ] `devicePixelRatio` / Retina scaling vs `SSPlayer.resize`'s DPR clamp
 - [ ] Optimize `ssconverter.wasm` (`wasm-opt -Oz`) — shared with

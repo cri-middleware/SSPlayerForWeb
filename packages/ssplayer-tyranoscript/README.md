@@ -334,10 +334,15 @@ just like any character:
 
 ## Audio
 
-SpriteStudio sound events play through TyranoScript's bundled audio (howler). Sound
-files are expected under `data/sound/`; an SS sound name resolves to
-`data/<dir>/<name>.<ext>` (tune with `[ss_init sounddir= soundext= sevolume=]`,
-disable with `audio="false"`).
+SpriteStudio sound events play through TyranoScript's bundled audio (howler), at the game's SE
+volume: the config screen's slider (`[seopt]`) applies, to a sound already playing as well. Sound
+files are expected under `data/sound/`; an SS sound name resolves to `data/<dir>/<name>.<ext>`,
+the way other storage paths do (tune with `[ss_init sounddir= soundext= sevolume=]`, disable with
+`audio="false"`).
+
+A sound plays as many times as its key says, and then stops: SpriteStudio audio has no endless
+loop. Stopping, pausing or switching the animation leaves a sound that is already playing alone;
+`[ss_free]` stops the sounds that player started, and only those.
 
 ## Troubleshooting
 
@@ -410,8 +415,9 @@ GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a l
   `FinalizationRegistry`.
 - **Audio**: SS `onAudio` events are routed to howler (`window.Howl`) via
   `TyranoAudioManager`. We use howler directly rather than `[playse]` because a KAG
-  tag would advance the scenario (`nextOrder`). `TyranoAudioManager` can also be used
-  directly from JS.
+  tag would advance the scenario (`nextOrder`). Each player gets its own manager,
+  because a player's teardown stops everything on its manager. `TyranoAudioManager`
+  can also be used directly from JS.
 
 ### Distribution (GitHub Releases)
 
