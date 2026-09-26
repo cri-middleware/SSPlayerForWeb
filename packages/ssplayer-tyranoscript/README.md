@@ -135,6 +135,10 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 | `[ss_fadein]` / `[ss_fadeout]` | Fade every player at once (scene changes) | `time=` `wait=` |
 | `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
+| `[ss_speed]` | Playback speed (`1` = as authored) | `name=`(req) `speed=`(req) |
+| `[ss_seek]` | Move the playhead to a frame | `name=`(req) `frame=`(req) |
+| `[ss_section]` | Play only a range of frames (omit both ends to clear) | `name=`(req) `start=` `end=` |
+| `[ss_direction]` | Forward / backward, once through / ping-pong | `name=`(req) `direction=` `style=` |
 | `[ss_wait]` | Wait until the animation ends (one loop if looping) | `name=`(req) |
 | `[ss_wait_signal]` | Wait until the animation fires a signal (the one `command=` names, if given) | `name=`(req) `command=` `var=` |
 | `[ss_pos]` | Instant move/scale/reorder (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` `zindex=` |
@@ -169,6 +173,7 @@ the contributor section.
 - `wait`: `true` = hold the scenario until the effect finishes. Default `true` for the fades, `false` for `[ss_move]`.
 - `next` / `nextloop` / `atframe`: see [Chaining animations](#chaining-animations-without-stopping-the-scenario).
 - `command` / `var`: see [Waiting for a signal](#waiting-for-a-signal).
+- `[ss_speed]` / `[ss_seek]` / `[ss_section]` / `[ss_direction]`: see [Speed, seeking and sections](#speed-seeking-and-sections).
 
 ## Preload, show, hide
 
@@ -211,6 +216,25 @@ player itself, so the scenario never stops:
   overlap the tail of one animation with the start of the next. An animation that
   ends before reaching the frame switches at its end.
 - The queued follow-up is cancelled by the next `[ss_play]` / `[ss_show anime=]`.
+
+## Speed, seeking and sections
+
+```
+[ss_speed name="akane" speed="0.5"]             ; half speed
+[ss_seek name="akane" frame="12"]               ; jump to frame 12
+[ss_section name="akane" start="10" end="30"]   ; loop frames 10–30 only
+[ss_direction name="akane" direction="backward" style="pingpong"]
+```
+
+Frame numbers count from 0, as SpriteStudio shows them. `[ss_seek]` keeps a playing
+animation playing and a paused one paused. `[ss_section]` moves the playhead to the
+start of the section; leave out `start=` or `end=` for that edge of the animation, and
+both to go back to the whole of it. `direction=` is `forward` or `backward`, and
+`style=` is `normal` (once through) or `pingpong`.
+
+Speed and direction stay when the animation changes. A section does not, because a
+frame number means nothing in another animation: `[ss_play anime=]` and a `next=`
+follow-up both drop it. All three are saved.
 
 ## Waiting for a signal
 
@@ -304,8 +328,9 @@ just like any character:
   `[ss_move]` becomes the engine's skip duration, and `[ss_wait]` does not wait. The
   animations themselves keep playing. `[ss_wait_signal]` still waits, since what follows
   may branch on the signal.
-- Visibility, stacking order, a queued `next=` follow-up and `[ss_chara]` bindings
-  all survive a save/load, so `[ss_restore]` puts the scene back as it was.
+- Visibility, stacking order, a queued `next=` follow-up, `[ss_chara]` bindings, and
+  the speed, direction and section all survive a save/load, so `[ss_restore]` puts the
+  scene back as it was.
 
 ## Audio
 

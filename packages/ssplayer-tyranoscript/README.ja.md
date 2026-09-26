@@ -107,6 +107,10 @@
 | `[ss_fadein]` / `[ss_fadeout]` | 全プレイヤーを一括フェード（シーン切替向け） | `time=` `wait=` |
 | `[ss_chara]` | 話者と連動し、発話中はトークアニメを再生 | `name=`(必須) `jname=` `talk=` `idle=` |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | 個別プレイヤーの停止 / 一時停止 / 再開 | `name=`(必須) |
+| `[ss_speed]` | 再生速度（`1` = 等速） | `name=`(必須) `speed=`(必須) |
+| `[ss_seek]` | 指定フレームへ移動 | `name=`(必須) `frame=`(必須) |
+| `[ss_section]` | 指定範囲のフレームだけを再生（両端とも省略で解除） | `name=`(必須) `start=` `end=` |
+| `[ss_direction]` | 順再生 / 逆再生、1 回 / 往復 | `name=`(必須) `direction=` `style=` |
 | `[ss_wait]` | アニメ終了（ループ時は1周）までシナリオを待つ | `name=`(必須) |
 | `[ss_wait_signal]` | アニメがシグナル（`command=` 指定時はそのコマンド）を出すまでシナリオを待つ | `name=`(必須) `command=` `var=` |
 | `[ss_pos]` | 瞬間移動/スケール/重なり順（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` `zindex=` |
@@ -138,6 +142,7 @@
 - `wait`: `true` で演出の完了までシナリオを止めます。フェード系は既定 `true`、`[ss_move]` は既定 `false`。
 - `next` / `nextloop` / `atframe`: [アニメの連鎖](#アニメの連鎖シナリオを止めない) を参照。
 - `command` / `var`: [シグナルを待つ](#シグナルを待つ) を参照。
+- `[ss_speed]` / `[ss_seek]` / `[ss_section]` / `[ss_direction]`: [速度・シーク・区間](#速度シーク区間) を参照。
 
 ## 先読み・表示・非表示
 
@@ -168,6 +173,19 @@
 - `nextloop=` は連鎖先のループ回数（既定は無限）。
 - `atframe=` は終了を待たずにそのフレームで切り替えます。前のアニメの余韻と次の出だしを重ねたいときに使います。そのフレームに届く前にアニメが終わった場合は、終了時に切り替えます。
 - 予約された連鎖は、次の `[ss_play]` / `[ss_show anime=]` で取り消されます。
+
+## 速度・シーク・区間
+
+```
+[ss_speed name="akane" speed="0.5"]             ; 半分の速度
+[ss_seek name="akane" frame="12"]               ; 12 フレーム目へ
+[ss_section name="akane" start="10" end="30"]   ; 10〜30 フレームだけをループ
+[ss_direction name="akane" direction="backward" style="pingpong"]
+```
+
+フレーム番号は SpriteStudio の表示と同じく 0 から数えます。`[ss_seek]` は、再生中なら再生を続け、一時停止中なら一時停止のままです。`[ss_section]` は再生位置を区間の先頭へ移します。`start=` か `end=` を省略するとその側はアニメの端になり、両方省略するとアニメ全体に戻ります。`direction=` は `forward`（順）か `backward`（逆）、`style=` は `normal`（1 回）か `pingpong`（往復）です。
+
+速度と方向はアニメを切り替えても残ります。区間は残りません。フレーム番号は別のアニメでは意味を持たないためで、`[ss_play anime=]` でも `next=` の続きでも解除されます。3 つともセーブに含まれます。
 
 ## シグナルを待つ
 
@@ -231,8 +249,7 @@
 - **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。セーブした時点のフレームから再開します。
 - **シーン切替**: レイヤーをクリアすると（`[freeimage]` など、原因を問わず）そのレイヤー上のプレイヤーは自動的に解放されます。`[ss_free]` / `[ss_free_all]` は、レイヤーに触れずに個別に解放したい場合に使います。
 - **スキップ**: `data/system/Config.tjs` の `skipEffectIgnore = true`（既定）のままスキップしている間は、`[chara_show]` と同じく SS の演出も短縮されます。`[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` / `[ss_move]` の `time=` はエンジンのスキップ時の長さになり、`[ss_wait]` は待ちません。アニメ自体は再生を続けます。`[ss_wait_signal]` は、続く処理がシグナルで分岐しうるため、スキップ中も待ちます。
-- 表示状態・重なり順・予約中の `next=` 連鎖・`[ss_chara]` の紐づけはいずれもセーブに含まれ、
-  `[ss_restore]` で元の画面が復元されます。
+- 表示状態・重なり順・予約中の `next=` 連鎖・`[ss_chara]` の紐づけ・速度・方向・区間はいずれもセーブに含まれ、`[ss_restore]` で元の画面が復元されます。
 
 ## 音声
 
