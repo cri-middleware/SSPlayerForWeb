@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, type InstanceChildState, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, ListenerSet, type InstanceChildState, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -181,13 +181,13 @@ export class SSPlayer extends Container {
     private debugText: Text;
 
     // --- Animation event listeners ---
-    private readonly _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
-    private readonly _signalListeners = new Set<(e: SSSignalEvent) => void>();
-    private readonly _audioListeners = new Set<(e: SSAudioEvent) => void>();
-    private readonly _animStartedListeners = new Set<() => void>();
-    private readonly _animFinishedListeners = new Set<() => void>();
-    private readonly _animLoopedListeners = new Set<() => void>();
-    private readonly _frameListeners = new Set<(frame: number) => void>();
+    private readonly _userDataListeners = new ListenerSet<SSUserDataEvent>();
+    private readonly _signalListeners = new ListenerSet<SSSignalEvent>();
+    private readonly _audioListeners = new ListenerSet<SSAudioEvent>();
+    private readonly _animStartedListeners = new ListenerSet();
+    private readonly _animFinishedListeners = new ListenerSet();
+    private readonly _animLoopedListeners = new ListenerSet();
+    private readonly _frameListeners = new ListenerSet<number>();
 
     // --- Part following (part-following) ---
     // Targets driven to follow a part each frame. `_attachmentLayer` holds the
@@ -680,7 +680,7 @@ export class SSPlayer extends Container {
 
     public play(startFrame: number = -1) {
         this.internalPlayer.play(startFrame);
-        this._animStartedListeners.forEach(cb => cb());
+        this._animStartedListeners.emit();
     }
 
     public pause() {
@@ -977,20 +977,17 @@ export class SSPlayer extends Container {
 
     /** Registers a user-data event listener. Returns an unsubscribe function. */
     public onUserData(listener: (e: SSUserDataEvent) => void): Unsubscribe {
-        this._userDataListeners.add(listener);
-        return () => { this._userDataListeners.delete(listener); };
+        return this._userDataListeners.add(listener);
     }
 
     /** Registers a signal event listener (active signals only). Returns an unsubscribe function. */
     public onSignal(listener: (e: SSSignalEvent) => void): Unsubscribe {
-        this._signalListeners.add(listener);
-        return () => { this._signalListeners.delete(listener); };
+        return this._signalListeners.add(listener);
     }
 
     /** Registers an audio event listener. Returns an unsubscribe function. */
     public onAudio(listener: (e: SSAudioEvent) => void): Unsubscribe {
-        this._audioListeners.add(listener);
-        return () => { this._audioListeners.delete(listener); };
+        return this._audioListeners.add(listener);
     }
 
     /**
@@ -999,20 +996,17 @@ export class SSPlayer extends Container {
      * carries on, it does not start.
      */
     public onAnimationStarted(listener: () => void): Unsubscribe {
-        this._animStartedListeners.add(listener);
-        return () => { this._animStartedListeners.delete(listener); };
+        return this._animStartedListeners.add(listener);
     }
 
     /** Fires once every configured loop has played. Never under an infinite loop count, nor on stop(). */
     public onAnimationFinished(listener: () => void): Unsubscribe {
-        this._animFinishedListeners.add(listener);
-        return () => { this._animFinishedListeners.delete(listener); };
+        return this._animFinishedListeners.add(listener);
     }
 
     /** Fires on each loop boundary crossing. */
     public onAnimationLooped(listener: () => void): Unsubscribe {
-        this._animLoopedListeners.add(listener);
-        return () => { this._animLoopedListeners.delete(listener); };
+        return this._animLoopedListeners.add(listener);
     }
 
     /**
@@ -1022,8 +1016,7 @@ export class SSPlayer extends Container {
      * the player is stopped (the ticker early-returns).
      */
     public onFrame(listener: (frame: number) => void): Unsubscribe {
-        this._frameListeners.add(listener);
-        return () => { this._frameListeners.delete(listener); };
+        return this._frameListeners.add(listener);
     }
 
     // --- Part following: managed attachments ---
@@ -1063,10 +1056,10 @@ export class SSPlayer extends Container {
 
         const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
         if (finished && this._animFinishedListeners.size > 0) {
-            this._animFinishedListeners.forEach(cb => cb());
+            this._animFinishedListeners.emit();
         }
         if (looped && this._animLoopedListeners.size > 0) {
-            this._animLoopedListeners.forEach(cb => cb());
+            this._animLoopedListeners.emit();
         }
 
         const count = ctx.get_passed_event_count();
@@ -1114,7 +1107,7 @@ export class SSPlayer extends Container {
             if (rect) ev.rect = { left: rect.left(), top: rect.top(), right: rect.right(), bottom: rect.bottom() };
             const point = val.point();
             if (point) ev.point = { x: point.v1(), y: point.v2() };
-            this._userDataListeners.forEach(cb => cb(ev));
+            this._userDataListeners.emit(ev);
         }
     }
 
@@ -1164,7 +1157,7 @@ export class SSPlayer extends Container {
                 commandId: val.commandId(),
                 params,
             };
-            this._signalListeners.forEach(cb => cb(ev));
+            this._signalListeners.emit(ev);
         }
     }
 
@@ -1185,7 +1178,7 @@ export class SSPlayer extends Container {
                 soundName: val.soundName(),
                 loopNum: val.loopNum(),
             };
-            this._audioListeners.forEach(cb => cb(ev));
+            this._audioListeners.emit(ev);
         }
     }
 
@@ -1224,7 +1217,7 @@ export class SSPlayer extends Container {
         // After the frame is placed (meshes + attachments), notify per-frame
         // listeners — the point at which getPartTransform is valid for frameNo.
         if (this._frameListeners.size > 0) {
-            this._frameListeners.forEach(cb => cb(frameNo));
+            this._frameListeners.emit(frameNo);
         }
     }
 

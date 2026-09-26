@@ -19,6 +19,7 @@ import {
   DirectInternalPlayer,
   hashString,
   initializeWasm,
+  ListenerSet,
   ssFormat,
   SSOverridePriority,
   SSPartFollower,
@@ -101,10 +102,10 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public readonly resourceManager: RMMZResourceManager;
   private readonly _gl: GL;
 
-  private _userDataListeners = new Set<(e: SSUserDataEvent) => void>();
-  private _signalListeners = new Set<(e: SSSignalEvent) => void>();
-  private _audioListeners = new Set<(e: SSAudioEvent) => void>();
-  private _frameListeners = new Set<(frame: number) => void>();
+  private _userDataListeners = new ListenerSet<SSUserDataEvent>();
+  private _signalListeners = new ListenerSet<SSSignalEvent>();
+  private _audioListeners = new ListenerSet<SSAudioEvent>();
+  private _frameListeners = new ListenerSet<number>();
 
   // Part following. The bookkeeping is core's (shared with ssplayer-pixi, which
   // had the same code); only the write onto a Pixi object is ours. Unlike
@@ -114,9 +115,9 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // Reused PIXI.Matrix (v5) for full-affine application; created lazily since
   // PIXI is only guaranteed present once MZ has booted.
   private _attachMatrix: any = null;
-  private _animStartedListeners = new Set<() => void>();
-  private _animFinishedListeners = new Set<() => void>();
-  private _animLoopedListeners = new Set<() => void>();
+  private _animStartedListeners = new ListenerSet();
+  private _animFinishedListeners = new ListenerSet();
+  private _animLoopedListeners = new ListenerSet();
 
   /**
    * @param gl the MZ shared WebGL context. Defaults to `Graphics._app.renderer.gl`
@@ -226,7 +227,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
 
   public play(startFrame = -1): void {
     this.internalPlayer.play(startFrame);
-    this._animStartedListeners.forEach((cb) => cb());
+    this._animStartedListeners.emit();
   }
   public pause(): void {
     this.internalPlayer.pause();
@@ -258,7 +259,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     if (this._follower.size > 0) this._follower.update();
     if (this._frameListeners.size > 0) {
       const f = this.internalPlayer.getFrameNo();
-      this._frameListeners.forEach((cb) => cb(f));
+      this._frameListeners.emit(f);
     }
   }
 
@@ -560,16 +561,13 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // --- Events (drained each update() via pollEvents; ported from ssplayer-pixi) ---
 
   public onUserData(l: (e: SSUserDataEvent) => void): Unsubscribe {
-    this._userDataListeners.add(l);
-    return () => this._userDataListeners.delete(l);
+    return this._userDataListeners.add(l);
   }
   public onSignal(l: (e: SSSignalEvent) => void): Unsubscribe {
-    this._signalListeners.add(l);
-    return () => this._signalListeners.delete(l);
+    return this._signalListeners.add(l);
   }
   public onAudio(l: (e: SSAudioEvent) => void): Unsubscribe {
-    this._audioListeners.add(l);
-    return () => this._audioListeners.delete(l);
+    return this._audioListeners.add(l);
   }
   /**
    * Fires when playback heads out — a `play()`, including one an autoplay or a
@@ -577,16 +575,13 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * carries on, it does not start.
    */
   public onAnimationStarted(l: () => void): Unsubscribe {
-    this._animStartedListeners.add(l);
-    return () => this._animStartedListeners.delete(l);
+    return this._animStartedListeners.add(l);
   }
   public onAnimationFinished(l: () => void): Unsubscribe {
-    this._animFinishedListeners.add(l);
-    return () => this._animFinishedListeners.delete(l);
+    return this._animFinishedListeners.add(l);
   }
   public onAnimationLooped(l: () => void): Unsubscribe {
-    this._animLoopedListeners.add(l);
-    return () => this._animLoopedListeners.delete(l);
+    return this._animLoopedListeners.add(l);
   }
 
   /**
@@ -595,8 +590,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * is valid for the new frame. Returns an unsubscribe function.
    */
   public onFrame(l: (frame: number) => void): Unsubscribe {
-    this._frameListeners.add(l);
-    return () => this._frameListeners.delete(l);
+    return this._frameListeners.add(l);
   }
 
   // --- Part following ---
@@ -650,10 +644,10 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     const ctx = this.internalPlayer.runtimeManager.context;
     const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
     if (finished && this._animFinishedListeners.size > 0) {
-      this._animFinishedListeners.forEach((cb) => cb());
+      this._animFinishedListeners.emit();
     }
     if (looped && this._animLoopedListeners.size > 0) {
-      this._animLoopedListeners.forEach((cb) => cb());
+      this._animLoopedListeners.emit();
     }
 
     const count = ctx.get_passed_event_count();
@@ -698,7 +692,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       if (rect) ev.rect = { left: rect.left(), top: rect.top(), right: rect.right(), bottom: rect.bottom() };
       const point = val.point();
       if (point) ev.point = { x: point.v1(), y: point.v2() };
-      this._userDataListeners.forEach((cb) => cb(ev));
+      this._userDataListeners.emit(ev);
     }
   }
 
@@ -743,16 +737,14 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       }
 
       const partIndex = sig.partIndex();
-      this._signalListeners.forEach((cb) =>
-        cb({
-          partIndex,
-          partName: mgr.getPartName(partIndex) ?? '',
+      this._signalListeners.emit({
+        partIndex,
+        partName: mgr.getPartName(partIndex) ?? '',
         frameNo: events.frameIndex(),
-          active: true,
-          commandId: Number(val.commandId() ?? 0),
-          params,
-        }),
-      );
+        active: true,
+        commandId: Number(val.commandId() ?? 0),
+        params,
+      });
     }
   }
 
@@ -764,17 +756,15 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       const val = audio?.value();
       if (!audio || !val) continue;
       const partIndex = audio.partIndex();
-      this._audioListeners.forEach((cb) =>
-        cb({
-          partIndex,
-          partName: mgr.getPartName(partIndex) ?? '',
+      this._audioListeners.emit({
+        partIndex,
+        partName: mgr.getPartName(partIndex) ?? '',
         frameNo: events.frameIndex(),
-          soundListNameHash: val.soundListNameHash(),
-          soundNameHash: val.soundNameHash(),
-          soundName: val.soundName(),
-          loopNum: val.loopNum(),
-        }),
-      );
+        soundListNameHash: val.soundListNameHash(),
+        soundNameHash: val.soundNameHash(),
+        soundName: val.soundName(),
+        loopNum: val.loopNum(),
+      });
     }
   }
 
