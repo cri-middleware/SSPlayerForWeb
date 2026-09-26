@@ -198,7 +198,7 @@ SpriteStudio のアニメ単位で行うものです:
 [ss_part_clear   name="chr"]
 ```
 
-- `color=` は `#RRGGBB` / `#RRGGBBAA`（α 省略時は不透明）。`#RGB` の短縮形も使えます
+- `color=` は `#RRGGBB` / `#RRGGBBAA`（α 省略時は不透明）。`#RGB` の短縮形や、TyranoScript の他のタグと同じ `0xRRGGBB` も使えます
 - `blend=` は `mix`（既定）/ `mul` / `add` / `sub`、数値 `0`〜`3` でも指定できます
 - `priority=` は `keyframe`（次のキーフレームに譲る）/ `anime`（既定・アニメが変わるまで保持）/
   `permanent`（アニメ変更をまたいで維持）、数値 `0`〜`2` でも可
