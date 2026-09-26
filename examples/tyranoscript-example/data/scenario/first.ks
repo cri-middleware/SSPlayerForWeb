@@ -80,8 +80,8 @@ $(".base_fore").css("background", "linear-gradient(160deg, #2b3a4a 0%, #3d3550 5
 「ss_play の next= で jump を1回再生し、自動で wait1 へ戻ります（シナリオは止まりません）。」[l][r]
 
 ; atframe= を使うと、終了を待たずにそのフレームで次のアニメへ切り替わる。
-[ss_play name="ringo" anime="attack1" next="wait1" atframe="20"]
-「atframe=20 で attack1 の途中から wait1 へ切り替えました。」[l][r]
+[ss_play name="ringo" anime="attack1" next="wait1" atframe="10"]
+「atframe=10 で attack1 の途中から wait1 へ切り替えました。」[l][r]
 
 ; --- 先読み（表示せずロード） → ss_show で登場 ---
 ; visible="false" はロードだけ行うので、重い ssab を事前に準備しておける。

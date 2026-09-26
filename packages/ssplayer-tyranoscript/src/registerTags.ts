@@ -386,8 +386,9 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 // ---------------------------------------------------------------------------
 
 /**
- * Arm `entry.meta.next` on the live player: when the current animation ends
- * (or reaches `atframe`), switch to the follow-up and keep playing. Unlike
+ * Arm `entry.meta.next` on the live player: when the current animation reaches
+ * `atframe` or ends, whichever comes first, switch to the follow-up and keep
+ * playing. Unlike
  * `[ss_wait]` this never touches the scenario, so the text keeps flowing while
  * a character finishes its entrance and settles into an idle loop.
  *
@@ -419,12 +420,13 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
     }
   };
 
-  const chain: Array<() => void> = [];
+  // The end fires the follow-up even under `atframe=`. An `atframe` past the
+  // last frame, or a finite loop that runs out first, never reaches the frame —
+  // and a chain waiting only for it leaves the character stopped for good.
+  const chain: Array<() => void> = [player.onAnimationFinished(fire)];
   if (next.atframe !== undefined && typeof player.onFrame === 'function') {
     const target = next.atframe;
     chain.push(player.onFrame((frame) => { if (frame >= target) fire(); }));
-  } else {
-    chain.push(player.onAnimationFinished(fire));
   }
   entry.chain = chain;
 }
@@ -542,6 +544,12 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       // never arrives — so an unstated loop plays once here, matching the
       // Spine plugin's [spine_anim], whose `loop` also defaults to false.
       meta.loop = 1;
+    } else {
+      // The default, never the previous tag's value: that can be the `1` a
+      // pending `next=` set for an entrance, and whether it still is depends on
+      // how fast the scenario got here — a player who clicks through quickly
+      // would get this animation once and then a frozen character.
+      meta.loop = -1;
     }
     meta.next = nextAnime
       ? {
