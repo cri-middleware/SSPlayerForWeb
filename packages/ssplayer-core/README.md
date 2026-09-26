@@ -28,8 +28,8 @@ This package is for the two audiences who do:
 ## ✨ Why build your renderer on this core?
 
 Build a renderer binding on `core` and you inherit the strengths shared by *every*
-SSPlayerForWeb renderer — they come from this core and the `#![no_std]` Rust SDK
-it wraps:
+SpriteStudio Player for Web renderer — they come from this core and the
+`#![no_std]` Rust SDK it wraps:
 
 - **One core, consistent visuals on every engine.** All the heavy state
   computation — bone matrices, mesh deformation, hierarchical color/opacity —

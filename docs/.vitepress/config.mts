@@ -39,8 +39,8 @@ const demo = (text: string, link: string) => ({ text, link, target: '_blank', re
 //   2. Customize            … a little effort to polish expression
 //   3. Development           … understand the whole, then touch core / WASM
 export default withMermaid({
-  title: 'SSPlayerForWeb',
-  description: 'SpriteStudio player for the Web (WebAssembly + PixiJS / WebGL)',
+  title: 'SpriteStudio Player for Web',
+  description: 'A player for SpriteStudio animations in the browser (WebAssembly + PixiJS / WebGL)',
   lastUpdated: true,
   cleanUrls: true,
   lang: 'en',

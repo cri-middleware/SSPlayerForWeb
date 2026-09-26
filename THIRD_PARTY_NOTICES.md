@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file contains the license notices for third-party libraries used in **SSPlayerForWeb**.
+This file contains the license notices for third-party libraries used in **SpriteStudio Player for Web**.
 
 We would like to thank the authors and contributors of these open-source projects.
 

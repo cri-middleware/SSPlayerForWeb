@@ -2,8 +2,7 @@
 layout: home
 
 hero:
-  name: SSPlayerForWeb
-  text: SpriteStudio player for the Web
+  name: SpriteStudio Player for Web
   tagline: A WebAssembly (Rust) × JavaScript hybrid. Play SpriteStudio animations at speed with WebGL, PixiJS, and other web graphics engines.
   actions:
     - theme: brand
