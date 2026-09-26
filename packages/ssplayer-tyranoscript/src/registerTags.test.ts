@@ -252,6 +252,10 @@ function makeTyrano(): Harness {
       variable: { f: {}, sf: {}, tf: {} },
       layer: { getLayer },
       error,
+      // The engine's rule, as `kag.js` writes it: a short fixed duration while
+      // skipping with `skipEffectIgnore` on, the given one otherwise.
+      cutTimeWithSkip: (time: number) =>
+        tyrano.kag.stat.is_skip === true && tyrano.kag.config.skipEffectIgnore === 'true' ? 70 : time,
       on: (names: string, callback: () => void, options?: Record<string, unknown>) => {
         for (const name of names.split(' ')) {
           listeners.set(name, [...(listeners.get(name) ?? []), callback]);
@@ -1209,6 +1213,68 @@ describe('registerSSTags', () => {
     expect(h.nextOrder.mock.calls.length).toBe(before); // still moving
 
     await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1));
+  });
+
+  // --- Skip mode -----------------------------------------------------------
+  //
+  // While the engine skips with `skipEffectIgnore` on, it cuts its own effects
+  // ([chara_show], [chara_hide] …) to a short duration. SS effects follow, or a
+  // read-skip would stop at each of them.
+
+  /** Put the engine in skip mode, as `setSkip(true)` leaves it. */
+  const startSkipping = (h: Harness, skipEffectIgnore = 'true'): void => {
+    h.tyrano.kag.stat.is_skip = true;
+    h.tyrano.kag.config.skipEffectIgnore = skipEffectIgnore;
+  };
+
+  it('cuts an SS fade to the engine\'s skip duration', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    const before = h.nextOrder.mock.calls.length;
+    startSkipping(h);
+
+    h.tags.ss_fadeout.start({ ...h.tags.ss_fadeout.pm } as Record<string, any>); // 1000 ms, waited
+    expect(p.element.style.transition).toBe('opacity 70ms linear');
+    await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1), { timeout: 500 });
+  });
+
+  it('cuts a waited ss_move to the engine\'s skip duration', async () => {
+    const h = await withPlayer();
+    const before = h.nextOrder.mock.calls.length;
+    startSkipping(h);
+
+    h.tags.ss_move.start({ name: 'chr', x: 800, time: 1000, wait: 'true' } as Record<string, any>);
+    await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1), { timeout: 500 });
+  });
+
+  it('keeps an instant ss_show instant while skipping', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    await runTag(h.tags.ss_hide, { name: 'chr' }, h.nextOrder);
+    startSkipping(h);
+
+    await runTag(h.tags.ss_show, { name: 'chr' }, h.nextOrder); // time defaults to 0
+    // The engine's skip duration is longer than 0; taken as is, it would add a fade.
+    expect(p.element.style.transition).toBe('');
+    expect(shown(p.element)).toBe(true);
+  });
+
+  it('leaves SS fades alone when the project keeps effects during skip', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    startSkipping(h, 'false');
+
+    await runTag(h.tags.ss_fadeout, { wait: 'false' }, h.nextOrder);
+    expect(p.element.style.transition).toBe('opacity 1000ms linear');
+  });
+
+  it('ss_wait does not hold a skip', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+    startSkipping(h);
+
+    await runTag(h.tags.ss_wait, { name: 'chr' }, h.nextOrder);
+    expect(p.isPlaying).toBe(true); // the animation itself plays on
   });
 
   it('ss_restore brings back visibility, z-order, follow-ups and speaker links', async () => {

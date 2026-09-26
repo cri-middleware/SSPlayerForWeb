@@ -162,11 +162,6 @@ is entirely in what the tags expose.
 - [ ] **No seek / section / reverse tags.** `frame`, `setAnimationSection` and
       `setPlaybackDirection` all exist on the core player and none is reachable
       from a scenario.
-- [ ] **`[ss_move wait="true"]` advances on a timer, not on the tween.** It calls
-      `setTimeout(nextOrder, time)` when the tween starts, so `[ss_pos]`
-      cancelling the tween does not cancel the advance, and a `[jump]` in between
-      lands the `nextOrder` on an unrelated scenario position. Resolve on the
-      tween's final frame instead, guarded by a token.
 
 ### PT8 — audio
 

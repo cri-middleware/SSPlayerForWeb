@@ -93,6 +93,13 @@ export interface TyranoKag {
    */
   error?: (message: string, replace_map?: Record<string, unknown>) => void;
   /**
+   * An effect duration shortened for skip mode — the rule `[chara_show]` and
+   * `[chara_hide]` fade through. Returns the engine's short duration while
+   * skipping with `skipEffectIgnore` on, and `time` unchanged otherwise, zero
+   * included. Optional: every caller guards it.
+   */
+  cutTimeWithSkip?: (time: number) => number | string;
+  /**
    * Engine event bus. Optional: older TyranoScript builds have none, so every
    * caller guards it.
    *

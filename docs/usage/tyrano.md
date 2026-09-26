@@ -263,6 +263,11 @@ than the anchor, so they were never accurate for this anyway.
 - **Scene changes**: clearing a layer (e.g. `[freeimage]`) releases the players on
   it automatically, whatever cleared it. `[ss_free]` / `[ss_free_all]` are for
   letting a player go without touching the layer.
+- **Skip**: while the game is skipping with `skipEffectIgnore = true` in
+  `data/system/Config.tjs` (the default), SS effects are cut the way `[chara_show]`'s
+  are. `time=` on `[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` /
+  `[ss_move]` becomes the engine's skip duration, and `[ss_wait]` does not wait. The
+  animations themselves keep playing.
 
 ## 7. Audio
 
