@@ -13,12 +13,11 @@
     "LICENSE.ja.md"
   ],
   "dependencies": {
-    "@spritestudio/ssconverter-core": "workspace:^",
+    "@spritestudio/ssconverter-importer": "workspace:^",
     "@spritestudio/ssplayer-core": "workspace:^"
   },
   "scripts": {
-    "//build": "Ordered: the plugin bundle inlines the finished Worker bundle as a string.",
-    "build": "tsdown --config tsdown.worker.config.ts && tsdown",
+    "build": "tsdown",
     "clean": "rimraf dist",
     "test": "vitest run",
     "pack": "node scripts/pack-tbp.mjs",

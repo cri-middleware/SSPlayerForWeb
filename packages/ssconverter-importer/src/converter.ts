@@ -1,24 +1,24 @@
-// `.sspj` -> `.ssab` inside the editor, via `@spritestudio/ssconverter-core`.
+// `.sspj` -> `.ssab` inside a host, via `@spritestudio/ssconverter-core`.
 //
 // The core is environment-agnostic on purpose: it never touches a filesystem or
 // the DOM, it takes the wasm bytes and a `Map<path, bytes>` of the project and
-// hands back a `Map<name, bytes>`. That is exactly the shape this host needs,
-// because in the builder the *host* is the only thing that can read files (via
-// `studio_api`), and wasm cannot `fetch()` a `file://` URL anyway.
+// hands back a `Map<name, bytes>`. That is exactly the shape a host needs,
+// because the *host* is the only thing that can read files (in TyranoBuilder,
+// via `studio_api`), and wasm cannot `fetch()` a `file://` URL anyway.
 //
 // It is also what lets the wasm run in a Worker. The call is synchronous and
-// long enough to be seen — on the machine this was measured on, a project open
-// with 20 sample projects froze the editor for 1.2 s, 680 ms of it in one
-// project — so it runs off the UI thread, and this file keeps only the halves a
-// Worker cannot do: reading the sources and writing the results, both of which
-// need the renderer-only `studio_api` bridge.
+// long enough to be seen — on the machine this was measured on, a TyranoBuilder
+// project open with 20 sample projects froze the editor for 1.2 s, 680 ms of it
+// in one project — so it runs off the UI thread, and this file keeps only the
+// halves a Worker cannot do: reading the sources and writing the results, both
+// of which need the host's filesystem, which only its UI thread holds.
 //
 // The Worker is not assumed to exist. It is started from a Blob URL — a
 // `file://` document cannot load a worker script from another `file://` URL,
-// and no vendor documents what a given builder build allows — so it is proven
+// and no vendor documents what a given host build allows — so it is proven
 // at startup and falls back to converting in-thread, which is exactly what
 // `probeBinaryBridge()` does for the binary bridge. The fallback is the old
-// behaviour, not a degraded one: the editor freezes, as it always did.
+// behaviour, not a degraded one: the host freezes, as it always did.
 
 import {
   convertProject,
@@ -49,7 +49,7 @@ export interface Converter {
   readonly version: string;
   /** The formats this build emits, for the version line in the panel. */
   readonly schema: SchemaVersions;
-  /** Whether conversions block the editor. Logged once, at startup. */
+  /** Whether conversions block the host. Logged once, at startup. */
   readonly mode: 'worker' | 'inline';
   /** Why the Worker was not used; empty when it was. */
   readonly detail: string;
@@ -61,10 +61,10 @@ export interface ConverterOptions {
   /** Absolute path of `ssconverter_bg.wasm`. */
   wasmPath: string;
   /**
-   * The Worker's own bundle, as source. Inlined into the plugin at build time
-   * (`tsdown.config.ts`) because a Blob URL is the only way to start a Worker
-   * from a `file://` document. Omitted — as it is in the tests — conversion
-   * runs on the calling thread.
+   * The Worker's own bundle, as source (`./worker-source`), inlined into the
+   * host's plugin at build time because a Blob URL is the only way to start a
+   * Worker from a `file://` document. Omitted — as it is in the tests —
+   * conversion runs on the calling thread.
    */
   workerSource?: string;
 }
@@ -74,7 +74,7 @@ export interface ConverterOptions {
  *
  * A Worker that cannot load normally fires `onerror`, which is faster than any
  * timeout; this is the backstop for the case that stays silent. Generous,
- * because it is paid once per session and only ever by a builder that was going
+ * because it is paid once per session and only ever by a host that was going
  * to fall back anyway — instantiating 1.4 MB of wasm on a slow machine must not
  * be mistaken for a Worker that never started.
  */
@@ -82,7 +82,7 @@ const WORKER_START_TIMEOUT_MS = 20_000;
 
 /**
  * Instantiate the converter wasm on this thread. Once per session: the module
- * is 1.4 MB and the editor converts repeatedly.
+ * is 1.4 MB and a host may convert repeatedly.
  */
 let inlineInit: Promise<{ version: string; schema: SchemaVersions }> | null = null;
 
@@ -114,8 +114,8 @@ function startInline(fs: HostFs, wasmPath: string, detail: string): Promise<Conv
         });
       } finally {
         // Release the wasm-side result now rather than waiting for the
-        // FinalizationRegistry — this process converts repeatedly and stays
-        // alive for as long as the editor is open. The byte arrays above are
+        // FinalizationRegistry — a host may convert repeatedly and stay alive
+        // for as long as its editor is open. The byte arrays above are
         // copies out of the wasm heap, so they outlive it.
         result.free();
       }
@@ -243,12 +243,12 @@ async function startWorker(
 }
 
 /**
- * One converter per editor session, not per plugin instance: `loadPlugins()`
- * rebuilds every plugin whenever any one of them is added, removed or
- * installed, and a Worker started in each of those constructors would leak one
- * wasm instance per rebuild. Keyed by the wasm it was built from, so opening a
- * different project — which moves it — replaces the Worker rather than reusing
- * one holding the previous project's converter.
+ * One converter per host session, not per importer: TyranoBuilder's
+ * `loadPlugins()` rebuilds every plugin whenever any one of them is added,
+ * removed or installed, and a Worker started in each of those constructors
+ * would leak one wasm instance per rebuild. Keyed by the wasm it was built
+ * from, so opening a different project — which moves it — replaces the Worker
+ * rather than reusing one holding the previous project's converter.
  */
 let current: { key: string; converter: Promise<Converter> } | null = null;
 
@@ -310,8 +310,8 @@ export interface ConvertStats {
  * the textures as sibling files (`result.assets` maps destination -> source).
  *
  * The middle of this — the wasm — is where the time goes and is the part that
- * runs elsewhere. The reads and writes around it are `studio_api` calls, so
- * they stay on the UI thread whatever `converter.mode` says.
+ * runs elsewhere. The reads and writes around it go through the host's
+ * filesystem, so they stay on the UI thread whatever `converter.mode` says.
  */
 export async function convertProjectAt(
   fs: HostFs,

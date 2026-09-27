@@ -1,16 +1,17 @@
-// The converter, off the editor's UI thread.
+// The converter, off the host's UI thread.
 //
-// Built to `dist/ssplayer.worker.js` as a classic (non-module) script, because
-// the plugin starts it from a Blob URL and a module Worker would then try to
+// Built to `dist/converter.worker.js` as a classic (non-module) script, because
+// the host starts it from a Blob URL and a module Worker would then try to
 // resolve its imports against `blob:` — so everything it needs is inlined.
 //
-// The Worker has no filesystem: `window.studio_api` is a renderer-only bridge.
-// That suits the converter core exactly, since it is environment-agnostic by
-// design — bytes in, bytes out — so the UI thread reads the project, this runs
-// the wasm, and the UI thread writes the results.
+// The Worker has no filesystem: the host's (TyranoBuilder's `window.studio_api`
+// is a renderer-only bridge) belongs to its UI thread. That suits the converter
+// core exactly, since it is environment-agnostic by design — bytes in, bytes
+// out — so the UI thread reads the project, this runs the wasm, and the UI
+// thread writes the results.
 //
 // Failures are reported, never thrown: an exception crossing `onmessage` would
-// reach the editor as an unhandled worker error with no id attached, and the
+// reach the host as an unhandled worker error with no id attached, and the
 // caller waiting on that conversion would hang forever.
 
 import {
@@ -78,7 +79,7 @@ scope.onmessage = (event) => {
           assets: result.assets as unknown as Map<string, string>,
         });
       } finally {
-        // This Worker lives as long as the editor session and converts
+        // This Worker lives as long as the host session and converts
         // repeatedly; waiting for the FinalizationRegistry would let the wasm
         // heap grow by a whole project per pass.
         result.free();

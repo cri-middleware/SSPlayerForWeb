@@ -1,19 +1,21 @@
-// Filesystem access from inside the TyranoBuilder renderer.
+// Filesystem access for the importer, over whatever the host hands it.
 //
-// The builder runs with `contextIsolation: true`, so the plugin never gets
-// `require()`. What it does get is `window.studio_api`, which the preload
-// publishes through `contextBridge` — including `fs-extra`. Functions come
-// across as proxies and arguments/return values are structured-cloned.
+// The narrowest host is TyranoBuilder's renderer. It runs with
+// `contextIsolation: true`, so a plugin never gets `require()`; what it does
+// get is `window.studio_api`, which the preload publishes through
+// `contextBridge` — including `fs-extra`. Functions come across as proxies and
+// arguments/return values are structured-cloned. A host that has `require()`
+// hands over Node's own modules, and none of what follows applies to it.
 //
-// That clone step is the one thing on this path that is NOT documented and NOT
-// guaranteed: a Node `Buffer` (a `Uint8Array` subclass) may arrive as a real
+// That clone step is the one thing on the bridged path that is NOT documented
+// and NOT guaranteed: a Node `Buffer` (a `Uint8Array` subclass) may arrive as a real
 // `Uint8Array`, as a `{type:'Buffer',data:[...]}` husk, or as something else
 // entirely, and a `Uint8Array` passed *into* `writeFileSync` may or may not be
 // written verbatim. So every binary op here has a base64 fallback: encodings
 // are plain strings, which always survive the bridge. `probeBinaryBridge()`
 // decides which mode to use once, at startup, by round-tripping a real file.
 
-import type { HostStats, StudioApi } from './builderTypes.js';
+import type { HostBackend, HostStats } from './hostTypes.js';
 
 /** How binary payloads cross the contextBridge. */
 export type BinaryMode = 'buffer' | 'base64';
@@ -92,23 +94,12 @@ export interface BridgeProbe {
 }
 
 export class HostFs {
-  readonly api: StudioApi;
+  readonly api: HostBackend;
   /** Chosen by `probeBinaryBridge()`; `buffer` until proven otherwise. */
   binaryMode: BinaryMode = 'buffer';
 
-  constructor(api: StudioApi) {
+  constructor(api: HostBackend) {
     this.api = api;
-  }
-
-  /** Throws unless the builder actually exposed its filesystem bridge. */
-  static fromWindow(): HostFs {
-    const api = window.studio_api;
-    if (!api?.fs || !api.path) {
-      throw new Error(
-        'window.studio_api is unavailable — this plugin only runs inside the TyranoBuilder editor.',
-      );
-    }
-    return new HostFs(api);
   }
 
   get path() {
@@ -120,7 +111,7 @@ export class HostFs {
   }
 
   mkdirp(dir: string): void {
-    // Mirrors the builder's own `io.mkdir` (`mkdirp.sync(dir, '0777')`).
+    // Mirrors TyranoBuilder's own `io.mkdir` (`mkdirp.sync(dir, '0777')`).
     this.api.mkdirp.sync(dir, '0777');
   }
 
@@ -142,9 +133,9 @@ export class HostFs {
   }
 
   /**
-   * Whether this build of the builder published Electron's `shell`. Ver 3.00
-   * does; a build that did not would leave the panel's buttons off rather than
-   * offering one that cannot work.
+   * Whether the host published a `shell`. TyranoBuilder Ver 3.00 does; a build
+   * that did not would leave the panel's buttons off rather than offering one
+   * that cannot work.
    */
   get canOpen(): boolean {
     return typeof this.api.shell?.openPath === 'function';
@@ -152,8 +143,8 @@ export class HostFs {
 
   /**
    * Hand a file or folder to the OS. Never throws and never waits: the author
-   * pressed a button, and whether Finder came up is not something this plugin
-   * can do anything about.
+   * pressed a button, and whether Finder came up is not something a plugin can
+   * do anything about.
    */
   openPath(p: string): void {
     try {
@@ -225,9 +216,9 @@ export class HostFs {
    * Every file under `dir`, recursively, each carrying the `stat` the walk had
    * to perform anyway to tell a file from a directory.
    *
-   * Handing that stat back matters more here than it looks: every call on this
-   * object is a synchronous hop across Electron's contextBridge, on the editor's
-   * UI thread. A caller that wants mtimes gets them for the price of the walk
+   * Handing that stat back matters more here than it looks: behind a bridge,
+   * every call on this object is a synchronous hop across it, on the host's UI
+   * thread. A caller that wants mtimes gets them for the price of the walk
    * instead of statting the same files a second time.
    */
   walkEntries(dir: string, out: WalkedFile[] = []): WalkedFile[] {
@@ -305,7 +296,7 @@ export class HostFs {
       }
     }
 
-    // Don't leave the probe behind: this folder ships inside an exported game.
+    // Don't leave the probe behind: a host may put it where an export copies.
     this.remove(scratchPath);
 
     this.binaryMode = bufferOk ? 'buffer' : 'base64';

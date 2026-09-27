@@ -13,14 +13,19 @@
 //
 // Everything the importer does is written to `<project>/ss_import_log.txt`.
 
-import workerSource from 'virtual:converter-worker';
+import {
+  DEFAULT_SOURCE_DIR,
+  ImportLog,
+  type HostFs,
+  type ImportRunResult,
+} from '@spritestudio/ssconverter-importer';
+import workerSource from '@spritestudio/ssconverter-importer/worker-source';
 
-import { AutoImporter, DEFAULT_SOURCE_DIR, type ImportRunResult } from './autoImporter.js';
+import { BuilderImporter } from './builderImporter.js';
 import type { BuilderComponentEntry, JQueryLike, TB } from './builderTypes.js';
 import { BUTTON_PARAM_TYPE, registerButtonParam } from './buttonParam.js';
 import { defineSSComponents } from './components.js';
-import { HostFs } from './hostFs.js';
-import { ImportLog } from './importLog.js';
+import { studioFs } from './studioFs.js';
 import {
   bindPanelButtons,
   escapeText,
@@ -179,7 +184,7 @@ function notifyRun(TB: TB | undefined, run: ImportRunResult): void {
  */
 let importing = false;
 
-function importNow(TB: TB | undefined, importer: AutoImporter, button: JQueryLike): void {
+function importNow(TB: TB | undefined, importer: BuilderImporter, button: JQueryLike): void {
   // `queuePass` would serialise a second press safely, but running the same
   // pass twice tells the author nothing and takes twice as long to say it.
   if (importing) return;
@@ -236,7 +241,7 @@ interface Host {
   log: ImportLog;
   /** Where {@link ImportLog} writes, so the panel can offer to open it. */
   logPath: string;
-  importer: AutoImporter;
+  importer: BuilderImporter;
 }
 
 /**
@@ -246,7 +251,7 @@ interface Host {
  * "I changed the animation, pick it up" lands. It is deliberately not silent:
  * the whole point of pressing it is to find out whether it worked.
  */
-function reconvert(TB: TB | undefined, importer: AutoImporter, storage: unknown): void {
+function reconvert(TB: TB | undefined, importer: BuilderImporter, storage: unknown): void {
   const t = (text: string): string => (typeof TB?.$?.s === 'function' ? TB.$.s(text) : text);
   void importer
     .reconvertPack(storage)
@@ -278,7 +283,7 @@ function createHost(TB: TB | undefined): Host | null {
 
   let fs: HostFs;
   try {
-    fs = HostFs.fromWindow();
+    fs = studioFs();
   } catch (e) {
     // Not fatal to the editor: log and stay out of the way.
     console.warn('[ssplayer-tyranobuilder]', (e as Error).message);
@@ -287,8 +292,8 @@ function createHost(TB: TB | undefined): Host | null {
 
   const projectRoot = resolveProjectRoot(TB, fs, pluginDir);
   const logPath = fs.path.join(projectRoot, LOG_FILENAME);
-  const log = new ImportLog(fs, logPath);
-  const importer = new AutoImporter({
+  const log = new ImportLog(fs, logPath, '[ssplayer-tyranobuilder]');
+  const importer = new BuilderImporter({
     fs,
     projectRoot,
     wasmPath: relocateConverterWasm(fs, projectRoot, pluginDir),
