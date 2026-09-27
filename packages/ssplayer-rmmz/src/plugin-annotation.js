@@ -15,7 +15,9 @@
  *   2. Convert your .sspj to .ssab with the SpriteStudio converter tooling
  *      (ssconverter-web) and place the output under a "spritestudio" folder at
  *      your PROJECT ROOT — beside img/, not inside it (see DEPLOYMENT below):
- *        MyGame/spritestudio/<project>/<project>.ssab (+ its .png textures)
+ *        MyGame/spritestudio/<project>/<ssae name>.ssab (+ its .png textures)
+ *      There is one .ssab per animation file (.ssae) in the project, named
+ *      after it.
  *      Or let test play convert: put "ssconverter_bg.wasm" beside this plugin
  *      and your SpriteStudio project FOLDERS under SpriteStudio_Source/ at the
  *      project root. Every test play converts what changed into
@@ -451,7 +453,8 @@
  *   2. .sspj を SpriteStudio コンバータ（ssconverter-web）で .ssab に変換し、出力を
  *      【プロジェクト直下】の spritestudio フォルダに配置します。img/ の中では
  *      なく、img/ と並ぶ位置です（後述の「デプロイメント」参照）。
- *        ゲームフォルダ/spritestudio/<プロジェクト名>/<プロジェクト名>.ssab（＋ .png）
+ *        ゲームフォルダ/spritestudio/<プロジェクト名>/<ssae名>.ssab（＋ .png）
+ *      .ssab はアニメーションファイル（.ssae）1 つにつき 1 つ、同じ名前でできます。
  *      テストプレイに変換させることもできます。このプラグインの隣に
  *      ssconverter_bg.wasm を置き、SpriteStudio のプロジェクトを【フォルダごと】
  *      プロジェクト直下の SpriteStudio_Source/ に置きます。テストプレイのたびに、

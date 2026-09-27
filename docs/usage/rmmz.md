@@ -70,8 +70,10 @@ MyGame/
         └── Ringo.png        ← textures sit beside their .ssab
 ```
 
-The `Show SS` path is then `spritestudio/<project>/<project>.ssab`. Keep each `.ssab` and
-its textures in the same folder — the plugin resolves textures relative to the `.ssab`.
+Each `.ssab` is named after an animation file (`.ssae`) in the project, not after the
+project: the converter writes one per `.ssae` (`Ringo.ssae` → `Ringo.ssab`). The `Show SS`
+path is therefore `spritestudio/<project>/<animation file>.ssab`. Keep each `.ssab` and its
+textures in the same folder — the plugin resolves textures relative to the `.ssab`.
 
 ### Convert on test play
 
@@ -80,8 +82,8 @@ With `ssconverter_bg.wasm` in `js/plugins/`, test play does the converting for y
 1. Put your SpriteStudio project under `SpriteStudio_Source/` at your project root — the
    `.sspj` **and its folder**, since an animation is several files. Subfolders are fine.
 2. Start a test play. Before the title, every project that changed since it was last
-   converted is converted into `spritestudio/<project>/` — the same place and path as
-   above.
+   converted is converted into `spritestudio/<project>/`, a folder named after its
+   `.sspj`. The `.ssab` files inside are named after the `.ssae` files, as above.
 3. After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and
    the change is converted on the way back up.
 
