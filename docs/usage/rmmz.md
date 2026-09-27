@@ -174,8 +174,9 @@ image so it stays plain, while the textures beside it get encrypted and the plug
 them automatically via `ImageManager`. In exchange you must **turn "Exclude unused files"
 off**, or **copy `img/spritestudio/` into the deployed output** afterward.
 
-If a texture does go missing, the plugin now reports it by name in the console instead of
-leaving the animation stuck loading.
+If the `.ssab` or a texture does go missing, the game stops on MZ's own "Failed to load"
+screen with the file's path, just as it does for a missing picture. Put the file back and
+press Retry to carry on from there.
 
 ## 5. Sound
 

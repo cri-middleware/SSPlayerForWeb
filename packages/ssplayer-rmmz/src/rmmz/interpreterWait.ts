@@ -8,6 +8,7 @@
 // that loopCount 0 is a synonym for infinite, not "play once".
 
 import { getLiveStatus } from './liveRegistry.js';
+import { isWasmOk } from './boot.js';
 
 /** Install the Game_Interpreter.updateWaitMode alias. Idempotent. */
 export function installInterpreterWait(): void {
@@ -25,7 +26,9 @@ export function installInterpreterWait(): void {
       const status = getLiveStatus(id);
       // Keep waiting while the animation is still loading (data present, not yet
       // mounted) or playing. Stop when it ended, or the picture/anim was removed.
-      if (hasData && status !== 'ended') return true;
+      // Without the runtime no player ever mounts, so there is nothing to wait
+      // for: the game runs on with SS disabled rather than freezing the event.
+      if (hasData && isWasmOk() && status !== 'ended') return true;
       this._waitMode = '';
       this._ssWaitPictureId = null;
       return false;

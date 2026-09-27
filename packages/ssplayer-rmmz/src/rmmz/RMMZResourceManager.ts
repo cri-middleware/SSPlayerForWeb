@@ -17,6 +17,7 @@
 
 import { SSWebGLResourceManager } from '@spritestudio/ssplayer-webgl';
 import { getImageManager, hasEncryptedImages, type GL, type RMMZBitmap } from '../rmmzGlobals.js';
+import { SSLoadError } from './loadError.js';
 
 export class RMMZResourceManager extends SSWebGLResourceManager {
   constructor(gl: GL) {
@@ -31,10 +32,17 @@ export class RMMZResourceManager extends SSWebGLResourceManager {
    */
   public override loadTexture(url: string, hash: number): Promise<void> {
     const im = getImageManager();
-    if (!im || !isDecryptable(url)) return super.loadTexture(url, hash);
+    if (!im || !isDecryptable(url)) {
+      return super.loadTexture(url, hash).catch((e: unknown) => {
+        throw new SSLoadError(url, `[ssplayer-rmmz] failed to load SS texture "${url}": ${String(e)}`);
+      });
+    }
 
     const { folder, filename } = splitBitmapUrl(url);
     const bitmap = im.loadBitmap(folder, filename);
+    // ImageManager caches the Bitmap even when it failed, so without this a
+    // Retry on the "Failed to load" screen would be handed the same failure.
+    if (bitmap.isError()) bitmap.retry();
     return new Promise<void>((resolve, reject) => {
       const finish = (bmp: RMMZBitmap) => {
         if (bmp.isError()) {
@@ -43,7 +51,8 @@ export class RMMZResourceManager extends SSWebGLResourceManager {
           // common cause is deployment's "Exclude unused files" having deleted
           // the texture; say so rather than just "load failed".
           reject(
-            new Error(
+            new SSLoadError(
+              url,
               `[ssplayer-rmmz] failed to load SS texture "${url}". If this game was deployed ` +
                 `with "Exclude unused files", assets under img/ are removed — keep SS assets ` +
                 `outside img/, audio/ and effects/ (e.g. spritestudio/) instead.`,
