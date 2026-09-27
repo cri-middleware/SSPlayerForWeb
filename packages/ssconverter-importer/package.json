@@ -4,7 +4,7 @@
   "description": "The auto-importer the in-repo editor plugins share: converts the SpriteStudio projects (.sspj) in a source folder to .ssab, and only the ones that changed",
   "type": "module",
   "private": true,
-  "//private": "Not published to npm. Bundled into the plugins that import SpriteStudio projects inside a host (TyranoBuilder); nothing loads it from here at run time.",
+  "//private": "Not published to npm. Bundled into the plugins that import SpriteStudio projects inside a host (TyranoBuilder, RPG Maker MZ); nothing loads it from here at run time.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,

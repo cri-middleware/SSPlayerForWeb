@@ -7,7 +7,8 @@ projects (`.sspj`) in a source folder, converts the ones that changed since thei
 successful import, and records what each conversion wrote.
 
 > **Who this is for:** contributors working on a plugin that imports SpriteStudio projects
-> inside its host — today [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder). It is
+> inside its host — [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder) on project
+> open, [`ssplayer-rmmz`](../ssplayer-rmmz) on test play. It is
 > private: nothing is published, and a plugin bundles it into its own build.
 
 It is the shape of SSPlayerForRenPy's auto-importer, run through
@@ -28,7 +29,8 @@ It is the shape of SSPlayerForRenPy's auto-importer, run through
 
 - **A filesystem**, as `HostBackend`: Node's `fs` plus `copySync` / `removeSync`,
   `node:path`, and a recursive mkdir. TyranoBuilder publishes exactly this as
-  `window.studio_api`; wrap it in `HostFs`.
+  `window.studio_api`; a host with `require()` (MZ's NW.js) builds it from Node. Wrap
+  it in `HostFs`.
 - **Where things live**, relative to the project root: the source folder
   (`SpriteStudio_Source` by default), the output folder, and the state file — put the last
   two where the host's export does what you want with them.
