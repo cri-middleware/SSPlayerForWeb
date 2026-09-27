@@ -13,6 +13,7 @@
 import type { ISpriteSpriteStudio } from './Sprite_SpriteStudio.js';
 import { setLivePlayer, clearLivePlayer, markLivePlayerEnded } from './liveRegistry.js';
 import { isWasmOk } from './boot.js';
+import { SSLoadError } from './loadError.js';
 import { applyPartOverrides, type SSPartOverride } from '@spritestudio/ssplayer-webgl';
 
 let _warnedNoWasm = false;
@@ -89,6 +90,12 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       }
       return;
     }
+    // A failed load is thrown here, inside the frame update, because that is
+    // where MZ catches its own: SceneManager stops the game and shows "Failed
+    // to load" with a Retry button, as it does for a missing picture or SE.
+    // Logging alone leaves the picture blank and holds any "wait for completion"
+    // forever, with nothing on screen to say why.
+    if (this._ssLoadError) throw this._ssLoadError;
     const key = `${ss.ssabUrl}|${ss.animation}`;
     // Same asset AND same animation: nothing to (re)build, but the model may
     // still have changed in ways that need no re-setup — see _ssApplyLive.
@@ -150,6 +157,12 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       .then(() => applyPartOverrides(child.player, ss.overrides))
       .catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to load SS animation:', e);
+        // Erased or given another .ssab while loading: nobody is waiting on it.
+        if (this._ssChild !== child) return;
+        const url = e instanceof SSLoadError ? e.url : ss.ssabUrl;
+        // Retry drops the failed child; the next updateBitmap rebuilds it from
+        // the model, overrides included, as a first mount would.
+        this._ssLoadError = ['LoadError', url, () => this._ssRemove()];
       });
     this._ssApplyLive(ss);
   };
@@ -206,6 +219,7 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     this._ssChild = null;
     this._ssKey = null;
     this._ssAsset = null;
+    this._ssLoadError = null;
     // Drop the live-state cache too: the next mount is a different player, and
     // a stale value here would make _ssApplyLive skip the call that sets it.
     this._ssLoop = undefined;

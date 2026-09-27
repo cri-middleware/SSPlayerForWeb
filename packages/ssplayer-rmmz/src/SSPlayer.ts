@@ -34,6 +34,7 @@ import {
 import type { Container as PixiContainer, Renderer } from 'pixi.js';
 import { getMZGl, getPIXI, type GL, type RMMZBitmap } from './rmmzGlobals.js';
 import { RMMZResourceManager } from './rmmz/RMMZResourceManager.js';
+import { SSLoadError } from './rmmz/loadError.js';
 import { registerSSPlayerRenderer, SSPLAYER_PLUGIN_NAME } from './SSPlayerRenderer.js';
 
 export type Unsubscribe = () => void;
@@ -160,13 +161,21 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // --- Loading & playback (thin wrappers over the core player) ---
 
   public async load(ssabUrl: string): Promise<void> {
-    // Fetched here rather than through the core's own load() only for the error
-    // message: MZ users hit this via a plugin command, and "404 on <url>" is
-    // worth far more to them than "Failed to load SSAB". Forward the ssab URL so
-    // the core resolves textures relative to it (siblings of the .ssab — the
-    // structure ssconverter emits).
-    const res = await fetch(ssabUrl);
-    if (!res.ok) throw new Error(`[ssplayer-rmmz] failed to load SSAB: ${res.status} ${res.statusText}`);
+    // Fetched here rather than through the core's own load() only for the error:
+    // MZ users hit this via a plugin command, and the picture bridge shows the
+    // failing URL on MZ's "Failed to load" screen. Under MZ's NW.js a missing
+    // file rejects the fetch rather than answering 404, so both paths throw.
+    // Forward the ssab URL so the core resolves textures relative to it
+    // (siblings of the .ssab — the structure ssconverter emits).
+    let res: Response;
+    try {
+      res = await fetch(ssabUrl);
+    } catch (e: unknown) {
+      throw new SSLoadError(ssabUrl, `[ssplayer-rmmz] failed to load SSAB "${ssabUrl}": ${String(e)}`);
+    }
+    if (!res.ok) {
+      throw new SSLoadError(ssabUrl, `[ssplayer-rmmz] failed to load SSAB "${ssabUrl}": ${res.status} ${res.statusText}`);
+    }
     const buffer = new Uint8Array(await res.arrayBuffer());
     this.bindResource(buffer, ssabUrl);
     await this.prepareResources();

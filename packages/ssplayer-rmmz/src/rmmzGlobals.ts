@@ -11,6 +11,7 @@ export interface RMMZBitmap {
   readonly canvas: HTMLCanvasElement;
   isReady(): boolean;
   isError(): boolean;
+  retry(): void;
   addLoadListener(cb: (bitmap: RMMZBitmap) => void): void;
 }
 
