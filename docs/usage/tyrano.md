@@ -78,7 +78,7 @@ data/others/plugin/ssplayer/
   init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
   main.js              # the plugin bundle (renderer + core inlined)
   ssruntime_bg.wasm    # the animation runtime binary
-data/others/ssdata/<project>.ssab
+data/others/ssdata/<ssae name>.ssab   # one per .ssae in your project, named after it
 ```
 
 ## 2. Convert your animation (.sspj → .ssab)

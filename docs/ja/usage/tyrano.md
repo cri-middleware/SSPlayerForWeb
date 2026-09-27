@@ -58,7 +58,7 @@ data/others/plugin/ssplayer/
   init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
   main.js              # プラグイン本体（レンダラ + core を内包）
   ssruntime_bg.wasm    # アニメーションランタイムのバイナリ
-data/others/ssdata/<project>.ssab
+data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつき 1 つ、同じ名前
 ```
 
 ## 2. アニメーションの変換（.sspj → .ssab）

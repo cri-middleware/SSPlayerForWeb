@@ -328,7 +328,7 @@ data/others/plugin/ssplayer/
   init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
   main.js              # このパッケージの dist/browser/main.js
   ssruntime_bg.wasm    # @spritestudio/ssplayer-core の runtime バイナリ
-data/others/ssdata/<project>.ssab
+data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつき 1 つ、同じ名前
 ```
 
 ### API（ESM）
