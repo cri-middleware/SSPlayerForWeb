@@ -38,14 +38,15 @@ correct Z-order with characters and pictures.
 
 ## 1. Install
 
-1. Get `ssplayer-rpgmakermz.js` **and** `ssruntime_bg.wasm`. **No release is published
-   yet**, so for now you build them yourself (see [Building from source](#building-from-source)).
-   Once the first release ships, you'll download the plugin ZIP from **GitHub Releases**
-   instead.
-2. Copy **both** into your project's `js/plugins/`, flat (the WASM must sit next to the
+1. Get `ssplayer-rpgmakermz.js` **and** `ssruntime_bg.wasm` — plus `ssconverter_bg.wasm`
+   if you want test play to convert your `.sspj` for you
+   ([below](#convert-on-test-play)). **No release is published yet**, so for now you build
+   them yourself (see [Building from source](#building-from-source)). Once the first
+   release ships, you'll download the plugin ZIP from **GitHub Releases** instead.
+2. Copy them into your project's `js/plugins/`, flat (the WASM files must sit next to the
    `.js`).
 3. Enable **ssplayer-rpgmakermz** in the Plugin Manager. There are no parameters — the
-   WASM is auto-loaded from the same folder as the plugin `.js`.
+   WASM files are auto-loaded from the same folder as the plugin `.js`.
 
 ## 2. Convert your animation (.sspj → .ssab)
 
@@ -71,6 +72,46 @@ MyGame/
 
 The `Show SS` path is then `spritestudio/<project>/<project>.ssab`. Keep each `.ssab` and
 its textures in the same folder — the plugin resolves textures relative to the `.ssab`.
+
+### Convert on test play
+
+With `ssconverter_bg.wasm` in `js/plugins/`, test play does the converting for you:
+
+1. Put your SpriteStudio project under `SpriteStudio_Source/` at your project root — the
+   `.sspj` **and its folder**, since an animation is several files. Subfolders are fine.
+2. Start a test play. Before the title, every project that changed since it was last
+   converted is converted into `spritestudio/<project>/` — the same place and path as
+   above.
+3. After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and
+   the change is converted on the way back up.
+
+```
+MyGame/
+├── js/plugins/
+│   ├── ssplayer-rpgmakermz.js
+│   ├── ssruntime_bg.wasm
+│   └── ssconverter_bg.wasm     ← converts on test play
+├── SpriteStudio_Source/        ← you put projects here
+│   └── Ringo/
+│       ├── Ringo.sspj
+│       └── …                   (.ssae, .ssce, textures)
+└── spritestudio/               ← test play writes here
+    └── Ringo/
+        ├── Ringo.ssab
+        └── Ringo.png
+```
+
+If a project fails to convert, the boot stops on MZ's error screen, naming the project and
+the reason. Fix it in SpriteStudio, save, and press **Retry**. Two projects with the same
+file name stop it too — `chara/hero.sspj` and `enemy/hero.sspj` would both write
+`spritestudio/hero/` — so rename one. The console (F8) has the details.
+
+Only a test play converts; a deployed game never does. It converts only what changed:
+the record of past conversions is `SpriteStudio_Source/.ss_import_state.json`. A
+conversion also removes the files the previous one wrote and this one no longer does, and
+leaves anything else in the folder alone. Sounds are not converted — see
+[5. Sound](#_5-sound). Before you deploy, leave the sources out
+([4. Deployment](#_4-deployment)).
 
 ## 3. Plugin commands
 
@@ -160,6 +201,11 @@ is outside its reach — exactly like `js/plugins/`, which is why the plugin `.j
 Sound files are the exception: MZ plays sound effects only from `audio/se/`, inside the
 option's reach — see [5. Sound](#_5-sound).
 
+**Leave the sources out.** Deployment copies the whole project folder, so
+`SpriteStudio_Source/` — your editable SpriteStudio projects — would ship with the game.
+Enter `SpriteStudio_Source,ssconverter_bg.wasm` in the deployment's
+**[Exclude files/folders]** option; the game needs neither to play.
+
 ::: warning Migrating an existing project
 If your assets are still under `img/spritestudio/`, move the whole folder up one level to
 `spritestudio/` and update the `SSAB File` argument of each `Show SS` / `Set SS As
@@ -209,7 +255,7 @@ limitation, are planned follow-ups.
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-rmmz build      # dist/browser/ssplayer-rpgmakermz.js
-pnpm --filter @spritestudio/ssplayer-rmmz pack       # dist/pack/ssplayer-rmmz-plugin-<v>.zip
+pnpm --filter @spritestudio/ssplayer-rmmz run pack   # dist/pack/ssplayer-rmmz-plugin-<v>.zip
 ```
 
 To try it in the bundled MZ example:
@@ -219,6 +265,12 @@ pnpm --filter rmmz-example run sync:plugin   # copy the built plugin + no-SIMD w
 pnpm deploy-examples                         # convert the SS-SDK test projects into spritestudio/
 nw examples/rmmz-example/SampleProject       # Test Play (or open the project in the MZ editor)
 ```
+
+To try [conversion on test play](#convert-on-test-play) there, copy
+`packages/ssconverter-core/wasm/ssconverter_bg.wasm` into `SampleProject/js/plugins/` and
+put a SpriteStudio project under `SampleProject/SpriteStudio_Source/`; both are
+git-ignored. `sync:plugin` leaves the converter out because the sample is also published
+as the web demo, where nothing converts.
 
 No NW.js? Use the browser harness at `examples/rmmz-harness` (real `SSPlayer` /
 `SSPlayerRenderer` against PixiJS v5). Track progress in

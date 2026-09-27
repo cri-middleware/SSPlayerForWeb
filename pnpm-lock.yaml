@@ -463,6 +463,9 @@ importers:
 
   packages/ssplayer-rmmz:
     dependencies:
+      '@spritestudio/ssconverter-importer':
+        specifier: workspace:^
+        version: link:../ssconverter-importer
       '@spritestudio/ssplayer-webgl':
         specifier: workspace:^
         version: link:../ssplayer-webgl

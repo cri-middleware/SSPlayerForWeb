@@ -12,12 +12,11 @@ import { defineConfig } from 'tsdown';
 //     to import outside RPG Maker MZ). `pixi.js` stays external (peer dep).
 //
 //  2. IIFE `dist/browser/ssplayer-rpgmakermz.js` — the runtime plugin you drop
-//     into `js/plugins/`. Bundles ssplayer-core + flatbuffers; `pixi.js` is
-//     EXTERNAL (RMMZ provides `window.PIXI` v5). The WASM binary is EXTERNAL —
-//     ship `ssruntime_bg.wasm` alongside and point the `wasmPath` param at it.
-//
-// SpriteStudio project conversion (.sspj -> .ssab) is NOT part of this package;
-// use the ssconverter-web / ssconverter-core tooling to pre-build .ssab assets.
+//     into `js/plugins/`. Bundles ssplayer-core + flatbuffers, and the test-play
+//     importer with the converter glue; `pixi.js` is EXTERNAL (RMMZ provides
+//     `window.PIXI` v5). Both WASM binaries are EXTERNAL and sit beside the
+//     plugin: `ssruntime_bg.wasm` always, `ssconverter_bg.wasm` to convert
+//     `.sspj` on test play (see `src/rmmz/autoImport.ts`).
 export default defineConfig([
   // 1. Bundler / test entry (ESM, no minify). pixi.js external.
   {
@@ -44,14 +43,22 @@ export default defineConfig([
       globals: { 'pixi.js': 'PIXI' },
     },
     // Everything the runtime needs must be inlined (MZ has no module resolution).
-    // Only the WASM binary and the host-provided PIXI stay external.
+    // Only the WASM binaries and the host-provided PIXI stay external.
     deps: {
       alwaysBundle: [
         '@spritestudio/ssplayer-rmmz',
         '@spritestudio/ssplayer-webgl',
         '@spritestudio/ssplayer-core',
         'flatbuffers',
+        // The importer, and the conversion Worker as a string.
+        /^@spritestudio\/ssconverter-importer(\/|$)/,
+        '@spritestudio/ssconverter-core',
       ],
     },
+    // The converter glue carries a `new URL('ssconverter_bg.wasm',
+    // import.meta.url)` for a caller that lets it find its own wasm. The
+    // importer always passes the bytes, and a classic script has no
+    // `import.meta`, so the branch is dead here and must not reach the IIFE.
+    define: { 'import.meta': '{}' },
   },
 ]);

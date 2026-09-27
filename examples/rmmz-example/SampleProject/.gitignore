@@ -7,5 +7,9 @@
 /js/plugins/ssplayer-rpgmakermz.js
 /js/plugins/ssruntime_bg.wasm
 
+# --- Test-play conversion, when tried here (converter copied in by hand) ---
+/js/plugins/ssconverter_bg.wasm
+/SpriteStudio_Source/
+
 # --- Playtest saves ---
 /save/

@@ -9,6 +9,7 @@
 
 import { registerSSPlayerRenderer } from './SSPlayerRenderer.js';
 import { getSelfScriptDir } from './rmmzGlobals.js';
+import { installAutoImport } from './rmmz/autoImport.js';
 import { installWasmBootGate } from './rmmz/boot.js';
 import { defineSpriteSpriteStudio } from './rmmz/Sprite_SpriteStudio.js';
 import { installGamePictureBridge } from './rmmz/gamePictureBridge.js';
@@ -45,6 +46,10 @@ function boot(): void {
   // 2. Start WASM init + boot gate. The WASM sits next to this plugin .js
   //    (derived from document.currentScript) — no configuration needed.
   installWasmBootGate(`${getSelfScriptDir()}ssruntime_bg.wasm`);
+
+  //    On a test play, convert what changed under SpriteStudio_Source/ before
+  //    the title — when ssconverter_bg.wasm sits beside this plugin.
+  installAutoImport();
 
   // 3. Build the view class against MZ's global Sprite and install the bridges.
   const SpriteSpriteStudio = defineSpriteSpriteStudio(g.Sprite);
