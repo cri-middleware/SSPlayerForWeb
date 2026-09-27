@@ -58,6 +58,11 @@ Plugin commands not in the spec but shipped: `changeSSAnimation`, `setSSSpeed`,
 `clearSSTalk` lip-sync (drives talk/idle off `Window_Message`). Live-player
 registry (`liveRegistry.ts`) backs the imperative commands.
 
+Test-play conversion (`src/rmmz/autoImport.ts`): with `ssconverter_bg.wasm` beside
+the plugin, each test play converts what changed under `SpriteStudio_Source/` into
+`spritestudio/` before the title, through the importer TyranoBuilder uses
+(`@spritestudio/ssconverter-importer`). Checked on macOS only; Windows is untested.
+
 ## Remaining work
 
 ### R1 — Wire `RMMZAudioManager` into the plugin path (§7.4) — ✅ **FIXED**

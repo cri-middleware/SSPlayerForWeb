@@ -30,8 +30,8 @@
 
 ## 1. インストール
 
-1. `ssplayer-rpgmakermz.js` **と** `ssruntime_bg.wasm` を用意します。**まだリリースが公開されていない**ため、当面は自分でビルドしてください（[ソースからビルドする](#building-from-source)）。最初のリリース後は **GitHub Releases** からプラグイン ZIP をダウンロードできるようになります。
-2. **両方**をプロジェクトの `js/plugins/` へフラットに置きます（WASM は `.js` と同じ場所に置く必要があります）。
+1. `ssplayer-rpgmakermz.js` **と** `ssruntime_bg.wasm` を用意します。テストプレイで `.sspj` を自動変換したい場合は `ssconverter_bg.wasm` も用意します（[後述](#convert-on-test-play)）。**まだリリースが公開されていない**ため、当面は自分でビルドしてください（[ソースからビルドする](#building-from-source)）。最初のリリース後は **GitHub Releases** からプラグイン ZIP をダウンロードできるようになります。
+2. これらをプロジェクトの `js/plugins/` へフラットに置きます（WASM は `.js` と同じ場所に置く必要があります）。
 3. プラグイン管理で **ssplayer-rpgmakermz** を有効化します。パラメーターはありません。WASM はプラグイン `.js` と同じフォルダーから自動で読み込まれます。
 
 ## 2. アニメーションの変換（.sspj → .ssab）
@@ -55,6 +55,34 @@ MyGame/
 
 「SS表示」のパスは `spritestudio/<project>/<project>.ssab` になります。テクスチャは `.ssab`
 からの相対で解決されるため、`.ssab` と同じフォルダーに置いたままにしてください。
+
+### テストプレイで変換する {#convert-on-test-play}
+
+`js/plugins/` に `ssconverter_bg.wasm` を置くと、テストプレイのときにプラグインが変換します。
+
+1. SpriteStudio のプロジェクトを、プロジェクト直下の `SpriteStudio_Source/` に置きます。アニメーションは複数のファイルで構成されるので、**`.sspj` だけでなくフォルダーごと**置いてください。サブフォルダーに入れても構いません。
+2. テストプレイを開始します。タイトルの前に、前回の変換から変更のあったプロジェクトがすべて `spritestudio/<project>/` へ変換されます。置き場所とパスは上と同じです。
+3. SpriteStudio で保存したら、テストプレイ中に **F5** を押します。ゲームが再起動し、その途中で変更が変換されます。
+
+```
+MyGame/
+├── js/plugins/
+│   ├── ssplayer-rpgmakermz.js
+│   ├── ssruntime_bg.wasm
+│   └── ssconverter_bg.wasm     ← テストプレイで変換する
+├── SpriteStudio_Source/        ← プロジェクトはここに置く
+│   └── Ringo/
+│       ├── Ringo.sspj
+│       └── …                   （.ssae・.ssce・テクスチャ）
+└── spritestudio/               ← 変換結果はここに書かれる
+    └── Ringo/
+        ├── Ringo.ssab
+        └── Ringo.png
+```
+
+変換に失敗したプロジェクトがあると、起動が MZ のエラー画面で止まり、プロジェクト名と理由が表示されます。SpriteStudio で直して保存し、**Retry** を押してください。同じファイル名のプロジェクトが 2 つある場合も止まります（`chara/hero.sspj` と `enemy/hero.sspj` はどちらも `spritestudio/hero/` に書き出すため）。どちらかの名前を変えてください。詳しい内容はコンソール（F8）に出ます。
+
+変換するのはテストプレイのときだけで、デプロイしたゲームでは変換しません。変換するのは変更のあったものだけです（これまでの変換の記録は `SpriteStudio_Source/.ss_import_state.json`）。変換では、前回の変換が書き出して今回は書き出さなかったファイルを消します。フォルダー内のそれ以外のファイルには触れません。音声は変換しません（[5. 音声](#_5-sound) を参照）。デプロイの前にソースを除外してください（[4. デプロイ](#_4-deployment) を参照）。
 
 ## 3. プラグインコマンド
 
@@ -120,6 +148,8 @@ img/   audio/   effects/
 
 例外は音声ファイルです。ツクールは効果音を `audio/se/` からしか再生しないため、このオプションの対象内に置くことになります（[5. 音声](#_5-sound) を参照）。
 
+**ソースを除外する。** デプロイメントはプロジェクトフォルダーを丸ごと書き出すため、編集用の SpriteStudio プロジェクトが入った `SpriteStudio_Source/` もそのままゲームに含まれます。デプロイメントのオプション **［除外するファイル/フォルダ］** に `SpriteStudio_Source,ssconverter_bg.wasm` を入力してください。どちらもゲームの実行には不要です。
+
 ::: warning 既存プロジェクトからの移行
 素材がまだ `img/spritestudio/` にある場合は、フォルダーごと 1 階層上の `spritestudio/` へ移動し、各「SS表示」「SSをピクチャに割当」コマンドの `SSABファイル` から先頭の `img/` を外してください。
 :::
@@ -148,7 +178,7 @@ img/   audio/   effects/
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-rmmz build      # dist/browser/ssplayer-rpgmakermz.js
-pnpm --filter @spritestudio/ssplayer-rmmz pack       # dist/pack/ssplayer-rmmz-plugin-<v>.zip
+pnpm --filter @spritestudio/ssplayer-rmmz run pack   # dist/pack/ssplayer-rmmz-plugin-<v>.zip
 ```
 
 同梱の MZ サンプルで試す場合は次のとおりです。
@@ -158,6 +188,8 @@ pnpm --filter rmmz-example run sync:plugin   # ビルド済みプラグイン + 
 pnpm deploy-examples                         # SS-SDK のテストプロジェクトを spritestudio/ へ変換
 nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ エディターで開く）
 ```
+
+サンプルで [テストプレイでの変換](#convert-on-test-play) を試すには、`packages/ssconverter-core/wasm/ssconverter_bg.wasm` を `SampleProject/js/plugins/` にコピーし、SpriteStudio のプロジェクトを `SampleProject/SpriteStudio_Source/` に置きます。どちらも git の管理対象外です。サンプルは Web デモとしても公開され、そこでは変換が動かないため、`sync:plugin` はコンバーターをコピーしません。
 
 NW.js が無い場合は、`examples/rmmz-harness`（PixiJS v5 上の実際の `SSPlayer` /
 `SSPlayerRenderer`）のブラウザーハーネスを利用できます。進捗は

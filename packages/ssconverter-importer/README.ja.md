@@ -4,7 +4,7 @@
 
 このリポジトリのエディタ用プラグインが共有する取り込み処理です。ソースフォルダにある SpriteStudio のプロジェクト（`.sspj`）を探し、前回の取り込みが成功してから変わったものだけを変換し、それぞれの変換が書き出したファイルを記録します。
 
-> **対象読者:** ホストの中で SpriteStudio のプロジェクトを取り込むプラグインを開発する方（現在は [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder)）。private パッケージなので公開はせず、プラグインが自分のビルドに取り込みます。
+> **対象読者:** ホストの中で SpriteStudio のプロジェクトを取り込むプラグインを開発する方（プロジェクトを開いたときに取り込む [`ssplayer-tyranobuilder`](../ssplayer-tyranobuilder) と、テストプレイで取り込む [`ssplayer-rmmz`](../ssplayer-rmmz)）。private パッケージなので公開はせず、プラグインが自分のビルドに取り込みます。
 
 SSPlayerForRenPy の取り込み処理と同じ形で、変換には [`@spritestudio/ssconverter-core`](../ssconverter-core) を使います。
 
@@ -16,7 +16,7 @@ SSPlayerForRenPy の取り込み処理と同じ形で、変換には [`@spritest
 
 ## ホストが用意するもの
 
-- **ファイルシステム**（`HostBackend`）。Node の `fs` に `copySync` / `removeSync` を加えたもの、`node:path`、再帰的な mkdir です。TyranoBuilder はちょうどこの形を `window.studio_api` として公開しているので、`HostFs` で包んで渡します。
+- **ファイルシステム**（`HostBackend`）。Node の `fs` に `copySync` / `removeSync` を加えたもの、`node:path`、再帰的な mkdir です。TyranoBuilder はちょうどこの形を `window.studio_api` として公開しています。`require()` が使えるホスト（MZ の NW.js）は Node から組み立てます。どちらも `HostFs` で包んで渡します。
 - **置き場所**（プロジェクトルートからの相対パス）。ソースフォルダ（既定は `SpriteStudio_Source`）、出力フォルダ、状態ファイルです。出力フォルダと状態ファイルは、ホストの書き出しで扱いたいとおりになる場所に置いてください。
 - **コンバータの wasm**（`ssconverter-core` の `ssconverter_bg.wasm`）のパス。
 - **Worker**（任意）。`import workerSource from '@spritestudio/ssconverter-importer/worker-source'` を `workerSource` に渡します。

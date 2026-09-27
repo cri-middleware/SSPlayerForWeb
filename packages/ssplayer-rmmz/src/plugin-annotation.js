@@ -16,6 +16,12 @@
  *      (ssconverter-web) and place the output under a "spritestudio" folder at
  *      your PROJECT ROOT — beside img/, not inside it (see DEPLOYMENT below):
  *        MyGame/spritestudio/<project>/<project>.ssab (+ its .png textures)
+ *      Or let test play convert: put "ssconverter_bg.wasm" beside this plugin
+ *      and your SpriteStudio project FOLDERS under SpriteStudio_Source/ at the
+ *      project root. Every test play converts what changed into
+ *      spritestudio/<project>/ before the title; after saving in SpriteStudio,
+ *      press F5. A project that fails stops the boot with the reason and a
+ *      Retry button. A deployed game never converts.
  *   3. Use the "Show SS" plugin command to attach an animation to a picture id.
  *
  * The animation is attached as a CHILD of the picture, so Move Picture / scale
@@ -38,6 +44,10 @@
  *   are used — anything you put under img/ is deleted. Keep them in their own
  *   project-root folder (spritestudio/) and the option leaves them alone, the
  *   same way it leaves js/plugins/ alone. No extra setup, nothing to register.
+ *
+ *   Leave the sources out: deployment copies the whole project folder, so
+ *   enter "SpriteStudio_Source,ssconverter_bg.wasm" in [Exclude files/folders].
+ *   The game needs neither to play.
  *
  *   Trade-off: MZ's "Encrypt Image Files" option is also limited to img/ and
  *   audio/, so SS textures outside img/ ship unencrypted. If you want them
@@ -442,6 +452,12 @@
  *      【プロジェクト直下】の spritestudio フォルダに配置します。img/ の中では
  *      なく、img/ と並ぶ位置です（後述の「デプロイメント」参照）。
  *        ゲームフォルダ/spritestudio/<プロジェクト名>/<プロジェクト名>.ssab（＋ .png）
+ *      テストプレイに変換させることもできます。このプラグインの隣に
+ *      ssconverter_bg.wasm を置き、SpriteStudio のプロジェクトを【フォルダごと】
+ *      プロジェクト直下の SpriteStudio_Source/ に置きます。テストプレイのたびに、
+ *      変更のあったものがタイトルの前に spritestudio/<プロジェクト名>/ へ変換され
+ *      ます。SpriteStudio で保存したら F5 を押してください。変換に失敗すると起動が
+ *      止まり、理由と Retry ボタンが表示されます。デプロイしたゲームでは変換しません。
  *   3. プラグインコマンド「SS表示」でピクチャ番号にアニメを割り当てます。
  *
  * アニメはピクチャの子として追加されるため、ピクチャの移動・拡大がそのまま適用
@@ -464,6 +480,10 @@
  *   img/ の中に置くと削除されますが、プロジェクト直下の spritestudio/ に置けば
  *   js/plugins/ と同じく対象外となり、そのまま出力されます。登録作業も追加設定も
  *   不要です。
+ *
+ *   ソースは除外してください。デプロイメントはプロジェクトフォルダを丸ごと書き出す
+ *   ため、［除外するファイル/フォルダ］に「SpriteStudio_Source,ssconverter_bg.wasm」
+ *   を入力します。どちらもゲームの実行には不要です。
  *
  *   トレードオフ：暗号化（画像ファイル）も img/・audio/ だけが対象のため、img/ の
  *   外に置いたテクスチャは暗号化されません。テクスチャを暗号化したい場合は、.ssab と

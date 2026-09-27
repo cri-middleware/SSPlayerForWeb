@@ -2,12 +2,15 @@
 //
 //   dist/pack/ssplayer-rmmz-plugin-<version>.zip
 //     ├─ ssplayer-rpgmakermz.js             (runtime plugin — build first)
-//     └─ ssruntime_bg.wasm                  (runtime WASM)
+//     ├─ ssruntime_bg.wasm                  (runtime WASM)
+//     └─ ssconverter_bg.wasm                (converter WASM — .sspj on test play)
 //
 // RPG Maker MZ loads plugins as flat files from js/plugins/, and our plugin
 // auto-loads its WASM from the same folder (document.currentScript), so every
 // file must sit together in js/plugins/. A user extracts the zip's contents
-// straight into js/plugins/ and enables the plugin(s) in the editor.
+// straight into js/plugins/ and enables the plugin(s) in the editor. The
+// converter is optional: without it the plugin plays .ssab and converts
+// nothing, so an author who converts by hand can leave it out.
 //
 // Run after `pnpm --filter @spritestudio/ssplayer-rmmz run build`.
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -29,10 +32,15 @@ const runtimeJs = join(pkgRoot, 'dist/browser/ssplayer-rpgmakermz.js');
 // simd128 and cannot load the SIMD runtime build. Ship the no-SIMD variant
 // (same wasm-bindgen interface, so the bundled glue loads it unchanged).
 const runtimeWasm = join(repoRoot, 'packages/ssplayer-core/wasm-nosimd/ssruntime_bg.wasm');
+// The converter is built without SIMD in every variant, so the one the other
+// packages use loads in MZ's NW.js as it is. Its glue is inlined into the
+// plugin, which pins the plugin to this exact binary.
+const converterWasm = join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');
 
 for (const [label, p] of [
   ['ssplayer-rpgmakermz.js', runtimeJs],
   ['ssruntime_bg.wasm', runtimeWasm],
+  ['ssconverter_bg.wasm', converterWasm],
 ]) {
   if (!existsSync(p)) {
     console.error(`[pack] missing ${label}: ${p}\n  → build first: pnpm --filter @spritestudio/ssplayer-rmmz run build`);
@@ -51,9 +59,10 @@ rmSync(zipPath, { force: true });
 const files = {
   'ssplayer-rpgmakermz.js': readFileSync(runtimeJs),
   'ssruntime_bg.wasm': readFileSync(runtimeWasm),
+  'ssconverter_bg.wasm': readFileSync(converterWasm),
 };
 writeFileSync(zipPath, zipSync(files, { level: 9, mtime: new Date(1980, 0, 1) }));
 
 console.log(`[pack] wrote dist/pack/${zipName}`);
-console.log(`[pack] runtime: ssplayer-rpgmakermz.js + ssruntime_bg.wasm`);
+console.log(`[pack] runtime: ssplayer-rpgmakermz.js + ssruntime_bg.wasm, converter: ssconverter_bg.wasm`);
 console.log('[pack] extract into js/plugins/ and enable in the MZ plugin manager.');

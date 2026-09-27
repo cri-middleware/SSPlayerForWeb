@@ -22,6 +22,7 @@
     "LICENSE.ja.md"
   ],
   "dependencies": {
+    "@spritestudio/ssconverter-importer": "workspace:^",
     "@spritestudio/ssplayer-webgl": "workspace:^"
   },
   "peerDependencies": {
