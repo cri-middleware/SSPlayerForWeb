@@ -9,73 +9,20 @@
 //   - `js/app/core/plugin.js` — how plugins are loaded and what `TB` holds
 //   - `js/app/core/io.js`     — the `TB.io` methods
 
-/**
- * Node's `fs.Stats` as it survives Electron's contextBridge. Methods come
- * across as proxies, so they are optional here: callers must tolerate a plain
- * data clone with no methods (see `statOf()` in `hostFs.ts`).
- */
-export interface HostStats {
-  isDirectory?: () => boolean;
-  isFile?: () => boolean;
-  /** POSIX mode bits; the fallback when `isDirectory` did not survive. */
-  mode?: number;
-  size?: number;
-  mtimeMs?: number;
-  mtime?: string | Date | number;
-}
-
-/** The subset of `node:path` the builder exposes (whole module, actually). */
-export interface HostPath {
-  join(...parts: string[]): string;
-  dirname(p: string): string;
-  basename(p: string, ext?: string): string;
-  extname(p: string): string;
-  resolve(...parts: string[]): string;
-  relative(from: string, to: string): string;
-  readonly sep: string;
-}
-
-/** `fs-extra` (and `node:fs`) as exposed through the bridge. */
-export interface HostFsModule {
-  readFileSync(path: string, encoding?: string): unknown;
-  writeFileSync(path: string, data: unknown, encoding?: string): void;
-  appendFileSync(path: string, data: string, encoding?: string): void;
-  existsSync(path: string): boolean;
-  readdirSync(path: string): string[];
-  statSync(path: string): HostStats;
-  /** fs-extra: recursive copy, runs entirely on the Node side. */
-  copySync(src: string, dest: string): void;
-  /** fs-extra: delete, no error when absent. */
-  removeSync(path: string): void;
-}
-
-/**
- * Electron's `shell`, as `preload.js` hands it to the renderer.
- *
- * The only way a plugin can show the author a folder: there is no file dialog
- * on the bridge (`dialog` is commented out in `preload.js`) and no menu on the
- * main window. Optional, because it is undocumented and a build that stopped
- * publishing it must degrade to a panel with one less button.
- */
-export interface HostShell {
-  /** Opens a file or folder with the OS handler. Resolves to '' on success. */
-  openPath(path: string): Promise<string> | string;
-  showItemInFolder(path: string): void;
-}
+import type { HostBackend, HostFsModule } from '@spritestudio/ssconverter-importer';
 
 /**
  * `window.studio_api` — installed by the builder's `preload.js` via
  * `contextBridge.exposeInMainWorld`. This is the whole reason an in-editor
- * importer is possible at all: the renderer gets real filesystem access.
+ * importer is possible at all: the renderer gets real filesystem access. Its
+ * filesystem half is what the shared importer is written against
+ * (`HostBackend`, in `@spritestudio/ssconverter-importer`).
  */
-export interface StudioApi {
+export interface StudioApi extends HostBackend {
   /** `fs-extra`. */
   fs: HostFsModule;
   /** `node:fs`. */
   fs_default: HostFsModule;
-  path: HostPath;
-  mkdirp: { sync(dir: string, mode?: string): void };
-  shell?: HostShell;
   admzip?: unknown;
   ipcRenderer?: unknown;
 }

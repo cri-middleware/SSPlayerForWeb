@@ -3,8 +3,8 @@
  * `inline-converter-worker` plugin in `tsdown.config.ts`.
  *
  * It is a string and not a file because a Worker in a `file://` document can
- * only be started from a Blob URL, and because the plugin folder lives under
- * `data/`, which a TyranoBuilder export copies wholesale into the shipped game.
+ * only be started from a Blob URL, and because a host's plugin folder may sit
+ * where an export copies it wholesale — TyranoBuilder's lives under `data/`.
  */
 declare module 'virtual:converter-worker' {
   const source: string;
