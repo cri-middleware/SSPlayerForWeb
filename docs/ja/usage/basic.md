@@ -129,7 +129,7 @@ WebGL 版パッケージでは、HTML に記述するだけで簡単に利用で
 </script>
 
 <!-- src に ssab のパス、animation にアニメーション名を指定 -->
-<ss-player src="/assets/Ringo.ssab" animation="run" autoplay speed="1.5" style="width: 640px; height: 480px;"></ss-player>
+<ss-player src="/assets/Ringo.ssab" animation="run" autoplay speed-scale="1.5" style="width: 640px; height: 480px;"></ss-player>
 ```
 
 JavaScript から DOM 要素を取得して、`play()` / `pause()` などのメソッドを呼ぶことも可能です。
