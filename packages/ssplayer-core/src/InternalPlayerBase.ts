@@ -1342,7 +1342,16 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
             childState.visible = visible;
             if (childState.slot.raw.transitioned()) {
-                childState.player.runtimeManager.context.play();
+                const childContext = childState.player.runtimeManager.context;
+                childContext.play();
+                // The slot has already put the child on the frame to draw this tick:
+                // its section's first frame when it plays on its own — where play()
+                // leaves it — and the parent-relative frame when it is synced.
+                // play() puts a synced child back on the section's first frame, and
+                // the renderers read the child's playhead, so put it back.
+                if (!childState.slot.raw.independent()) {
+                    childContext.set_frame_no(childState.slot.raw.child_frame_no());
+                }
             }
 
             // Advance the child's own effects
