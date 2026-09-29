@@ -2,7 +2,7 @@ import type { FrameData } from './ss/runtime/frame-data.js';
 import type { InstanceChildState, InternalPlayerBase } from './InternalPlayerBase.js';
 import { FrameDataRaw } from './FrameDataRaw.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
-import { composeMaskInfluence, composeVisibleInside } from './MaskComposition.js';
+import { instanceMaskInfluence, instanceVisibleInside } from './MaskComposition.js';
 
 /**
  * One instance part, resolved for the frame currently being drawn: whether it
@@ -22,9 +22,9 @@ export interface ResolvedInstance<T> {
     childAlpha: number;
     /** owner parentMatrix ∘ instance world ∘ child local. Aliases `child.parentMatrix`. */
     composed: Float32Array;
-    /** Composed `mask_influence` handed to the sub-animation. */
+    /** The instance part's own `mask_influence`, handed to the sub-animation. */
     influence: boolean;
-    /** Composed `visible_inside_mask` polarity handed down. */
+    /** The instance part's own `visible_inside_mask`, handed down. */
     visibleInside: boolean;
     /** The child's playhead, honouring `subFrameEnabled` (see `getFrameNo`). */
     frameNo: number;
@@ -64,9 +64,9 @@ export class InstanceResolver<T extends InternalPlayerBase<T>> {
      * transparent.
      *
      * `parentMatrix` places the owner context (null at the root) and
-     * `parentAlpha` is the opacity accumulated down the instance ancestry;
-     * `ctxInfluence` / `ctxVisibleInside` are the owner's already-composed mask
-     * context (`ROOT_MASK_INFLUENCE` / `ROOT_VISIBLE_INSIDE` at the root).
+     * `parentAlpha` is the opacity accumulated down the instance ancestry. The
+     * mask context handed down needs nothing from the owner: it is the instance
+     * part's own flags, one level deep (see `MaskComposition`).
      */
     public resolve(
         player: T,
@@ -75,8 +75,6 @@ export class InstanceResolver<T extends InternalPlayerBase<T>> {
         rank: number,
         parentMatrix: Float32Array | null,
         parentAlpha: number,
-        ctxInfluence: boolean,
-        ctxVisibleInside: boolean,
     ): ResolvedInstance<T> | null {
         const partIdx = drawOrder[rank];
 
@@ -112,10 +110,10 @@ export class InstanceResolver<T extends InternalPlayerBase<T>> {
         out.composed = composed;
         // Caller side of the composition, resolved BEFORE the child builds
         // anything so it settles its own parts' roles itself and its output is
-        // never patched after the fact. `mask_write` deliberately takes no part:
-        // writing your own mask is a local fact, not something descendants inherit.
-        out.influence = composeMaskInfluence(ctxInfluence, partFlags);
-        out.visibleInside = composeVisibleInside(ctxVisibleInside, partFlags);
+        // never patched after the fact. Only this instance part's own flags go
+        // down — what the owner itself inherited stops here.
+        out.influence = instanceMaskInfluence(partFlags);
+        out.visibleInside = instanceVisibleInside(partFlags);
         // The child's DRAW frame, not its playhead: this is what the renderer is
         // handed for the sub-animation, so `subFrameEnabled = false` reaches it
         // as it does the root.

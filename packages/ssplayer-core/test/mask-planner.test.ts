@@ -3,7 +3,7 @@ import { MaskPlanner, MAX_MASK_WRITERS, MASK_GEOM_NORMAL, MASK_GEOM_SHAPE, MASK_
 import { DrawBatchKind } from '../src/ss/runtime/draw-batch-kind.js';
 
 interface BatchDesc { kind: number; parts: number[]; flags?: number; textureHash?: number; }
-interface PartDesc { mask?: number; flag?: number; shapeVerts?: number; meshVerts?: number; meshIdx?: number; }
+interface PartDesc { mask?: number; hide?: boolean; flag?: number; shapeVerts?: number; meshVerts?: number; meshIdx?: number; }
 
 // Build a plain MaskPlanSource from a declarative description. draw_order is the
 // parts concatenated in batch order; each batch's startRank is its offset there.
@@ -20,6 +20,7 @@ function makeSource(batches: BatchDesc[], parts: Record<number, PartDesc> = {}):
         readBatch: (i, out) => { const v = views[i]; out.kind = v.kind; out.startRank = v.startRank; out.count = v.count; out.flags = v.flags; out.textureHash = v.textureHash; },
         drawOrderAt: (r) => drawOrder[r],
         partMask: (p) => get(p).mask ?? 255,        // default: visible / active
+        partHide: (p) => get(p).hide ?? false,
         maskFlag: (p) => get(p).flag ?? 0,
         shapeVertexCount: (p) => get(p).shapeVerts ?? 0,
         meshVertexCount: (p) => get(p).meshVerts ?? 0,
@@ -63,6 +64,19 @@ describe('MaskPlanner', () => {
         expect(p.partIdx[0]).toBe(2);
         expect(p.rank[0]).toBe(1);                  // second part's draw rank
         expect(p.bit[0]).toBe(0);                   // bit stays dense after the skip
+    });
+
+    it('skips hidden writers like inert ones', () => {
+        // A hidden draw_as_mask part keeps its Mask batch in the runtime's
+        // output; hiding it must still switch its mask off.
+        const p = new MaskPlanner();
+        const src = makeSource([{ kind: DrawBatchKind.Mask, parts: [1, 2] }], { 1: { hide: true }, 2: {} });
+        expect(p.plan(src)).toBe(1);
+        expect(p.partIdx[0]).toBe(2);
+        expect(p.bit[0]).toBe(0);
+        // ...and a hidden clipping writer, should one reach the planner.
+        const clip = makeSource([{ kind: DrawBatchKind.Normal, parts: [3] }], { 3: { flag: 0x02, hide: true } });
+        expect(p.plan(clip)).toBe(0);
     });
 
     it('does not treat draw_as_mask parts in a Normal batch as clipping writers', () => {

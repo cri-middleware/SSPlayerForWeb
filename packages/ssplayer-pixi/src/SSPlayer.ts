@@ -1,5 +1,5 @@
 import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, ListenerSet, type InstanceChildState, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, MaskPlanner, FrameDataMaskSource, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -91,40 +91,40 @@ export type Unsubscribe = () => void;
  */
 export type SSPartAttachment = SSPartAttachmentOf<Container>;
 
-// Per-context mask coverage produced by the pre-pass: the offscreen texture,
-// the affine that maps a part's player-local position into the coverage's
-// [0,1] UV space, and the writer metadata replayed by the masked shader.
+// Writers the coverage bitmap holds for a whole instance tree: 24 bits per tile
+// (R/G/B x 8), the texture split into at most 4 tiles.
+const MASK_TILE_BITS = MAX_MASK_WRITERS;
+const MAX_TREE_MASK_WRITERS = MASK_TILE_BITS * 4;
+
+// The instance tree's mask coverage, produced by the root context's pre-pass:
+// the offscreen texture, the affine that maps a part's position (in the root's
+// space, where every context's geometry lands) into the coverage's [0,1] UV
+// space, and the writer metadata replayed by the masked shader.
 interface MaskCoverage {
     rt: RenderTexture;
     minX: number;
     minY: number;
     invW: number;
     invH: number;
-    meta: Float32Array; // MAX_MASK_WRITERS * vec4 (drawRank, bit, opInvert, isClipping)
+    meta: Float32Array; // MAX_TREE_MASK_WRITERS * vec4 (open, close, bit, opInvert) — see MaskTreePlanner
     count: number;
+    // Tile grid (columns, rows) the writers are spread over — see buildTreeCoverage.
+    tilesX: number;
+    tilesY: number;
 }
 
 // Mask context an instance part hands to the sub-animation it calls.
-// The caller's settings do NOT replace the
-// callee's — they COMPOSE: `mask_influence` with AND, `visible_inside_mask`
-// with OR. Every part in the sub-animation then resolves its own role against
-// the composed value, so a caller can never silently discard what a callee part
-// asked for (nor the other way round). Because each level passes an already
-// composed value down, nesting chains with no extra bookkeeping.
-//
-// A fallback of the shape "the callee wins if it has its own setting, otherwise
-// inherit the caller's" is NOT equivalent to either operator and disagrees with
-// SpriteStudio 7.5 in both directions — that was the defect this replaced.
+// The instance part's settings do NOT replace the callee's — they COMPOSE:
+// `mask_influence` with AND, `visible_inside_mask` with OR — and only the
+// instance part's own flags go down, one level (see MaskComposition). The
+// coverage is the tree's, built once at the root.
 interface InheritedMask {
-    // Ancestor coverage the sub-animation clips against, or null when no mask
-    // reaches it (the child then falls back to its own coverage, if it has one).
+    // The tree's coverage, or null when no writer is active anywhere in it.
     cov: MaskCoverage | null;
-    // Rank of the instance part in the draw order of whoever OWNS `cov`. The
-    // scope test is judged at the instance part's slot, not the child
-    // part's, because that is where the sub-animation sits in the caller.
-    rank: number;
-    // Composed caller-chain values. `influence: false` is absorbing: once a
-    // caller is not a mask target, nothing below it is either.
+    // The tree has writers but no renderer to rasterise them yet (see
+    // maskDeferred in renderContext): the sub-animation's mask targets wait.
+    deferred: boolean;
+    // The instance part's own mask_influence / visible_inside_mask.
     influence: boolean;
     visibleInside: boolean;
 }
@@ -260,17 +260,30 @@ export class SSPlayer extends Container {
     // Bbox→RT mapping for the coverage pass, passed as the render-root transform
     // (a render-group root's own scale/position are ignored by renderer.render).
     private readonly scratchCovTransform = new Matrix();
-    // Engine-agnostic mask writer planner (core) + its FrameData adapter. The
-    // planner does all writer selection/classification; this class only
-    // rasterises the resulting plan into the coverage bitmap.
-    private readonly maskPlanner = new MaskPlanner();
-    private readonly maskSource = new FrameDataMaskSource();
-    // Carry-over scratch: the running coverage bbox shared by every baked
-    // writer, and a pooled candidate list of visible instance children whose
-    // clipping writers are carried up into this context's coverage.
+    // Engine-agnostic mask planning for the whole instance tree (core): which
+    // writers there are, where each one holds on the tree's draw sequence, and
+    // the sequence number of every part. This class only rasterises them into
+    // the coverage bitmap, through the visitors below.
+    private readonly maskTree = new MaskTreePlanner<DirectInternalPlayer>(MAX_TREE_MASK_WRITERS);
+    // One container per coverage tile under maskRenderRoot; each carries the
+    // bbox→tile mapping as its own transform.
+    private readonly _covTiles: Container[] = [];
+    // Running coverage bbox shared by every baked writer.
     private readonly _covBBox = new Float32Array(4);
-    private readonly _bubbleCands: { rank: number; child: InstanceChildState<DirectInternalPlayer>; influence: boolean; composed: Float32Array }[] = [];
-    private _bubbleCount = 0;
+    private readonly _coverageVisitor: MaskTreeVisitor<DirectInternalPlayer> = {
+        beginContext: (player, _fd, matrix) => {
+            // The context's geometry in the root's space, where the coverage lives.
+            const gb = player.geometryBuilder;
+            gb.parentMatrix = matrix;
+            gb.updateWorldPositions();
+        },
+        writer: (player, fd, planner, w, index) => this.bakePlannedWriter(player.geometryBuilder, fd, planner, w, index),
+    };
+    // Counts writers without a renderer to rasterise them into (maskDeferred).
+    private readonly _countVisitor: MaskTreeVisitor<DirectInternalPlayer> = {
+        beginContext: () => {},
+        writer: () => {},
+    };
     private maskWriteShaders: Map<Texture, Shader> = new Map();
     // Masked-content shaders keyed by `${contentTexUid}_${coverageRtUid}` so the
     // bound coverage sampler (a per-context resource) stays consistent.
@@ -1276,7 +1289,7 @@ export class SSPlayer extends Container {
     private inheritedAtDepth(depth: number): InheritedMask {
         let m = this._inheritedPool[depth];
         if (!m) {
-            m = { cov: null, rank: 0, influence: ROOT_MASK_INFLUENCE, visibleInside: ROOT_VISIBLE_INSIDE };
+            m = { cov: null, deferred: false, influence: ROOT_MASK_INFLUENCE, visibleInside: ROOT_VISIBLE_INSIDE };
             this._inheritedPool[depth] = m;
         }
         return m;
@@ -1318,11 +1331,12 @@ export class SSPlayer extends Container {
 
         const maskFlags = manager.getPartMaskFlags();
 
-        // Mask coverage pre-pass: rasterise this context's mask contributors
-        // (DrawBatchKind.Mask batches) into an offscreen coverage texture, then
-        // masked content samples it below. Null when the context has no masks.
-        // Runs here, in the ticker, so coverage is ready before the stage render
-        // draws our children. See buildMaskCoverage.
+        // Mask coverage pre-pass, once per tree at the root: number every part
+        // of the instance tree on one draw sequence and rasterise every writer
+        // in it into one offscreen coverage texture; masked content samples it
+        // below, in this context and in every sub-animation. Null when the tree
+        // has no active writer. Runs here, in the ticker, so coverage is ready
+        // before the stage render draws our children. See buildTreeCoverage.
         //
         // Without a renderer we cannot rasterise at all. That happens on the
         // first drawn frame of a player the host did not attachRenderer() to —
@@ -1333,49 +1347,48 @@ export class SSPlayer extends Container {
         // anyway (pure CPU, no renderer needed) and, if this frame does have
         // masks, hold their targets back until coverage can be produced —
         // one missing frame instead of one wrong one.
-        // Composed mask context from the caller chain. The root identity
-        // is influence = true / visibleInside = false, which makes every part of
-        // a top-level animation evaluate exactly by its own flags. Resolved here,
-        // ahead of the coverage pass, because carry-over composes each bubbled
-        // writer's op with this influence.
+        //
+        // The mask context an instance part handed down: its own flags, one
+        // level (see MaskComposition). The root identity is influence = true /
+        // visibleInside = false, which makes every part of a top-level animation
+        // evaluate exactly by its own flags.
         const ctxInfluence = inheritedMask ? inheritedMask.influence : ROOT_MASK_INFLUENCE;
         const ctxVisibleInside = inheritedMask ? inheritedMask.visibleInside : ROOT_VISIBLE_INSIDE;
 
         let cov: MaskCoverage | null = null;
         let maskDeferred = false;
-        if (this.maskEnabled) {
+        if (inheritedMask) {
+            cov = inheritedMask.cov;
+            maskDeferred = inheritedMask.deferred;
+        } else if (this.maskEnabled) {
             if (this.renderer) {
-                cov = this.buildMaskCoverage(player, manager, geometryBuilder, frameData, drawOrder, ctxInfluence);
-                // buildMaskCoverage reads instance children's frames to carry their
-                // clipping masks up, which can grow WASM memory and detach
-                // our frameData / drawOrder views. Re-derive before the batch loop
-                // reads them; only runs on an actual grow.
-                if (getWasmMemory().buffer !== memBuf) {
-                    const fresh = manager.getFrameData(frameNo);
-                    const freshOrder = fresh?.drawOrderArray();
-                    if (!fresh || !freshOrder) return;
-                    frameData = fresh;
-                    drawOrder = freshOrder;
-                    memBuf = getWasmMemory().buffer;
-                }
+                cov = this.buildTreeCoverage(player, frameData, parentMatrix);
             } else {
-                this.maskSource.bind(frameData, drawOrder, manager);
-                maskDeferred = this.maskPlanner.plan(this.maskSource) > 0;
+                maskDeferred = this.maskTree.plan(player, frameData, parentMatrix, this._countVisitor) > 0;
+            }
+            // Planning asks every visible instance child for its frame, which
+            // can grow WASM memory and detach our frameData / drawOrder views.
+            // Re-derive before the batch loop reads them; only runs on an
+            // actual grow.
+            if (getWasmMemory().buffer !== memBuf) {
+                const fresh = manager.getFrameData(frameNo);
+                const freshOrder = fresh?.drawOrderArray();
+                if (!fresh || !freshOrder) return;
+                frameData = fresh;
+                drawOrder = freshOrder;
+                memBuf = getWasmMemory().buffer;
             }
         }
+        // Where this context's ranks sit on the tree's draw sequence — what
+        // each writer's interval is judged against. Numbered by the planner
+        // whenever masking is on at all.
+        const seq = this.maskEnabled ? this.maskTree.seqOf(player) : undefined;
+        // With no coverage, a part that draws only inside a mask is covered by
+        // nothing and draws nowhere — even when the tree has no mask at all.
+        // Only when masking is on: turning it off draws every part.
+        const insideDropsOut = this.maskEnabled && cov === null && !maskDeferred;
 
-        // Coverage this context's parts clip against. An ancestor's coverage
-        // wins over our own when one reaches here, because a sub-animation is
-        // drawn into the caller's coverage space. When the composed influence is
-        // false the AND has already settled the whole subtree as non-target, so
-        // nothing here clips at all.
-        //
-        // Known limitation: a child that BOTH inherits coverage and owns masks
-        // of its own keeps only the inherited one — the replay samples a single
-        // coverage texture. Composing two would need a second sampler.
-        const effCov = ctxInfluence ? (inheritedMask?.cov ?? cov) : null;
-
-        /** Polarity for one part: the caller chain's OR its own. */
+        /** Polarity for one part: the instance part's OR its own. */
         const polarityOf = (partIdx: number): number =>
             composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0) ? 1 : 0;
 
@@ -1408,7 +1421,7 @@ export class SSPlayer extends Container {
                     // reused, so read out what must survive the recursion below.
                     const inst = this._instanceResolver.resolve(
                         player, frameData, drawOrder, startRank + c,
-                        parentMatrix, parentAlpha, ctxInfluence, ctxVisibleInside);
+                        parentMatrix, parentAlpha);
                     if (!inst) continue;
                     const child = inst.child;
                     const composed = inst.composed;
@@ -1416,24 +1429,17 @@ export class SSPlayer extends Container {
                     const instInfluence = inst.influence;
                     const instVisibleInside = inst.visibleInside;
 
-                    // Coverage is deferred this frame (see maskDeferred): a mask
-                    // target instance part would draw its whole sub-animation
-                    // unclipped, so hold it back instead.
-                    if (maskDeferred && instInfluence) continue;
-
                     const childFrame = inst.frameNo;
                     const childFrameData = child.player.runtimeManager.getFrameData(childFrame);
                     if (!childFrameData) continue;
 
                     // Instance mask inheritance. The child's composited
-                    // positions are already in this coverage's space, so its
-                    // parts sample `effCov` directly; the scope test stays at
-                    // the rank that owns that coverage, which is this instance
-                    // part's own rank unless we are ourselves a sub-animation
-                    // clipping against an ancestor's.
+                    // positions are already in the tree coverage's space, so
+                    // its parts sample it directly, each judged at its own
+                    // number on the tree sequence.
                     const childInherited = this.inheritedAtDepth(this._depth);
-                    childInherited.cov = effCov;
-                    childInherited.rank = inheritedMask ? inheritedMask.rank : startRank + c;
+                    childInherited.cov = cov;
+                    childInherited.deferred = maskDeferred;
                     childInherited.influence = instInfluence;
                     childInherited.visibleInside = instVisibleInside;
                     // The child holds this slot for its whole render, so it must
@@ -1459,11 +1465,19 @@ export class SSPlayer extends Container {
                 continue;
             }
 
+            // Whether this batch's parts are mask targets: the batch's
+            // FLAG_MASK_INFLUENCE (0x01) is the parts' own mask_influence
+            // (batches are keyed by it), ANDed with the instance part's.
+            const target = (flags & 0x01) !== 0 && ctxInfluence;
+
             // Coverage is deferred this frame (see maskDeferred): the parts this
             // batch would have had clipped are held back rather than drawn
             // unclipped. Same predicate as `masked` below, so exactly the parts
             // the mask governs are the ones that wait for it.
-            if (maskDeferred && (flags & 0x01) !== 0) continue;
+            if (maskDeferred && target) continue;
+            // Targets that draw only inside a mask, with no coverage to be
+            // inside of, are skipped per part below.
+            const dropInside = insideDropsOut && target;
 
             // Effect batches (and root/null parts) carry textureHash 0; their real
             // texture is resolved per draw command, so avoid the missing-asset warning.
@@ -1483,14 +1497,11 @@ export class SSPlayer extends Container {
             const invTexW = 1.0 / texture.width;
             const invTexH = 1.0 / texture.height;
             
-            // Parts in this batch are clipped when coverage reaches them AND the
-            // runtime set the batch's FLAG_MASK_INFLUENCE (0x01). That flag is
-            // the parts' own mask_influence (batches are keyed by it), so this
-            // conjunction IS the AND: `effCov` already carries the caller
-            // chain's half, and a sub-animation part that opted out is not
-            // clipped even though its caller was a mask target. Masked parts use
-            // a separate pool (carrying aMaskUV) and shader.
-            const masked = effCov !== null && (flags & 0x01) !== 0;
+            // Parts in this batch are clipped when they are targets and the tree
+            // has coverage. A target no writer reaches passes the test anyway,
+            // so there is no need to work out which writers reach which part
+            // here. Masked parts use a separate pool (carrying aMaskUV) and shader.
+            const masked = cov !== null && target;
 
             if (kind === DrawBatchKind.Normal) {
                 for (let c = 0; c < count; c++) {
@@ -1499,6 +1510,7 @@ export class SSPlayer extends Container {
                     if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
                     const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
+                    if (dropInside && polarityOf(partIdx)) continue;
 
                     const mesh = masked
                         ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, 5, 12, 'masked')
@@ -1530,9 +1542,9 @@ export class SSPlayer extends Container {
                         : null;
 
                     this.finishPart(mesh, 5, masked,
-                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        seq ? seq[startRank + c] : 0,
                         polarityOf(partIdx),
-                        effCov, texture, blendMode, parentAlpha, ssShader);
+                        cov, texture, blendMode, parentAlpha, ssShader);
                 }
             } else if (kind === DrawBatchKind.Shape) {
                 const shapeVertexCounts = manager.getShapeVertexCounts();
@@ -1545,6 +1557,7 @@ export class SSPlayer extends Container {
 
                     const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
+                    if (dropInside && polarityOf(partIdx)) continue;
 
                     const numIndices = (numVerts - 2) * 3;
                     const mesh = masked
@@ -1569,9 +1582,9 @@ export class SSPlayer extends Container {
                     mesh.geometry.getIndex().update();
 
                     this.finishPart(mesh, numVerts, masked,
-                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        seq ? seq[startRank + c] : 0,
                         polarityOf(partIdx),
-                        effCov, texture, blendMode, parentAlpha);
+                        cov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Mesh) {
                 const meshVOff = manager.getMeshVertexOffsets();
@@ -1582,6 +1595,7 @@ export class SSPlayer extends Container {
                     if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
                     const alpha = this._raw.partAlphaOf(frameData, partIdx);
                     if (alpha <= 0) continue;
+                    if (dropInside && polarityOf(partIdx)) continue;
 
                     const v0 = meshVOff[partIdx];
                     const v1 = meshVOff[partIdx + 1];
@@ -1613,9 +1627,9 @@ export class SSPlayer extends Container {
                     mesh.geometry.getIndex().update();
 
                     this.finishPart(mesh, pCount, masked,
-                        inheritedMask ? inheritedMask.rank : startRank + c,
+                        seq ? seq[startRank + c] : 0,
                         polarityOf(partIdx),
-                        effCov, texture, blendMode, parentAlpha);
+                        cov, texture, blendMode, parentAlpha);
                 }
             } else if (kind === DrawBatchKind.Effect) {
                 // Particle geometry is simulated in the WASM runtime and returned as an
@@ -1702,7 +1716,7 @@ export class SSPlayer extends Container {
         mesh: Mesh<any>,
         numVerts: number,
         masked: boolean,
-        maskRank: number,
+        maskSeq: number,
         maskMode: number,
         cov: MaskCoverage | null,
         texture: Texture,
@@ -1712,7 +1726,7 @@ export class SSPlayer extends Container {
     ): void {
         if (masked && cov) {
             // maskMode = visible_inside_mask: show inside (1) vs outside (0).
-            this.fillMaskUV(mesh, numVerts, maskRank, maskMode, cov);
+            this.fillMaskUV(mesh, numVerts, maskSeq, maskMode, cov);
             mesh.shader = this.getMaskedShader(texture, cov) as any;
         } else {
             // SpriteStudio integration shader if the part carries one, else the
@@ -1725,8 +1739,8 @@ export class SSPlayer extends Container {
         this.addChild(mesh);
     }
 
-    /** Write per-vertex aMaskUV (coverage uv, rank, polarity) for a masked part. */
-    private fillMaskUV(mesh: Mesh<any>, numVerts: number, thisRank: number, mode: number, cov: MaskCoverage): void {
+    /** Write per-vertex aMaskUV (coverage uv, tree sequence number, polarity) for a masked part. */
+    private fillMaskUV(mesh: Mesh<any>, numVerts: number, thisSeq: number, mode: number, cov: MaskCoverage): void {
         const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
         const buf = mesh.geometry.getBuffer('aMaskUV');
         const muv = buf.data as Float32Array;
@@ -1735,118 +1749,58 @@ export class SSPlayer extends Container {
             const y = positions[v * 2 + 1];
             muv[v * 4 + 0] = (x - cov.minX) * cov.invW;
             muv[v * 4 + 1] = (y - cov.minY) * cov.invH;
-            muv[v * 4 + 2] = thisRank;
+            muv[v * 4 + 2] = thisSeq;
             muv[v * 4 + 3] = mode;
         }
         buf.update();
     }
 
     /**
-     * Rasterise this context's mask contributors (DrawBatchKind.Mask batches)
-     * into an offscreen coverage texture using the bit-packed bitmap method:
-     * each writer gets one bit (0..23) packed into the
-     * R/G/B channels via additive blending, cut out by its alpha threshold.
+     * Rasterise every writer of the instance tree under `player` into one
+     * offscreen coverage texture using the bit-packed bitmap method: each
+     * writer gets one bit (0..23) packed into the R/G/B channels via additive
+     * blending, cut out by its alpha threshold. Every context's writers land in
+     * the root's space (the space every part of the tree is drawn in), so one
+     * texture serves the whole tree, and which writer reaches which part is
+     * settled by the writers' intervals on the tree sequence (MaskTreePlanner).
      * Returns the coverage texture, the bbox→UV mapping, and the per-writer
-     * metadata replayed by the masked shader; null when there are no active
-     * writers. Rendered immediately (we run before the stage render), so the
-     * texture is ready when masked content samples it.
+     * metadata replayed by the masked shader; null when no writer is active.
+     * Rendered immediately (we run before the stage render), so the texture is
+     * ready when masked content samples it.
      */
-    private buildMaskCoverage(
+    private buildTreeCoverage(
         player: DirectInternalPlayer,
-        manager: SSRuntimeManager,
-        geometryBuilder: GeometryBuilder,
         frameData: FrameData,
-        drawOrder: Uint16Array,
-        ctxInfluence: boolean
+        parentMatrix: Float32Array | null
     ): MaskCoverage | null {
-        const slot = this.activeRTs;
-        const covObj = this.ensureCov(slot);
-
-        // Engine-agnostic planning (core): select writers, classify OP / scope /
-        // clipping, resolve cutout threshold + geometry kind, assign coverage
-        // bits and the replay meta. This class only rasterises the plan below.
-        const planner = this.maskPlanner;
-        this.maskSource.bind(frameData, drawOrder, manager);
-        const count = planner.plan(this.maskSource);
-        if (planner.exceeded && !this.maskWritersExceeded) {
-            this.maskWritersExceeded = true;
-            console.warn(`[SSPlayer] mask writers exceeded ${MAX_MASK_WRITERS}; extra masks ignored.`);
-        }
-
-        // Carry-over: a mask written *inside* a visible instance child
-        // reaches out to the parent's parts drawn after that instance. Snapshot
-        // the instance placements now — before any child getFrameData() below can
-        // grow WASM memory and detach `drawOrder` — then bake each child's
-        // clipping writers into this coverage. The coverage pass runs even when
-        // this context owns no writer of its own (count === 0), as long as a
-        // child carries one up.
-        const bubbleCount = this.collectClipBubbles(player, geometryBuilder, frameData, drawOrder, ctxInfluence);
-        if (count === 0 && bubbleCount === 0) return null;
-
-        const root = this.maskRenderRoot;
         const bbox = this._covBBox;
         bbox[0] = Infinity; bbox[1] = Infinity; bbox[2] = -Infinity; bbox[3] = -Infinity;
 
-        // Own writers: rasterise each into the coverage bitmap (its coverage bit
-        // pre-encoded into one R/G/B channel, cutout threshold in aVarg.x,
-        // additive-blended so disjoint bits OR together).
-        for (let w = 0; w < count; w++) {
-            this.bakeCoverageWriter(geometryBuilder, frameData, planner.partIdx[w], planner.geomKind[w],
-                planner.numVerts[w], planner.numIndices[w], planner.textureHash[w], planner.threshold[w],
-                planner.bit[w], bbox);
+        // Engine-agnostic planning (core): number the tree, select and classify
+        // every context's writers, and hand each to the visitor, which bakes it
+        // into the coverage render root while its context's frame is current.
+        const root = this.maskRenderRoot;
+        const tree = this.maskTree;
+        const count = tree.plan(player, frameData, parentMatrix, this._coverageVisitor);
+        if (tree.exceeded && !this.maskWritersExceeded) {
+            this.maskWritersExceeded = true;
+            console.warn(`[SSPlayer] mask writers exceeded ${MAX_TREE_MASK_WRITERS}; extra masks ignored.`);
+        }
+        const tiles = this._covTiles;
+        if (count === 0) {
+            for (const t of tiles) t.removeChildren();
+            return null;
         }
 
-        // The planner's `meta` is reusable scratch (overwritten by the child
-        // plan() below). Copy the own writers' entries into the pooled per-slot
-        // record before that happens, so an inheriting child can replay
-        // this coverage at draw time.
-        covObj.meta.set(planner.meta.subarray(0, count * 4));
+        const slot = this.activeRTs;
+        const covObj = this.ensureCov(slot);
+        covObj.meta.set(tree.meta.subarray(0, count * 4));
 
-        // Bubble each visible instance child's clipping writers up. `total`
-        // continues the own writers' bit numbering; the shared 24-bit budget
-        // covers both (carry-over).
-        let total = count;
-        for (let bi = 0; bi < bubbleCount && total < MAX_MASK_WRITERS; bi++) {
-            const cand = this._bubbleCands[bi];
-            const childManager = cand.child.player.runtimeManager;
-            const childFrame = cand.child.player.getDrawFrame();
-            const childFrameData = childManager.getFrameData(childFrame);
-            if (!childFrameData) continue;
-            const childDrawOrder = childFrameData.drawOrderArray();
-            if (!childDrawOrder) continue;
-
-            this.maskSource.bind(childFrameData, childDrawOrder, childManager);
-            const cCount = planner.plan(this.maskSource);
-            if (cCount === 0) continue;
-
-            // The child's geometry is built in this coverage's space via the
-            // composed instance matrix, matching where the child's parts land
-            // when it draws normally.
-            const cgb = cand.child.player.geometryBuilder;
-            cgb.parentMatrix = cand.composed;
-            cgb.updateWorldPositions();
-
-            for (let w = 0; w < cCount && total < MAX_MASK_WRITERS; w++) {
-                // Only clipping writers carry out; a pure mask closes within the
-                // sub-animation.
-                if (!planner.isClipping[w]) continue;
-                const bit = total;
-                // Ranked at the instance part so it clips the owner parts drawn
-                // after it; op composed with the influence handed down — a
-                // mask_influence == 0 instance drops its writers onto the union
-                // (increment) plane (op_invert = false).
-                covObj.meta[bit * 4 + 0] = cand.rank;
-                covObj.meta[bit * 4 + 1] = bit;
-                covObj.meta[bit * 4 + 2] = (planner.opInvert[w] && cand.influence) ? 1 : 0;
-                covObj.meta[bit * 4 + 3] = 1;
-                this.bakeCoverageWriter(cgb, childFrameData, planner.partIdx[w], planner.geomKind[w],
-                    planner.numVerts[w], planner.numIndices[w], planner.textureHash[w], planner.threshold[w],
-                    bit, bbox);
-                total++;
-            }
-        }
-
-        if (total === 0) return null; // every candidate child turned out writer-less
+        // Past one tile's 24 bits, split the texture into 2 and then 4 tiles.
+        // The texture grows to keep each tile at the bbox's resolution, up to
+        // the size cap; past it the tiles share the cap at a lower resolution.
+        const tilesX = count > MASK_TILE_BITS ? 2 : 1;
+        const tilesY = count > MASK_TILE_BITS * 2 ? 2 : 1;
 
         // Pad 1px so the mask's own edge texels aren't clipped; guard degeneracy.
         let minX = bbox[0] - 1, minY = bbox[1] - 1, maxX = bbox[2] + 1, maxY = bbox[3] + 1;
@@ -1855,28 +1809,45 @@ export class SSPlayer extends Container {
         if (boxW < 1) boxW = 1;
         if (boxH < 1) boxH = 1;
 
-        const rt = this.acquireCoverageRT(slot, boxW, boxH);
+        const rt = this.acquireCoverageRT(slot, boxW * tilesX, boxH * tilesY);
 
-        // Map the bbox onto the full RT: (minX,minY) → pixel (0,0), (maxX,maxY)
-        // → (rtW,rtH). The masked shader's coverage uv = (pos - min) / box ∈ [0,1].
-        // The container passed to renderer.render() is a render-group root whose
-        // OWN transform is ignored, so the bbox mapping must go through the
-        // RenderOptions `transform` instead of root.scale/position.
-        const sx = rt.width / boxW;
-        const sy = rt.height / boxH;
-        this.scratchCovTransform.set(sx, 0, 0, sy, -minX * sx, -minY * sy);
+        // Map the bbox onto each tile: (minX,minY) → the tile's top-left pixel,
+        // (maxX,maxY) → its bottom-right. The masked shader's coverage uv =
+        // (pos - min) / box ∈ [0,1], offset into the writer's tile. The
+        // container passed to renderer.render() is a render-group root whose
+        // OWN transform is ignored, so each tile's mapping rides on its tile
+        // container and the render root gets identity.
+        const tileW = rt.width / tilesX;
+        const tileH = rt.height / tilesY;
+        const sx = tileW / boxW;
+        const sy = tileH / boxH;
+        for (let t = 0; t < tiles.length; t++) {
+            const ox = (t % tilesX) * tileW;
+            const oy = Math.floor(t / tilesX) * tileH;
+            tiles[t].setFromMatrix(this.scratchCovTransform.set(sx, 0, 0, sy, ox - minX * sx, oy - minY * sy));
+        }
+        this.scratchCovTransform.identity();
 
         this.renderer!.render({ container: root, target: rt, clear: true, clearColor: [0, 0, 0, 0], transform: this.scratchCovTransform });
-        root.removeChildren();
+        for (const t of tiles) t.removeChildren();
 
         covObj.rt = rt;
         covObj.minX = minX;
         covObj.minY = minY;
         covObj.invW = 1 / boxW;
         covObj.invH = 1 / boxH;
-        covObj.count = total;
+        covObj.count = count;
+        covObj.tilesX = tilesX;
+        covObj.tilesY = tilesY;
         this.activeRTs = slot + 1;
         return covObj;
+    }
+
+    /** Bake `planner`'s writer `w` into the coverage under bit `bit` (MaskTreeVisitor). */
+    private bakePlannedWriter(gb: GeometryBuilder, fd: FrameData, planner: MaskPlanner, w: number, bit: number): void {
+        this.bakeCoverageWriter(gb, fd, planner.partIdx[w], planner.geomKind[w],
+            planner.numVerts[w], planner.numIndices[w], planner.textureHash[w], planner.threshold[w],
+            bit, this._covBBox);
     }
 
     /**
@@ -1884,9 +1855,8 @@ export class SSPlayer extends Container {
      * build its geometry (via `gb` from `fd`), pre-encode `bit` into one aColor
      * R/G/B channel and the cutout `threshold` into aVarg.x, accumulate the
      * writer's extent into `bbox` [minX,minY,maxX,maxY], and add the mesh to the
-     * coverage render root (additive-blended). `gb` is this context's builder for
-     * an own writer, or an instance child's builder placed into owner space for a
-     * bubbled one. Cutout texture comes from the planner's DrawBatch
+     * coverage render root (additive-blended). `gb` is the writer's context's
+     * builder, placed into the root's space. Cutout texture comes from the planner's DrawBatch
      * textureHash (0 = pure mask / shape → no cutout, the geometry is the mask).
      */
     private bakeCoverageWriter(
@@ -1916,8 +1886,11 @@ export class SSPlayer extends Container {
             gb.buildNormal(partIdx, fd, invTexW, invTexH, positions, uvs, colors, vargs);
         }
 
-        const chan = (bit / 8) | 0;
-        const bitVal = (1 << (bit % 8)) / 255;
+        // Tile first, then the channel and bit inside it.
+        const tile = (bit / MASK_TILE_BITS) | 0;
+        const tileBit = bit - tile * MASK_TILE_BITS;
+        const chan = (tileBit / 8) | 0;
+        const bitVal = (1 << (tileBit % 8)) / 255;
         const br = chan === 0 ? bitVal : 0;
         const bg = chan === 1 ? bitVal : 0;
         const bb = chan === 2 ? bitVal : 0;
@@ -1937,56 +1910,29 @@ export class SSPlayer extends Container {
         mesh.blendMode = 'add';
         mesh.alpha = 1;
         mesh.visible = true;
-        this.maskRenderRoot.addChild(mesh);
+        this.coverageTile(tile).addChild(mesh);
     }
 
-    /**
-     * Snapshot the visible instance children whose clipping writers carry up into
-     * this context's coverage. Fills the pooled `_bubbleCands` with, per
-     * child: its `rank` in the owner draw order (where the carried mask starts
-     * clipping), the child state, the composed `mask_influence` handed down (which
-     * decides each bubbled writer's op plane), and the composed instance matrix
-     * (owner parentMatrix ∘ instance world ∘ child local) that maps the child's
-     * geometry into this coverage's space. Reads only the owner frame (no child
-     * getFrameData), so it is safe to run before the detach-prone bubble bake.
-     * Returns the candidate count.
-     *
-     * Which instance parts qualify is the core resolver's call, so a fully
-     * transparent one is skipped here exactly as it is in the draw loop: an
-     * instance the renderer never draws contributes no coverage either. It is
-     * also the shared reading of "visible instance child" — ssplayer-webgl
-     * reaches the same point by carrying the writers up from inside its draw loop.
-     */
-    private collectClipBubbles(
-        player: DirectInternalPlayer, geometryBuilder: GeometryBuilder,
-        frameData: FrameData, drawOrder: Uint16Array, ctxInfluence: boolean
-    ): number {
-        this._bubbleCount = 0;
-        const ownerParent = geometryBuilder.parentMatrix;
-        const n = drawOrder.length;
-        for (let rank = 0; rank < n; rank++) {
-            // parentAlpha / ctxVisibleInside play no part in a bubble: only the
-            // rank, the composed placement and the op-deciding influence do.
-            const inst = this._instanceResolver.resolve(
-                player, frameData, drawOrder, rank, ownerParent, 1, ctxInfluence, ROOT_VISIBLE_INSIDE);
-            if (!inst) continue;
-            // The composed matrix reuses child.parentMatrix as its target, and is
-            // recomputed identically when the child draws its own parts later this
-            // frame — so holding it past the loop is safe.
-            const child = inst.child;
-            let e = this._bubbleCands[this._bubbleCount];
-            if (!e) { e = { rank: 0, child, influence: false, composed: inst.composed }; this._bubbleCands[this._bubbleCount] = e; }
-            e.rank = rank; e.child = child; e.influence = inst.influence; e.composed = inst.composed;
-            this._bubbleCount++;
+    /** The container for coverage tile `t`, created under the render root on first use. */
+    private coverageTile(t: number): Container {
+        let c = this._covTiles[t];
+        if (!c) {
+            // Created in order, so tile t sits at index t.
+            for (let i = this._covTiles.length; i <= t; i++) {
+                const tc = new Container();
+                this._covTiles.push(tc);
+                this.maskRenderRoot.addChild(tc);
+            }
+            c = this._covTiles[t];
         }
-        return this._bubbleCount;
+        return c;
     }
 
     /** Pooled MaskCoverage record for a context slot (its meta array is reused). */
     private ensureCov(slot: number): MaskCoverage {
         let c = this.covPool[slot];
         if (!c) {
-            c = { rt: null as any, minX: 0, minY: 0, invW: 0, invH: 0, meta: new Float32Array(MAX_MASK_WRITERS * 4), count: 0 };
+            c = { rt: null as any, minX: 0, minY: 0, invW: 0, invH: 0, meta: new Float32Array(MAX_TREE_MASK_WRITERS * 4), count: 0, tilesX: 1, tilesY: 1 };
             this.covPool[slot] = c;
         }
         return c;
@@ -2038,8 +1984,9 @@ export class SSPlayer extends Container {
         let shader = this.maskedShaders.get(key);
         if (!shader) {
             const maskUniforms = new UniformGroup({
-                uMaskMeta: { value: new Float32Array(MAX_MASK_WRITERS * 4), type: 'vec4<f32>', size: MAX_MASK_WRITERS },
-                uMaskCount: { value: 0, type: 'f32' }
+                uMaskMeta: { value: new Float32Array(MAX_TREE_MASK_WRITERS * 4), type: 'vec4<f32>', size: MAX_TREE_MASK_WRITERS },
+                uMaskCount: { value: 0, type: 'f32' },
+                uMaskTiles: { value: new Float32Array([1, 1]), type: 'vec2<f32>' }
             });
             shader = Shader.from({
                 gl: MaskedPartsColorShader,
@@ -2058,6 +2005,9 @@ export class SSPlayer extends Container {
         const mu = shader.resources.maskUniforms as UniformGroup;
         (mu.uniforms.uMaskMeta as Float32Array).set(cov.meta);
         mu.uniforms.uMaskCount = cov.count;
+        const tiles = mu.uniforms.uMaskTiles as Float32Array;
+        tiles[0] = cov.tilesX;
+        tiles[1] = cov.tilesY;
         mu.update();
         return shader;
     }

@@ -1,13 +1,18 @@
-// Composition of mask settings down an instance-part hierarchy.
+// Composition of mask settings across an instance part.
 // When a part calls a sub-animation, the caller's mask
 // settings do NOT replace the callee's, nor the other way round — they compose:
 //
-//   effective mask_influence      = caller's effective && own mask_influence
-//   effective visible_inside_mask = caller's effective || own visible_inside_mask
+//   effective mask_influence      = instance part's mask_influence && own mask_influence
+//   effective visible_inside_mask = instance part's visible_inside_mask || own visible_inside_mask
 //
-// A "the callee wins if it has its own setting, otherwise inherit the caller's"
-// fallback is neither operator and disagrees with SpriteStudio 7.5 in both
-// directions; that was the defect this replaced.
+// Only the instance part DIRECTLY above takes part, and it always does, whether
+// or not anything above it masks. What that instance part itself inherited from
+// further up does not chain down: SpriteStudio 7.5 draws a mask_influence == 0
+// instance's own parts unmasked while the parts of the instances inside it are
+// still judged on their own instance parts. Chaining the composed value down
+// (AND- / OR-absorbing through every level) disagrees with that, and so does a
+// "the callee wins if it has its own setting, otherwise inherit the caller's"
+// fallback.
 //
 // The rule lives here rather than in each renderer because it is the same
 // question everywhere: ssplayer-pixi clips against a coverage bitmap and
@@ -33,20 +38,31 @@ export const ROOT_MASK_INFLUENCE = true;
 export const ROOT_VISIBLE_INSIDE = false;
 
 /**
- * AND-compose `mask_influence`. Once a caller is not a mask target the
- * result is false for good — it can never return to true further down — so a
- * whole subtree below an opted-out instance part is settled as non-target.
- *
- * `mask_write` is deliberately not part of this: writing your own mask is a
- * local fact about one part, not something its descendants inherit.
+ * The `mask_influence` an instance part hands to the sub-animation it calls:
+ * its own flag and nothing it inherited. `mask_write` takes no part — writing
+ * your own mask is a local fact about one part.
+ */
+export function instanceMaskInfluence(instancePartFlags: number): boolean {
+    return (instancePartFlags & MASK_FLAG_MASK_INFLUENCE) !== 0;
+}
+
+/** The `visible_inside_mask` an instance part hands down: its own flag only. */
+export function instanceVisibleInside(instancePartFlags: number): boolean {
+    return (instancePartFlags & MASK_FLAG_VISIBLE_INSIDE) !== 0;
+}
+
+/**
+ * AND-compose a part's `mask_influence` with what its instance part handed
+ * down (`ROOT_MASK_INFLUENCE` at the root). This is both whether the part is a
+ * mask target and, for a writer, which op it writes with (true = invert).
  */
 export function composeMaskInfluence(callerInfluence: boolean, partFlags: number): boolean {
     return callerInfluence && (partFlags & MASK_FLAG_MASK_INFLUENCE) !== 0;
 }
 
 /**
- * OR-compose `visible_inside_mask`. Once any level asks to be drawn
- * inside the mask, everything below it is drawn inside too.
+ * OR-compose a part's `visible_inside_mask` with what its instance part
+ * handed down (`ROOT_VISIBLE_INSIDE` at the root).
  */
 export function composeVisibleInside(callerVisibleInside: boolean, partFlags: number): boolean {
     return callerVisibleInside || (partFlags & MASK_FLAG_VISIBLE_INSIDE) !== 0;

@@ -32,11 +32,11 @@ describe.each(VARIANTS)('%s coverage replay', (_name, source) => {
   const body = replayBody(source);
 
   it('accumulates the invert and increment ops in separate variables', () => {
-    // The invert branch (m.z > 0.5) and the increment branch must not write the
+    // The invert branch (m.w > 0.5) and the increment branch must not write the
     // same accumulator — that identity is the whole point of the split.
     expect(body).toMatch(/\bparity\b/);
     expect(body).toMatch(/\bcounter\b/);
-    const invertBranch = body.slice(body.indexOf('m.z > 0.5'));
+    const invertBranch = body.slice(body.indexOf('m.w > 0.5'));
     expect(invertBranch).toMatch(/parity[\s\S]{0,40}?(?:\^|1\.0 -)/);
     expect(invertBranch).toMatch(/counter[\s\S]{0,20}?\+/);
   });
@@ -45,6 +45,18 @@ describe.each(VARIANTS)('%s coverage replay', (_name, source) => {
     // Covered iff either plane is set: parity for the odd-overlap writers,
     // counter for the union writers.
     expect(body).toMatch(/parity[\s\S]{0,40}?\|\|[\s\S]{0,40}?counter/);
+  });
+
+  it('judges each writer on its interval of the tree sequence', () => {
+    // open < seq, and seq < close unless close is the never-closing -1.
+    expect(body).toMatch(/thisSeq > m\.x/);
+    expect(body).toMatch(/m\.y < 0\.0\)?\s*\|\|\s*\(?thisSeq < m\.y/);
+  });
+
+  it('still tests a part when there is no writer at all', () => {
+    // A part that draws only inside a mask draws nowhere without one, so a
+    // writer count of 0 must not short-circuit to "pass".
+    expect(body).not.toMatch(/writerCount (?:< 0\.5|== 0)\)\s*(?:\{\s*)?return true/);
   });
 
   it('no longer reconstructs a single 8-bit stencil value', () => {
