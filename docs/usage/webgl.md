@@ -45,7 +45,7 @@ The Custom Element is the quickest way to get started.
   src="/assets/Ringo.ssab" 
   animation="run" 
   autoplay 
-  speed="1.0" 
+  speed-scale="1.0" 
   style="width: 640px; height: 480px;">
 </ss-player>
 ```

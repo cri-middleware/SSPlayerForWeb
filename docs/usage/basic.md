@@ -136,7 +136,7 @@ The WebGL package also ships a Custom Element (`<ss-player>`) that you can use j
 </script>
 
 <!-- src: path to the ssab, animation: animation name -->
-<ss-player src="/assets/Ringo.ssab" animation="run" autoplay speed="1.5" style="width: 640px; height: 480px;"></ss-player>
+<ss-player src="/assets/Ringo.ssab" animation="run" autoplay speed-scale="1.5" style="width: 640px; height: 480px;"></ss-player>
 ```
 
 You can also grab the DOM element from JavaScript and call methods such as `play()` / `pause()`.

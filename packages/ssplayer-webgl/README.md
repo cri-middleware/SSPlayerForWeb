@@ -77,7 +77,7 @@ await el.loadBuffer(ssabArrayBuffer, new Map([[0x1234abcd, imageBitmap]]));
 el.play();
 ```
 
-Observed attributes (`src`, `animation`, `speed`) react live; construction-time options (`max-dpr`, `power-preference`, `antialias`, `stencil`, `pause-when-hidden`) are read once at connect. Player events are re-dispatched as DOM `CustomEvent`s.
+Observed attributes (`src`, `animation`, `speed-scale`) react live; construction-time options (`max-dpr`, `power-preference`, `antialias`, `stencil`, `pause-when-hidden`) are read once at connect. Player events are re-dispatched as DOM `CustomEvent`s.
 
 `pause-when-hidden` is **on by default** — the ticker stops while the canvas is off-screen or the tab is backgrounded. Turn it off with `pause-when-hidden="false"`.
 
@@ -241,7 +241,7 @@ player.onAnimationLooped(() => {});
 off();
 ```
 
-With the `<ss-player>` element these same events are re-dispatched as DOM `CustomEvent`s, so you can `addEventListener` for them instead.
+With the `<ss-player>` element these same events are re-dispatched as DOM `CustomEvent`s, so you can `addEventListener` for them instead: `animationstarted`, `animationfinished`, `animationlooped`, `userdata`, `signal` and `audio` (payload in `detail`), plus `load` once a pack is set up and `error` when one fails. The names are the family's stems lower-cased, the same ones `<ss-player-webgpu>` dispatches.
 
 Per-part overrides (colour / cell / visibility) are on the same facade — `setPartColorOverride`, `setPartCellOverride`, `setPartVisibilityOverride`, `clearAllPartOverrides`. The element keeps only the playback verbs of its own, so reach them through `el.player` (`await el.ready` first).
 

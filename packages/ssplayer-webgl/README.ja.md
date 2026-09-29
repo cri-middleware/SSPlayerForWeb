@@ -57,7 +57,7 @@ await el.loadBuffer(ssabArrayBuffer, new Map([[0x1234abcd, imageBitmap]]));
 el.play();
 ```
 
-監視される属性(`src`、`animation`、`speed`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`stencil`、`pause-when-hidden`)は接続時に一度だけ読み取られます。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。
+監視される属性(`src`、`animation`、`speed-scale`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`stencil`、`pause-when-hidden`)は接続時に一度だけ読み取られます。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。
 
 `pause-when-hidden` は **既定で有効** です(キャンバスが画面外にある間やタブが非アクティブな間はティッカーを停止します)。無効にするには `pause-when-hidden="false"` を指定してください。
 
@@ -204,7 +204,7 @@ player.onAnimationLooped(() => {});
 off();
 ```
 
-`<ss-player>` 要素では、これらと同じイベントが DOM の `CustomEvent` として再ディスパッチされるため、`addEventListener` で受け取ることもできます。
+`<ss-player>` 要素では、これらと同じイベントが DOM の `CustomEvent` として再ディスパッチされるため、`addEventListener` で受け取ることもできます。名前は `animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`（中身は `detail`）で、ほかにパックの設定が済むと `load`、失敗すると `error` が届きます。どれもファミリー共通の語幹を小文字にしたもので、`<ss-player-webgpu>` と同じ名前です。
 
 パーツ単位の上書き（色 / セル / 表示）も同じファサード上にあります（`setPartColorOverride` / `setPartCellOverride` / `setPartVisibilityOverride` / `clearAllPartOverrides`）。`<ss-player>` 要素自体は再生系の動詞だけを持つ薄い皮なので、これらは `el.player` 経由で呼んでください（先に `await el.ready`）。
 

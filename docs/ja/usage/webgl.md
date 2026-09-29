@@ -38,7 +38,7 @@ pnpm add @spritestudio/ssplayer-webgl@beta
   src="/assets/Ringo.ssab" 
   animation="run" 
   autoplay 
-  speed="1.0" 
+  speed-scale="1.0" 
   style="width: 640px; height: 480px;">
 </ss-player>
 ```

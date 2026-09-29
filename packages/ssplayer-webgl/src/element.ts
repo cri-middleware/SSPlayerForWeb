@@ -39,7 +39,7 @@ export class SSPlayerElement extends HTMLElement {
     // pause-when-hidden) are read once at connect and are intentionally NOT observed:
     // the GL context is created up front and getContext() ignores attributes on a
     // context that already exists, so they can't change reactively.
-    return ['src', 'animation', 'speed'];
+    return ['src', 'animation', 'speed-scale'];
   }
 
   // Overlay mode (the default) shares ONE surface — and so one WebGL context —
@@ -180,8 +180,8 @@ export class SSPlayerElement extends HTMLElement {
           try { this.applyAnimation(newValue); } catch (err) { this.emit('error', err); }
         }
         break;
-      case 'speed':
-        player.speedScale = this.numAttr('speed') ?? 1;
+      case 'speed-scale':
+        player.speedScale = this.numAttr('speed-scale') ?? 1;
         break;
     }
   }
@@ -260,7 +260,7 @@ export class SSPlayerElement extends HTMLElement {
       this._surface = new SSSurface(this._canvas!, options);
       this._player = this._surface.createPlayer();
     }
-    const speed = this.numAttr('speed');
+    const speed = this.numAttr('speed-scale');
     if (speed !== undefined) this._player.speedScale = speed;
     this.wireEvents();
   }
@@ -268,11 +268,15 @@ export class SSPlayerElement extends HTMLElement {
   private wireEvents(): void {
     const player = this._player!;
     // Re-dispatch player events as DOM CustomEvents so declarative hosts can
-    // listen on the element. 'audio' carries the sound reference only — actual
-    // playback requires an SSWebAudioManager attached to `el.player`.
+    // listen on the element, under the family's stems (animationStarted,
+    // userData, …) lower-cased as DOM event names are — the names
+    // <ss-player-webgpu> dispatches too. 'audio' carries the sound reference
+    // only — actual playback requires an SSWebAudioManager attached to
+    // `el.player`.
     this._unsubscribe.push(
-      player.onAnimationFinished(() => this.emit('ended')),
-      player.onAnimationLooped(() => this.emit('loop')),
+      player.onAnimationStarted(() => this.emit('animationstarted')),
+      player.onAnimationFinished(() => this.emit('animationfinished')),
+      player.onAnimationLooped(() => this.emit('animationlooped')),
       player.onUserData((e: unknown) => this.emit('userdata', e)),
       player.onSignal((e: unknown) => this.emit('signal', e)),
       player.onAudio((e: unknown) => this.emit('audio', e)),

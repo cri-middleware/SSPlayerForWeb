@@ -34,11 +34,11 @@ function renderSnippet(): void {
   // The element auto-picks the first animation when the attribute is unset; show that
   // concrete name (from the dropdown) so the snippet is explicit and copy-ready.
   const anim = player.getAttribute('animation') || animSel.value;
-  const speedVal = player.getAttribute('speed');
+  const speedVal = player.getAttribute('speed-scale');
   const attrs = [`src="${src}"`];
   if (anim) attrs.push(`animation="${anim}"`);
   attrs.push('autoplay');
-  if (speedVal && Number(speedVal) !== 1) attrs.push(`speed="${speedVal}"`);
+  if (speedVal && Number(speedVal) !== 1) attrs.push(`speed-scale="${speedVal}"`);
   snippet.textContent =
 `<script type="module">
   import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
@@ -79,9 +79,9 @@ async function populateAnimations(url: string): Promise<void> {
   renderSnippet();
 }
 
-// Element CustomEvents. `load`/`error` fire today; `ended`/`loop`/`userdata`/`signal`
-// are wired but inert until the SSPlayer P0 event work lands.
-for (const type of ['load', 'ended', 'loop', 'userdata', 'signal', 'error']) {
+// Element CustomEvents: the family's events under their DOM names, and the
+// element's own `load` / `error`. `audio` is left out: the player plays the sound itself.
+for (const type of ['load', 'animationstarted', 'animationfinished', 'animationlooped', 'userdata', 'signal', 'error']) {
   player.addEventListener(type, (e: Event) => {
     const detail = (e as CustomEvent).detail;
     write(`event: ${type}${detail !== undefined ? ' ' + JSON.stringify(detail) : ''}`);
@@ -107,7 +107,7 @@ document.getElementById('stop')!.addEventListener('click', () => player.stop());
 
 speed.addEventListener('input', () => {
   spd.textContent = Number(speed.value).toFixed(1);
-  player.setAttribute('speed', speed.value);
+  player.setAttribute('speed-scale', speed.value);
   renderSnippet();
 });
 
