@@ -1506,9 +1506,10 @@ export class SSPlayer extends Container {
             const invTexH = 1.0 / texture.height;
             
             // Parts in this batch are clipped when they are targets and the tree
-            // has coverage. A target no writer reaches passes the test anyway,
-            // so there is no need to work out which writers reach which part
-            // here. Masked parts use a separate pool (carrying aMaskUV) and shader.
+            // has coverage. The test needs no pre-filter for which writers reach
+            // which part: where none does, a part that draws outside a mask
+            // passes and one that draws only inside fails, as it should. Masked
+            // parts use a separate pool (carrying aMaskUV) and shader.
             const masked = cov !== null && target;
 
             if (kind === DrawBatchKind.Normal) {
@@ -1651,6 +1652,12 @@ export class SSPlayer extends Container {
                 // the same (cellmap, blend) into a single pooled Mesh / draw call. Only
                 // *consecutive* runs are merged, so draw order (hence blend compositing)
                 // is preserved exactly.
+                //
+                // An effect batch holds one effect part, so its first part decides the
+                // polarity, and the part's number on the tree sequence its scope.
+                const fxInside = polarityOf(drawOrder[startRank]);
+                if (dropInside && fxInside) continue;
+                const fxSeq = seq ? seq[startRank] : 0;
                 const fxCount = this._fx.collect(player, frameData, drawOrder, startRank, count);
 
                 // The descriptors hold zero-copy EffectDrawPlan views over WASM
@@ -1666,7 +1673,12 @@ export class SSPlayer extends Container {
 
                     const pCount = totalQuads * 4;
                     const iCount = totalQuads * 6;
-                    const mesh = this.acquireMesh(this.effectMeshPool, this.activeEffectMeshes++, pCount, iCount, 'effect');
+                    // A masked effect draws through the masked parts-colour shader, which
+                    // at vVarg = (rate 1, multiply) computes exactly what EffectShader does:
+                    // the texture modulated by the particle colour.
+                    const mesh = masked
+                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, pCount, iCount, 'masked')
+                        : this.acquireMesh(this.effectMeshPool, this.activeEffectMeshes++, pCount, iCount, 'effect');
 
                     const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
                     const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
@@ -1691,9 +1703,20 @@ export class SSPlayer extends Container {
                     mesh.geometry.getIndex().update();
 
                     const effectTex = this.pixiResourceManager.getTexture(cellmap) || Texture.WHITE;
-                    mesh.shader = this.getEffectShader(effectTex) as any;
                     // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
                     const bMode = (blend === 1) ? SS_ADD_BLEND : SS_MIX_BLEND;
+                    if (masked) {
+                        const vargBuf = mesh.geometry.getBuffer('aVarg');
+                        const vargs = vargBuf.data as Float32Array;
+                        for (let v = 0; v < pCount; v++) {
+                            vargs[v * 4 + 0] = 1; vargs[v * 4 + 1] = 0; vargs[v * 4 + 2] = 1; vargs[v * 4 + 3] = 0;
+                        }
+                        vargBuf.update();
+                        this.finishPart(mesh, pCount, true, fxSeq, fxInside, cov, effectTex, bMode, parentAlpha);
+                        g = h;
+                        continue;
+                    }
+                    mesh.shader = this.getEffectShader(effectTex) as any;
                     mesh.blendMode = bMode;
                     // Per-part opacity was folded into the vertex alpha above, so the mesh
                     // alpha only carries the (uniform) parent-chain opacity.
