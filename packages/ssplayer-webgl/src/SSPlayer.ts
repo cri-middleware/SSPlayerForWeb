@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, resolvePlacement, ssFormat, SSBlendOp, SSOverridePriority, WebPlaybackDirection, WebPlaybackStyle, type SSAlign, type SSFit, type SSPlacementBox } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 import type { SSTextureEntry } from './SSWebGLTextureCache.js';
 import type { SSSurface } from './SSSurface.js';
@@ -80,6 +80,21 @@ export interface SSPlayerBox {
   h: number;
 }
 
+/** How an animation is fitted into its player's box. See {@link SSPlayer.setPlacement}. */
+export interface SSPlayerPlacement {
+  /** Default `contain`. */
+  fit?: SSFit;
+  /** Default `center`. */
+  align?: SSAlign;
+  /**
+   * The box to fit, in animation-local units. Omitted, the authored canvas of the
+   * animation that is playing — so each animation is fitted by its own canvas.
+   * Pass {@link SSPlayer.canvasRect} once, after the first `setAnimation`, to keep
+   * one scale across a pack.
+   */
+  frame?: SSPlacementBox;
+}
+
 export interface SSPlayerOptions {
   /**
    * Automatically play the animation's sounds (default `true`).
@@ -158,6 +173,17 @@ export class SSPlayer {
   private _scaleY = 1;
   private _rotation = 0;
   private readonly _matrix = new Float32Array(6); // [m00, m01, m10, m11, tx, ty]
+
+  // --- Placement ---
+  // What was asked for, and the solution for the inputs it was last solved for.
+  // The solution depends on the box's size and the flips, not on where the box
+  // is, so an overlay that rewrites the box position every frame re-solves
+  // nothing.
+  private _placement: (SSPlayerPlacement & { frame?: SSPlacementBox }) | null = null;
+  private _fitScale = 1;
+  private _fitX = 0;
+  private _fitY = 0;
+  private _fitKey: { w: number; h: number; frame: SSPlacementBox | null; flipX: boolean; flipY: boolean } | null = null;
 
   // --- Colour ---
   private _alpha = 1;
@@ -583,6 +609,42 @@ export class SSPlayer {
   }
 
   /**
+   * Fit the animation into this player's {@link box}: scaled by `fit`
+   * (`contain`, `cover` or `none`) and placed by `align`, both from the
+   * animation's authored canvas unless a `frame` is given. `setPlacement({})` is
+   * `contain` and `center`.
+   *
+   * The fit follows the box, so a surface resize or an element's layout keeps the
+   * animation in it. {@link setTransform}'s `x` and `y` are then added after the
+   * fit, and its scale multiplies the fit's; {@link flipX} and {@link flipY} are
+   * honoured, so an edge alignment stays against that edge when mirrored.
+   *
+   * Without a placement — the default, and what `null` puts back — the animation
+   * is drawn at its authored scale with its origin at the box's centre.
+   */
+  public setPlacement(placement: SSPlayerPlacement | null): void {
+    this._placement = placement ? { ...placement, frame: placement.frame ? { ...placement.frame } : undefined } : null;
+    this._fitKey = null;
+  }
+
+  /** What {@link setPlacement} last received, or `null` when there is none. */
+  public getPlacement(): SSPlayerPlacement | null {
+    const p = this._placement;
+    return p ? { fit: p.fit, align: p.align, frame: p.frame ? { ...p.frame } : undefined } : null;
+  }
+
+  /**
+   * The authored canvas of the animation that is set up, as a box in
+   * animation-local units (Y down) — what a fit measures when it is given no
+   * `frame`. `null` until an animation is set up. It is the playing animation's
+   * own canvas, and one pack's animations may differ.
+   */
+  public get canvasRect(): SSPlacementBox | null {
+    const r = this.internalPlayer.getCanvasRect();
+    return r ? { ...r } : null;
+  }
+
+  /**
    * Mirror the drawn animation horizontally.
    *
    * Distinct from `setTransform({ scaleX: -1 })` in two ways worth knowing.
@@ -623,13 +685,39 @@ export class SSPlayer {
     const cos = Math.cos(this._rotation);
     const sin = Math.sin(this._rotation);
     const m = this._matrix;
-    m[0] = cos * this._scaleX;   // m00
-    m[1] = -sin * this._scaleY;  // m01
-    m[2] = sin * this._scaleX;   // m10
-    m[3] = cos * this._scaleY;   // m11
-    m[4] = this.boxX + this.boxW / 2 + this._x; // tx
-    m[5] = this.boxY + this.boxH / 2 + this._y; // ty
+    let originX = this.boxW / 2;
+    let originY = this.boxH / 2;
+    let fitScale = 1;
+    if (this._placement) {
+      this.solvePlacement();
+      originX = this._fitX;
+      originY = this._fitY;
+      fitScale = this._fitScale;
+    }
+    m[0] = cos * this._scaleX * fitScale;   // m00
+    m[1] = -sin * this._scaleY * fitScale;  // m01
+    m[2] = sin * this._scaleX * fitScale;   // m10
+    m[3] = cos * this._scaleY * fitScale;   // m11
+    m[4] = this.boxX + originX + this._x; // tx
+    m[5] = this.boxY + originY + this._y; // ty
     return m;
+  }
+
+  /** Solve the placement for the box's current size, only when an input has changed. */
+  private solvePlacement(): void {
+    const placement = this._placement!;
+    const w = this.boxW;
+    const h = this.boxH;
+    const frame = placement.frame ?? this.internalPlayer.getCanvasRect();
+    const flipX = this.internalPlayer.flipX;
+    const flipY = this.internalPlayer.flipY;
+    const key = this._fitKey;
+    if (key && key.w === w && key.h === h && key.frame === frame && key.flipX === flipX && key.flipY === flipY) return;
+    const solved = resolvePlacement(frame, w, h, { fit: placement.fit, align: placement.align, flipX, flipY });
+    this._fitX = solved.x;
+    this._fitY = solved.y;
+    this._fitScale = solved.scale;
+    this._fitKey = { w, h, frame, flipX, flipY };
   }
 
   // --- Per-frame ------------------------------------------------------------
