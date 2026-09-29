@@ -58,6 +58,11 @@ export class FrameDataMaskSource implements MaskPlanSource {
         return ps ? ps.mask() : 0;
     }
 
+    partHide(partIdx: number): boolean {
+        const ps = this.frameData!.parts(partIdx, this._ps);
+        return ps ? ps.hide() : false;
+    }
+
     maskFlag(partIdx: number): number {
         return this.maskFlags ? this.maskFlags[partIdx] : 0;
     }

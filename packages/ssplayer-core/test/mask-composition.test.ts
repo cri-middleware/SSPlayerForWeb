@@ -8,20 +8,35 @@ import {
     ROOT_VISIBLE_INSIDE,
     composeMaskInfluence,
     composeVisibleInside,
+    instanceMaskInfluence,
+    instanceVisibleInside,
 } from '../src/MaskComposition.js';
 
 /**
- * Instance-hierarchy mask composition. The rule that
- * matters is that neither side of an instance call wins outright: the caller
- * and the callee are combined, with AND for mask_influence and OR for
- * visible_inside_mask. The defect these replaced was a "callee wins if it has
- * its own setting, else inherit the caller's" fallback — which happens to agree
- * with both operators in the easy cases and disagree in the interesting ones,
- * so the tests below deliberately cover the disagreeing combinations.
+ * Instance-hierarchy mask composition. Neither side of an instance call wins
+ * outright: the instance part and the sub-animation part are combined, with
+ * AND for mask_influence and OR for visible_inside_mask. And only the instance
+ * part directly above takes part — what it inherited itself does not chain
+ * down (SpriteStudio 7.5). The tests cover the combinations where a "callee
+ * wins" fallback, or a chained composition, would disagree.
  */
 
 const INFLUENCE = MASK_FLAG_MASK_INFLUENCE;
 const INSIDE = MASK_FLAG_VISIBLE_INSIDE;
+
+/** A part's effective flags under a chain of instance parts (outermost first). */
+function effectiveInfluence(instanceChain: number[], partFlags: number): boolean {
+    const handedDown = instanceChain.length > 0
+        ? instanceMaskInfluence(instanceChain[instanceChain.length - 1])
+        : ROOT_MASK_INFLUENCE;
+    return composeMaskInfluence(handedDown, partFlags);
+}
+function effectiveInside(instanceChain: number[], partFlags: number): boolean {
+    const handedDown = instanceChain.length > 0
+        ? instanceVisibleInside(instanceChain[instanceChain.length - 1])
+        : ROOT_VISIBLE_INSIDE;
+    return composeVisibleInside(handedDown, partFlags);
+}
 
 describe('mask_influence composes with AND', () => {
     it('lets a root animation decide by its own flag', () => {
@@ -36,16 +51,20 @@ describe('mask_influence composes with AND', () => {
         expect(composeMaskInfluence(false, 0)).toBe(false);
     });
 
-    it('is absorbing once false — a callee cannot opt back in', () => {
-        // The case a "callee wins" fallback gets wrong: the sub-animation part
-        // asks to be masked, but its caller already opted the subtree out.
-        expect(composeMaskInfluence(false, INFLUENCE)).toBe(false);
-        // ...and it stays false however deep the nesting goes.
-        let influence = composeMaskInfluence(true, 0);
-        for (let depth = 0; depth < 4; depth++) {
-            influence = composeMaskInfluence(influence, INFLUENCE);
-        }
-        expect(influence).toBe(false);
+    it('a callee cannot opt back in under an opted-out instance part', () => {
+        // The case a "callee wins" fallback gets wrong.
+        expect(effectiveInfluence([0], INFLUENCE)).toBe(false);
+    });
+
+    it('takes only the instance part directly above', () => {
+        // InstancePropagationTired3: the outer instance part opts out, the
+        // inner one (Source01) opts in. The outer's own parts are unmasked,
+        // the inner sub-animation's parts are masked — no chaining.
+        expect(effectiveInfluence([0], INFLUENCE)).toBe(false);
+        expect(effectiveInfluence([0, INFLUENCE], INFLUENCE)).toBe(true);
+        // ...and the other way round, an opted-in outer does not rescue an
+        // opted-out inner.
+        expect(effectiveInfluence([INFLUENCE, 0], INFLUENCE)).toBe(false);
     });
 });
 
@@ -62,15 +81,13 @@ describe('visible_inside_mask composes with OR', () => {
         expect(composeVisibleInside(false, 0)).toBe(false);
     });
 
-    it('is absorbing once true — a callee cannot force itself back outside', () => {
-        // The mirror case a "callee wins" fallback gets wrong: the caller asked
-        // for inside, the sub-animation part says outside, and OR keeps inside.
-        expect(composeVisibleInside(true, 0)).toBe(true);
-        let inside = composeVisibleInside(false, INSIDE);
-        for (let depth = 0; depth < 4; depth++) {
-            inside = composeVisibleInside(inside, 0);
-        }
-        expect(inside).toBe(true);
+    it('a callee cannot force itself back outside under an inside instance part', () => {
+        expect(effectiveInside([INSIDE], 0)).toBe(true);
+    });
+
+    it('takes only the instance part directly above', () => {
+        expect(effectiveInside([INSIDE, 0], 0)).toBe(false);
+        expect(effectiveInside([0, INSIDE], 0)).toBe(true);
     });
 });
 
@@ -83,6 +100,8 @@ describe('composition inputs', () => {
         expect(composeVisibleInside(false, noise)).toBe(false);
         expect(composeMaskInfluence(true, noise | INFLUENCE)).toBe(true);
         expect(composeVisibleInside(false, noise | INSIDE)).toBe(true);
+        expect(instanceMaskInfluence(noise)).toBe(false);
+        expect(instanceVisibleInside(noise)).toBe(false);
     });
 
     it('uses the identity element of each operator at the root', () => {

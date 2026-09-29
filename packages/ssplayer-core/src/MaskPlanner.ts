@@ -33,6 +33,13 @@ export interface MaskPlanSource {
     drawOrderAt(rank: number): number;
     /** FrameData per-frame mask value (0..255); `<= 0` means the writer is inert. */
     partMask(partIdx: number): number;
+    /**
+     * FrameData per-frame hide. A hidden writer writes nothing, like one at
+     * mask 0. The runtime drops a hidden `PartTypeMask` or clipping part from
+     * the draw order, but a hidden `draw_as_mask` part keeps its Mask batch,
+     * so this is the only place that writer is switched off.
+     */
+    partHide(partIdx: number): boolean;
     /** Packed static mask-flags byte: 0x01 visibleInside, 0x02 maskWrite, 0x04 maskInfluence, 0x08 drawAsMask. 0 when unavailable. */
     maskFlag(partIdx: number): number;
     shapeVertexCount(partIdx: number): number;
@@ -133,14 +140,14 @@ export class MaskPlanner {
             }
         }
 
-        // Pass 2: finalize — drop inert (mask <= 0) and degenerate-geometry
-        // writers, assign a dense coverage bit, and resolve cutout threshold +
-        // geometry kind.
+        // Pass 2: finalize — drop inert (mask <= 0 or hidden) and
+        // degenerate-geometry writers, assign a dense coverage bit, and resolve
+        // cutout threshold + geometry kind.
         let count = 0;
         for (let w = 0; w < cand; w++) {
             const partIdx = sel[w * 4 + 0];
             const maskVal = src.partMask(partIdx);
-            if (maskVal <= 0) continue;
+            if (maskVal <= 0 || src.partHide(partIdx)) continue;
 
             const texHash = selTex[w];
             // Cutout threshold. texHash 0 (pure masks / shapes) = no cutout.

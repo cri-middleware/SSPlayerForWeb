@@ -22,6 +22,7 @@ export * from './PartTransform.js';
 export * from './FrameDataMaskSource.js';
 export * from './InternalPlayerBase.js';
 export * from './InstanceResolver.js';
+export * from './MaskTree.js';
 export * from './EffectBatchPlanner.js';
 export * from './ShaderAttributeResolver.js';
 export * from './BlendState.js';
