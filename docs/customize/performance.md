@@ -21,8 +21,12 @@ player.resize(cssWidth, cssHeight);       // recomputes the buffer under the cap
 ```
 
 ```html
-<ss-player src="/assets/Ringo.ssab" animation="run" max-dpr="1.5"></ss-player>
+<ss-player src="/assets/Ringo.ssab" animation="run" standalone max-dpr="1.5"></ss-player>
 ```
+
+`max-dpr` configures the element's own context, so it takes effect on a `standalone` element. Elements
+share one overlay canvas by default, and that canvas is set up once, by
+`SSOverlay.getOrCreate(id, { maxDPR: 1.5 })`, before the first element connects.
 
 **PixiJS** — the drawing buffer belongs to the `Application`, so cap it there:
 

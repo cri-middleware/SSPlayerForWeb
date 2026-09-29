@@ -1,5 +1,4 @@
 import { defineSSPlayerElement, SSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
-import { SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 
 // Register <ss-player>. This upgrades the element already in the HTML, whose
 // connectedCallback then loads its `src`/`autoplay` attributes.
@@ -19,6 +18,10 @@ const ssabSel = document.getElementById('ssab') as HTMLSelectElement;
 const animSel = document.getElementById('anim') as HTMLSelectElement;
 const speed = document.getElementById('speed') as HTMLInputElement;
 const spd = document.getElementById('spd') as HTMLElement;
+const fitSel = document.getElementById('fit') as HTMLSelectElement;
+const alignSel = document.getElementById('align') as HTMLSelectElement;
+const flipX = document.getElementById('flipx') as HTMLInputElement;
+const flipY = document.getElementById('flipy') as HTMLInputElement;
 const log = document.getElementById('log') as HTMLElement;
 const snippet = document.getElementById('snippet') as HTMLElement;
 const copyBtn = document.getElementById('copy') as HTMLButtonElement;
@@ -39,6 +42,10 @@ function renderSnippet(): void {
   if (anim) attrs.push(`animation="${anim}"`);
   attrs.push('autoplay');
   if (speedVal && Number(speedVal) !== 1) attrs.push(`speed-scale="${speedVal}"`);
+  if (fitSel.value !== 'contain') attrs.push(`fit="${fitSel.value}"`);
+  if (alignSel.value !== 'center') attrs.push(`align="${alignSel.value}"`);
+  if (flipX.checked) attrs.push('flip-x');
+  if (flipY.checked) attrs.push('flip-y');
   snippet.textContent =
 `<script type="module">
   import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
@@ -63,11 +70,10 @@ for (const name of BUNDLED_SSABS) {
 }
 ssabSel.value = ssabUrl('Basic.ssab');
 
-// The element auto-selects the first animation; we still fetch the ssab once to
-// populate the dropdown (mirrors main.ts — no instance-level name accessor).
-async function populateAnimations(url: string): Promise<void> {
-  const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
-  const anims = SSRuntimeManager.extractAnimationNames(buf);
+// The element auto-selects the first animation; `load` fires once a pack is set up,
+// which is when its animation names can be read off the player underneath.
+function populateAnimations(): void {
+  const anims = player.player?.getAnimationNames() ?? [];
   animSel.innerHTML = '';
   for (const name of anims) {
     const opt = document.createElement('option');
@@ -75,9 +81,11 @@ async function populateAnimations(url: string): Promise<void> {
     opt.textContent = name;
     animSel.appendChild(opt);
   }
+  animSel.value = player.getAttribute('animation') ?? anims[0] ?? '';
   animSel.disabled = anims.length === 0;
   renderSnippet();
 }
+player.addEventListener('load', populateAnimations);
 
 // Element CustomEvents: the family's events under their DOM names, and the
 // element's own `load` / `error`. `audio` is left out: the player plays the sound itself.
@@ -90,10 +98,9 @@ for (const type of ['load', 'animationstarted', 'animationfinished', 'animationl
 
 // Switch ssab reactively via the `src` attribute; clear `animation` so the element
 // falls back to the first animation of the new ssab.
-ssabSel.addEventListener('change', async () => {
+ssabSel.addEventListener('change', () => {
   player.removeAttribute('animation');
   player.setAttribute('src', ssabSel.value);
-  await populateAnimations(ssabSel.value);
 });
 
 animSel.addEventListener('change', () => {
@@ -111,4 +118,18 @@ speed.addEventListener('input', () => {
   renderSnippet();
 });
 
-populateAnimations(ssabUrl('Basic.ssab')).catch((e) => write(`Error: ${e?.message ?? e}`));
+// The placement attributes are read by the element as they change.
+for (const [control, attribute] of [[fitSel, 'fit'], [alignSel, 'align']] as const) {
+  control.addEventListener('change', () => {
+    player.setAttribute(attribute, control.value);
+    renderSnippet();
+  });
+}
+for (const [control, attribute] of [[flipX, 'flip-x'], [flipY, 'flip-y']] as const) {
+  control.addEventListener('change', () => {
+    player.toggleAttribute(attribute, control.checked);
+    renderSnippet();
+  });
+}
+
+renderSnippet();

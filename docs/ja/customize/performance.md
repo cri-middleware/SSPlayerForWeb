@@ -15,8 +15,10 @@ player.resize(cssWidth, cssHeight);       // 上限を反映してバッファ�
 ```
 
 ```html
-<ss-player src="/assets/Ringo.ssab" animation="run" max-dpr="1.5"></ss-player>
+<ss-player src="/assets/Ringo.ssab" animation="run" standalone max-dpr="1.5"></ss-player>
 ```
+
+`max-dpr` は要素自身のコンテキストを設定するので、効くのは `standalone` の要素です。要素は既定で 1 枚のオーバーレイキャンバスを共有し、そのキャンバスは最初の要素が接続する前に `SSOverlay.getOrCreate(id, { maxDPR: 1.5 })` で一度だけ設定します。
 
 **PixiJS** — 描画バッファは `Application` のものなので、そちらで上限をかけます。
 

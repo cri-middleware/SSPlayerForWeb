@@ -1,7 +1,13 @@
 import { SSSurface, type SSSurfaceOptions } from './SSSurface.js';
 import { SSOverlay } from './SSOverlay.js';
 import type { SSPlayer } from './SSPlayer.js';
-import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
+import type { SSAlign, SSFit, SSPlacementBox } from '@spritestudio/ssplayer-core';
+
+/** The attributes that only move the character, so a change re-fits and nothing else. */
+const PLACEMENT_ATTRIBUTES = ['fit', 'align', 'flip-x', 'flip-y'];
+
+const FITS: readonly SSFit[] = ['contain', 'cover', 'none'];
+const ALIGNS: readonly SSAlign[] = ['center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
 /**
  * Optional `<ss-player>` Custom Element: one {@link SSSurface} carrying one
@@ -18,9 +24,16 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
  * player specifically — the future wgpu/WebGPU player is a separate product (two
  * independent renderers), so this element does no WebGPU capability detection.
  *
+ * The animation is fitted into the element's box, `contain` and `center` by default:
+ * `fit` (`contain` / `cover` / `none`) and `align` (`center`, `top`, `bottom-left`, …)
+ * choose otherwise, and `flip-x` / `flip-y` mirror it. `fit="none"` draws at the
+ * authored scale about the box's centre. The box is the authored canvas of the
+ * animation the pack was loaded on, kept when `animation` switches so the character
+ * does not rescale between animations. An element given no size takes the canvas's.
+ *
  * Declarative usage:
  * ```html
- * <ss-player src="chara.ssab" animation="idle" autoplay
+ * <ss-player src="chara.ssab" animation="idle" autoplay standalone
  *            max-dpr="2" power-preference="low-power" style="width:320px;height:480px">
  * </ss-player>
  * ```
@@ -35,11 +48,14 @@ import { SSRuntimeManager } from '@spritestudio/ssplayer-core';
  */
 export class SSPlayerElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    // Construction-time options (max-dpr / power-preference / antialias / stencil /
-    // pause-when-hidden) are read once at connect and are intentionally NOT observed:
-    // the GL context is created up front and getContext() ignores attributes on a
-    // context that already exists, so they can't change reactively.
-    return ['src', 'animation', 'speed-scale'];
+    // Construction-time options (max-dpr / power-preference / antialias /
+    // pause-when-hidden / background) are read once at connect and are intentionally
+    // NOT observed: the GL context is created up front and getContext() ignores
+    // attributes on a context that already exists, so they can't change reactively.
+    // They configure the element's own surface, so they take effect on a `standalone`
+    // element only; the shared overlay is built once, by whichever element comes
+    // first, and takes no per-element options.
+    return ['src', 'animation', 'speed-scale', ...PLACEMENT_ATTRIBUTES];
   }
 
   // Overlay mode (the default) shares ONE surface — and so one WebGL context —
@@ -52,6 +68,12 @@ export class SSPlayerElement extends HTMLElement {
   private _player: SSPlayer | null = null;
   private _canvas: HTMLCanvasElement | null = null;
   private _resizeObserver: ResizeObserver | null = null;
+  // Gives the element the authored canvas's size when the page sizes neither axis;
+  // it is the only thing in flow (the canvas is laid over the whole box).
+  private _sizer: SVGSVGElement | null = null;
+  // The box the character is fitted into: the canvas of the animation the pack was
+  // loaded on, kept across `animation` switches. A new pack picks it again.
+  private _frame: SSPlacementBox | undefined;
 
   // Monotonic guard: every (re)load / connect / disconnect bumps this. Async
   // continuations (fetch, setAnimation) compare against it and bail if a newer
@@ -111,7 +133,14 @@ export class SSPlayerElement extends HTMLElement {
       // setSSPlayerWasmUrl() (e.g. from the CDN bundle's `data-wasm`) → the
       // bundler-resolved default. Only the first element to connect actually runs
       // init; later elements reuse the cached promise (their `wasm` is ignored).
-      await ensureWasm(this.getAttribute('wasm') ?? _defaultWasmUrl ?? undefined);
+      try {
+        await ensureWasm(this.getAttribute('wasm') ?? _defaultWasmUrl ?? undefined);
+      } catch (err) {
+        // ensureWasm has already logged this one, with what to do about it.
+        readyReject(err);
+        this.emit('error', err);
+        return;
+      }
       if (token !== this._loadToken || !this.isConnected) {
         // No player will be built for this cycle, so `ready` must not be left
         // pending forever — a caller awaiting it would hang with no error.
@@ -132,10 +161,10 @@ export class SSPlayerElement extends HTMLElement {
       const src = this.getAttribute('src');
       if (src) await this.loadSrc(src, token);
     } catch (err) {
-      // A no-op once `ready` has resolved (a later loadSrc failure only emits
-      // the DOM event); before that it reports the init failure to the awaiter.
+      // A no-op once `ready` has resolved (a later loadSrc failure only reports
+      // it); before that it reports the failure to the awaiter.
       readyReject(err);
-      this.dispatchEvent(new CustomEvent('error', { detail: err }));
+      this.fail(err);
     }
   }
 
@@ -171,17 +200,23 @@ export class SSPlayerElement extends HTMLElement {
 
     switch (name) {
       case 'src':
-        if (newValue) this.loadSrc(newValue, ++this._loadToken).catch((err) => this.emit('error', err));
+        if (newValue) this.loadSrc(newValue, ++this._loadToken).catch((err) => this.fail(err));
         break;
       case 'animation':
         // Reflected onto the player synchronously, so an unknown name throws right
-        // here — keep it a DOM 'error' event like the async paths do.
+        // here — report it like the async paths do.
         if (newValue) {
-          try { this.applyAnimation(newValue); } catch (err) { this.emit('error', err); }
+          try { this.applyAnimation(newValue); } catch (err) { this.fail(err); }
         }
         break;
       case 'speed-scale':
         player.speedScale = this.numAttr('speed-scale') ?? 1;
+        break;
+      case 'fit':
+      case 'align':
+      case 'flip-x':
+      case 'flip-y':
+        this.applyPlacement();
         break;
     }
   }
@@ -210,9 +245,9 @@ export class SSPlayerElement extends HTMLElement {
     const token = ++this._loadToken;
     await player.loadBuffer(ssab, textures);
     if (token !== this._loadToken) return;
-    const anim = this.getAttribute('animation')
-      ?? SSRuntimeManager.extractAnimationNames(ssab instanceof Uint8Array ? ssab : new Uint8Array(ssab))[0];
+    const anim = this.getAttribute('animation') ?? player.getAnimationNames()[0];
     if (anim) this.applyAnimation(anim);
+    this.pinFrame();
     if (token !== this._loadToken) return;
     this.emit('load');
   }
@@ -228,8 +263,15 @@ export class SSPlayerElement extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
     // Author sizes the element via CSS/attributes; the canvas fills the host box.
-    style.textContent = ':host{display:inline-block;position:relative}canvas{display:block;width:100%;height:100%}';
+    // The canvas is laid over the box rather than sitting in flow, so its buffer
+    // size, which follows the box, can never feed back into the box.
+    style.textContent = ':host{display:inline-block;position:relative}:host([hidden]){display:none}'
+      + 'canvas{position:absolute;inset:0;display:block;width:100%;height:100%}'
+      + 'svg{display:block;width:100%;height:auto;visibility:hidden}';
     root.append(style);
+    this._sizer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    this._sizer.setAttribute('aria-hidden', 'true');
+    root.append(this._sizer);
     // In overlay mode the element owns no canvas at all — it is just a box whose
     // rect the overlay reads. That is the whole reason the context count stops
     // scaling with the number of elements.
@@ -262,6 +304,7 @@ export class SSPlayerElement extends HTMLElement {
     }
     const speed = this.numAttr('speed-scale');
     if (speed !== undefined) this._player.speedScale = speed;
+    this.applyPlacement();
     this.wireEvents();
   }
 
@@ -290,17 +333,48 @@ export class SSPlayerElement extends HTMLElement {
     await player.load(src);
     if (token !== this._loadToken) return;
 
-    let anim = this.getAttribute('animation');
-    if (!anim) {
-      // No instance-level animation-name accessor exists, so re-fetch the ssab bytes
-      // once to pick the first animation (browser-cached; mirrors the example).
-      const buf = new Uint8Array(await (await fetch(src)).arrayBuffer());
-      if (token !== this._loadToken) return;
-      anim = SSRuntimeManager.extractAnimationNames(buf)[0] ?? null;
-    }
+    const anim = this.getAttribute('animation') ?? player.getAnimationNames()[0];
     if (anim) this.applyAnimation(anim);
+    this.pinFrame();
     if (token !== this._loadToken) return;
     this.emit('load');
+  }
+
+  /**
+   * Fit against the canvas of the animation a pack was loaded on, and size the
+   * element by it when the page has not.
+   */
+  private pinFrame(): void {
+    const rect = this._player?.canvasRect;
+    this._frame = rect ?? undefined;
+    if (rect && this._sizer) {
+      this._sizer.setAttribute('width', String(rect.width));
+      this._sizer.setAttribute('height', String(rect.height));
+    }
+    this.applyPlacement();
+  }
+
+  /**
+   * Put `fit`, `align`, `flip-x` and `flip-y` on the player. An unknown `fit` or
+   * `align` is reported, naming what is accepted, and leaves the placement as it
+   * was rather than drawing somewhere the page did not ask for.
+   */
+  private applyPlacement(): void {
+    const player = this._player;
+    if (!player) return;
+    const fit = this.getAttribute('fit') ?? 'contain';
+    const align = this.getAttribute('align') ?? 'center';
+    if (!(FITS as readonly string[]).includes(fit)) {
+      this.fail(new Error(`<ss-player>: unknown fit "${fit}"; it takes ${FITS.join(', ')}.`));
+      return;
+    }
+    if (!(ALIGNS as readonly string[]).includes(align)) {
+      this.fail(new Error(`<ss-player>: unknown align "${align}"; it takes ${ALIGNS.join(', ')}.`));
+      return;
+    }
+    player.flipX = this.hasAttribute('flip-x');
+    player.flipY = this.hasAttribute('flip-y');
+    player.setPlacement({ fit: fit as SSFit, align: align as SSAlign, frame: this._frame });
   }
 
   private applyAnimation(name: string): void {
@@ -317,9 +391,12 @@ export class SSPlayerElement extends HTMLElement {
     // player follows this element's rect every frame.
     const surface = this._surface;
     if (!surface) return;
-    const rect = this.getBoundingClientRect();
-    const w = Math.max(1, Math.round(rect.width));
-    const h = Math.max(1, Math.round(rect.height));
+    // The canvas's layout box, not the element's bounding rect: the rect is the
+    // bounding box of whatever CSS transform the page put on the element, and a
+    // buffer sized from it stretches the picture.
+    const canvas = this._canvas!;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
     // Drawing buffer only — the shadow stylesheet already sizes the canvas element
     // (`canvas{width:100%;height:100%}`), so nothing writes inline CSS over it.
     surface.resize(w, h);
@@ -329,6 +406,16 @@ export class SSPlayerElement extends HTMLElement {
 
   private emit(type: string, detail?: unknown): void {
     this.dispatchEvent(new CustomEvent(type, { detail }));
+  }
+
+  /**
+   * Report a failure on the `error` event and in the console. A declarative page
+   * never listens for the event, and a blank element with an empty console reads
+   * as a renderer fault rather than a wrong `src` or animation name.
+   */
+  private fail(err: unknown): void {
+    console.error('[ss-player]', err);
+    this.emit('error', err);
   }
 
   /**
