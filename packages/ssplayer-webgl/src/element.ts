@@ -270,9 +270,9 @@ export class SSPlayerElement extends HTMLElement {
     // Re-dispatch player events as DOM CustomEvents so declarative hosts can
     // listen on the element, under the family's stems (animationStarted,
     // userData, …) lower-cased as DOM event names are — the names
-    // <ss-player-webgpu> dispatches too. 'audio' carries the sound reference
-    // only — actual playback requires an SSWebAudioManager attached to
-    // `el.player`.
+    // <ss-player-webgpu> dispatches too. 'audio' is the notification: the
+    // player plays the sound itself through the SSWebAudioManager it wires up on
+    // its own, unless it was constructed with `autoAudio: false`.
     this._unsubscribe.push(
       player.onAnimationStarted(() => this.emit('animationstarted')),
       player.onAnimationFinished(() => this.emit('animationfinished')),
