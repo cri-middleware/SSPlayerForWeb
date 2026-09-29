@@ -69,22 +69,28 @@ Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパ
 
 🚧 こちらが 2 つめの扉です。パッケージ公開前に評価したい場合か、本体を開発する場合の入口。
 
-**前提条件:** [Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/)（本リポジトリは pnpm workspaces を使用します）。以下の手順は **プリビルド** の WASM コアを取得するため、Rust ツールチェーンは不要です。
+**前提条件:** [Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/)（本リポジトリは pnpm workspaces を使用します）。🚧 SDK はまだリリースを公開していないため、ダウンロードできるプリビルドの WASM コアはありません。公開されるまでは WASM をソースからビルドするので、**Rust**（[rustup](https://rustup.rs/) 経由）と **wasm-pack**（`cargo install wasm-pack`）が必要です。
 
 ```bash
-git clone https://github.com/cri-middleware/SSPlayerForWeb.git
+git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
 cd SSPlayerForWeb
+pnpm run example                         # 下のすべての手順を実行し、<ss-player> のデモをブラウザで開く
+```
+
+`pnpm run example` は、下の各手順を、その成果物が無いときだけ実行します。`pnpm run example example=pixi` で別のサンプル(`override`、`part-follow`、`sspj-preview` も選べます)を起動できます。手順を自分で実行する場合:
+
+```bash
 git submodule update --init --recursive  # SpriteStudio-SDK（サンプル素材＋コア）を取得
 pnpm install                             # 依存関係のインストール & ワークスペースの初期化
-pnpm run download:wasm                   # プリビルド WASM を取得（macOS・Windows 共通）
+pnpm run build:wasm                      # WASM をソースからビルド（Rust + wasm-pack）
 pnpm run build                           # すべての TypeScript パッケージをビルド
 pnpm run deploy-examples                 # examples が読み込む .ssab アセットを生成
 cd examples/webgl-example
 pnpm run dev                             # 開発サーバを起動してアニメーションを確認
 ```
-examples は **ビルド済み** のパッケージをワークスペース参照で利用します。`packages/` 配下の TypeScript を変更したら `pnpm run build` を、サンプルプロジェクトを編集したら `pnpm run deploy-examples` を再実行してください。
+examples は **ビルド済み** のパッケージをワークスペース参照で利用します。`packages/` 配下の TypeScript を変更したら `pnpm run build` を、Rust コアを変更したら `pnpm run build:wasm` を、サンプルプロジェクトを編集したら `pnpm run deploy-examples` を再実行してください。
 
-**WASM コアをソースからビルド**（Rust コアを変更する場合のみ）: `pnpm run download:wasm` を `pnpm run build:wasm` に置き換えるだけで、他の手順は同じです。追加で **Rust（[rustup](https://rustup.rs/) 経由）** と **wasm-pack**（`cargo install wasm-pack`）が必要です。変更を貢献する場合は、[CONTRIBUTING.md](./CONTRIBUTING.md) にコーディング規約と WASM FFI のルールがあります。
+**SDK がリリースを公開したら**、`pnpm run build:wasm` の代わりに `pnpm run download:wasm` でプリビルドの WASM を取得でき、Rust ツールチェーンは不要になります。変更を貢献する場合は、[CONTRIBUTING.md](./CONTRIBUTING.md) にコーディング規約と WASM FFI のルールがあります。
 
 ## 💡 概要
 

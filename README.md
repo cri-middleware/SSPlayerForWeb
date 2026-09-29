@@ -71,22 +71,28 @@ No Rust or WASM toolchain needed — the WASM ships inside each renderer package
 
 🚧 This is the second door — evaluating SpriteStudio Player for Web before the packages ship, or working on it.
 
-**Prerequisites:** [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) (this repo uses pnpm workspaces). The steps below fetch the **pre-built** WASM core, so no Rust toolchain is required.
+**Prerequisites:** [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) (this repo uses pnpm workspaces). 🚧 The SDK has published no release yet, so there is no pre-built WASM core to download: until it does, the WASM is built from source, which needs **Rust** (via [rustup](https://rustup.rs/)) and **wasm-pack** (`cargo install wasm-pack`).
 
 ```bash
-git clone https://github.com/cri-middleware/SSPlayerForWeb.git
+git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
 cd SSPlayerForWeb
+pnpm run example                         # every step below, then the <ss-player> demo in your browser
+```
+
+`pnpm run example` runs each step below only when its output is missing, and `pnpm run example example=pixi` picks another example (`override`, `part-follow` and `sspj-preview` too). By hand:
+
+```bash
 git submodule update --init --recursive  # SpriteStudio-SDK (sample source + core)
 pnpm install                             # install deps & initialize the workspace
-pnpm run download:wasm                   # fetch the pre-built WASM (macOS & Windows alike)
+pnpm run build:wasm                      # build the WASM from source (Rust + wasm-pack)
 pnpm run build                           # build all TypeScript packages
 pnpm run deploy-examples                 # generate the .ssab assets the examples load
 cd examples/webgl-example
 pnpm run dev                             # open the dev server and see the animation
 ```
-The examples consume the **built** packages via workspace references — re-run `pnpm run build` whenever you change TypeScript under `packages/`, and `pnpm run deploy-examples` if you edit the sample projects.
+The examples consume the **built** packages via workspace references — re-run `pnpm run build` whenever you change TypeScript under `packages/`, `pnpm run build:wasm` whenever you change the Rust core, and `pnpm run deploy-examples` if you edit the sample projects.
 
-**Building the WASM core from source** (only if you modify the Rust core): replace `pnpm run download:wasm` with `pnpm run build:wasm` — everything else is identical. This additionally needs **Rust** (via [rustup](https://rustup.rs/)) and **wasm-pack** (`cargo install wasm-pack`). Contributing the change back? [CONTRIBUTING.md](./CONTRIBUTING.md) covers the coding standards and WASM FFI rules.
+**Once the SDK publishes a release**, `pnpm run download:wasm` fetches the pre-built WASM in place of `pnpm run build:wasm`, and no Rust toolchain is needed. Contributing the change back? [CONTRIBUTING.md](./CONTRIBUTING.md) covers the coding standards and WASM FFI rules.
 
 ## 💡 Overview
 

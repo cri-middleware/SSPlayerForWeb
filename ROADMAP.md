@@ -87,15 +87,18 @@ describes and the official players implement, but this one does not yet.
 
 The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration point — a Custom Element with a `ResizeObserver`, a shared-overlay mode and a standalone mode. What is missing is everything past drawing: an element that sizes, receives pointers and announces itself the way a control on the page does. The vocabulary is shared with the sibling Players — `fit` / `align` for placement, a part rect read-out for hit areas, and a UI-state map.
 
-*   [ ] **`fit` / `align` on the element and the players**
-    Nothing fits the animation into its box: the element sizes its canvas and the player draws at authored
-    scale, so CSS decides the box and the art ignores it.
-    *   *Target*: `fit` (`contain` / `cover` / `none`) + `align`, spelled in `object-fit` / `object-position`
-        vocabulary on the element and in the family's on the player. The contract — names, defaults, the
-        arithmetic, and where the box comes from — is the porting guide's
-        [Placement: Fit and Align](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/50_features/70_placement.md).
-    *   Also give the element an intrinsic aspect ratio from that box, so `height: auto` and CSS
-        `aspect-ratio` behave as they do on `<img>`.
+*   [x] **`fit` / `align` on the element and the WebGL player** — *done*
+    The animation is fitted into its box, and the element takes the box's size from the authored canvas
+    when the page gives it none. The contract — names, defaults, the arithmetic, and where the box comes
+    from — is the porting guide's
+    [Placement: Fit and Align](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/50_features/70_placement.md).
+    *   *Shipped as*: `fit` / `align` / `flip-x` / `flip-y` on `<ss-player>` (`object-fit` words, `contain` and
+        `center` by default), and `setPlacement()` / `getPlacement()` / `canvasRect` on the `ssplayer-webgl`
+        `SSPlayer`. The arithmetic is `resolvePlacement()` in `ssplayer-core`.
+    *   *Not on PixiJS*: an `ssplayer-pixi` `SSPlayer` is a Container the host places and sizes, so it has no
+        box to fit into.
+    *   *Not shipped*: `frameScope` (measuring the box from the drawn geometry) — the authored canvas is the
+        box, and a `frame` can be passed for any other.
 
 *   [ ] **Per-part hit testing and pointer events**
     An animation cannot be clicked on its artwork. Overlay mode makes it explicit — the shared canvas is

@@ -45,12 +45,18 @@ vi.mock('@spritestudio/ssplayer-core', async () => ({
   // The real one, from source: listener dispatch is behaviour these tests pin
   // (onAnimationStarted), not something to fake.
   ListenerSet: (await import('../../ssplayer-core/src/ListenerSet.js')).ListenerSet,
+  // Also the real one: the placement arithmetic is what SSPlayer hands the box to.
+  resolvePlacement: (await import('../../ssplayer-core/src/Placement.js')).resolvePlacement,
   initializeWasm: vi.fn().mockResolvedValue(undefined),
   DirectInternalPlayer: class {
     currentAnimation = 'Anime_1';
     isPausing = false;
     audioManager: unknown = null;
     subFrameEnabled = false;
+    flipX = false;
+    flipY = false;
+    canvasRect: { x: number; y: number; width: number; height: number } | null = null;
+    getCanvasRect() { return this.canvasRect; }
     runtimeManager = {
       context: { set_render_mode: vi.fn(), set_coordinate_system: vi.fn() },
       getSounds: () => [],
@@ -328,6 +334,94 @@ describe('SSPlayer box', () => {
     expect(m[0]).toBe(2);
     expect(m[3]).toBe(3);
     expect(m[4]).toBe(400);
+  });
+});
+
+describe('SSPlayer placement', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // A 200x100 canvas whose pivot puts it wholly to the right of and below the
+  // origin, so a fit that ignores where the box sits shows.
+  const CANVAS = { x: 0, y: 0, width: 200, height: 100 };
+
+  function setup(w = 800, h = 600) {
+    const surface = new SSSurface(makeCanvas(w, h));
+    const player = surface.createPlayer();
+    const internal = (player as unknown as { internalPlayer: { canvasRect: typeof CANVAS | null; flipX: boolean; flipY: boolean } }).internalPlayer;
+    internal.canvasRect = CANVAS;
+    return { surface, player, internal };
+  }
+
+  it('draws at the authored scale about the box centre until a placement is set', () => {
+    const { player } = setup();
+    const m = player.renderTransform();
+    expect([m[0], m[3], m[4], m[5]]).toEqual([1, 1, 400, 300]);
+  });
+
+  it('fits the authored canvas into the box', () => {
+    const { player } = setup(800, 600);
+    player.setPlacement({});
+    const m = player.renderTransform();
+    // 800/200 = 4 and 600/100 = 6: contain takes the smaller. The canvas centre
+    // (100, 50) then sits on the box centre.
+    expect(m[0]).toBe(4);
+    expect(m[3]).toBe(4);
+    expect(m[4]).toBeCloseTo(400 - 4 * 100);
+    expect(m[5]).toBeCloseTo(300 - 4 * 50);
+  });
+
+  it('adds the transform\'s offset after the fit and multiplies its scale into it', () => {
+    const { player } = setup(800, 600);
+    player.setPlacement({});
+    player.setTransform({ x: 10, y: -5, scaleX: 0.5, scaleY: 0.5 });
+    const m = player.renderTransform();
+    expect(m[0]).toBe(2);
+    expect(m[4]).toBeCloseTo(400 - 4 * 100 + 10);
+    expect(m[5]).toBeCloseTo(300 - 4 * 50 - 5);
+  });
+
+  it('follows the box when it moves and when it resizes', () => {
+    const { surface, player } = setup(800, 600);
+    player.setPlacement({ align: 'top-left' });
+
+    player.box = { x: 100, y: 50, w: 400, h: 200 };
+    let m = player.renderTransform();
+    expect(m[0]).toBe(2);
+    expect(m[4]).toBeCloseTo(100); // the canvas's left edge on the box's left edge
+    expect(m[5]).toBeCloseTo(50);
+
+    player.resetBox();
+    surface.resize(200, 100, 1);
+    m = player.renderTransform();
+    expect(m[0]).toBe(1);
+    expect(m[4]).toBeCloseTo(0);
+  });
+
+  it('keeps an edge alignment against its edge when the player is mirrored', () => {
+    const { player, internal } = setup(800, 600);
+    player.setPlacement({ align: 'left' });
+    internal.flipX = true;
+    const m = player.renderTransform();
+    // Mirrored, the canvas spans [tx - 4*200, tx]: its left edge is tx - 800.
+    expect(m[4] - 4 * CANVAS.width).toBeCloseTo(0);
+  });
+
+  it('takes a frame of its own over the canvas, and clears back to unfitted', () => {
+    const { player } = setup(800, 600);
+    player.setPlacement({ frame: { x: -100, y: -100, width: 400, height: 300 } });
+    expect(player.renderTransform()[0]).toBe(2);
+
+    player.setPlacement(null);
+    expect(player.getPlacement()).toBeNull();
+    expect(player.renderTransform()[0]).toBe(1);
+  });
+
+  it('falls back to the unfitted placement while there is no canvas', () => {
+    const { player, internal } = setup(800, 600);
+    internal.canvasRect = null;
+    player.setPlacement({});
+    const m = player.renderTransform();
+    expect([m[0], m[4], m[5]]).toEqual([1, 400, 300]);
   });
 });
 

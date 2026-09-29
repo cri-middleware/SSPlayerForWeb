@@ -63,7 +63,7 @@ defineSSPlayerElement();   // registers the <ss-player> tag (once per app)
 ```
 
 ```html
-<ss-player src="chara.ssab" animation="idle" autoplay
+<ss-player src="chara.ssab" animation="idle" autoplay standalone
            max-dpr="2" power-preference="low-power"
            style="width:320px;height:480px"></ss-player>
 ```
@@ -77,7 +77,7 @@ await el.loadBuffer(ssabArrayBuffer, new Map([[0x1234abcd, imageBitmap]]));
 el.play();
 ```
 
-Observed attributes (`src`, `animation`, `speed-scale`) react live; construction-time options (`max-dpr`, `power-preference`, `antialias`, `stencil`, `pause-when-hidden`) are read once at connect. Player events are re-dispatched as DOM `CustomEvent`s.
+The animation is fitted into the element's box — `fit` (`contain` by default, `cover`, `none`), `align` (`center` by default) and `flip-x` / `flip-y` choose how — and an element given no size takes the authored canvas's. Observed attributes (`src`, `animation`, `speed-scale`, `fit`, `align`, `flip-x`, `flip-y`) react live; construction-time options (`max-dpr`, `power-preference`, `antialias`, `pause-when-hidden`, `background`) are read once at connect, and configure the element's own context, so they apply to a `standalone` element only (elements share one overlay canvas by default). Player events are re-dispatched as DOM `CustomEvent`s. A failure to load — a wrong `src` or `animation`, a runtime that would not start — is dispatched as an `error` event and logged with `console.error`.
 
 `pause-when-hidden` is **on by default** — the ticker stops while the canvas is off-screen or the tab is backgrounded. Turn it off with `pause-when-hidden="false"`.
 

@@ -43,7 +43,7 @@ defineSSPlayerElement();   // <ss-player> タグを登録(アプリごとに一�
 ```
 
 ```html
-<ss-player src="chara.ssab" animation="idle" autoplay
+<ss-player src="chara.ssab" animation="idle" autoplay standalone
            max-dpr="2" power-preference="low-power"
            style="width:320px;height:480px"></ss-player>
 ```
@@ -57,7 +57,7 @@ await el.loadBuffer(ssabArrayBuffer, new Map([[0x1234abcd, imageBitmap]]));
 el.play();
 ```
 
-監視される属性(`src`、`animation`、`speed-scale`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`stencil`、`pause-when-hidden`)は接続時に一度だけ読み取られます。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。
+アニメーションは要素の箱に合わせて描かれます。合わせ方は `fit`(既定は `contain`、ほかに `cover`、`none`)、`align`(既定は `center`)、`flip-x` / `flip-y` で選び、大きさを指定していない要素はオーサリング上のキャンバスと同じ大きさになります。監視される属性(`src`、`animation`、`speed-scale`、`fit`、`align`、`flip-x`、`flip-y`)はライブで反応します。構築時のオプション(`max-dpr`、`power-preference`、`antialias`、`pause-when-hidden`、`background`)は接続時に一度だけ読み取られ、要素自身のコンテキストを設定するので、効くのは `standalone` の要素だけです(要素は既定で 1 枚のオーバーレイキャンバスを共有します)。プレイヤーのイベントは DOM の `CustomEvent` として再ディスパッチされます。読み込みの失敗(`src` や `animation` の誤り、ランタイムが起動しない場合など)は `error` イベントとして発火され、`console.error` にも出力されます。
 
 `pause-when-hidden` は **既定で有効** です(キャンバスが画面外にある間やタブが非アクティブな間はティッカーを停止します)。無効にするには `pause-when-hidden="false"` を指定してください。
 

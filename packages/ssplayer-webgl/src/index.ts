@@ -5,6 +5,7 @@ export {
   SSPlayer,
   type SSPlayerOptions,
   type SSPlayerBox,
+  type SSPlayerPlacement,
   type SSUserDataEvent,
   type SSSignalEvent,
   type SSAudioEvent,

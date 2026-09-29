@@ -37,7 +37,7 @@ pnpm run download:wasm   # ビルド済みの変換 WASM を取得（ツール�
 ```
 
 `download:wasm` は、**git で管理されていない**
-`@spritestudio/ssconverter-core` の `wasm/ssconverter_bg.wasm` を取得します。一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリルートで実行します）。
+`@spritestudio/ssconverter-core` の `wasm/ssconverter_bg.wasm` を取得します。🚧 SDK はまだリリースを公開していないため取得できるものがありません。代わりに `pnpm run build:wasm` を実行してください(Rust と wasm-pack が必要です)。どちらかを一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリルートで実行します）。
 
 ## ブラウザツール
 

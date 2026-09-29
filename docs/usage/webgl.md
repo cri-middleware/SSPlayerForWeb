@@ -50,6 +50,44 @@ The Custom Element is the quickest way to get started.
 </ss-player>
 ```
 
+### Attributes
+
+| Attribute | |
+|---|---|
+| `src` | The `.ssab` to load. Setting it again loads another pack. |
+| `animation` | The animation to start on; the first one in the pack when absent. |
+| `autoplay` | Play as soon as the animation is set up. Absent, the element holds its first frame. |
+| `speed-scale` | Playback speed as a multiple of the authored rate. |
+| `fit` | How the animation is scaled to the element's box: `contain` (default), `cover` or `none`. `none` draws at the authored scale with the origin at the box's centre. |
+| `align` | Which point of the animation's canvas lands on the matching point of the box: `center` (default), `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left` or `bottom-right`. |
+| `flip-x`, `flip-y` | Mirror the animation. `align` follows the mirror. |
+| `standalone` | Draw on the element's own canvas and WebGL context. See below. |
+| `max-dpr`, `power-preference`, `antialias`, `background`, `pause-when-hidden` | Configure a `standalone` element's context. Read once, at connect. |
+
+`src`, `animation`, `speed-scale`, `fit`, `align`, `flip-x` and `flip-y` react when they change. An
+element with the `hidden` attribute is not displayed.
+
+**Size and fit.** The box the animation is fitted to is its authored canvas — the canvas size set in
+SpriteStudio — of the animation the pack was loaded on. It stays when `animation` changes, so a character
+does not rescale between the animations of one pack. An element the page gives no size is as large as that
+canvas, one canvas unit to a CSS pixel; given only a width, it takes the canvas's aspect ratio for its
+height.
+
+A failure — a `src` that does not load, an `animation` the pack does not have, a runtime that
+will not start — is dispatched as an `error` event on the element (its `detail` is the error)
+and logged with `console.error`.
+
+**Overlay or standalone.** Browsers cap how many WebGL contexts a page may hold, so by default every
+`<ss-player>` shares **one overlay canvas** laid over the page, and the element is only the
+box the animation is drawn in. That makes any number of elements cheap, and it means the
+element's own CSS does not shape the animation: `transform`, `filter`, `clip-path` and
+`border-radius` on the element do not reach it, and it does not share the element's place
+in the stacking order. Add `standalone` to give an element its own canvas, where all of those
+apply — the choice for an element that needs a CSS effect, an opaque backdrop or its own stacking
+context. The context options above configure that private context, so they have no
+effect on an overlay element; the shared overlay takes its options from
+`SSOverlay.getOrCreate(id, options)`.
+
 To control it from JavaScript, grab the DOM element and call `play()` or `stop()`. See
 [Basic playback](/usage/basic) for the full API.
 
@@ -92,3 +130,19 @@ async function main() {
 
 main().catch(console.error);
 ```
+
+### Fitting into a box
+
+A player draws into its `box` — the whole surface unless you set one. Without a placement it draws at the
+authored scale with its origin at the box's centre. `setPlacement` fits it into the box instead, and keeps
+it fitted as the box moves or resizes:
+
+```ts
+player.setPlacement({ fit: 'cover', align: 'bottom' }); // {} is contain and center
+player.setTransform({ x: 8 });                          // added after the fit; its scale multiplies the fit's
+player.setPlacement(null);                              // back to the authored scale
+```
+
+The box that is fitted is the authored canvas of the animation playing, so each animation is fitted by its
+own canvas. To keep one scale across a pack, read `player.canvasRect` once, after the first `setAnimation`,
+and pass it as `frame`: `player.setPlacement({ frame: player.canvasRect })`.

@@ -6,6 +6,7 @@ import { IAudioManager } from './IAudioManager.js';
 import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
 import { InstancePackProvider, resolveInstancePacks } from './PackResolver.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
+import { canvasRectFrom, type SSPlacementBox } from './Placement.js';
 
 export interface EffectChildState {
     slot: EffectSlotHandle;
@@ -168,6 +169,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // the previous pack's selection for "already selected" and skip the
         // setup the new pack still needs — leaving it bound but unplayable.
         this._animationName = '';
+        this._canvasRect = undefined;
         // A new pack means new assets: re-arm the one-shot load.
         this._resourceManager?.reset?.();
         this._prepared = null;
@@ -188,6 +190,30 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public get animationNames(): readonly string[] {
         return this._animationNames;
+    }
+
+    // The set-up animation's authored canvas; undefined until asked for, and
+    // dropped whenever the animation or the pack changes.
+    private _canvasRect: SSPlacementBox | null | undefined;
+
+    /**
+     * The authored canvas of the animation that is set up, as a box in
+     * player-local units (Y down) — what a fit measures against when it is given
+     * no frame of its own. `null` until an animation is set up.
+     *
+     * It is the playing animation's own canvas, and one pack's animations may
+     * differ. A host that wants one scale across a pack reads it once after its
+     * first `setAnimation` and passes it as the fit's `frame`. Read-only: it is
+     * the cache, not a copy.
+     */
+    public getCanvasRect(): SSPlacementBox | null {
+        if (this._canvasRect === undefined) {
+            const data = this.runtimeManager.getCurrentAnimationData();
+            const size = data?.canvasSize();
+            const pivot = data?.pivot();
+            this._canvasRect = size && pivot ? canvasRectFrom(size.v1(), size.v2(), pivot.v1(), pivot.v2()) : null;
+        }
+        return this._canvasRect;
     }
 
     /**
@@ -367,6 +393,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             );
         }
         this._animationName = animationName;
+        this._canvasRect = undefined;
         // Per-transition in the runtime, so the caller's count has to go back on
         // after every switch. Speed, frame skip and the playback direction all
         // survive setup on their own and need nothing here.
@@ -1342,7 +1369,16 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
             childState.visible = visible;
             if (childState.slot.raw.transitioned()) {
-                childState.player.runtimeManager.context.play();
+                const childContext = childState.player.runtimeManager.context;
+                childContext.play();
+                // The slot has already put the child on the frame to draw this tick:
+                // its section's first frame when it plays on its own — where play()
+                // leaves it — and the parent-relative frame when it is synced.
+                // play() puts a synced child back on the section's first frame, and
+                // the renderers read the child's playhead, so put it back.
+                if (!childState.slot.raw.independent()) {
+                    childContext.set_frame_no(childState.slot.raw.child_frame_no());
+                }
             }
 
             // Advance the child's own effects
