@@ -74,7 +74,10 @@ batches, and the cost is proportional to how many parts are involved:
   [Shaders & blend modes](/customize/shaders).
 - **Masking**. Masked content goes through a separate coverage pre-pass. On PixiJS, set
   `player.maskEnabled = false` to drop that pass for animations that do not use mask parts (the
-  WebGL renderer has no such toggle).
+  WebGL renderer has no such toggle). Without the pass every part draws unclipped, including a
+  part set to draw only inside a mask — which SpriteStudio hides when no mask covers it, even in
+  an animation with no mask parts at all. An animation with such parts therefore looks different
+  with the pass turned off.
 
 Neither is something to avoid on principle — they are just the first thing to look at when one
 animation costs far more than another with a similar part count.

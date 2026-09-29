@@ -33,6 +33,22 @@ players carry it alongside the `.ssab`, but sequence *playback* is not implement
 runtime, so it is unavailable to every official player — see
 [Shared Limitations](https://cri-middleware.github.io/SpriteStudio-Docs/sdk/limitations/).
 
+## Masks
+
+Masking differs between the two renderers in the points below. The framework integrations all
+draw through `ssplayer-webgl`, so what is said of it applies to them.
+
+::: warning
+- **Effects are not masked on PixiJS.** An effect's particles draw unclipped even when the effect
+  part is a mask target. `ssplayer-webgl` masks them.
+- **The number of mask writers is limited.** Every mask part and clipping part counts — those of
+  the animation and of every instance it calls, each time the instance is placed. One animation
+  holds at most 24 of its own; the whole instance tree holds at most 96 on `ssplayer-pixi` and 256
+  on `ssplayer-webgl`. Writers past the limit are ignored (`ssplayer-pixi` logs a warning once).
+  On `ssplayer-pixi`, a tree with more than 24 shares one coverage texture split into tiles, so
+  its masks lose resolution once the texture reaches its size cap.
+:::
+
 ## Browser requirements
 
 ::: warning WebAssembly SIMD is required
