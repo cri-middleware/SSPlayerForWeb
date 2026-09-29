@@ -216,7 +216,7 @@ MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it 
 
 ## Known limitations
 
-- The picture's **tint doesn't affect** the SS animation. *Opacity*, *move* and *scale*
+- The picture's **tint and blend mode don't affect** the SS animation. *Opacity*, *move* and *scale*
   **do** apply.
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
   can shift the animation out of place). MZ's own flash/tint overlays are unaffected.

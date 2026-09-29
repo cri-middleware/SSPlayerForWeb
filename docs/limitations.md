@@ -84,7 +84,7 @@ host framework's plugin system, so they are **not installable from npm**.
 [Using RPG Maker MZ](/usage/rmmz).
 
 ::: warning
-- **A picture's tint does not affect the animation.** *Opacity*, *move* and *scale* do apply.
+- **A picture's tint and blend mode do not affect the animation.** *Opacity*, *move* and *scale* do apply.
 - **Some screen effects behave differently** from a normal picture: a few PIXI filters can shift
   the animation out of place. MZ's own flash / tint overlays are unaffected.
 - **Deployment's "Exclude unused files" deletes anything you put under `img/`.** The `.ssab` files
