@@ -42,8 +42,10 @@ pnpm run download:wasm   # fetch the pre-built converter WASM (no toolchain need
 ```
 
 `download:wasm` fetches `@spritestudio/ssconverter-core`'s
-`wasm/ssconverter_bg.wasm`, which is **not tracked in git**. Run it once; then use
-either mode below (all commands are run from the repo root).
+`wasm/ssconverter_bg.wasm`, which is **not tracked in git**. 🚧 The SDK has published no
+release yet, so there is nothing for it to fetch: run `pnpm run build:wasm` instead, which
+needs Rust and wasm-pack. Run one of them once; then use either mode below (all commands
+are run from the repo root).
 
 ## Browser tool
 

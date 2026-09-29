@@ -90,7 +90,9 @@ suites are reported as **skipped**, not passed — read the summary line. The
 examples consume the **built** packages via workspace references, so re-run
 `pnpm run build` after changing any TypeScript under `packages/`, then check the
 change in the example for the renderer you touched — `examples/webgl-example`
-for the core and WebGL, `examples/pixi-example` for PixiJS — with `pnpm run dev`.
+for the core and WebGL, `examples/pixi-example` for PixiJS — with `pnpm run dev`. On a fresh checkout,
+`pnpm run example` (or `pnpm run example example=pixi`) does every step that is missing and starts
+the example: [`scripts/run-example.sh`](./scripts/run-example.sh) and its `.ps1` twin.
 
 ### Regenerating the FlatBuffers accessors
 
@@ -199,7 +201,7 @@ pnpm run build
 pnpm test             # 全ワークスペースの vitest スイート
 ```
 
-生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。`pnpm test` には上の 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。
+生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。`pnpm test` には上の 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。新規チェックアウトでは `pnpm run example`（別のサンプルは `pnpm run example example=pixi`）が、不足している手順をすべて実行してサンプルを起動します（[`scripts/run-example.sh`](./scripts/run-example.sh) とその `.ps1` の片割れ）。
 
 ### FlatBuffers アクセサの再生成
 
