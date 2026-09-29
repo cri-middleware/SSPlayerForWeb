@@ -127,13 +127,30 @@ describe('MaskPlanner', () => {
         expect(p.bit[MAX_MASK_WRITERS - 1]).toBe(MAX_MASK_WRITERS - 1);
     });
 
-    it('flags exceeded on truncation even when the finalized count falls below the cap', () => {
+    it('does not let switched-off writers take the slots of live ones', () => {
         const p = new MaskPlanner();
-        // 30 candidates: selection stops at 24 (6 dropped), then pass 2 filters
-        // the 10 inert ones. The surviving count says nothing about truncation.
+        // 30 writers, the first 10 at mask 0: the 20 live ones all fit, and
+        // nothing live was dropped.
         const parts = Array.from({ length: MAX_MASK_WRITERS + 6 }, (_, i) => i);
         const inert = Object.fromEntries(parts.slice(0, 10).map(i => [i, { mask: 0 }]));
-        expect(p.plan(makeSource([{ kind: DrawBatchKind.Mask, parts }], inert))).toBe(MAX_MASK_WRITERS - 10);
+        expect(p.plan(makeSource([{ kind: DrawBatchKind.Mask, parts }], inert))).toBe(MAX_MASK_WRITERS - 4);
+        expect(p.exceeded).toBe(false);
+        expect(p.partIdx[0]).toBe(10);
+
+        // Hidden ones likewise: a full cap's worth of hidden writers ahead of
+        // three live ones still leaves the live ones planned.
+        const many = Array.from({ length: MAX_MASK_WRITERS + 3 }, (_, i) => i);
+        const hidden = Object.fromEntries(many.slice(0, MAX_MASK_WRITERS).map(i => [i, { hide: true }]));
+        expect(p.plan(makeSource([{ kind: DrawBatchKind.Mask, parts: many }], hidden))).toBe(3);
+        expect(p.exceeded).toBe(false);
+        expect(Array.from(p.partIdx.subarray(0, 3))).toEqual([MAX_MASK_WRITERS, MAX_MASK_WRITERS + 1, MAX_MASK_WRITERS + 2]);
+    });
+
+    it('flags exceeded when live writers overflow, however many inert ones are mixed in', () => {
+        const p = new MaskPlanner();
+        const parts = Array.from({ length: MAX_MASK_WRITERS + 11 }, (_, i) => i);
+        const inert = Object.fromEntries(parts.slice(0, 10).map(i => [i, { mask: 0 }]));
+        expect(p.plan(makeSource([{ kind: DrawBatchKind.Mask, parts }], inert))).toBe(MAX_MASK_WRITERS);
         expect(p.exceeded).toBe(true);
     });
 

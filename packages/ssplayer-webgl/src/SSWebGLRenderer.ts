@@ -63,8 +63,9 @@ export class SSWebGLRenderer {
   // masked frame so mask-free animations never pay for it. See writeTreeWriter.
   private maskProgram: MaskProgram | null = null;
   // True when the GL context was created with a stencil buffer (the `stencil`
-  // context attribute). Masking is skipped entirely when absent (masked content
-  // draws unclipped) — graceful degradation on contexts without a stencil attachment.
+  // context attribute). Without one no mask can be written, so masking degrades:
+  // targets that draw outside a mask draw unclipped, and targets that draw only
+  // inside one are not drawn at all — there is no inside to draw them in.
   private _stencilSupported = false;
   // Vertex count produced by the last buildOnePart() call (its index count is returned).
   private _builtVerts = 0;
@@ -612,9 +613,10 @@ export class SSWebGLRenderer {
     // animation evaluates every part by its own flags alone.
     const ctxInfluence = inherited ? inherited.influence : ROOT_MASK_INFLUENCE;
     const ctxVisibleInside = inherited ? inherited.visibleInside : ROOT_VISIBLE_INSIDE;
-    // With no writer anywhere in the tree, a target that draws only inside a
-    // mask is covered by nothing and draws nowhere.
-    const insideDropsOut = this._stencilSupported && this._treeCount === 0;
+    // With no writer anywhere in the tree — or no stencil to write one into — a
+    // target that draws only inside a mask is covered by nothing and draws
+    // nowhere.
+    const insideDropsOut = !this._stencilSupported || this._treeCount === 0;
 
     const batchesLen = fd.drawBatchesLength();
     for (let i = 0; i < batchesLen; i++) {
@@ -666,9 +668,11 @@ export class SSWebGLRenderer {
       // Masked content (FLAG_MASK_INFLUENCE, 0x01): clip each part against the
       // stencil coverage. Handled per-part (not batched), so skip the batched
       // build/draw. The batch flag is the parts' own mask_influence, so
-      // requiring it alongside ctxInfluence is the AND. A target no writer
-      // reaches passes the test anyway; with no writer in the tree at all the
-      // content draws unclipped, bar the parts that draw only inside a mask.
+      // requiring it alongside ctxInfluence is the AND. The test needs no
+      // pre-filter for which writers reach which part: where none does, a part
+      // that draws outside a mask passes and one that draws only inside fails,
+      // as it should. With no writer in the tree at all the batch skips the
+      // test: its outside parts draw unclipped and its inside parts not at all.
       const batchInfluence = (b.flags() & 0x01) !== 0;
       const target = batchInfluence && ctxInfluence;
       const dropInside = insideDropsOut && target;
@@ -1061,7 +1065,8 @@ export class SSWebGLRenderer {
    * programs sample unit 0). Restores the parts-color program on return.
    *
    * `dropInsideOf` is non-null when the batch's parts are mask targets but the
-   * tree has no writer: it is the handed-down visible_inside_mask, and a part
+   * tree has no writer (or there is no stencil): it is the handed-down
+   * visible_inside_mask, and a part
    * that composes to "inside" is skipped — covered by nothing, it draws nowhere.
    */
   private drawShaderNormalBatch(

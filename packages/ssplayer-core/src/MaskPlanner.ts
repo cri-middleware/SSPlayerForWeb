@@ -78,9 +78,6 @@ export class MaskPlanner {
     /** True when the writer cap was reached (extra masks dropped). */
     exceeded = false;
 
-    // Candidate scratch (pre-finalize): (partIdx, rank, opInvert, isClipping) + texHash.
-    private readonly _candSel = new Int32Array(MAX_MASK_WRITERS * 4);
-    private readonly _candTex = new Uint32Array(MAX_MASK_WRITERS);
     private readonly _batch: MaskBatch = { kind: 0, startRank: 0, count: 0, flags: 0, textureHash: 0 };
 
     /**
@@ -88,108 +85,85 @@ export class MaskPlanner {
      * writer count and fills the SoA fields above.
      */
     plan(src: MaskPlanSource): number {
-        const sel = this._candSel;
-        const selTex = this._candTex;
         const b = this._batch;
+        this.count = 0;
+        this.exceeded = false;
 
-        // Pass 1: select candidate writers in draw order:
+        // Walk the batches in draw order and take each writer as it comes:
         //   pure masks  — DrawBatchKind.Mask batches (PartTypeMask / draw_as_mask);
         //                 OP rides in the batch flag (0x01: 0 = increment, 1 = invert).
         //   clipping    — drawn parts with mask_write (no twin batch emitted),
         //                 detected via the static PartData flags; mask_influence
         //                 doubles as the OP, and they scope FORWARD.
-        // `truncated` is latched HERE, the only place writers are actually
-        // dropped: a candidate was selected but there was no room left for it.
-        // It cannot be inferred from the finalized count below, which pass 2
-        // shrinks by dropping inert/degenerate writers (that count reaching the
-        // cap does not mean anything was lost, and falling short of it does not
-        // mean nothing was).
-        let cand = 0;
-        let truncated = false;
+        // A writer that writes nothing this frame is dropped before it is
+        // counted (see add), so only live writers compete for the cap.
         const nb = src.drawBatchCount();
-        for (let i = 0; i < nb && !truncated; i++) {
+        for (let i = 0; i < nb && !this.exceeded; i++) {
             src.readBatch(i, b);
             const texHash = b.textureHash >>> 0;
             if (b.kind === DrawBatchKind.Mask) {
                 const opInvert = (b.flags & 0x01) !== 0 ? 1 : 0;
-                for (let c = 0; c < b.count; c++) {
-                    if (cand >= MAX_MASK_WRITERS) { truncated = true; break; }
-                    const partIdx = src.drawOrderAt(b.startRank + c);
-                    sel[cand * 4 + 0] = partIdx;
-                    sel[cand * 4 + 1] = b.startRank + c;
-                    sel[cand * 4 + 2] = opInvert;
-                    sel[cand * 4 + 3] = 0;
-                    selTex[cand] = texHash;
-                    cand++;
+                for (let c = 0; c < b.count && !this.exceeded; c++) {
+                    this.add(src, src.drawOrderAt(b.startRank + c), b.startRank + c, opInvert, 0, texHash);
                 }
             } else if (b.kind === DrawBatchKind.Normal || b.kind === DrawBatchKind.Shape || b.kind === DrawBatchKind.Mesh) {
-                for (let c = 0; c < b.count; c++) {
+                for (let c = 0; c < b.count && !this.exceeded; c++) {
                     const partIdx = src.drawOrderAt(b.startRank + c);
                     const mf = src.maskFlag(partIdx);
                     // mask_write drawn part = clipping writer (draw_as_mask parts
                     // are pure masks, emitted via Mask batches above).
                     if ((mf & 0x02) === 0 || (mf & 0x08) !== 0) continue;
-                    if (cand >= MAX_MASK_WRITERS) { truncated = true; break; }
-                    sel[cand * 4 + 0] = partIdx;
-                    sel[cand * 4 + 1] = b.startRank + c;
-                    sel[cand * 4 + 2] = (mf & 0x04) !== 0 ? 1 : 0;
-                    sel[cand * 4 + 3] = 1;
-                    selTex[cand] = texHash;
-                    cand++;
+                    this.add(src, partIdx, b.startRank + c, (mf & 0x04) !== 0 ? 1 : 0, 1, texHash);
                 }
             }
         }
+        return this.count;
+    }
 
-        // Pass 2: finalize — drop inert (mask <= 0 or hidden) and
-        // degenerate-geometry writers, assign a dense coverage bit, and resolve
-        // cutout threshold + geometry kind.
-        let count = 0;
-        for (let w = 0; w < cand; w++) {
-            const partIdx = sel[w * 4 + 0];
-            const maskVal = src.partMask(partIdx);
-            if (maskVal <= 0 || src.partHide(partIdx)) continue;
+    /**
+     * Take one writer, unless it writes nothing this frame: inert (mask <= 0),
+     * hidden, or with no geometry. Those are dropped before the cap is
+     * checked, so a switched-off writer never takes the slot of a live one.
+     * `exceeded` is set only when a live writer finds no room left.
+     */
+    private add(src: MaskPlanSource, partIdx: number, rank: number, opInvert: number, isClipping: number, texHash: number): void {
+        const maskVal = src.partMask(partIdx);
+        if (maskVal <= 0 || src.partHide(partIdx)) return;
 
-            const texHash = selTex[w];
-            // Cutout threshold. texHash 0 (pure masks / shapes) = no cutout.
-            const threshold = texHash !== 0 ? (255 - maskVal) / 255 : -1.0;
+        // Resolve geometry kind (the Mask batch doesn't carry it): shape
+        // vertex count, then mesh slice, else a quad.
+        const shapeVerts = src.shapeVertexCount(partIdx);
+        const meshVCount = src.meshVertexCount(partIdx);
+        let geomKind: number;
+        let numVerts: number;
+        let numIndices: number;
+        if (shapeVerts >= 3) { geomKind = MASK_GEOM_SHAPE; numVerts = shapeVerts; numIndices = (shapeVerts - 2) * 3; }
+        else if (meshVCount > 0) { geomKind = MASK_GEOM_MESH; numVerts = meshVCount; numIndices = src.meshIndexCount(partIdx); }
+        else { geomKind = MASK_GEOM_NORMAL; numVerts = 5; numIndices = 12; }
+        if (numIndices <= 0) return;
 
-            // Resolve geometry kind (the Mask batch doesn't carry it): shape
-            // vertex count, then mesh slice, else a quad.
-            const shapeVerts = src.shapeVertexCount(partIdx);
-            const meshVCount = src.meshVertexCount(partIdx);
-            let geomKind: number;
-            let numVerts: number;
-            let numIndices: number;
-            if (shapeVerts >= 3) { geomKind = MASK_GEOM_SHAPE; numVerts = shapeVerts; numIndices = (shapeVerts - 2) * 3; }
-            else if (meshVCount > 0) { geomKind = MASK_GEOM_MESH; numVerts = meshVCount; numIndices = src.meshIndexCount(partIdx); }
-            else { geomKind = MASK_GEOM_NORMAL; numVerts = 5; numIndices = 12; }
-            if (numIndices <= 0) continue;
+        const count = this.count;
+        if (count >= MAX_MASK_WRITERS) { this.exceeded = true; return; }
 
-            const rankPos = sel[w * 4 + 1];
-            const opInvert = sel[w * 4 + 2];
-            const isClipping = sel[w * 4 + 3];
-            const bit = count;
+        // Cutout threshold. texHash 0 (pure masks / shapes) = no cutout.
+        const threshold = texHash !== 0 ? (255 - maskVal) / 255 : -1.0;
+        const bit = count;
 
-            this.partIdx[count] = partIdx;
-            this.rank[count] = rankPos;
-            this.bit[count] = bit;
-            this.opInvert[count] = opInvert;
-            this.isClipping[count] = isClipping;
-            this.textureHash[count] = texHash;
-            this.threshold[count] = threshold;
-            this.geomKind[count] = geomKind;
-            this.numVerts[count] = numVerts;
-            this.numIndices[count] = numIndices;
+        this.partIdx[count] = partIdx;
+        this.rank[count] = rank;
+        this.bit[count] = bit;
+        this.opInvert[count] = opInvert;
+        this.isClipping[count] = isClipping;
+        this.textureHash[count] = texHash;
+        this.threshold[count] = threshold;
+        this.geomKind[count] = geomKind;
+        this.numVerts[count] = numVerts;
+        this.numIndices[count] = numIndices;
 
-            this.meta[count * 4 + 0] = rankPos;
-            this.meta[count * 4 + 1] = bit;
-            this.meta[count * 4 + 2] = opInvert;
-            this.meta[count * 4 + 3] = isClipping;
-            count++;
-        }
-
-        this.count = count;
-        this.exceeded = truncated;
-        return count;
+        this.meta[count * 4 + 0] = rank;
+        this.meta[count * 4 + 1] = bit;
+        this.meta[count * 4 + 2] = opInvert;
+        this.meta[count * 4 + 3] = isClipping;
+        this.count = count + 1;
     }
 }
