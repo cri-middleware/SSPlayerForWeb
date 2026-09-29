@@ -180,6 +180,12 @@ export class SSPlayer extends Container {
     private pixiResourceManager: PixiResourceManager;
     private debugText: Text;
 
+    // Everything the animation draws lives here, cleared and refilled every frame.
+    // Keeping it off the player itself is what lets a host parent its own display
+    // objects onto the player: they are siblings of this container, so a frame
+    // never clears them.
+    private readonly _art = new Container();
+
     // --- Animation event listeners ---
     private readonly _userDataListeners = new ListenerSet<SSUserDataEvent>();
     private readonly _signalListeners = new ListenerSet<SSSignalEvent>();
@@ -191,9 +197,9 @@ export class SSPlayer extends Container {
 
     // --- Part following (part-following) ---
     // Targets driven to follow a part each frame. `_attachmentLayer` holds the
-    // targets attached with addAsChild (the default): renderFrame() clears our
-    // children every frame, so the layer is re-added and driven at the end of
-    // renderFrame() — after the meshes, so followers draw on top.
+    // targets attached with addAsChild (the default); renderFrame() keeps it the
+    // last child, above the meshes and anything a host parented onto the player,
+    // and drives it after the meshes are placed.
     private readonly _attachmentLayer = new Container();
     private readonly _attachMatrix = new Matrix();
     // The bookkeeping (who follows what, did we hide it, detach ordering) is
@@ -495,6 +501,7 @@ export class SSPlayer extends Container {
         this.internalPlayer = new DirectInternalPlayer(this.pixiResourceManager);
         this.debugText = new Text({ text: "Frame: 0", style: { fill: 0xffffff } });
         this.debugText.visible = false;
+        this.addChild(this._art);
         this.addChild(this.debugText);
 
         // Capture the renderer the first time we're drawn. The mask coverage
@@ -1256,8 +1263,7 @@ export class SSPlayer extends Container {
         // Per-frame reset of the integration-shader pool hand-out counters so
         // each frame re-issues pooled Shader instances from index 0.
         this.ssShaderActive.clear();
-        this.removeChildren();
-        this.addChild(this.debugText);
+        this._art.removeChildren();
 
         this._depth = 0;
 
@@ -1276,11 +1282,13 @@ export class SSPlayer extends Container {
             1.0
         );
 
-        // renderContext addChild'd this frame's meshes onto us; re-add the
-        // attachment layer last so followers draw above the animation, then
-        // drive each target to its part's just-finalized transform.
+        // Followers draw above the animation and above what a host parented onto
+        // us, so the layer stays last; then each target is driven to its part's
+        // just-finalized transform.
         if (this._follower.size > 0) {
-            this.addChild(this._attachmentLayer);
+            if (this.children[this.children.length - 1] !== this._attachmentLayer) {
+                this.addChild(this._attachmentLayer);
+            }
             this._follower.update();
         }
     }
@@ -1691,7 +1699,7 @@ export class SSPlayer extends Container {
                     // alpha only carries the (uniform) parent-chain opacity.
                     mesh.alpha = parentAlpha;
                     mesh.visible = true;
-                    this.addChild(mesh);
+                    this._art.addChild(mesh);
 
                     g = h;
                 }
@@ -1736,7 +1744,7 @@ export class SSPlayer extends Container {
         mesh.blendMode = blendMode;
         mesh.alpha = alpha;
         mesh.visible = true;
-        this.addChild(mesh);
+        this._art.addChild(mesh);
     }
 
     /** Write per-vertex aMaskUV (coverage uv, tree sequence number, polarity) for a masked part. */
