@@ -1,3 +1,7 @@
+---
+description: 従来の SS6Player for Web（ss6player-pixi）から ssplayer-pixi への移行。アセット、クラス構成、再生制御 API、イベント、パーツ単位の制御。
+---
+
 # SS6Player for Web からのマイグレーション
 
 [← ドキュメント目次へ戻る](/ja/)

@@ -1,3 +1,7 @@
+---
+description: The renderer for apps already built on PixiJS v8, which draws many characters together with batched Direct Drawing.
+---
+
 # PixiJS
 
 `@spritestudio/ssplayer-pixi` is the renderer for apps already built on **PixiJS v8**.

@@ -1,3 +1,7 @@
+---
+description: コードからパーツの色・セル・表示を上書きする方法と、変更が描画に反映されるタイミング。
+---
+
 # パーツ制御（表示 / セル / 色）
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see

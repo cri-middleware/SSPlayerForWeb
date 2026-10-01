@@ -1,3 +1,7 @@
+---
+description: Making your own display object follow a part every frame, with the follow options, flip, timing and the pull API.
+---
+
 # Part tracking (following a specified part)
 
 A feature that makes a user-provided display object (a weapon, effect, hitbox, etc.) follow a specified part every frame. The player neither creates nor destroys the object; it only drives the one you hand it (constraint style), and you own the target's lifecycle.

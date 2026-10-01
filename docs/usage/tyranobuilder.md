@@ -1,3 +1,7 @@
+---
+description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto importer, the components, and troubleshooting."
+---
+
 # TyranoBuilder
 
 ::: warning Beta

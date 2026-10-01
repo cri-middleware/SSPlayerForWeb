@@ -1,3 +1,7 @@
+---
+description: What players share and what each owns, what destroy() frees, and how to tear down many players and handle WebGL context loss.
+---
+
 # Resources and lifecycle
 
 What several players share, what each one owns, and what `destroy()` actually frees. Read this

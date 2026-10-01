@@ -1,3 +1,7 @@
+---
+description: The blend modes both renderers implement as fixed-function GPU blending, and the SS integration shaders.
+---
+
 # Shaders and blend modes
 
 Both renderers implement the same feature set with the same results — `ssplayer-webgl` in raw GLSL,

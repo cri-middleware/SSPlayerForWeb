@@ -1,3 +1,7 @@
+---
+description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。インストール、変換、プラグインコマンド、デプロイ、音声、既知の制限。
+---
+
 # RPG ツクール MZ で使う
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see

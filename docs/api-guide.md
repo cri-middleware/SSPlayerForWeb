@@ -1,3 +1,7 @@
+---
+description: Which class to start from, what sits underneath it, and which types you actually touch. The map that goes with the generated reference.
+---
+
 # API reference
 
 The [generated reference](/api/) lists every exported symbol. This page is the map that goes with

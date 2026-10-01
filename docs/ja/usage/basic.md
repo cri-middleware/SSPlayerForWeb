@@ -1,3 +1,7 @@
+---
+description: WebGL と PixiJS のプレイヤーに共通する再生制御 API。読み込み、再生・一時停止、フレームと速度、方向、反転、パーツ照会。
+---
+
 # 基本的な再生
 
 `SSPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/ja/setup/quickstart) を参照してください。

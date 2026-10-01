@@ -1,3 +1,7 @@
+---
+description: "Frame-rate tuning ordered by how much each buys: resolution and overdraw, not drawing at all, playback options and what breaks batching."
+---
+
 # Performance tuning
 
 Ordered roughly by how much they usually buy you. If an animation is dropping frames, start with

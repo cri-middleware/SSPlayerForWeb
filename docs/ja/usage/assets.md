@@ -1,3 +1,7 @@
+---
+description: .sspj を再生用の .ssab に変換する方法。ブラウザツール、デスクトップ GUI、CLI、ライブラリと、テクスチャの解決。
+---
+
 # アセットの準備（.sspj → .ssab）
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see

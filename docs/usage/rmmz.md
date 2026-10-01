@@ -1,3 +1,7 @@
+---
+description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, plugin commands, deployment, sound and known limitations."
+---
+
 # RPG Maker MZ
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see

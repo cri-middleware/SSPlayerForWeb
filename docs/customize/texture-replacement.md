@@ -1,3 +1,7 @@
+---
+description: Swapping the texture a cell map binds to from code, without touching the .ssab, for colour variations and costume changes.
+---
+
 # Runtime texture replacement (costume changes)
 
 Swap the texture a cell map binds **from your code**, without touching the `.ssab` — colour variations, costume changes, dynamic facial expressions. It keys by **cell-map name**, so one call reaches every part that draws from that cell map.

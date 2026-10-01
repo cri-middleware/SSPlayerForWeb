@@ -1,3 +1,7 @@
+---
+description: エンジンに依存しない単体の WebGL レンダラー。ss-player Web Component として、または SSSurface と SSPlayer を直接使う方法。
+---
+
 # WebGL・Web Components で使う
 
 `@spritestudio/ssplayer-webgl` は、外部のレンダリングエンジン（PixiJS など）に依存しない単体の WebGL 1/2 レンダラーです。依存関係やファイルサイズを抑えたい構成に向いており、広告バナーやシンプルな Web ページにそのまま組み込めます。フレームワークを使わないドロップイン用途を想定しています。
