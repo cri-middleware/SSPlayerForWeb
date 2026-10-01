@@ -1,4 +1,5 @@
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import llmstxt, { copyOrDownloadAsMarkdownButtons } from 'vitepress-plugin-llms'
 
 const GITHUB = 'https://github.com/cri-middleware/SSPlayerForWeb'
 
@@ -49,6 +50,47 @@ export default withMermaid({
   // CI passes DOCS_BASE to match; local dev/build stays at '/'. Env-driven because
   // VitePress build has no --base CLI flag.
   base: process.env.DOCS_BASE || '/',
+
+  // `llms.txt` and `llms-full.txt` for readers who hand the docs to an AI assistant, plus a
+  // Markdown copy of every page beside its HTML. The two aggregates leave out the Japanese
+  // pages (the plugin writes one pair for the whole site) and the TypeDoc symbol pages, which
+  // are hundreds of files. Both keep their own `.md`, so the discovery link in every page
+  // resolves. `ja.md` is what the plugin calls the Japanese home page, which `ja/**` misses.
+  vite: {
+    plugins: [
+      llmstxt({
+        domain: new URL(SITE_URL).origin,
+        ignoreFilesPerOutput: {
+          llmsTxt: ['ja.md', 'ja/**', 'api/@spritestudio/*/*/**'],
+          llmsFullTxt: ['ja.md', 'ja/**', 'api/@spritestudio/*/*/**'],
+        },
+        customTemplateVariables: {
+          title: 'SpriteStudio Player for Web',
+          description: 'A player for SpriteStudio animations in the browser (WebAssembly + PixiJS / WebGL)',
+          details: [
+            'Browser players for SpriteStudio over one WebAssembly core: `@spritestudio/ssplayer-core`, with',
+            'renderers for WebGL and Web Components (`ssplayer-webgl`) and PixiJS (`ssplayer-pixi`), and',
+            'integrations for RPG Maker MZ, TyranoScript and TyranoBuilder. `setup/install` and',
+            '`setup/quickstart` get a first animation on screen, `usage/assets` converts a `.sspj` into an',
+            '`.ssab`, and `api-guide` says where to start in the API. `limitations` lists what is not',
+            'supported. The generated reference keeps one index page per package in this file; each class,',
+            'interface, function and type has its own page at',
+            '`api/@spritestudio/<package>/<kind>/<Name>.md`, where `<kind>` is `classes`, `interfaces`,',
+            '`functions`, `type-aliases`, `enumerations` or `namespaces`. This file is the English pages',
+            'only; each Japanese page is the same path under `ja/` with `.md` appended.',
+          ].join(' '),
+        },
+      }),
+    ],
+  },
+
+  // The Copy as Markdown button, inserted after each page's first heading. The component
+  // itself is registered in theme/index.ts.
+  markdown: {
+    config(md) {
+      md.use(copyOrDownloadAsMarkdownButtons)
+    },
+  },
 
   // Open Graph / Twitter Card metadata. VitePress emits none of it on its own, so a link
   // shared into Slack, X, or Discord previews as a bare URL. Built per page from the title
@@ -184,6 +226,12 @@ export default withMermaid({
       description: 'SpriteStudio のアニメーションをブラウザーで再生するプレイヤー（WebAssembly + PixiJS / WebGL）',
       themeConfig: {
         outline: { level: [2, 3], label: '目次' },
+        llms: {
+          copyText: 'ページをコピー',
+          copiedText: 'コピーしました',
+          viewMarkdownText: 'Markdown で表示',
+          openInAIText: '{provider} で開く',
+        },
         nav: [
           { text: 'はじめに', link: '/ja/setup/install' },
           { text: '使い方', link: '/ja/usage/basic' },
