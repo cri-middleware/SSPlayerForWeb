@@ -1,3 +1,7 @@
+---
+description: ティラノビルダー向けの ssplayer-tyranobuilder プラグイン。自動インポート、コンポーネント、うまくいかないとき。
+---
+
 # ティラノビルダーで使う
 
 ::: warning ベータ版

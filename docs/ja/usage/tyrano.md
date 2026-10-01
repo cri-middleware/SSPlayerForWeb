@@ -1,3 +1,7 @@
+---
+description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シナリオタグ、移動とエフェクト、セーブ / ロード、音声。
+---
+
 # TyranoScript で使う
 
 ::: warning ベータ版

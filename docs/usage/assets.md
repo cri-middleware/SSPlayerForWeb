@@ -1,3 +1,7 @@
+---
+description: Converting a .sspj into the .ssab the player plays, with the browser tool, the desktop GUI, the CLI or the library, and how textures are resolved.
+---
+
 # Preparing assets (.sspj → .ssab)
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see

@@ -1,3 +1,7 @@
+---
+description: The standalone WebGL renderer with no engine dependency, used as the ss-player Web Component or through SSSurface and SSPlayer directly.
+---
+
 # WebGL & Web Components
 
 `@spritestudio/ssplayer-webgl` is a standalone WebGL 1/2 renderer with no dependency on

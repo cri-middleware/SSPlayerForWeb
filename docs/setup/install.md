@@ -1,3 +1,7 @@
+---
+description: Choosing a renderer package, installing it, and the prerequisites.
+---
+
 # Installation
 
 ## Choosing a package

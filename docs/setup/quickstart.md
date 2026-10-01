@@ -1,3 +1,7 @@
+---
+description: The minimum code to play a .ssab with ssplayer-webgl or ssplayer-pixi, and the common pitfalls.
+---
+
 # Quick start
 
 Here is the minimum code to play a `.ssab`. Both the dependency-free `ssplayer-webgl`

@@ -1,3 +1,7 @@
+---
+description: PixiJS v8 で作られたアプリ向けのレンダラー。バッチ描画の Direct Drawing で多数のキャラクターをまとめて描画。
+---
+
 # PixiJS で使う
 
 `@spritestudio/ssplayer-pixi` は、すでに **PixiJS v8** を採用しているアプリ向けのレンダラーです。**Direct Drawing（バッチ描画）** を使い、多数のキャラクターをまとめて描画します。

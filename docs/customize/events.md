@@ -1,3 +1,7 @@
+---
+description: Receiving the user data, signals and sounds placed on the timeline on the frame they fire, and what happens when you seek.
+---
+
 # Events and User Data
 
 **User data / signals / sounds** placed on the timeline are delivered to you on the

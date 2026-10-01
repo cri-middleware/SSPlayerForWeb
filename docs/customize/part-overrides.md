@@ -1,3 +1,7 @@
+---
+description: Overriding a part's colour, cell or visibility from code, which wins over keyframes and blending, and when the change reaches the screen.
+---
+
 # Part control (visibility / cell / color)
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see

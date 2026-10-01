@@ -1,3 +1,7 @@
+---
+description: "The playback-control API shared by the WebGL and PixiJS players: loading, play and pause, frame and speed, direction, flip and part lookup."
+---
+
 # Basic playback
 
 This page collects the playback-control API shared by `SSPlayer` (both the WebGL and PixiJS v8 backends). Most of the API is common to both. For the minimal load-and-play steps, see the [Quick start](/setup/quickstart).

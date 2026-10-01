@@ -1,3 +1,7 @@
+---
+description: ssplayer-webgl または ssplayer-pixi で .ssab を再生する最小限のコードと、よくある落とし穴。
+---
+
 # クイックスタート
 
 `.ssab` を再生する最小コードです。依存の要らない `ssplayer-webgl` と、

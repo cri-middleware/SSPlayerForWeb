@@ -1,3 +1,7 @@
+---
+description: "Moving from the legacy SS6Player for Web (ss6player-pixi) to ssplayer-pixi: the asset pipeline, classes, playback API, events and per-part control."
+---
+
 # Migrating from SS6Player for Web
 
 [← Back to docs home](/)

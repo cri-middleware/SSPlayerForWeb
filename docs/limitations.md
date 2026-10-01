@@ -1,3 +1,7 @@
+---
+description: What the Web players do not do yet, the browser requirements, how each package is distributed, and the constraints on playback features.
+---
+
 # Limitations & Scope
 
 Constraints to be aware of when shipping with the current SpriteStudio Player for Web. For what

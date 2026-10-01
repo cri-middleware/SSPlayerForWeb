@@ -1,3 +1,7 @@
+---
+description: "The ssplayer-tyranoscript plugin for TyranoScript: the scenario tags, movement and effects, save and load, and audio."
+---
+
 # TyranoScript
 
 ::: warning Beta
