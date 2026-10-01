@@ -1,5 +1,5 @@
 import { withMermaid } from 'vitepress-plugin-mermaid'
-import llmstxt from 'vitepress-plugin-llms'
+import llmstxt, { copyOrDownloadAsMarkdownButtons } from 'vitepress-plugin-llms'
 
 const GITHUB = 'https://github.com/cri-middleware/SSPlayerForWeb'
 
@@ -82,6 +82,14 @@ export default withMermaid({
         },
       }),
     ],
+  },
+
+  // The Copy as Markdown button, inserted after each page's first heading. The component
+  // itself is registered in theme/index.ts.
+  markdown: {
+    config(md) {
+      md.use(copyOrDownloadAsMarkdownButtons)
+    },
   },
 
   // Open Graph / Twitter Card metadata. VitePress emits none of it on its own, so a link
@@ -218,6 +226,12 @@ export default withMermaid({
       description: 'SpriteStudio のアニメーションをブラウザーで再生するプレイヤー（WebAssembly + PixiJS / WebGL）',
       themeConfig: {
         outline: { level: [2, 3], label: '目次' },
+        llms: {
+          copyText: 'ページをコピー',
+          copiedText: 'コピーしました',
+          viewMarkdownText: 'Markdown で表示',
+          openInAIText: '{provider} で開く',
+        },
         nav: [
           { text: 'はじめに', link: '/ja/setup/install' },
           { text: '使い方', link: '/ja/usage/basic' },
