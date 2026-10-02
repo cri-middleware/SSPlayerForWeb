@@ -79,15 +79,15 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssplayer-webgl` | npm | beta |
 | `@spritestudio/ssplayer-pixi` | npm | beta |
 | `@spritestudio/ssconverter-core` | npm | beta |
-| `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) | **alpha** |
+| `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) | beta |
 | `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](/usage/tyrano#building-from-source) | beta |
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](/usage/tyranobuilder#building-from-source) | beta |
 | `@spritestudio/ssconverter-web` | hosted on GitHub Pages at `/ssconverter/`, plus a Node CLI in the repo | beta |
 
-## RPG Maker MZ (alpha)
+## RPG Maker MZ (beta)
 
-`@spritestudio/ssplayer-rmmz` is an **alpha**: the tag set and behavior may still change. See
-[Using RPG Maker MZ](/usage/rmmz).
+`@spritestudio/ssplayer-rmmz` is **beta**: the tag set and behavior may still change before
+`7.0.0`. See [Using RPG Maker MZ](/usage/rmmz).
 
 ::: warning
 - **A picture's tint and blend mode do not affect the animation.** *Opacity*, *move* and *scale* do apply.
