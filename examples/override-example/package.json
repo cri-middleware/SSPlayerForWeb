@@ -14,13 +14,13 @@
   "type": "module",
   "dependencies": {
     "@spritestudio/ssplayer-pixi": "workspace:*",
-    "pixi.js": "^8.21.0"
+    "pixi.js": "^8.22.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "terser": "^5.51.2",
     "typescript": "^7.0.2",
-    "vite": "^8.3.1",
+    "vite": "^8.3.2",
     "vite-plugin-compression": "^0.5.1"
   }
 }
