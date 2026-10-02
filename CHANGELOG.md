@@ -28,7 +28,7 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     - `ssconverter-web` — the browser tool and Node CLI that turn `.sspj` into `.ssab`. Conversion
       runs entirely client-side; nothing is uploaded.
 - **Framework integrations** (shipped as IIFE plugin bundles rather than npm installs):
-  `@spritestudio/ssplayer-rmmz` for RPG Maker MZ (PixiJS v5, alpha),
+  `@spritestudio/ssplayer-rmmz` for RPG Maker MZ (PixiJS v5, beta),
   `@spritestudio/ssplayer-tyranoscript` for TyranoScript (beta), and
   `@spritestudio/ssplayer-tyranobuilder` for TyranoBuilder (beta).
 - **Per-part runtime overrides**: `setPartColorOverride` / `setPartColorOverrideCorners`,
@@ -47,8 +47,8 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Events, shaders, and performance tuning** documented under *Customize* in the docs site.
 
 ### Known Limitations
-- The framework integrations are not published to npm. RPG Maker MZ is **alpha**; TyranoScript and
-  TyranoBuilder are **beta**.
+- The framework integrations are not published to npm. RPG Maker MZ, TyranoScript and
+  TyranoBuilder are all **beta**.
 - Playback requires a browser with **WebAssembly SIMD**; `ssplayer-webgl` needs WebGL 1 or 2, and
   `ssplayer-pixi` needs WebGL 2 (using WebGPU where the browser provides it).
 - Constraints inherited from the shared runtime — `independent=true` parts under reverse playback
