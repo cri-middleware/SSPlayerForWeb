@@ -1,11 +1,11 @@
 // SSPlayer — a PixiJS v5 DisplayObject (Container) that plays a SpriteStudio
 // animation by driving ssplayer-webgl's SSWebGLRenderer against RPG Maker MZ's
-// shared WebGL context (spec §2.2 / §0 Layer 3).
+// shared WebGL context.
 //
 // Unlike ssplayer-pixi's SSPlayer this class does NOT own a Ticker: playback is
 // advanced only when the host RMMZ sprite calls `update(deltaMs)` from its own
 // `update()`, so the animation stays perfectly in step with MZ time and pauses
-// with the game (spec §7.3). Drawing happens in `_render`, called by Pixi at the
+// with the game. Drawing happens in `_render`, called by Pixi at the
 // container's Z position, so MZ handles Z-order and the transform chain.
 // Opacity is inherited too, but not automatically: Pixi applies worldAlpha in its
 // own batch shader, which the raw GL draw bypasses, so SSPlayerRenderer feeds it
@@ -256,7 +256,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
 
   /**
    * Advance the animation by `deltaMs` and dispatch its events. Call this from
-   * the host RMMZ sprite's `update()` — never from a private timer (spec §7.3).
+   * the host RMMZ sprite's `update()` — never from a private timer.
    */
   public update(deltaMs: number): void {
     if (!this.internalPlayer.isPlaying) return;
@@ -778,7 +778,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     }
   }
 
-  // --- Pixi render hook (spec §2.2) ---
+  // --- Pixi render hook ---
 
   // Container._render is Pixi's per-object custom-draw hook, invoked at this
   // container's Z position (after its parent chain's transform/alpha is applied,
@@ -796,7 +796,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     // Detach followers first so a host-owned target is neither destroyed nor
     // left hidden by our teardown.
     this._follower.detachAll();
-    // Immediately free WASM memory (spec §10.1) rather than waiting for GC.
+    // Immediately free WASM memory rather than waiting for GC.
     this.internalPlayer?.destroy();
     this.resourceManager?.destroy();
     super.destroy(options);

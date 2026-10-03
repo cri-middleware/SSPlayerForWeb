@@ -1,4 +1,4 @@
-// WASM boot synchronisation (spec §8.3).
+// WASM boot synchronisation.
 //
 // ssplayer-core needs its WASM runtime initialised once before any SSPlayer is
 // used. We kick that off the moment the plugin loads and hold the promise, then

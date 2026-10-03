@@ -3,7 +3,7 @@ import { defineConfig } from 'tsdown';
 // The RPG Maker MZ plugin annotation (/*: and /*:ja) is prepended to each IIFE
 // AFTER the bundle is written, by scripts/prepend-annotation.mjs (wired into the
 // `build` npm script). tsdown/rolldown's `banner` option does not survive here,
-// so the post-build prepend is the reliable path. See spec §9.
+// so the post-build prepend is the reliable path.
 //
 // ssplayer-rmmz ships two artefacts:
 //

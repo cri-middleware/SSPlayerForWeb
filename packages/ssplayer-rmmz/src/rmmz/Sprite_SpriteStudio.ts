@@ -1,10 +1,10 @@
 // Sprite_SpriteStudio — the RPG Maker MZ "view" that hosts one SSPlayer.
 //
 // It is created as a CHILD of an existing MZ sprite (e.g. Sprite_Picture), so
-// MZ's move / scale / (rotation) transforms flow into the SS animation for free
-// (spec §7.2). It carries NO private timer: MZ's Sprite.update() recurses into
+// MZ's move / scale / (rotation) transforms flow into the SS animation for free.
+// It carries NO private timer: MZ's Sprite.update() recurses into
 // its children, so our `update()` is called once per MZ frame and simply steps
-// the player — keeping SS time perfectly synced with the game (spec §7.3).
+// the player — keeping SS time perfectly synced with the game.
 //
 // Defined via a factory because it extends the MZ global `Sprite`, which only
 // exists inside the running game; the ESM barrel must stay import-safe outside
@@ -48,7 +48,7 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
       super();
       this.player = new SSPlayer(gl);
       this.addChild(this.player as unknown as any);
-      // Route SS sound parts through MZ's AudioManager (spec §7.4). Bound here —
+      // Route SS sound parts through MZ's AudioManager. Bound here —
       // BEFORE any loadAnimation/setAnimation — so preload runs through us too.
       this._audioUnsub = new RMMZAudioManager().bindToPlayer(this.player);
     }
@@ -91,7 +91,7 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
       this.player.update(MS_PER_FRAME);
     }
 
-    // Explicitly free WASM memory now (spec §10.1) rather than waiting for GC.
+    // Explicitly free WASM memory now rather than waiting for GC.
     public destroy(options?: unknown): void {
       this._audioUnsub();
       this.player.destroy();
