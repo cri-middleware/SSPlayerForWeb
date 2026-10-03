@@ -173,7 +173,8 @@ remains.
 Each pass compares, per project, the **newest modification time anywhere in that project's
 folder** (`.sspj`, `.ssae`, `.ssce`, textures — all of it) against what the last **successful**
 import covered. Newer sources mean a reconversion; otherwise the project is skipped and costs a
-few `stat` calls.
+few `stat` calls. A pack is also rebuilt when it was last converted by a different converter build, so
+updating the plugin refreshes packs whose sources have not changed.
 
 That record is a small JSON file, `.ss_import_state.json`, at the project root:
 
