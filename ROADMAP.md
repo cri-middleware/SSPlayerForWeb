@@ -8,17 +8,6 @@ For the roadmap of the underlying Rust WebAssembly engine, please refer to the s
 
 The following features were present in previous JavaScript-only versions (e.g., `SS6Player`) but require updates to the underlying `SpriteStudio-SDK` WebAssembly FFI before they can be fully implemented in SpriteStudio Player for Web.
 
-*   [x] **Part Property Override API Integration** — *done*
-    Dynamic runtime modification of specific parts, covering the legacy `SS6Player`
-    use cases (PartsColorChange / CellChangeParts / HideSet).
-    *   *Shipped as*: `setPartColorOverride` / `setPartColorOverrideCorners`,
-        `setPartCellOverride`, `setPartVisibilityOverride`, their `clear…`
-        counterparts and `clearAllPartOverrides` — each taking a part **name or
-        index**, so no separate `…ByIndex` methods were needed.
-    *   Available on every player, plus RPG Maker MZ plugin commands and
-        TyranoScript `[ss_part_*]` tags. See
-        [Part control](https://cri-middleware.github.io/SSPlayerForWeb/customize/part-overrides).
-
 *   [ ] **Dynamic Instance Animation Swap**
     Support replacing the animation mounted on an Instance part dynamically at runtime.
     *   *Dependency*: Requires the **Instance Lifecycle API (Dynamic instance swap)** (Phase 3) implementation in the `SpriteStudio-SDK`.
