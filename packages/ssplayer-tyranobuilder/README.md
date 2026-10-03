@@ -52,10 +52,9 @@ stacking the two leaves the editor and runtime halves on different versions.
 ## After editing in SpriteStudio
 
 Conversion happens **once, when the project is opened** — nothing runs in the
-background while you work. So after saving in SpriteStudio, tick **Reconvert
+background while you work. So after saving in SpriteStudio, press **Reconvert
 now** on the **SpriteStudio: show** component that plays the animation you
-edited. It rebuilds that one pack and reports what it did; the tick box clears
-itself, because it is a button rather than a setting.
+edited. It rebuilds that one pack and reports what it did.
 
 **Added a *new* `.sspj` while the builder was open?** Reconvert lives on a
 component, and a component can only point at a pack that already exists — so
