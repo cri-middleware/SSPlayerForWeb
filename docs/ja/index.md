@@ -50,7 +50,7 @@ features:
 
 ## 概要（.sspj → 描画まで） {#overview-from-sspj-to-rendering}
 
-`.sspj` は **ビルド時に一度** `.ssab` へ変換し、**実行時**はその `.ssab` を読み込んで描画するだけです。変換は **ブラウザツール（`ssconverter-web`）**、**GUI ツール（[`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases)）** と
+`.sspj` は **ビルド時に一度** `.ssab` へ変換し、**実行時**はその `.ssab` を読み込んで描画するだけです。変換は **ブラウザツール（`ssconverter-web`）**、**GUI ツール（[SSConverter GUI](https://github.com/cri-middleware/SSConverterGUI/releases)）** と
 **CLI（[`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases)）** の 3 経路があります。
 
 ```mermaid
@@ -60,7 +60,7 @@ graph LR
     subgraph Build ["① ビルド時（変換・1回だけ）"]
         WEB["ssconverter-web"]
         UNZIP["ZIP展開"]
-        GUI["SSConverterGUI"]
+        GUI["SSConverter GUI"]
         CLI["ssconverter-cli"]
     end
 
@@ -92,7 +92,7 @@ graph LR
     class WEB,UNZIP,GUI,CLI tool;
 ```
 
-図の 3 経路（`SSConverterGUI` / `ssconverter-web` / `ssconverter-cli`）の詳しい使い方は
+図の 3 経路（SSConverter GUI / `ssconverter-web` / `ssconverter-cli`）の詳しい使い方は
 [アセットの準備](/ja/usage/assets) を参照してください。
 
 ## パッケージ
@@ -121,4 +121,4 @@ graph LR
 
 - [SpriteStudio Docs](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と公式 Player のドキュメントポータル。
 - [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — `libssruntime` / `libssconverter` を提供する SDK 本体。
-- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — Player を介さず `.sspj` を変換するデスクトップ GUI。
+- [SSConverter GUI](https://github.com/cri-middleware/SSConverterGUI) — Player を介さず `.sspj` を変換するデスクトップ GUI。

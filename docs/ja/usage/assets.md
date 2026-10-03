@@ -21,7 +21,7 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
 | [`ssconverter-web`](#ssconverter-web-browser-tool) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> 🚧 初回リリースの公開後に有効） |
-| [`SSConverterGUI`](#ssconvertergui-desktop-gui-tool) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
+| [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 | [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
 
@@ -63,10 +63,10 @@ WASM の初期化状況・変換状況はステータスバッジに、詳細は
 
 ダウンロードした ZIP を展開し、`.ssab`（と通常モードのテクスチャ）を配信場所に置きます（[配置とテクスチャ解決](#配置とテクスチャ解決)）。
 
-## SSConverterGUI（デスクトップGUIツール） {#ssconvertergui-desktop-gui-tool}
+## SSConverter GUI（デスクトップGUIツール） {#ssconvertergui-desktop-gui-tool}
 
 デスクトップ上で動作する、`.sspj` を `.ssab` に変換するための GUI ツールです。
-**[SSConverterGUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** から OS 向けのバイナリをダウンロードして使用してください。
+**[SSConverter GUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** から OS 向けのバイナリをダウンロードして使用してください。
 
 ## ssconverter-cli（CLI・CI / 開発者向け） {#ssconverter-cli-cli-ci-for-developers}
 

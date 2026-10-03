@@ -28,7 +28,7 @@ if you want effects. The downloaded project feeds any of the tools below as-is.
 | Tool | Best for | Getting it |
 |---|---|---|
 | [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> (🚧 live once the first release is published) |
-| [`SSConverterGUI`](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
+| [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
 | [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core@beta` |
 
@@ -78,10 +78,10 @@ in the log pane (which also reports the converter version and ssab schema versio
 Extract the downloaded ZIP and place the `.ssab` (and, in Normal mode, its textures)
 where you serve them ([Placement and texture resolution](#placement-and-texture-resolution)).
 
-## SSConverterGUI (desktop GUI tool)
+## SSConverter GUI (desktop GUI tool)
 
 A desktop GUI tool for converting `.sspj` to `.ssab`. Download the binary for your OS
-from **[SSConverterGUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** and run it.
+from **[SSConverter GUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** and run it.
 
 ## ssconverter-cli (CLI / CI, for developers)
 

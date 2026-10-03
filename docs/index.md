@@ -61,7 +61,7 @@ No install — these run entirely in your browser (🚧 live once the first rele
 
 ## Overview (.sspj → on screen) {#overview-from-sspj-to-rendering}
 
-You convert a `.sspj` to a `.ssab` **once, at build time**, and at **runtime** you simply load that `.ssab` and render it. There are three conversion paths: the **browser tool (`ssconverter-web`)**, the **GUI tool ([`SSConverterGUI`](https://github.com/cri-middleware/SSConverterGUI/releases))**, and the **CLI ([`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases))**.
+You convert a `.sspj` to a `.ssab` **once, at build time**, and at **runtime** you simply load that `.ssab` and render it. There are three conversion paths: the **browser tool (`ssconverter-web`)**, the **GUI tool ([SSConverter GUI](https://github.com/cri-middleware/SSConverterGUI/releases))**, and the **CLI ([`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases))**.
 
 ```mermaid
 graph LR
@@ -70,7 +70,7 @@ graph LR
     subgraph Build ["① Build time (convert, once)"]
         WEB["ssconverter-web"]
         UNZIP["unzip"]
-        GUI["SSConverterGUI"]
+        GUI["SSConverter GUI"]
         CLI["ssconverter-cli"]
     end
 
@@ -102,7 +102,7 @@ graph LR
     class WEB,UNZIP,GUI,CLI tool;
 ```
 
-For details on the three paths (`SSConverterGUI` / `ssconverter-web` / `ssconverter-cli`), see [Preparing assets](/usage/assets).
+For details on the three paths (SSConverter GUI / `ssconverter-web` / `ssconverter-cli`), see [Preparing assets](/usage/assets).
 
 ## Packages
 
@@ -131,4 +131,4 @@ Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/S
 
 - [SpriteStudio Docs](https://cri-middleware.github.io/SpriteStudio-Docs/) — the documentation portal for the SDK and its official players.
 - [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — the SDK itself, providing `libssruntime` / `libssconverter`.
-- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — a standalone desktop GUI for converting `.sspj` without a player.
+- [SSConverter GUI](https://github.com/cri-middleware/SSConverterGUI) — a standalone desktop GUI for converting `.sspj` without a player.
