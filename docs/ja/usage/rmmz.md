@@ -196,4 +196,4 @@ nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ
 
 NW.js が無い場合は、`examples/rmmz-harness`（PixiJS v5 上の実際の `SSPlayer` /
 `SSPlayerRenderer`）のブラウザーハーネスを利用できます。進捗は
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
+[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/ROADMAP.md) を参照してください。
