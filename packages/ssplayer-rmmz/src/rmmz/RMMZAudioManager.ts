@@ -1,5 +1,5 @@
 // RMMZAudioManager — satisfies ssplayer-core's IAudioManager by routing SS
-// sound events to RPG Maker MZ's AudioManager (spec §7.4). The core never plays
+// sound events to RPG Maker MZ's AudioManager. The core never plays
 // audio itself; it emits SSAudioEvents which we forward here (via bindToPlayer).
 //
 // SS sounds are MZ SE (audio/se/), started through `AudioManager.playSe` so the

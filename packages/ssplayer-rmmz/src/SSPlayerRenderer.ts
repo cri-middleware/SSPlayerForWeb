@@ -1,6 +1,6 @@
 // SSPlayerRenderer — a PixiJS v5 ObjectRenderer plugin (registered as
 // 'ssplayer') that draws an SSPlayer by driving ssplayer-webgl's SSWebGLRenderer
-// against MZ's shared WebGL context (spec §2.1).
+// against MZ's shared WebGL context.
 //
 // One instance exists per PixiJS Renderer, so it also owns the single shared
 // SSWebGLRenderer (mirroring how MZ keeps one Effekseer context). Around the raw

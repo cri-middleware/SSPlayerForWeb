@@ -282,7 +282,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 本パッケージは TyranoScript 向けの薄いアダプタです。描画は
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSPlayer`
-（WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）が担います。このパッケージは **GPU 処理を持たず**、レイヤー `div` への `<canvas>` 挿入・座標マッピング・再生制御といった
+（WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）が担います。このパッケージは **GPU 処理を持たず**、レイヤーへのキャラクター用 `<div>` の追加（描画はレイヤー共有の canvas）・座標マッピング・再生制御といった
 **TyranoScript 固有のグルー**に徹します。実装済み範囲は実 TyranoScript で確認済みで、残タスクは [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ### しくみ
@@ -300,7 +300,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 - **座標**: Tyrano の左上原点・論理ピクセル（`config.scWidth × scHeight`）を、
   `SSPlayer`（Y-down）の描画バッファ座標へマップします。HiDPI は `devicePixelRatio`
   をバッファ倍率に反映し、`maxDPR` で上限を設けます。
-- **`[anim]` 用の命名**: 生成時に canvas へプレイヤー名を CSS クラスとして付与します（`$.setName`＝`addClass(name)`。TyranoScript のキャラ識別と同じ仕組み）。`ss-player`
+- **`[anim]` 用の命名**: 生成時にキャラクターの `<div>` へプレイヤー名を CSS クラスとして付与します（`$.setName`＝`addClass(name)`。TyranoScript のキャラ識別と同じ仕組み）。`ss-player`
   クラスも付くので `$(".ss-player")` で一括選択できます。絶対座標指定はレンダラ内部の
   `setTransform`（Spine の `[spine_mod]` 相当）を経由するため、`[anim]` とは別に
   `[ss_pos]` / `[ss_move]` が存在します。

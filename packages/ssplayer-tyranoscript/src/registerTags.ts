@@ -504,7 +504,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
   const ftag = kag.ftag;
   const nextOrder = () => ftag.nextOrder();
-  /** Mirror the live registry into the save target (§3.3). */
+  /** Mirror the live registry into the save target. */
   const persist = () => {
     persistPlayers(kag, registry);
     persistGlobalState(kag, { layerHidden: state.layerHidden });
@@ -1134,7 +1134,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   };
 
   // [ss_free name=] — destroy one player: WASM/GL teardown + canvas removal +
-  // registry + save-state cleanup (§3.3).
+  // registry + save-state cleanup.
   ftag.master_tag['ss_free'] = {
     vital: ['name'],
     start(pm) {
@@ -1442,7 +1442,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     state.detachObserver?.observe(parent, { childList: true });
   };
 
-  /** Rebuild every player from the saved state (§3.3). */
+  /** Rebuild every player from the saved state. */
   const restoreSavedPlayers = async (): Promise<void> => {
     // Tear down stale players first: module state survives a load, the DOM does
     // not. The overlays go with them — a load rebuilds Tyrano's layer divs, and

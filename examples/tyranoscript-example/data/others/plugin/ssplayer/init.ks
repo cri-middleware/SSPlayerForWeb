@@ -1,4 +1,4 @@
-; ssplayer-tyranoscript plugin loader (§4.1)
+; ssplayer-tyranoscript plugin loader
 ;
 ; This is the canonical distribution template for the plugin. Ship this folder
 ; as `data/others/plugin/ssplayer/` in a TyranoScript project, alongside the

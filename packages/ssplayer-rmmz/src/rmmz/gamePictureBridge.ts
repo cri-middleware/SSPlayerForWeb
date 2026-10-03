@@ -1,4 +1,4 @@
-// Game_Picture <-> Sprite_Picture bridge (spec §7.1 / §7.2).
+// Game_Picture <-> Sprite_Picture bridge.
 //
 // Model (Game_Picture): we stash the "which SS animation to play" data on the
 // picture object itself. Game objects are serialized by MZ's save system, so the

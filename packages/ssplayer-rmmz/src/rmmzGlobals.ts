@@ -67,7 +67,7 @@ export function getMZRenderer(): PixiV5Renderer | null {
 /**
  * The shared WebGL context MZ's Pixi renderer draws into. Everything SS —
  * texture uploads and the SSWebGLRenderer — must use THIS context so it draws
- * into MZ's framebuffer in Z-order (spec §0). Throws if MZ isn't booted yet.
+ * into MZ's framebuffer in Z-order. Throws if MZ isn't booted yet.
  */
 export function getMZGl(): GL {
   const r = getMZRenderer();

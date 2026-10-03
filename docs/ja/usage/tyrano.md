@@ -12,7 +12,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 :::
 
 **TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**
-（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤーに載る実際の `<canvas>` なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。
+（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤー上の `<div>`（描画はレイヤー共有の canvas が行います）なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
@@ -28,8 +28,8 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 プラグインは `[ss_*]` の KAG カスタムタグ群を Tyrano の `master_tag` に登録します。自己登録する単一の `main.js`（IIFE バンドル）が、TyranoScript / TyranoBuilder / TyranoStudio のいずれでも動作します。
 
-- `[ss_new]` ごとに名前付きプレイヤーを生成し、`.ssab` をロードして対象レイヤーへ `<canvas>` をマウントし、[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer`（WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）で駆動します。
-- canvas には **プレイヤー名**が識別子として付与されるため、他のキャラと同じように Tyrano 標準の
+- `[ss_new]` ごとに名前付きプレイヤーを生成し、`.ssab` をロードして対象レイヤーへ `<div>` を追加し、[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer`（WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）で駆動します。描画はレイヤー共有の canvas に行われます。
+- `<div>` には **プレイヤー名**が識別子として付与されるため、他のキャラと同じように Tyrano 標準の
   `[anim]` / `[kanim]` でそのまま動かせます。
 - 外部に残るのは **WASM バイナリ**（`ssruntime_bg.wasm`）だけで、レンダラと core の JS は `main.js`
   に内包されています。

@@ -1,7 +1,7 @@
 # tyranoscript-example — ssplayer-tyranoscript 手書きシナリオ最小確認
 
 `@spritestudio/ssplayer-tyranoscript` の `[ss_*]` カスタムタグを、実際の **TyranoScript**
-プロジェクト上で表示・再生する最小サンプルです（PT1）。
+プロジェクト上で表示・再生する最小サンプルです。
 
 > **TyranoScript 本体はこのリポジトリに含まれません。**
 > ライセンス上、本体の再配布は控えています（フリー・商用可のエンジンですが、プラグインとして自作物を配る方針）。本体は**開発時に各自で配置**します。このサンプルがコミットしているのは *authored* な部分だけです:
@@ -130,23 +130,23 @@ projectID = ssplayer_tyrano_example;
 > `Config.tjs` はエンジン付属＝git 管理外。本体を各自配置したら**必ず一意の
 > `projectID` を設定**してください。
 
-## 使用しているタグ（PT1 + PT2 + PT3 範囲）
+## 使用しているタグ
 
 | タグ | 役割 |
 | --- | --- |
 | `[plugin name="ssplayer"]` | プラグイン読み込み + ランタイム起動（シナリオに書くのはこの 1 行だけ） |
 | `[ss_init audio= sounddir= soundext= sevolume=]` | 音声設定（ランタイムは `[plugin]` が起動済み） |
-| `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ canvas 挿入 → 再生 |
+| `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ要素（`<div>`）追加 → 再生 |
 | `[ss_play name= anime= loop= start=]` | 再生 / アニメ切替 |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` `name=` | 個別の停止 / 一時停止 / 再開 |
 | `[ss_stop_audio name=]` | そのプレイヤーが鳴らした音をすぐ止める |
 | `[ss_wait name=]` | アニメ終了（ループ時は1周）まで待つ |
 | `[ss_pos name= x= y= scale=]` / `[ss_move name= x= y= scale= time=]` | 内部 transform で瞬間/補間移動（アンカー基準・絶対） |
-| `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + canvas 除去） |
+| `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + 要素除去） |
 | `[ss_pause_all]` / `[ss_resume_all]` | 全体一時停止 / 再開（メニュー等） |
 | `[ss_restore]` | セーブから再構築（**通常は不要** — ロード時に自動復元されます） |
 
-### セーブ / ロード復元（PT2）
+### セーブ / ロード復元
 
 `[ss_new]` 等は各プレイヤーの復元情報を `stat.f.__ssplayers`（セーブ対象）へ随時ミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝TyranoScript が **`data/scenario/make.ks`** を call するのと同じ隙間）でプラグインが自動的に再構築します。**`make.ks` への記述は不要**です。
 
@@ -158,11 +158,11 @@ Ringo が復元されれば成功です（frame ではなくアニメ先頭か�
 
 ### 移動・エフェクトは標準タグで
 
-canvas にはプレイヤー名が CSS クラスとして付くので、**フェードや単純移動は
+キャラクターの要素（`<div>`）にはプレイヤー名が CSS クラスとして付くので、**フェードや単純移動は
 TyranoScript 標準の `[anim]` / `[kanim]` がそのまま使えます**（本サンプルは
 `[anim ... opacity=]` でフェードを実演）。**アンカー基準・絶対座標**の移動/スケールは内部 `setTransform` を叩く **`[ss_pos]`（瞬間）/ `[ss_move]`（補間）**を使います（本サンプルで実演）。詳細はパッケージ README を参照。
 
-### 音声（PT3）
+### 音声
 
 SS の音声イベントは TyranoScript 同梱の howler で再生されます。音声ファイルは
 `data/sound/` に置き、SS のサウンド名 → `data/sound/<name>.ogg` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。本サンプルの Ringo には音声が無いため鳴りません。

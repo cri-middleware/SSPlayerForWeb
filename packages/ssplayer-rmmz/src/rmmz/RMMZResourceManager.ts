@@ -1,5 +1,5 @@
 // RMMZResourceManager — makes SS texture loading go through RPG Maker MZ's own
-// ImageManager / Bitmap cache (spec §7.4 Dependency Injection), while reusing
+// ImageManager / Bitmap cache, while reusing
 // ssplayer-webgl's SSWebGLResourceManager for the actual GL upload into MZ's
 // shared context.
 //

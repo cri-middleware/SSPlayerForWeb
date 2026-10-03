@@ -21,7 +21,7 @@ export enum SSBlendEquation {
 
 /**
  * The seven fixed-function states SpriteStudio's twelve `BlendType` values
- * actually realise. Four of the twelve have no GPU-native equivalent and land on
+ * actually realise. Five of the twelve have no GPU-native equivalent and land on
  * one of these; see {@link ssBlendMode}.
  */
 export enum SSBlendMode {
@@ -56,13 +56,11 @@ export const SS_BLEND_ALPHA: Readonly<SSBlendState> = {
  * The colour blend for each {@link SSBlendMode}, indexed by it.
  *
  * SpriteStudio realises every blend as a fixed-function GPU blend state, reading
- * the destination framebuffer through the `Dst*` factors — verified against the
- * official SS6PlayerForUnity (`Library_SpriteStudio6.cs`,
- * `FunctionMaterialSetUpAnimation`). These are those states, and they are the
- * same states whichever API is asked for them: `ssplayer-webgl` hands them to
- * `gl.blendFuncSeparate`, `ssplayer-pixi` registers them as real GPU blend modes
- * for both its WebGL and WebGPU backends. Writing them once is what keeps the
- * three tables from disagreeing.
+ * the destination framebuffer through the `Dst*` factors. These are those
+ * states, and they are the same states whichever API is asked for them:
+ * `ssplayer-webgl` hands them to `gl.blendFuncSeparate`, `ssplayer-pixi` registers
+ * them as real GPU blend modes for both its WebGL and WebGPU backends. Writing
+ * them once is what keeps the three tables from disagreeing.
  */
 export const SS_BLEND_STATES: readonly Readonly<SSBlendState>[] = [
     // Mix       — src over dst
@@ -84,11 +82,10 @@ export const SS_BLEND_STATES: readonly Readonly<SSBlendState>[] = [
 /**
  * Which of the seven states a `BlendType` is drawn with.
  *
- * Eight of the twelve map to a state of their own. The remaining four are the
- * SS6-era "2" variants, which have no fixed-function equivalent and are
- * approximated until they can be verified against SS6PlayerForUnity: `Mulalpha`
- * and `Mul2` fall back to `Mul`, `Screen2` to `Screen`, and `Div2` / `Overlay2`
- * to `Mix` — the same fallback an unrecognised value takes.
+ * Seven of the twelve map to a state of their own. The remaining five have no
+ * fixed-function equivalent and are approximated: `Mulalpha` and `Mul2` fall
+ * back to `Mul`, `Screen2` to `Screen`, and `Div2` / `Overlay2` to `Mix` — the
+ * same fallback an unrecognised value takes.
  */
 export function ssBlendMode(blendType: BlendType | number): SSBlendMode {
     switch (blendType) {
