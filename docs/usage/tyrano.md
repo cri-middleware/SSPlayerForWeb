@@ -15,9 +15,9 @@ distributed on **GitHub Releases** — but for now the only way to obtain it is 
 :::
 
 Show and play **SpriteStudio** (`.ssab`) animations inside a **TyranoScript** visual novel by
-writing `[ss_*]` tags in your scenario — no coding required. Each animation is a real
-`<canvas>` mounted on a Tyrano layer, so it sits in the normal layer stack alongside
-characters, backgrounds, and messages.
+writing `[ss_*]` tags in your scenario — no coding required. Each animation is a
+`<div>` on a Tyrano layer (drawn on that layer's shared canvas), so it sits in the normal
+layer stack alongside characters, backgrounds, and messages.
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
@@ -38,10 +38,11 @@ The plugin registers a family of `[ss_*]` KAG custom tags onto Tyrano's `master_
 A single self-registering `main.js` (an IIFE bundle) works across TyranoScript,
 TyranoBuilder, and TyranoStudio.
 
-- Each `[ss_new]` creates a named player: it loads the `.ssab`, mounts a `<canvas>`
-  on the target layer, and drives it with [`ssplayer-webgl`](/usage/webgl)'s
-  `SSPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies).
-- The canvas is tagged with **your player name** as its identifier, so Tyrano's own
+- Each `[ss_new]` creates a named player: it loads the `.ssab`, adds a `<div>` to the
+  target layer, and drives the animation with [`ssplayer-webgl`](/usage/webgl)'s
+  `SSPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies), drawn on the
+  layer's shared canvas.
+- The `<div>` is tagged with **your player name** as its identifier, so Tyrano's own
   `[anim]` / `[kanim]` tags drive it directly — just like any character.
 - Only the **WASM binary** (`ssruntime_bg.wasm`) stays external; the renderer and
   core JS are inlined into `main.js`.

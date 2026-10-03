@@ -136,13 +136,13 @@ projectID = ssplayer_tyrano_example;
 | --- | --- |
 | `[plugin name="ssplayer"]` | プラグイン読み込み + ランタイム起動（シナリオに書くのはこの 1 行だけ） |
 | `[ss_init audio= sounddir= soundext= sevolume=]` | 音声設定（ランタイムは `[plugin]` が起動済み） |
-| `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ canvas 挿入 → 再生 |
+| `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ要素（`<div>`）追加 → 再生 |
 | `[ss_play name= anime= loop= start=]` | 再生 / アニメ切替 |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` `name=` | 個別の停止 / 一時停止 / 再開 |
 | `[ss_stop_audio name=]` | そのプレイヤーが鳴らした音をすぐ止める |
 | `[ss_wait name=]` | アニメ終了（ループ時は1周）まで待つ |
 | `[ss_pos name= x= y= scale=]` / `[ss_move name= x= y= scale= time=]` | 内部 transform で瞬間/補間移動（アンカー基準・絶対） |
-| `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + canvas 除去） |
+| `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + 要素除去） |
 | `[ss_pause_all]` / `[ss_resume_all]` | 全体一時停止 / 再開（メニュー等） |
 | `[ss_restore]` | セーブから再構築（**通常は不要** — ロード時に自動復元されます） |
 
@@ -158,7 +158,7 @@ Ringo が復元されれば成功です（frame ではなくアニメ先頭か�
 
 ### 移動・エフェクトは標準タグで
 
-canvas にはプレイヤー名が CSS クラスとして付くので、**フェードや単純移動は
+キャラクターの要素（`<div>`）にはプレイヤー名が CSS クラスとして付くので、**フェードや単純移動は
 TyranoScript 標準の `[anim]` / `[kanim]` がそのまま使えます**（本サンプルは
 `[anim ... opacity=]` でフェードを実演）。**アンカー基準・絶対座標**の移動/スケールは内部 `setTransform` を叩く **`[ss_pos]`（瞬間）/ `[ss_move]`（補間）**を使います（本サンプルで実演）。詳細はパッケージ README を参照。
 

@@ -377,8 +377,9 @@ Known limitations are listed under TyranoScript / TyranoBuilder in [Limitations 
 This is a thin adapter. Rendering is handled by
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSPlayer`
 (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies). This package holds **no
-GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a layer
-`div`, coordinate mapping, and playback control. Remaining work lives in
+GPU code** — it is pure **TyranoScript glue**: adding a `<div>` per character to a
+layer (drawn on that layer's shared canvas), coordinate mapping, and playback
+control. Remaining work lives in
 [`ROADMAP.md`](./ROADMAP.md).
 
 ### How it works
@@ -401,7 +402,7 @@ GPU code** — it is pure **TyranoScript glue**: inserting a `<canvas>` into a l
 - **Coordinates**: Tyrano's top-left logical pixels (`config.scWidth × scHeight`) map
   to `SSPlayer`'s (Y-down) drawing-buffer space; HiDPI folds `devicePixelRatio`
   into the buffer scale, clamped by `maxDPR`.
-- **Naming for `[anim]`**: on creation the canvas is tagged with the player name as a
+- **Naming for `[anim]`**: on creation the character's `<div>` is tagged with the player name as a
   CSS class (`$.setName` is `addClass(name)`, the same way TyranoScript identifies a
   named element). It also carries an `ss-player` class, so `$(".ss-player")` selects
   them all. Absolute positioning goes through the renderer's internal `setTransform`
