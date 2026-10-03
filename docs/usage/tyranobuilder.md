@@ -215,7 +215,7 @@ The importer owns `SpriteStudio_Source/` → `data/others/ssdata/`, but it does 
 **Animation pack** dropdown. That dropdown lists **every `.ssab` anywhere under `data/`**, with
 the imported ones first and the rest alphabetically.
 
-A pack you converted with [`ssconverter-web`, `SSConverterGUI` or `ssconverter-cli`](/usage/assets)
+A pack you converted with [`ssconverter-web`, SSConverter GUI or `ssconverter-cli`](/usage/assets)
 and copied in by hand shows up like any other — put it wherever suits your project (next to a
 scene's images, for instance). The **Animation** dropdown is read out of the `.ssab` itself, so
 it is accurate for those packs too.

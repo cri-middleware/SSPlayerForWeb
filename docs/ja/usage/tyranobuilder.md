@@ -160,7 +160,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 インポーターが管理するのは `SpriteStudio_Source/` → `data/others/ssdata/` の範囲だけで、**アニメデータ**のプルダウンはその範囲に限りません。プルダウンには **`data/` 以下のすべての
 `.ssab`** が並びます（自動変換したものが先、残りはアルファベット順）。
 
-[`ssconverter-web` / `SSConverterGUI` / `ssconverter-cli`](/ja/usage/assets) で変換して手動でコピーしたデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。**アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
+[`ssconverter-web` / SSConverter GUI / `ssconverter-cli`](/ja/usage/assets) で変換して手動でコピーしたデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。**アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
 
 自動で同期されるのは `SpriteStudio_Source/` に置いたものだけです。ただし `data/others/ssdata/` から**コピーした**データなら **今すぐ再変換** が使え、生成元のフォルダではなく今ある場所へ書き直します。まったく別の場所で変換したデータには変換元のプロジェクトがないため、その旨を表示します。
 

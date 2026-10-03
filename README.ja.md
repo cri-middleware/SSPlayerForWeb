@@ -30,7 +30,7 @@
 - [インストール](./docs/ja/setup/install.md)
 - [クイックスタート](./docs/ja/setup/quickstart.md)
 - [基本的な使い方](./docs/ja/usage/basic.md)
-- [制限事項と対応範囲](./docs/ja/limitations.md)
+- [制約と適用範囲](./docs/ja/limitations.md)
 - [SS6Player for Web からの移行](./docs/ja/migration_from_ss6.md)
 
 ## 🎯 どのパッケージを使うか

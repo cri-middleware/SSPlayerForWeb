@@ -24,13 +24,13 @@ player.setAnimation(name);  // アニメーションを選択（WebGL / PixiJS �
 player.currentAnimation;       // 現在のアニメーション名
 ```
 
-再生設定は引数ではなくプロパティです（[再生制御](#再生制御)）。これらはアニメーションではなく呼び出し側のものなので、`setAnimation` を跨いで保持されます。`loopCount = 3` は切り替え後も
+再生設定は引数ではなくプロパティです（[再生制御](#playback-control)）。これらはアニメーションではなく呼び出し側のものなので、`setAnimation` を跨いで保持されます。`loopCount = 3` は切り替え後も
 3 回のままです。
 
 `setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので
 `load()` で全て読み込まれ、切り替えはランタイムのリセットのみ — 待つべき読み込みはありません。
 
-## 再生制御
+## 再生制御 {#playback-control}
 
 ```ts
 player.play();              // 再生開始（引数で startFrame を指定可）
@@ -69,7 +69,7 @@ player.frameSkipEnabled = false;                       // フレームスキッ�
 
 区間を設定すると `startFrame` / `endFrame` / `totalFrames` はいずれもその区間に追従します。
 
-## 反転とオフセット
+## 反転とオフセット {#flip-and-offset}
 
 ```ts
 player.flipX = true;        // 左右反転

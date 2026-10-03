@@ -19,8 +19,9 @@
     belongs to none of them goes where it will be seen to go stale.
 *   **Never commit inside the `SpriteStudio-SDK` submodule.** A change the core needs is a pull request in
     the SDK repository, followed by a submodule bump here.
-*   **Playback semantics are the SDK's** — the Rust core is the submodule; do not reimplement the rules it
-    owns. Do not alter that submodule's structure without explicit instruction.
+*   **Playback and rendering semantics are the SDK's** — see [its AGENTS.md](./SpriteStudio-SDK/AGENTS.md)
+    and the porting guide in `SpriteStudio-SDK/libs/ssruntime/docs/`; where the guide is silent,
+    SSPlayerForWgpu's behaviour decides. Do not reimplement the rules they own.
 *   **Code comments do not cite the SDK's porting guide** — no section numbers, page paths or quotes.
     Its sections move as it is revised and nothing checks a citation inside a comment; say what breaks
     if the code changes, and leave the rule to the guide.

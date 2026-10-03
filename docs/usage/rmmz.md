@@ -219,7 +219,7 @@ Picture` command (drop the leading `img/`).
 :::
 
 **Trade-off — encryption.** MZ's *Encrypt Image Files* option is likewise limited to
-`img/` and `audio/`, so SS textures outside `img/` ship unencrypted. If you want them
+`img/`, so SS textures outside `img/` ship unencrypted. If you want them
 encrypted, move the **whole `spritestudio/` folder back under `img/`**
 (`img/spritestudio/`) — don't separate the `.ssab` from its textures. The `.ssab` isn't an
 image so it stays plain, while the textures beside it get encrypted and the plugin decrypts
