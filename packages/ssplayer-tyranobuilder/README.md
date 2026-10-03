@@ -178,8 +178,9 @@ environment and every conversion, and appends across sessions.
 [`examples/tyranobuilderexample`](../../examples/tyranobuilderexample) is a
 project to open straight away: one scene that uses the components on Ringo.
 
-[ROADMAP.md](./ROADMAP.md) covers what is left to build and how the editor works
-inside, including the parts the vendor does not document.
+How the editor hosts the plugin, including the parts the vendor does not document, is in the
+source comments, chiefly `src/plugin.builder.ts`, `src/builderTypes.d.ts` and `src/buttonParam.ts`.
+What is left to build is in [ROADMAP.md](./ROADMAP.md).
 
 ## Licence
 
