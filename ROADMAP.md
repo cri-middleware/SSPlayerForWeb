@@ -23,18 +23,6 @@ here because they are player responsibilities the
 [Player Porting Guide](https://github.com/cri-middleware/SpriteStudio-SDK/tree/HEAD/libs/ssruntime/docs)
 describes and the official players implement, but this one does not yet.
 
-*   [x] **Flip / offset** (`flipX` / `flipY` / `offsetX` / `offsetY`) — *done*
-    Mirror or shift what the player draws without touching the host display object, so anything
-    parented to it — including part-following targets — stays put. Available on every player.
-    *   *Naming*: `flipX` / `flipY` rather than SpriteStudio Player for Godot's `flip_h` /
-        `flip_v`, and scalar `offsetX` / `offsetY` rather than a `Vector2` — each engine in its
-        own idiom, as SpriteStudio Player for Unity also does (`FlipX` / `FlipY`, after
-        `SpriteRenderer`).
-    *   *Not exposed*: TyranoScript / TyranoBuilder tags. `[ss_pos]` would need matching
-        attributes **and** the save/load bridge would have to persist them, or a restored save
-        would silently drop the flip.
-    See [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic).
-
 *   [x] **`getPartNames()`** — *done*
     Return every part name in one call, in part-index order — no need to walk `getPartsCount()`
     and resolve each index. Available on every player (the count is `getPartNames().length`).
