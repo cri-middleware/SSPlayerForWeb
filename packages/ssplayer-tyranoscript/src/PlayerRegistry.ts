@@ -53,8 +53,8 @@ export interface SSCharaBinding {
 
 /**
  * A live SS player mounted into a Tyrano layer. The `meta` block is everything
- * needed to reconstruct the player on save/load (§3.3) — kept here so the
- * SaveLoadBridge (PT2) can serialise a registry snapshot without reaching into
+ * needed to reconstruct the player on save/load — kept here so the
+ * SaveLoadBridge can serialise a registry snapshot without reaching into
  * the player internals.
  */
 export interface SSPlayerEntry {
@@ -145,7 +145,7 @@ export function clearChain(entry: SSPlayerEntry): void {
 /**
  * `name -> SSPlayer` map held in module scope, mirroring how TyranoScript
  * tracks `[chara]` actors. Every `[ss_*]` tag looks the target up here by
- * `name`; `[ss_free]` (PT2) removes it. Kept as a class (not a bare Map) so the
+ * `name`; `[ss_free]` removes it. Kept as a class (not a bare Map) so the
  * save/load bridge and teardown can share one clear ownership point.
  */
 export class PlayerRegistry {
@@ -193,7 +193,7 @@ export class PlayerRegistry {
     this.entries.delete(name);
   }
 
-  /** Tear down every player (scene transition / layer clear — §3.3). */
+  /** Tear down every player (scene transition / layer clear). */
   destroyAll(): void {
     for (const name of this.names()) this.destroy(name);
   }

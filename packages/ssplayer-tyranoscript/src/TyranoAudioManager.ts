@@ -1,8 +1,8 @@
 import type { IAudioManager, SoundAsset, SSPlayer, Unsubscribe } from '@spritestudio/ssplayer-webgl';
 import { resolveDataPath } from './storagePath.js';
 
-// SS audio routed through TyranoScript's bundled **howler.js** (`window.Howl`),
-// §3.4. The SS runtime plays no sound itself: it emits `onAudio` events (sound
+// SS audio routed through TyranoScript's bundled **howler.js** (`window.Howl`).
+// The SS runtime plays no sound itself: it emits `onAudio` events (sound
 // name + loop count) and the host plays them. We use howler directly rather
 // than `[playse]` because a KAG tag would try to advance the scenario
 // (`nextOrder`) — playing straight through howler can never disturb scenario

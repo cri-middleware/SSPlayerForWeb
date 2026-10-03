@@ -479,7 +479,7 @@ describe('registerSSTags', () => {
     expect(p.play).toHaveBeenCalled();
   });
 
-  // --- PT2: lifecycle (save/load, free, pause) ----------------------------
+  // --- lifecycle (save/load, free, pause) ----------------------------
 
   /** Boot an initialized harness with a `.0_fore` layer and one player 'chr'. */
   async function withPlayer(): Promise<Harness & { tags: Record<string, TyranoMasterTag> }> {
@@ -681,7 +681,7 @@ describe('registerSSTags', () => {
     for (const p of FakeSSPlayer.instances) expect(p.destroy).toHaveBeenCalled();
   });
 
-  // --- PT3: ss_wait / ss_pos / ss_move / audio ----------------------------
+  // --- ss_wait / ss_pos / ss_move / audio ----------------------------
 
   // --- Author-facing errors ------------------------------------------------
   //
@@ -1141,7 +1141,7 @@ describe('registerSSTags', () => {
     ]);
   });
 
-  // --- PT3.5: show / hide / fade, z-order, chained animations, speaker link --
+  // --- show / hide / fade, z-order, chained animations, speaker link --
   //
   // Parity with the official Spine ([spine_new]/[spine_show]/[spine_hide]/
   // [spine_fadein]/[spine_anim next_motion]) and Live2D ([live2d_new jname=])
