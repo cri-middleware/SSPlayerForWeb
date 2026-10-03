@@ -78,7 +78,7 @@ in the log pane (which also reports the converter version and ssab schema versio
 Extract the downloaded ZIP and place the `.ssab` (and, in Normal mode, its textures)
 where you serve them ([Placement and texture resolution](#placement-and-texture-resolution)).
 
-## SSConverter GUI (desktop GUI tool)
+## SSConverter GUI (desktop GUI tool) {#ssconvertergui-desktop-gui-tool}
 
 A desktop GUI tool for converting `.sspj` to `.ssab`. Download the binary for your OS
 from **[SSConverter GUI Releases](https://github.com/cri-middleware/SSConverterGUI/releases)** and run it.
