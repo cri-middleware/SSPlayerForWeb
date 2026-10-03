@@ -61,11 +61,13 @@ The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration p
     label authored in SpriteStudio draws nothing here. Draw it, and allow substituting the string at
     runtime — a UI label that cannot be localized is not a UI label.
 
+*   [ ] **Draw `Nines` parts**
+    The runtime builds the 9-slice grid into its `get_nines_*` buffers, but no renderer reads them, so a
+    Nines part draws as nothing (see [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)).
+
 *   [ ] **Stretch a `Nines` part to the element's box** — *needs SDK*
-    The runtime evaluates a Nines part's size from its keyframes and hands over finished vertices
-    (`get_nines_*`), and the Override Layer covers colour / cell / visibility only, so nothing can resize one
-    from the host: an authored window frame cannot follow the box CSS gives it, and scaling the player
-    distorts the border art instead of stretching the middle.
+    Once drawn, a Nines part still cannot follow the box CSS gives it: the runtime evaluates its size from its
+    keyframes, and the Override Layer covers colour / cell / visibility only, so the host cannot resize it.
     *   *Dependency*: the SDK roadmap's **Per-part size override** (Phase 3) — the Override Layer extended
         with `size_x` / `size_y`.
 
