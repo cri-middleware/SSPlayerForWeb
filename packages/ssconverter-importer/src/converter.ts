@@ -75,14 +75,14 @@ export interface ConverterOptions {
  * A Worker that cannot load normally fires `onerror`, which is faster than any
  * timeout; this is the backstop for the case that stays silent. Generous,
  * because it is paid once per session and only ever by a host that was going
- * to fall back anyway — instantiating 1.4 MB of wasm on a slow machine must not
+ * to fall back anyway — instantiating the wasm on a slow machine must not
  * be mistaken for a Worker that never started.
  */
 const WORKER_START_TIMEOUT_MS = 20_000;
 
 /**
- * Instantiate the converter wasm on this thread. Once per session: the module
- * is 1.4 MB and a host may convert repeatedly.
+ * Instantiate the converter wasm on this thread. Once per session, because a
+ * host may convert repeatedly.
  */
 let inlineInit: Promise<{ version: string; schema: SchemaVersions }> | null = null;
 

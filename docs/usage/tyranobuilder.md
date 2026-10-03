@@ -237,7 +237,7 @@ project here to rebuild it from, and the plugin says so rather than pretending.
 
 TyranoBuilder's export is three unfiltered copies — `index.html`, `data/`, `tyrano/` — so
 **anything left under `data/` ships inside every built game.** That is the whole reason the
-author-time files above sit outside it, and why the 1.4 MB converter is relocated to
+author-time files above sit outside it, and why the converter is relocated to
 `.ss_tools/` the first time the plugin runs: a `.tbp` can only deliver files into the plugin
 folder, which is under `data/`, but nothing except the editor half ever reads the converter.
 

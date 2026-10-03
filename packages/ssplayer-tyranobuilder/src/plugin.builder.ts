@@ -48,7 +48,7 @@ const TOOLS_DIR = '.ss_tools';
  *
  * A `.tbp` can only deliver files into the plugin folder, which lives under
  * `data/`; but nothing except this plugin ever reads the converter, so it does
- * not have to stay there. Relocating it keeps 1.4 MB out of every export. The
+ * not have to stay there. Relocating it keeps it out of every export. The
  * staged copy reappearing means a reinstall or an update, so it always wins.
  */
 function relocateConverterWasm(fs: HostFs, projectRoot: string, pluginDir: string): string {
