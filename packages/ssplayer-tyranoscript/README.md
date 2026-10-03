@@ -15,7 +15,7 @@ writing `[ss_*]` tags in your scenario — no coding required.
 > **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) — the standalone renderer this plugin is built on.
 
 > ⚠️ **Beta.** The scenario-authoring tags are complete, but names and behavior may
-> still change before `7.0.0`. The design roadmap lives in the repo
+> still change before `7.0.0`. Open work lives in the repo
 > ([`ROADMAP.md`](./ROADMAP.md)).
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
@@ -366,7 +366,7 @@ full stack always goes to the browser console (dev tools).
 - **An animation name is rejected**: check it against the animation names in SpriteStudio. Names are case-sensitive; an empty `anime=` picks the first.
 - **Characters vanish after loading a save**: restore is automatic, so this should not happen. If it does, the engine is too old to have an event bus — put `[ss_restore]` in `make.ks`.
 
-Known limitations and planned work are tracked in [`ROADMAP.md`](./ROADMAP.md).
+Known limitations are listed under TyranoScript / TyranoBuilder in [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations#tyranoscript-tyranobuilder), and planned work is in [`ROADMAP.md`](./ROADMAP.md).
 
 ---
 

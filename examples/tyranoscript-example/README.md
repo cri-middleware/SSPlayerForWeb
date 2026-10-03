@@ -167,4 +167,4 @@ TyranoScript 標準の `[anim]` / `[kanim]` がそのまま使えます**（本�
 SS の音声イベントは TyranoScript 同梱の howler で再生されます。音声ファイルは
 `data/sound/` に置き、SS のサウンド名 → `data/sound/<name>.ogg` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。本サンプルの Ringo には音声が無いため鳴りません。
 
-ティラノビルダー `.tbp` 対応は PT4（[ssplayer-tyranoscript ROADMAP](../../packages/ssplayer-tyranoscript/ROADMAP.md)）。
+ティラノビルダー `.tbp` には [ssplayer-tyranobuilder](../../packages/ssplayer-tyranobuilder/README.ja.md) で対応しています。

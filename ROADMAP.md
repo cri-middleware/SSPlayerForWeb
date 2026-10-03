@@ -5,6 +5,8 @@ This file lists unfinished work only. Technical constraints live in [Limitations
 ## Playback & rendering
 
 - [ ] **Animation blending / crossfade** — Layer and cross-fade animations on one player through the runtime's track stack. The WASM build already exports the track calls; what is missing is the JS surface in `ssplayer-core` and the renderers on top of it, named after the stems in [Player API Conventions](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/20_design/30_api_conventions.md) §3-2 (`setTrackAnimation`, `crossfade`, `addTrackSource`, `fadeTrack`, …) and designed as in [Animation mixing](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/libs/ssruntime/docs/50_features/10_animation_mixing.md). It is a selling point rather than a release blocker, so it follows the first release; SpriteStudio Player for wgpu, the one official player that surfaces it, is the reference.
+- [ ] **Label playback** — Play a named label range, with start and end offsets. `setAnimationSection` takes frame numbers only, so a label the animation already carries cannot be named from the host. Labels ride in the `.ssab` (`AnimationData.labels`, readable through `ssplayer-core`), so no SDK change is needed: resolve the name to a frame in `ssplayer-core` and every renderer inherits it.
+- [ ] **Confirm the five approximated blend modes** — `Mulalpha` and `Mul2` draw as Mul, `Screen2` as Screen, and `Div2` and `Overlay2` as Mix, in `ssplayer-webgl` and `ssplayer-pixi` alike (one table, `ssBlendMode` in `ssplayer-core`) and as in SpriteStudio Player for wgpu. The approximation is listed in [Shaders and blend modes](https://cri-middleware.github.io/SSPlayerForWeb/customize/shaders); none of the five has been checked against a reference render.
 
 ## UI integration
 
@@ -25,6 +27,8 @@ The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration p
 - [ ] **Stretch a `Nines` part to the element's box** — Once drawn, a Nines part still cannot follow the box CSS gives it: the runtime evaluates its size from its keyframes, and the Override Layer covers colour / cell / visibility only, so the host cannot resize it. Waits for: Per-part size override (Phase 3).
 
 ## Backlog
+
+- [ ] **Share event extraction in core** — The FlatBuffer walk over the current animation's events table (`pollEvents` with `dispatchUserData` / `dispatchSignals` / `dispatchAudios`) is written out in `ssplayer-webgl`, `ssplayer-pixi` and `ssplayer-rmmz`, differing only in whether `partName` is typed `string` or `string | null`. Core could own the walk and each renderer keep its call site, as `SSPartFollower` does for part following. Keeping events out of core was a deliberate call made when there were two copies, so revisit it before writing code.
 
 Candidate renderer packages that consume the engine-agnostic `@spritestudio/ssplayer-core` and adapt its `DrawBatch` output to a target scene graph, with no change to the core or the `<ss-player>` element. They are demand-driven: none is scheduled, and each is picked up when a concrete project calls for it. Every ecosystem below already has an established skeletal-animation solution, so the leverage is in keeping the `DrawBatch` adapter path documented and stable, not in shipping backends ahead of demand.
 

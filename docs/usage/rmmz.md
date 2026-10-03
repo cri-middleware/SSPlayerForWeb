@@ -280,4 +280,4 @@ as the web demo, where nothing converts.
 
 No NW.js? Use the browser harness at `examples/rmmz-harness` (real `SSPlayer` /
 `SSPlayerRenderer` against PixiJS v5). Track progress in
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
+[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/ROADMAP.md).

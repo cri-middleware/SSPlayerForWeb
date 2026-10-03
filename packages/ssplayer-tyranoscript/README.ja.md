@@ -7,7 +7,7 @@
 > **対象読者:** TyranoScript を使うシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` タグを追加するドロップイン・プラグインです。
 > **TyranoBuilder** をお使いの場合は [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) を導入してください。本パッケージのランタイムを内包した上で、コンポーネントパレットからの配置と `.sspj` の自動変換に対応します。**ステータス:** beta。**目的が違う場合:** → [ssplayer-webgl](../ssplayer-webgl/README.ja.md) — このプラグインの土台になっている単体レンダラです。
 
-> ⚠️ **beta。** シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。設計ロードマップはリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
+> ⚠️ **beta。** シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。未完了の作業はリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 同梱の TyranoScript サンプルをブラウザで動かせます（🚧 初回リリース後に公開）。
@@ -258,7 +258,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 音はキーに指定された回数だけ鳴って止まります。SpriteStudio の音声に無限ループはありません。アニメの停止・一時停止・切り替えでは、鳴っている音は止めません。プレイヤーが鳴らした音は `[ss_stop_audio]` ですぐ止まり、`[ss_free]` でもプレイヤーの解放と一緒に止まります。どちらもほかの音には触れません。`[stopse]` はこれらの音には効きません。
 
-既知の制限と残課題は [`ROADMAP.md`](./ROADMAP.md) にまとめています。
+既知の制限は[制限事項](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations#tyranoscript-tyranobuilder)の TyranoScript / ティラノビルダーの節に、残課題は [`ROADMAP.md`](./ROADMAP.md) にまとめています。
 
 ## うまく表示されないとき
 

@@ -126,8 +126,7 @@ Ringo を `SpriteStudio_Source/` に置くので、初回から変換対象が�
 
 [`examples/tyranobuilderexample`](../../examples/tyranobuilderexample) は、すぐに開けるサンプルプロジェクトです。Ringo にコンポーネントを使うシーンが 1 つ入っています。
 
-エディタ内部の仕組み（ベンダー非公開の部分を含む）と残タスクは
-[ROADMAP.md](./ROADMAP.md) にあります。
+エディタ内部の仕組み（ベンダー非公開の部分を含む）はソースのコメント（主に `src/plugin.builder.ts`、`src/builderTypes.d.ts`、`src/buttonParam.ts`）に、残タスクは [ROADMAP.md](./ROADMAP.md) にあります。
 
 ## ライセンス
 
