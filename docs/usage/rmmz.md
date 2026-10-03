@@ -253,10 +253,6 @@ MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it 
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
   can shift the animation out of place). MZ's own flash / tint overlays are unaffected.
 
-`SSWebGLRenderer` now takes a world tint, which is what made opacity inheritance work. Wiring
-MZ's *tint* through it, and injecting a projection matrix for the remaining projection
-limitation, are planned follow-ups.
-
 ## Building from source
 
 ```sh
