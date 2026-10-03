@@ -28,7 +28,7 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 - `SSPlayer` は `PIXI.Container` を継承し、`SSPlayerRenderer`（登録済みの
   `PIXI.ObjectRenderer` `'ssplayer'`）が [`ssplayer-webgl`](/ja/usage/webgl) の
   `SSWebGLRenderer` を MZ 共有の `gl` に対して再利用します。これにより、マスク・エフェクト・
-  13 種の SS 連携シェーダー・インスタンスパーツがそのまま動作します。
+  13 種の SS 連携シェーダー・インスタンスパーツは WebGL プレイヤーと同じコードで描画されます。
 - **非 SIMD（スカラー）版の WASM** を同梱しているため、MZ 同梱の NW.js（WebAssembly SIMD 非対応の
   Chromium）でも起動フラグなしで動作します。初期化に失敗した場合は SS アニメーションが無効化されるだけで、ゲーム自体は起動します。
 

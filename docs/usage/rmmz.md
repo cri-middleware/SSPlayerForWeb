@@ -35,7 +35,7 @@ correct Z-order with characters and pictures.
 - `SSPlayer` extends `PIXI.Container`, and `SSPlayerRenderer` — a registered
   `PIXI.ObjectRenderer` (`'ssplayer'`) — reuses [`ssplayer-webgl`](/usage/webgl)'s
   `SSWebGLRenderer` against MZ's shared `gl`. Reusing that renderer means masks,
-  effects, the 13 SS integration shaders, and instance parts all work out of the box.
+  effects, the 13 SS integration shaders, and instance parts are drawn by the same code as in the WebGL player.
 - It bundles the **no-SIMD (scalar)** WASM, so it runs on MZ's bundled NW.js (a Chromium
   without WebAssembly SIMD) with no launch flags. If initialization fails, SS animations
   are disabled but the game still boots.
