@@ -6,7 +6,7 @@ For the roadmap of the underlying Rust WebAssembly engine, please refer to the s
 
 ## Planned Features & SDK Integrations
 
-The following features were present in previous JavaScript-only versions (e.g., `SS6Player`) but require updates to the underlying `SpriteStudio-SDK` WebAssembly FFI before they can be fully implemented in SpriteStudio Player for Web.
+This feature needs an update to the underlying `SpriteStudio-SDK` WebAssembly FFI before it can be implemented in SpriteStudio Player for Web.
 
 *   [ ] **Dynamic Instance Animation Swap**
     Support replacing the animation mounted on an Instance part dynamically at runtime.
@@ -14,7 +14,7 @@ The following features were present in previous JavaScript-only versions (e.g., 
     *   *Target Methods*:
         *   `changeInstanceAnime`
 
-*(Note: As the `SpriteStudio-SDK` progresses through its roadmap phases, the corresponding TypeScript bindings and renderer logic will be added to `ssplayer-core` and `ssplayer-pixi` respectively.)*
+*(Note: Once the `SpriteStudio-SDK` ships that API, the TypeScript binding goes into `ssplayer-core` and the drawing into each renderer — `ssplayer-pixi`, `ssplayer-webgl` and `ssplayer-rmmz`.)*
 
 ## Player-side features
 
