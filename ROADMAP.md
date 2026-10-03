@@ -23,10 +23,6 @@ here because they are player responsibilities the
 [Player Porting Guide](https://github.com/cri-middleware/SpriteStudio-SDK/tree/HEAD/libs/ssruntime/docs)
 describes and the official players implement, but this one does not yet.
 
-*   [x] **`getPartNames()`** — *done*
-    Return every part name in one call, in part-index order — no need to walk `getPartsCount()`
-    and resolve each index. Available on every player (the count is `getPartNames().length`).
-
 *   [ ] **Animation blending / crossfade** — *after the first release*
     Layer and cross-fade animations on one player through the runtime's track stack. The runtime
     side is complete and the WASM build already exports the track calls; what is missing is the
