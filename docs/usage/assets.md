@@ -137,7 +137,7 @@ ssconverter-cli ./assets/projects ./extra_assets
 | `--embedded` | `<name>_emb/` | Same as above, but referenced assets are embedded in each `.ssab` (no separate texture copies) |
 
 For details, see the SDK's
-[ssconverter-cli README](https://github.com/cri-middleware/SpriteStudio-SDK/blob/main/cli/README.md).
+[ssconverter-cli README](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/cli/README.md).
 
 ## ssconverter-core (library / embedding in your own app)
 

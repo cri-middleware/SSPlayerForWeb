@@ -73,6 +73,6 @@ Call `player.audioManager?.stopAll?.()` yourself wherever you do want silence.
 
 ## Behavior when seeking
 
-When you seek, events between the start frame and the target frame are scanned. If
-you see events firing unexpectedly, check them together with section playback
+Seeking does not fire the events it skips over — only the destination frame's user data, signals
+and sounds fire. To receive every key in a span, let playback pass through it instead of seeking
 (`setAnimationSection` in [Basic playback](/usage/basic)).

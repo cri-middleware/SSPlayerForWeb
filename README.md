@@ -23,7 +23,7 @@ Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) a
 
 - [**Documentation site (hosted)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 live after the first release
 - [**Documentation (English)**](./docs/index.md) · [**日本語ドキュメント**](./docs/ja/index.md)
-- [**For AI assistants**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — these docs as Markdown: `llms.txt` indexes the pages and `llms-full.txt` holds all of them in one file — 🚧 live after the first release
+- [**For AI assistants**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — these docs as Markdown: `llms.txt` indexes the English pages and `llms-full.txt` holds all of them in one file; each Japanese page is available as `.md` under `ja/` — 🚧 live after the first release
 - [**SpriteStudio Docs (portal)**](https://cri-middleware.github.io/SpriteStudio-Docs/) — the SDK and every official player in one place — 🚧 live after the first release
 
 ### Quick Links

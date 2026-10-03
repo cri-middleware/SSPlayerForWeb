@@ -61,7 +61,7 @@ WASM の初期化状況・変換状況はステータスバッジに、詳細は
 | 通常 | `<name>_<timestamp>.zip` | `<name>/` | `.ssab`（＋ `.ssqb`）＋ 参照テクスチャ |
 | Embedded | `<name>_emb_<timestamp>.zip` | `<name>_emb/` | テクスチャを `.ssab` に埋め込み（別ファイルなし） |
 
-ダウンロードした ZIP を展開し、`.ssab`（と通常モードのテクスチャ）を配信場所に置きます（[配置とテクスチャ解決](#配置とテクスチャ解決)）。
+ダウンロードした ZIP を展開し、`.ssab`（と通常モードのテクスチャ）を配信場所に置きます（[配置とテクスチャ解決](#placement-and-texture-resolution)）。
 
 ## SSConverter GUI（デスクトップGUIツール） {#ssconvertergui-desktop-gui-tool}
 
@@ -118,7 +118,7 @@ ssconverter-cli ./assets/projects ./extra_assets
 | `--embedded` | `<name>_emb/` | 上記と同じだが、参照アセットを各 `.ssab` に埋め込み（テクスチャの別コピーなし） |
 
 詳細は SDK の
-[ssconverter-cli README](https://github.com/cri-middleware/SpriteStudio-SDK/blob/main/cli/README.md)
+[ssconverter-cli README](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/cli/README.ja.md)
 を参照してください。
 
 ## ssconverter-core（ライブラリ / 自作アプリへの組み込み） {#ssconverter-core-library-embedding-in-your-own-app}
@@ -176,7 +176,7 @@ API の一覧は
 [`ssconverter-core` の README](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core#api)
 を参照してください。
 
-## 配置とテクスチャ解決
+## 配置とテクスチャ解決 {#placement-and-texture-resolution}
 
 ::: info どのファイルが、変換後のどれになるのか
 `.sspj` / `.ssae` / `.ssce` / `.ssqe` それぞれの役割と変換後の対応は Player 共通なので、ポータルにまとめてあります — [アセットの変換 — プロジェクトの構成と、変換後の対応](https://cri-middleware.github.io/SpriteStudio-Docs/ja/overview/conversion/#プロジェクトの構成と変換後の対応)。
