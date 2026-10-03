@@ -18,10 +18,10 @@ This feature needs an update to the underlying `SpriteStudio-SDK` WebAssembly FF
 
 ## Player-side features
 
-These need no new SDK API — the runtime already provides everything required. They are listed
-here because they are player responsibilities the
+This needs no new SDK API — the runtime already provides everything required. It is a player
+responsibility the
 [Player Porting Guide](https://github.com/cri-middleware/SpriteStudio-SDK/tree/HEAD/libs/ssruntime/docs)
-describes and the official players implement, but this one does not yet.
+describes and an official player implements, but this one does not yet.
 
 *   [ ] **Animation blending / crossfade** — *after the first release*
     Layer and cross-fade animations on one player through the runtime's track stack. The runtime
