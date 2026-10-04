@@ -6,8 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Per-package versioning.** This is a monorepo whose packages are versioned and published
-> independently. Package-level history lives in each package's own `CHANGELOG.md`; this file
-> records repository-wide milestones.
+> independently. Package-level history lives in each package's GitHub Releases
+> (`<package>-v<version>`); this file records repository-wide milestones.
 
 ## [Unreleased]
 

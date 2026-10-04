@@ -15,30 +15,26 @@
 #   npm       The PUBLIC packages. `pnpm pack` is the same packing path
 #             `pnpm publish` takes -- the `files` allow-list, the `prepack`
 #             artifact guard, `workspace:^` rewritten to a real range -- so what
-#             lands here is what would be uploaded, minus the upload.
+#             lands here is the file release.yml uploads.
 #
 #   plugins   The PRIVATE packages, which are never on npm. Each one's own
 #             `pack` script produces exactly the file release.yml attaches to
 #             the Release it cuts.
 #
-# release.yml runs the .sh twin for the plugin assets it uploads, so CI and a
-# local run cannot drift: the archives inspected here are the ones the workflow
-# attaches to the Releases, built the same way and checked the same way. The
-# workflow keeps what is GitHub's -- the checkout, the npm publish, the Releases
-# themselves -- and reads <out>/manifest.json for what to attach to which.
+# release.yml runs the .sh twin for everything it uploads, so CI and a local run
+# cannot drift: the tarballs it publishes to npm and the archives it attaches to
+# the Releases are the files built and checked here, the same way. The workflow
+# keeps what is GitHub's and npm's -- the checkout, the version commit, the
+# publish, the tags and the Releases -- and reads <out>/manifest.json for which
+# file is which. Run locally before a release, this is the one look at an npm
+# tarball anyone gets while it can still be fixed: a published version is
+# immutable.
 #
-# The npm half is the exception, and cannot be otherwise: `changeset publish`
-# packs and uploads from the workspace itself, so there is no tarball to hand
-# it. Building those here buys the look BEFORE the release that the workflow
-# cannot offer -- an npm version is immutable, so the first time anyone would
-# otherwise see a tarball is after it can no longer be fixed.
-#
-# The versions are the working tree's, and this does not touch them.
-# `changeset version` runs inside the release, so a run from main before it
-# produces artifacts one bump behind what will be published; when changesets are
-# pending, the summary says so and names what each package would become. Bumping
-# here instead would leave the release's own decision half-made in the working
-# tree -- and it is a decision this script has no business making.
+# The versions are the working tree's, and this does not touch them. A release
+# sets them first (scripts/set-versions.mjs), so a run without that step builds
+# under the versions the tree has now. Setting them here would leave the
+# release's own decision half-made in the working tree -- and it is a decision
+# this script has no business making.
 #
 # The checks are the ones that would otherwise ship:
 #
@@ -205,11 +201,11 @@ Write-Host "  -h | --help             Show this help"
     Write-Host ""
     Write-Host "Output: <out>/npm/*.tgz (the npm channel), <out>/plugins/* (the GitHub"
     Write-Host "Releases channel), <out>/manifest.json naming both (release.yml reads it to"
-    Write-Host "cut the plugin Releases) and SHA256SUMS over the lot."
+    Write-Host "publish the tarballs and cut the Releases) and SHA256SUMS over the lot."
     Write-Host ""
     Write-Host "This builds a release; it does not make one. Nothing here publishes, tags,"
-    Write-Host "commits, or bumps a version: the artifacts carry the versions the working"
-    Write-Host "tree has right now, and the release bumps them itself (changeset version)."
+    Write-Host "commits, or sets a version: the artifacts carry the versions the working"
+    Write-Host "tree has right now, which a release sets first (scripts/set-versions.mjs)."
 }
 
 foreach ($item in $args) {
@@ -353,57 +349,6 @@ foreach ($p in $PUBLIC_PKGS) { Write-Host ("  npm      {0,-40} {1}" -f $p.Name, 
 foreach ($p in $PLUGIN_PKGS) { Write-Host ("  release  {0,-40} {1}  ({2})" -f $p.Name, $p.Version, (Split-Path -Leaf $p.Artifact)) }
 foreach ($p in $NEITHER)     { Write-Host ("  --       {0,-40} {1}  (private, no pack script -- not a release artifact)" -f $p.Name, $p.Version) }
 
-# --- what the release would call them --------------------------------------
-#
-# The tree is not bumped here, so say out loud where these versions stand
-# relative to the ones that will be published.
-$prePath = Join-Path $ROOT_DIR ".changeset/pre.json"
-$pending = @(Get-ChildItem (Join-Path $ROOT_DIR ".changeset") -Filter "*.md" -File -ErrorAction SilentlyContinue |
-             Where-Object { $_.Name -ne "README.md" })
-if ($pending.Count -gt 0) {
-    Write-Host ""
-    Write-Host "note: $($pending.Count) changeset(s) pending -- the release bumps before it builds, so"
-    Write-Host "      the artifacts below are named one bump behind what it will publish:"
-    # `changeset status` REWRITES .changeset/pre.json as a side effect: it
-    # re-serializes the pre state and drops initialVersions/changesets from it.
-    # Nothing in this script is allowed to leave a modified working tree, and a
-    # gutted pre.json is not a harmless diff -- initialVersions is what the pre
-    # line's exit bumps from. So snapshot it and put it back.
-    $preBackup = $null
-    if (Test-Path $prePath) { $preBackup = [System.IO.File]::ReadAllBytes($prePath) }
-
-    $statusJson = Join-Path ([System.IO.Path]::GetTempPath()) ("changeset-status-" + [guid]::NewGuid().ToString() + ".json")
-    if ((Invoke-Tolerant { & pnpm changeset status --output=$statusJson }) -eq 0 -and (Test-Path $statusJson)) {
-        $status = Get-Content $statusJson -Raw | ConvertFrom-Json
-        foreach ($r in @($status.releases)) {
-            if (-not $r -or $r.type -eq "none") { continue }
-            Write-Host "        $($r.name): $($r.oldVersion) -> $($r.newVersion)"
-        }
-    }
-    Remove-Item $statusJson -Force -ErrorAction SilentlyContinue
-
-    if ($null -ne $preBackup) {
-        # Only when it actually changed, so an untouched file keeps its mtime.
-        $now = if (Test-Path $prePath) { [System.IO.File]::ReadAllBytes($prePath) } else { @() }
-        if (@(Compare-Object $preBackup $now -SyncWindow 0).Count -gt 0) {
-            [System.IO.File]::WriteAllBytes($prePath, $preBackup)
-        }
-    } elseif (Test-Path $prePath) {
-        Remove-Item $prePath -Force
-    }
-}
-
-# Pre mode changes what a version even means, and it is easy to forget it is on.
-if (Test-Path $prePath) {
-    $pre = Get-Content $prePath -Raw | ConvertFrom-Json
-    if ($pre.mode -eq "pre") {
-        Write-Host ""
-        Write-Host "note: changesets pre mode is ACTIVE (tag: $($pre.tag)) -- the release publishes"
-        Write-Host "      under the '$($pre.tag)' dist-tag, so there is no 'latest' and a consumer has"
-        Write-Host "      to ask for <pkg>@$($pre.tag) until 'pnpm changeset pre exit' ends the line."
-    }
-}
-
 # Every workspace path is relative to the repo root, so build from there however
 # the script was invoked.
 Push-Location $ROOT_DIR
@@ -499,10 +444,10 @@ try {
 
     # --- the manifest -----------------------------------------------------
     # What this run produced, per channel, as data rather than as a listing to
-    # be read. release.yml reads `.plugins[]` out of it to cut one GitHub
-    # Release per plugin, which is what keeps the artifact names in exactly one
-    # place -- the PLUGIN_ROWS table above -- so adding a plugin needs no change
-    # to the workflow.
+    # be read. release.yml publishes each `.npm[]` tarball and tags and drafts a
+    # Release for every entry as `<dir>-v<version>`, which is what keeps the
+    # artifact names in exactly one place -- the PLUGIN_ROWS table above -- so
+    # adding a package needs no change to the workflow.
     #
     # It lists what is on disk, not what this run was asked to build, so a
     # channel whose stage was skipped comes out empty and the workflow can say
@@ -513,14 +458,14 @@ try {
     foreach ($p in $PUBLIC_PKGS) {
         $tgz = ($p.Name -replace "^@", "" -replace "/", "-") + "-$($p.Version).tgz"
         if (Test-Path (Join-Path $OUT "npm/$tgz")) {
-            $npmRows += [ordered]@{ package = $p.Name; version = $p.Version; file = "npm/$tgz" }
+            $npmRows += [ordered]@{ package = $p.Name; dir = $p.Dir; version = $p.Version; file = "npm/$tgz" }
         }
     }
     $pluginRows = @()
     foreach ($p in $PLUGIN_PKGS) {
         $base = Split-Path -Leaf $p.Artifact
         if (Test-Path (Join-Path $OUT "plugins/$base")) {
-            $pluginRows += [ordered]@{ package = $p.Name; version = $p.Version; file = "plugins/$base" }
+            $pluginRows += [ordered]@{ package = $p.Name; dir = $p.Dir; version = $p.Version; file = "plugins/$base" }
         }
     }
     $manifest = [ordered]@{ npm = @($npmRows); plugins = @($pluginRows) }
@@ -745,10 +690,9 @@ foreach ($rel in $listed) {
 }
 Write-Host ""
 Write-Host "${APP}: nothing was published. This is what a release would upload:"
-Write-Host "  npm/*.tgz     what 'changeset publish' sends to npm (it packs from the"
-Write-Host "                workspace itself, so it never reads these files)"
-Write-Host "  plugins/*     the very files release.yml attaches to the per-plugin"
-Write-Host "                GitHub Releases -- it runs the .sh twin to build them"
+Write-Host "  npm/*.tgz     the very files release.yml publishes to npm"
+Write-Host "  plugins/*     the very files release.yml attaches to the plugins'"
+Write-Host "                GitHub Releases -- it runs the .sh twin to build both"
 if (@(Get-ChildItem (Join-Path $OUT "npm") -Filter "*.tgz" -File -ErrorAction SilentlyContinue).Count -gt 0) {
     Write-Host ""
     Write-Host "${APP}: try a tarball before shipping it -- install it into a scratch project:"

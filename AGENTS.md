@@ -47,8 +47,8 @@ submodule.
 | Question | File |
 |---|---|
 | What each package does, and the architecture diagram | [README.md](./README.md), the [docs site](./docs/) |
-| How to set up, build, test and regenerate code | [CONTRIBUTING.md](./CONTRIBUTING.md) |
-| How the site is built and a release is cut | [RELEASING.md](./RELEASING.md), maintainers only |
+| How to set up, build, test and regenerate code, the docs site included | [CONTRIBUTING.md](./CONTRIBUTING.md) |
+| How a release is cut | [RELEASING.md](./RELEASING.md), maintainers only |
 | What to build next, and what is out of scope | [ROADMAP.md](./ROADMAP.md) |
 | What each script does and takes | that script's `--help` |
 

@@ -2,83 +2,56 @@
 
 Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Building the documentation site
-
-```bash
-scripts/prepare-docs.sh    # pnpm install + the SDK wasm
-scripts/build-docs.sh      # TypeDoc, then VitePress -> docs/.vitepress/dist
-```
-
-`pages.yml` runs `build-docs.sh` too, so CI and a local build cannot drift. Two options earn their
-keep: `api=no` skips TypeDoc when only prose changed, and `base=/SSPlayerForWeb/` sets `DOCS_BASE`
-the way the project site needs it. **Building the docs is the only gate there is** — nothing builds
-them on a pull request, and a dead link fails the build, VitePress checking by default. This is
-*one* build for both locales, VitePress resolving `docs/ja` itself, which is why this
-`build-docs` takes no `locale=` where the Zensical player repos' do. The wasm is not optional:
-TypeDoc parses `packages/*/src`, which import the bindings.
-
-`docs/.vitepress/config.mts` builds the Open Graph and Twitter Card tags in `transformHead`, from
-the title and description VitePress has already resolved. **One code path serves both locales** —
-Japanese cards come from `locales.ja.description`, so localize by adding a per-locale config value,
-never by branching on the locale inside `transformHead`. `og:url` is built from `SITE_URL`,
-deliberately not from `base`, which is `/` during local dev.
-
-## Building the whole published site
-
-`scripts/build-pages.sh` builds everything into one directory (`_site` by default): the docs at the
-root, `ssconverter-web` for every schema version in `versions.json` under `/ssconverter/`, and the
-six examples under `/examples/`. `pages.yml` runs this same script, keeping only what is GitHub's
-— the checkout, the toolchain, the artifact upload and the deploy.
-
-`base=` defaults to `/<repo>/`, because a project site is served under it and a site built for `/`
-looks fine locally and 404s once deployed. `skip=<stages>` is what makes the script usable while
-iterating (`skip=install,wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter` rebuilds the
-docs alone); a skipped stage leaves its part out with a warning, while a stage that ran and produced
-nothing is an error. `sdk=download`, the default, takes the prebuilt wasm for
-`scripts/SDK_VERSION.txt`; `sdk=build` compiles it from the submodule and is the way through while
-that SDK release does not exist yet — but it reaches the `ssconverter` stage **only as far as the
-one schema version whose `sdk` tag matches `SDK_VERSION.txt`**, every other version still
-downloading the release it pins, which is the point of pinning it. Each version logs which of the
-two it took.
-
-Three things it needs that `pnpm install` does not: the SpriteStudio-SDK submodule, network
-access, and — on the `.sh` path only — `jq`, which the `.ps1` twin does without (it uses `ConvertFrom-Json`).
-
 ## Cutting a release
 
-A release is a maintainer running the **Release** workflow on `main` once the accumulated
-changesets are worth shipping. Packages are versioned independently through Changesets; the
-branching model follows from that and is described in [CONTRIBUTING.md](./CONTRIBUTING.md).
+Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `gh` (run `gh auth login` once), and the repository needs the `SS_NPM_TOKEN` secret for the npm half.
 
-`scripts/build-release.sh` builds *both* channels into one directory (`release-dist` by default)
-and publishes neither: `<out>/npm/*.tgz` (`pnpm pack` for every package that is not `private`, so
-the `files` allow-list, the `prepack` artifact guard and the `workspace:^` rewrite all apply
-exactly as they would on publish) and `<out>/plugins/*` (each private package's own `pack` script
-— the files `release.yml` attaches to the per-plugin GitHub Releases), plus `SHA256SUMS` over
-both. `release.yml` runs it for the plugin assets it uploads, so the archives a maintainer looks
-over are the ones the Releases carry, and the workflow reads `<out>/manifest.json` to know which
-file belongs to which package.
+Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. The workflow writes them, builds and checks everything, commits them to `main`, publishes the public packages to npm, and gives every package it released a `<package>-v<version>` tag and a draft GitHub Release. The private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh` are never on npm: their Release, with the archive attached, is their only channel. A pull request carries no version and no release note — both are decided here.
 
-The npm half is the exception and cannot be otherwise: `changeset publish` packs from the
-workspace itself, so there is no tarball to hand it. Building them locally buys the only look at
-an npm artifact anyone gets while it can still be fixed, since a published version is immutable.
-The script never bumps a version — `changeset version` runs inside the release — so a local run
-beforehand produces artifacts one bump behind, and it says so, naming what each package would
-become, when changesets are pending or pre mode is active.
+### 1. Decide the versions
 
-**The verification is what earns the script its keep**, and every check in it is a failure that
-would otherwise ship: `workspace:` left in a packed manifest; a `files` entry missing from the
-tarball; `ssplayer-core` without its second (`dist/`) copy of the wasm that the CDN snippets load
-by URL; the RPG Maker MZ plugin carrying the SIMD runtime instead of the no-SIMD one, which MZ's
-NW.js cannot load; `ssplayer.tbp` renamed or holding anything but the one `ssplayer/` folder,
-since the builder derives the plugin id from the filename; a `{{VERSION}}` left unsubstituted in
-the TyranoScript readme; and the docs' version pins disagreeing with the manifests. A new private
-package with a `pack` script fails the run until it is listed in `PLUGIN_ROWS`, the only place the
-plugin artifact names live.
+Look at what each package gained since its previous tag. A package that depends on another through `workspace:^` needs a release of its own only when it needs what the other added. A version with a prerelease part (`7.0.0-beta.2`) goes to npm under that word's dist-tag (`beta`), so `latest` stays on the last full release.
 
-Both channels are reproducible run to run. The pack scripts write the plugin archives with
-fflate and stamp every entry 1980-01-01, so the same inputs give the same bytes, and the plugins
-stage needs no `zip` on any platform.
+```bash
+git log --oneline ssplayer-core-v7.0.0-beta.1..origin/main -- packages/ssplayer-core
+```
+
+### 2. Run the workflow
+
+```bash
+gh workflow run release.yml --ref main -f versions="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
+gh run watch                                      # the run takes a few seconds to appear
+```
+
+The run writes the versions, repoints the version-pinned CDN snippets in the docs, and commits; then it builds and checks everything with `scripts/build-release.sh`, and only after that pushes the commit, publishes to npm and drafts the Releases. A failure before the push leaves `main` and npm untouched, and so does a `main` that moved during the run, which rejects the push.
+
+With `versions` left empty, nothing is set, and every current version not yet released goes out: the first release, and the retry after a run that failed. `-f publish_npm=false` or `-f release_plugins=false` leaves that channel out.
+
+### 3. Publish the drafts
+
+Open each draft on the [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) page. Its generated notes list every pull request since that package's previous tag, the other packages' included: cut them down to what this package gained. Check the archive on a plugin's, choose **Set as a pre-release** or **Set as the latest release**, and **Publish release**. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Watch the run through, then open the site: a failed run leaves the site as it was. Once the cause is fixed, re-run it.
+
+```bash
+gh run watch                                      # pages.yml; the run takes a few seconds to appear
+```
+
+## Undoing a release
+
+**An npm version is permanent**: it cannot be withdrawn, only superseded, so a fault found after step 2 is fixed by a new version. A run that failed before publishing anything is simply run again. One that failed partway through is run again with `versions` empty: it skips whatever npm and the Releases already have and finishes the rest, reusing any tag it had pushed. A draft can be deleted until it is published.
+
+## Building the release locally
+
+`scripts/build-release.sh` is the release build, and `release.yml` runs exactly this script for everything it uploads. It builds *both* channels into one directory (`release-dist` by default) and publishes neither: `<out>/npm/*.tgz` (`pnpm pack` for every package that is not `private`, so the `files` allow-list, the `prepack` artifact guard and the `workspace:^` rewrite all apply) and `<out>/plugins/*` (each private package's own `pack` script), plus `SHA256SUMS` over both. The workflow publishes those very tarballs and attaches those very archives, reading `<out>/manifest.json` to know which file belongs to which package. Run before a release, it is the one look at an npm artifact anyone gets while it can still be fixed.
+
+```bash
+node scripts/set-versions.mjs ssplayer-core@7.0.0-beta.2 && node scripts/sync-doc-versions.mjs   # the versions a release would set
+scripts/build-release.sh                          # -> release-dist/
+git checkout -- .                                 # put the versions back
+```
+
+**The verification is what earns the script its keep**, and every check in it is a failure that would otherwise ship: `workspace:` left in a packed manifest; a `files` entry missing from the tarball; `ssplayer-core` without its second (`dist/`) copy of the wasm that the CDN snippets load by URL; the RPG Maker MZ plugin carrying the SIMD runtime instead of the no-SIMD one, which MZ's NW.js cannot load; `ssplayer.tbp` renamed or holding anything but the one `ssplayer/` folder, since the builder derives the plugin id from the filename; a `{{VERSION}}` left unsubstituted in the TyranoScript readme; and the docs' version pins disagreeing with the manifests. A new private package with a `pack` script fails the run until it is listed in `PLUGIN_ROWS`, the only place the plugin artifact names live.
+
+Both channels are reproducible run to run. The pack scripts write the plugin archives with fflate and stamp every entry 1980-01-01, so the same inputs give the same bytes, and the plugins stage needs no `zip` on any platform.
 
 <br>
 
@@ -88,50 +61,53 @@ stage needs no `zip` on any platform.
 
 維持者向けです。コントリビューターがこの手順を実行することはありません（[CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください）。
 
-## ドキュメントサイトのビルド
-
-```bash
-scripts/prepare-docs.sh    # pnpm install と SDK の wasm
-scripts/build-docs.sh      # TypeDoc のあと VitePress -> docs/.vitepress/dist
-```
-
-`pages.yml` も `build-docs.sh` を実行するので、CI と手元のビルドがずれません。役に立つオプションは
-2 つです。文章だけを直したときに TypeDoc を飛ばす `api=no` と、プロジェクトサイトに必要な
-`DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。**ゲートはこのビルドだけです。** プルリクエストでは docs はビルドされず、リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
-`docs/ja` を自分で解決するため、これは両ロケールを**一度に**ビルドします。Zensical の Player 群の
-`build-docs` が `locale=` を取るのに対し、こちらが取らないのはそのためです。wasm は省略できません。
-TypeDoc が読む `packages/*/src` がバインディングを import しているからです。
-
-`docs/.vitepress/config.mts` は Open Graph / Twitter Card タグを `transformHead` で、VitePress が解決済みのタイトルと説明から組み立てます。**1 つのコードパスが両ロケールを賄います。** 日本語のカードは `locales.ja.description` から来るので、ローカライズはロケールごとの設定値を足して行い、
-`transformHead` の中でロケール分岐を書かないでください。`og:url` は `base` ではなく `SITE_URL` から作ります（`base` はローカル開発では `/` になるためです）。
-
-## 公開サイト全体のビルド
-
-`scripts/build-pages.sh` が全体を 1 つのディレクトリ（既定 `_site`）に組み立てます。ルートに docs、
-`/ssconverter/` に `versions.json` の各スキーマバージョンの `ssconverter-web`、`/examples/` にサンプル 6 本です。`pages.yml` も同じスクリプトを実行し、GitHub 側の仕事（チェックアウト、ツールチェイン、アーティファクトのアップロード、デプロイ）だけを持ちます。
-
-`base=` の既定は `/<repo>/` です。プロジェクトサイトはその下で配信されるため、`/` 向けに建てたサイトはローカルでは問題なく見えて、デプロイすると 404 します。`skip=<stages>` が反復作業を可能にします（`skip=install,wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter` で docs だけ建て直せます）。スキップした段はその部分をサイトから外し警告を出しますが、走ったのに何も出さなかった段はエラーです。既定の `sdk=download` は `scripts/SDK_VERSION.txt` のビルド済み wasm を取得します。`sdk=build` は
-submodule からコンパイルし、その SDK リリースがまだ無いときの回避路ですが、`ssconverter` 段に届くのは **`sdk` タグが `SDK_VERSION.txt` と一致するスキーマバージョン 1 つだけ**です。他のバージョンは自分がピンしたリリースをダウンロードし続けます（それがピンの意味です）。どちらを取ったかは各バージョンがログに出します。
-
-`pnpm install` では足りないものが 3 つあります。SpriteStudio-SDK submodule、ネットワーク、そして
-`.sh` の経路でのみ `jq` です（`.ps1` 双子は `ConvertFrom-Json` で済ませます）。
-
 ## リリースの手順
 
-リリースとは、溜まった changeset が出荷に値するようになったときに、維持者が `main` で **Release**
-ワークフローを実行することです。パッケージは Changesets により独立にバージョニングされ、ブランチモデルはそこから導かれます（[CONTRIBUTING.md](./CONTRIBUTING.md) に記載）。
+このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `gh`（最初に一度 `gh auth login`）で、npm 側にはリポジトリの `SS_NPM_TOKEN` secret が要ります。
 
-`scripts/build-release.sh` は**両方**のチャンネルを 1 つのディレクトリ（既定 `release-dist`）にビルドし、どちらも publish しません。`<out>/npm/*.tgz`（`private` でない全パッケージの `pnpm pack`。
-`files` 許可リスト、`prepack` の成果物ガード、`workspace:^` の書き換えが publish と同じように適用されます）と `<out>/plugins/*`（各 private パッケージ自身の `pack` スクリプトの出力。
-`release.yml` がプラグインごとの GitHub Release に添付するファイルそのもの）、そして両方に対する
-`SHA256SUMS` です。`release.yml` はアップロードするプラグイン asset のためにこれを実行するので、維持者が確認するアーカイブが Release に載るものと同一になります。どのファイルがどのパッケージのものかは、ワークフローが `<out>/manifest.json` から読みます。
+パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。ワークフローはそれを書き込み、すべてをビルドして検査し、`main` へコミットし、公開パッケージを npm へ publish し、リリースした各パッケージに `<package>-v<version>` のタグと下書きの GitHub Release を作ります。`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインは npm には出ません。アーカイブを添付した Release が唯一の配布経路です。プルリクエストはバージョンもリリースノートも持ちません。どちらもここで決めます。
 
-npm 側だけは例外で、そうする他にありません。`changeset publish` はワークスペースから直接
-pack するため、渡せる tarball が存在しないのです。ローカルでビルドしておくことが、npm の成果物をまだ直せるうちに確認できる唯一の機会になります（publish 済みのバージョンは変更できません）。このスクリプトはバージョンを上げません（`changeset version` はリリースの中で走ります）。したがって事前のローカル実行は 1 バンプ古い成果物を作ります。changeset が未処理のときや pre モードのときは、各パッケージがどのバージョンになるかを明示してそう伝えます。
+### 1. バージョンを決める
 
-**このスクリプトの価値は検査にあります。** どの検査も、無ければそのまま出荷される失敗です。
-packed manifest に残った `workspace:`、tarball から欠けた `files` エントリ、CDN スニペットが URL で読み込む 2 つめ（`dist/`）の wasm コピーを欠いた `ssplayer-core`、no-SIMD ではなく SIMD ランタイムを同梱した RPG ツクール MZ プラグイン（MZ の NW.js は読み込めません）、改名されたか `ssplayer/`
-フォルダ以外を含む `ssplayer.tbp`（ビルダーはファイル名からプラグイン ID を導きます）、
-TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
+各パッケージが前回のタグから何を得たかを見ます。`workspace:^` で別のパッケージに依存するパッケージは、相手が足したものを必要とするときだけ自分もリリースします。プレリリース部分のあるバージョン（`7.0.0-beta.2`）は、その語の dist-tag（`beta`）で npm に出るので、`latest` は最後の正式版に残ります。
+
+```bash
+git log --oneline ssplayer-core-v7.0.0-beta.1..origin/main -- packages/ssplayer-core
+```
+
+### 2. ワークフローを実行する
+
+```bash
+gh workflow run release.yml --ref main -f versions="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
+gh run watch                                      # run が一覧に出るまで数秒かかる
+```
+
+run はバージョンを書き込み、docs のバージョン固定の CDN スニペットを追従させてコミットします。続けて `scripts/build-release.sh` ですべてをビルドして検査し、そのあとで初めてコミットを push し、npm へ publish し、Release の下書きを作ります。push より前に失敗すれば `main` も npm も変わりません。run の途中で `main` が進んでいた場合も、push が拒否されるので同じです。
+
+`versions` を空にすると何も設定せず、まだリリースしていない現在のバージョンをすべて出します。初回のリリースと、失敗した run のやり直しがこれです。`-f publish_npm=false` か `-f release_plugins=false` で、そのチャネルを外せます。
+
+### 3. 下書きを公開する
+
+[Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) ページで下書きを 1 つずつ開きます。自動生成のノートには、そのパッケージの前回のタグ以降のプルリクエストが、他のパッケージのものも含めてすべて並ぶので、このパッケージが得たものだけに絞ります。プラグインの下書きでは添付のアーカイブを確かめ、**Set as a pre-release** か **Set as the latest release** を選んで、**Publish release** を押します。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。run を最後まで見届けてから、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因を直したら run を再実行します。
+
+```bash
+gh run watch                                      # pages.yml。run が一覧に出るまで数秒かかる
+```
+
+## リリースの取り消し
+
+**npm のバージョンは恒久的です。** 取り下げられず、上書きもできないので、手順 2 の後に見つかった不具合は新しいバージョンで直します。何も publish する前に失敗した run は、そのまま実行し直します。途中で失敗した run は `versions` を空にして実行し直します。npm と Release にすでにあるものは飛ばして残りを終わらせ、push 済みのタグはそのまま使います。下書きは公開するまで消せます。
+
+## リリースのローカルビルド
+
+`scripts/build-release.sh` がリリースのビルドそのもので、`release.yml` はアップロードするものすべてについて、このスクリプトを実行しているだけです。**両方**のチャネルを 1 つのディレクトリ（既定 `release-dist`）にビルドし、どちらも publish しません。`<out>/npm/*.tgz`（`private` でない全パッケージの `pnpm pack`。`files` 許可リスト、`prepack` の成果物ガード、`workspace:^` の書き換えが適用されます）と `<out>/plugins/*`（各 private パッケージ自身の `pack` スクリプトの出力）、そして両方に対する `SHA256SUMS` です。ワークフローはこの tarball とアーカイブをそのまま publish・添付し、どのファイルがどのパッケージのものかを `<out>/manifest.json` から読みます。リリースの前に実行すれば、npm の成果物をまだ直せるうちに確認できる唯一の機会になります。
+
+```bash
+node scripts/set-versions.mjs ssplayer-core@7.0.0-beta.2 && node scripts/sync-doc-versions.mjs   # リリースが設定するバージョン
+scripts/build-release.sh                          # -> release-dist/
+git checkout -- .                                 # バージョンを元に戻す
+```
+
+**このスクリプトの価値は検査にあります。** どの検査も、無ければそのまま出荷される失敗です。packed manifest に残った `workspace:`、tarball から欠けた `files` エントリ、CDN スニペットが URL で読み込む 2 つめ（`dist/`）の wasm コピーを欠いた `ssplayer-core`、no-SIMD ではなく SIMD ランタイムを同梱した RPG ツクール MZ プラグイン（MZ の NW.js は読み込めません）、改名されたか `ssplayer/` フォルダ以外を含む `ssplayer.tbp`（ビルダーはファイル名からプラグイン ID を導きます）、TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
 
 どちらのチャネルも実行ごとに再現可能です。プラグインのアーカイブは pack スクリプトが fflate で書き出し、全エントリの日時を 1980-01-01 に固定しているので、入力が同じならバイト列も同じになります。plugins 段はどのプラットフォームでも `zip` を必要としません。
