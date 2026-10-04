@@ -22,25 +22,11 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 
 ## ✨ Why SpriteStudio with PixiJS?
 
-- **Pixi renders; it doesn't author animation.** Anything past `AnimatedSprite`
-  and spritesheets — bone rigs, mesh deformation, particle effects — means
-  hand-building an animation system or reaching for another runtime. SpriteStudio
-  is that dedicated 2D editor, and this player drops the finished animation
-  straight onto your stage.
-- **A whole scene, not just a character.** Compose characters, backgrounds,
-  effects, and UI on one timeline in the editor, then bring the entire cutscene or
-  full-screen sequence into your Pixi stage as a single animation — not just one
-  rigged sprite.
-- **Zero-friction integration.** `SSPlayer` **is** a Pixi `Container` and
-  self-drives from `Ticker.shared` — no bespoke per-frame `update()`. It draws
-  through Pixi's own BatchRenderer (direct / batched meshes), so it batches
-  alongside the rest of your scene at full performance.
-- **Your existing art, plus game hooks.** The PNG / WebP art you already have
-  animates as-is, and timeline events (`onUserData` / `onSignal` / `onAudio`)
-  surface as callbacks you wire straight into game logic.
-- **Smooth at any refresh rate.** Playback is **sub-frame interpolated** (on by
-  default), rendering each frame at its exact display time — so motion stays fluid
-  on 120Hz+ displays and in slow motion, instead of snapping to integer frames.
+- **Pixi renders; SpriteStudio animates.** Past `AnimatedSprite` and spritesheets — bone rigs, mesh deformation, particle effects — you would be hand-building an animation system. SpriteStudio is a dedicated 2D editor where an artist builds that motion over the PNG / WebP art you already have, and this player drops the result onto your stage.
+- **Whole scenes, not just a character.** Characters, backgrounds, effects and UI composed on one timeline arrive on your stage as a single animation — a cutscene or a full-screen sequence.
+- **Just a Pixi `Container`.** `SSPlayer` drives itself from `Ticker.shared` — no per-frame `update()` to write — and draws through Pixi's own batching, alongside the rest of your scene.
+- **Game hooks on the timeline.** Events the artist placed arrive as callbacks (`onUserData` / `onSignal` / `onAudio`) that you wire straight into game logic.
+- **Smooth at any refresh rate.** **Sub-frame interpolation** (on by default) renders each frame at its exact display time, so motion stays fluid on 120 Hz+ displays and in slow motion.
 
 ## Install
 

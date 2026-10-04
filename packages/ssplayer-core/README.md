@@ -27,33 +27,12 @@ This package is for the two audiences who do:
 
 ## ✨ Why build your renderer on this core?
 
-Build a renderer binding on `core` and you inherit the strengths shared by *every*
-SpriteStudio Player for Web renderer — they come from this core and the
-`#![no_std]` Rust SDK it wraps:
+Build a renderer binding on `core` and you inherit what every SpriteStudio Player for Web renderer shares:
 
-- **One core, consistent visuals on every engine.** All the heavy state
-  computation — bone matrices, mesh deformation, hierarchical color/opacity —
-  happens once here and is emitted as a single cross-engine draw plan. The
-  PixiJS v8, standalone WebGL, and RPG Maker MZ renderers all consume the *same*
-  plan, so an animation looks identical wherever you render it, with no
-  engine-specific visual drift.
-- **Compact assets, zero-copy, SIMD.** Animations ship as the columnar `.ssab`
-  FlatBuffers binary — zero parsing at load. During playback, transforms and
-  geometry are read through `Float32Array` views mapped directly onto WASM
-  memory (no per-frame copies), and the Rust core uses SIMD (f32x4) for maximum
-  throughput at minimal CPU / memory cost.
-- **Reference *and* embedded assets, handled for you.** `core` loads both `.ssab`
-  variants — one that **references** external texture files, and one converted
-  with `--embedded` that **inlines** its textures. Embedding collapses loading
-  from one `.ssab` **plus one HTTP request per texture** down to a **single
-  self-contained request**: fewer round-trips, simpler caching and deployment, and
-  the asset can even be shipped inline as an `ArrayBuffer` with no sibling files.
-  Your renderer just implements the optional `loadTextureFromBytes` to decode
-  embedded textures from the binary; omit it and everything falls back to URL
-  loading — both paths inherited for free.
-- **Runs anywhere a browser does.** The core is the SDK's `#![no_std]` Rust
-  compiled to WebAssembly — no OS or DOM assumptions — so playback stays stable
-  and allocation-free from memory-constrained mobile browsers to desktop.
+- **The motion is computed for you.** Bone matrices, mesh deformation and hierarchical colour / opacity are computed here and emitted as one draw plan. The PixiJS, standalone WebGL and RPG Maker MZ renderers all consume the same plan, so pose, deformation and draw order match across them. Your renderer draws; blend modes and part colours arrive as intent for it to reproduce with its engine.
+- **Zero-parse loading, zero-copy frames, SIMD.** `.ssab` is a FlatBuffers binary read in place. Each frame's transforms and geometry are `Float32Array` views onto WASM memory — no per-frame copies — computed by the Rust core with SIMD (f32x4).
+- **Referenced or embedded textures, both handled.** `core` loads a `.ssab` that references its texture files and one converted with `--embedded` that carries them inside — one request instead of one per texture, or none when you pass the bytes as an `ArrayBuffer`. Implement the optional `loadTextureFromBytes` to decode embedded textures; leave it out and loading falls back to URLs.
+- **Runs anywhere a browser does.** The core is the SDK's `#![no_std]` Rust compiled to WebAssembly, with no OS or DOM assumptions.
 
 ## What this package is
 
