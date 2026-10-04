@@ -549,14 +549,17 @@ try {
                     }
                 }
 
-                # ssplayer-core ships the runtime binary TWICE on purpose: wasm/
-                # is the wasm-bindgen package the bundler entry imports, dist/ is
-                # the copy the IIFE build loads by URL from a CDN (its build step
-                # copies it there). A tarball with only the first one is a
-                # bundler-only release, and the CDN snippets in the docs 404
-                # against it.
+                # ssplayer-core ships the runtime binary TWICE on purpose. wasm/
+                # is the wasm-bindgen package, and its .wasm is the URL every CDN
+                # snippet in the docs hands to initialize(). dist/ holds the copy
+                # the ESM entry finds next to itself (new URL('ssruntime_bg.wasm',
+                # import.meta.url)) when initialize() is given no URL -- the file
+                # a bundler emits, and the one an ESM import from a CDN fetches;
+                # the build step copies it there. A tarball without that copy
+                # installs and type-checks, then 404s on the runtime in every
+                # bundled app.
                 if ($p.Dir -eq "ssplayer-core" -and -not ($entries -contains "package/dist/ssruntime_bg.wasm")) {
-                    Add-Failure "$tgzName has no dist/ssruntime_bg.wasm (the copy the IIFE build loads by URL)"
+                    Add-Failure "$tgzName has no dist/ssruntime_bg.wasm (the copy the ESM entry loads when initialize() is given no URL)"
                 }
             }
         }

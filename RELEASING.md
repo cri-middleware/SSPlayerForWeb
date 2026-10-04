@@ -49,7 +49,7 @@ scripts/build-release.sh                          # -> release-dist/
 git checkout -- .                                 # put the versions back
 ```
 
-**The verification is what earns the script its keep**, and every check in it is a failure that would otherwise ship: `workspace:` left in a packed manifest; a `files` entry missing from the tarball; `ssplayer-core` without its second (`dist/`) copy of the wasm that the CDN snippets load by URL; the RPG Maker MZ plugin carrying the SIMD runtime instead of the no-SIMD one, which MZ's NW.js cannot load; `ssplayer.tbp` renamed or holding anything but the one `ssplayer/` folder, since the builder derives the plugin id from the filename; a `{{VERSION}}` left unsubstituted in the TyranoScript readme; and the docs' version pins disagreeing with the manifests. A new private package with a `pack` script fails the run until it is listed in `PLUGIN_ROWS`, the only place the plugin artifact names live.
+**The verification is what earns the script its keep**, and every check in it is a failure that would otherwise ship: `workspace:` left in a packed manifest; a `files` entry missing from the tarball; `ssplayer-core` without its second (`dist/`) copy of the wasm, the one its ESM entry loads from beside itself in every bundled app; the RPG Maker MZ plugin carrying the SIMD runtime instead of the no-SIMD one, which MZ's NW.js cannot load; `ssplayer.tbp` renamed or holding anything but the one `ssplayer/` folder, since the builder derives the plugin id from the filename; a `{{VERSION}}` left unsubstituted in the TyranoScript readme; and the docs' version pins disagreeing with the manifests. A new private package with a `pack` script fails the run until it is listed in `PLUGIN_ROWS`, the only place the plugin artifact names live.
 
 Both channels are reproducible run to run. The pack scripts write the plugin archives with fflate and stamp every entry 1980-01-01, so the same inputs give the same bytes, and the plugins stage needs no `zip` on any platform.
 
@@ -108,6 +108,6 @@ scripts/build-release.sh                          # -> release-dist/
 git checkout -- .                                 # バージョンを元に戻す
 ```
 
-**このスクリプトの価値は検査にあります。** どの検査も、無ければそのまま出荷される失敗です。packed manifest に残った `workspace:`、tarball から欠けた `files` エントリ、CDN スニペットが URL で読み込む 2 つめ（`dist/`）の wasm コピーを欠いた `ssplayer-core`、no-SIMD ではなく SIMD ランタイムを同梱した RPG ツクール MZ プラグイン（MZ の NW.js は読み込めません）、改名されたか `ssplayer/` フォルダ以外を含む `ssplayer.tbp`（ビルダーはファイル名からプラグイン ID を導きます）、TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
+**このスクリプトの価値は検査にあります。** どの検査も、無ければそのまま出荷される失敗です。packed manifest に残った `workspace:`、tarball から欠けた `files` エントリ、ESM の入口が自分の隣から読み込む 2 つめ（`dist/`）の wasm コピーを欠いた `ssplayer-core`（バンドラで組んだアプリはすべてこれを読みます）、no-SIMD ではなく SIMD ランタイムを同梱した RPG ツクール MZ プラグイン（MZ の NW.js は読み込めません）、改名されたか `ssplayer/` フォルダ以外を含む `ssplayer.tbp`（ビルダーはファイル名からプラグイン ID を導きます）、TyranoScript の readme に残った未置換の `{{VERSION}}`、そして docs のバージョンピンと manifest の不一致。`pack` スクリプトを持つ private パッケージを追加すると、`PLUGIN_ROWS` に載せるまで実行が失敗します。プラグイン成果物の名前が書かれているのは今はそこだけです。
 
 どちらのチャネルも実行ごとに再現可能です。プラグインのアーカイブは pack スクリプトが fflate で書き出し、全エントリの日時を 1980-01-01 に固定しているので、入力が同じならバイト列も同じになります。plugins 段はどのプラットフォームでも `zip` を必要としません。
