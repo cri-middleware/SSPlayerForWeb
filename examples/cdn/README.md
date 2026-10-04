@@ -1,6 +1,6 @@
 # CDN samples — zero build step
 
-Two self-contained HTML pages that load the players **straight from a CDN**, with no
+Three self-contained HTML pages that load the players **straight from a CDN**, with no
 bundler and no `npm install`:
 
 | File | Package | Loads via | Peer deps |
@@ -47,7 +47,7 @@ await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-c
 
 ## Run it
 
-Both pages `fetch()` an `.ssab`, so they must be served over **http(s)** — opening the
+All three pages `fetch()` an `.ssab`, so they must be served over **http(s)** — opening the
 file directly (`file://`) will fail on CORS.
 
 1. **Supply an `.ssab`.** Use an *embedded* one (textures inlined → single self-contained
@@ -62,7 +62,7 @@ file directly (`file://`) will fail on CORS.
 
    ```bash
    npx serve examples/cdn        # or: python3 -m http.server -d examples/cdn 8080
-   # then open http://localhost:3000/pixi.html  (or webgl.html)
+   # then open http://localhost:3000/pixi.html  (or webgl.html, ss-player.html)
    ```
 
 Override the asset or animation via query string:

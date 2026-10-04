@@ -170,7 +170,7 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
 </script>
 ```
 
-両方の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります。
+`<ss-player>` 版とクラシック `<script>` 版の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります（`ss-player.html` と `webgl.html`）。
 
 ## エントリーポイント
 

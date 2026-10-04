@@ -191,7 +191,7 @@ Same rule: pass the WASM URL explicitly.
 </script>
 ```
 
-A runnable copy of both is in [`examples/cdn`](../../examples/cdn/).
+Runnable copies of the `<ss-player>` and classic `<script>` versions are in [`examples/cdn`](../../examples/cdn/) (`ss-player.html` and `webgl.html`).
 
 ## Entry points
 

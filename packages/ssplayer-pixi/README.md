@@ -146,7 +146,7 @@ Same rule: pass the WASM URL explicitly.
 </script>
 ```
 
-A runnable copy of both is in [`examples/cdn`](../../examples/cdn/).
+A runnable copy of the classic `<script>` version is in [`examples/cdn`](../../examples/cdn/) (`pixi.html`).
 
 ## Playback API (excerpt)
 

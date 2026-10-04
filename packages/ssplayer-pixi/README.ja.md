@@ -131,7 +131,7 @@ CDN 経由）ではバンドラが行う自動パス解決が効きません。�
 </script>
 ```
 
-両方の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります。
+クラシック `<script>` 版の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります（`pixi.html`）。
 
 ## 再生 API（抜粋）
 
