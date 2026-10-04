@@ -18,33 +18,11 @@ page to play it (🚧 live once the first release is published).
 
 ## ✨ Why SpriteStudio with plain WebGL?
 
-- **Drop it in with a single HTML tag.** The built-in **`<ss-player>` custom
-  element** plays a `.ssab` declaratively — `<ss-player src="chara.ssab"
-  animation="idle" autoplay>` — with no build step and no JavaScript, in any
-  framework or plain HTML. Prefer code? The `SSPlayer` class gives full
-  imperative control over the same renderer.
-- **A whole scene, not just a character.** SpriteStudio composes characters,
-  backgrounds, effects, and UI onto a single timeline, so one `.ssab` can be a
-  complete animated piece — a full banner, splash, or cut-in, not just one sprite.
-- **When you can't (or won't) ship an engine.** Embeddable widgets, a
-  landing-page hero, or any placement on a strict byte budget — where pulling in
-  a full framework is too much weight, and you'd otherwise hand-roll a WebGL
-  animation system or fall back to video. Editor-crafted bone / mesh / particle
-  animation with **zero dependencies** and a tiny footprint, rendering into a
-  plain `<canvas>`.
-- **A lighter alternative to `<video>` — and smoother.** It scales freely at
-  runtime, loops seamlessly, and reacts to input, instead of a fixed-size clip
-  that just plays back. And because playback is **sub-frame interpolated** (on by
-  default), motion renders at the display's exact refresh rate — no judder from a
-  clip baked at a fixed frame rate.
-- **Pay only for what you use.** Tree-shakeable entry points: the `./lite` build
-  trims to Normal + blend for the tightest bundle when size is the budget, and
-  the audio adapter loads only when a sound-bearing animation is set.
-
-Put together, that's exactly what the **tightest, sandboxed embed slots** ask for —
-zero dependencies, a single self-contained `.ssab` (embedded), one drop-in HTML
-tag, and a byte-budgeted `./lite` build — so it fits size- and sandbox-constrained
-placements where a heavier player simply won't.
+- **Artist-made animation, no animation code.** Breathing characters, swaying hair, slash and magic effects — an artist builds them visually in a dedicated 2D editor (SpriteStudio), with bone rigs, mesh deformation and particles over the PNG / WebP art you already have. This player just plays the exported `.ssab`.
+- **One HTML tag.** `<ss-player src="chara.ssab" animation="idle" autoplay>` plays it with no build step and no JavaScript, in plain HTML or inside any framework. Prefer code? The `SSPlayer` class drives the same renderer.
+- **Whole scenes — banners, splashes, cut-ins.** Characters, backgrounds, effects and UI composed on one timeline play back as a single animation from a single `.ssab`.
+- **A lighter alternative to `<video>`.** It scales freely, loops seamlessly and reacts to input, and **sub-frame interpolation** (on by default) renders at the display's refresh rate instead of a clip's baked frame rate.
+- **Fits tight embed slots.** Zero dependencies, a plain `<canvas>`, and one self-contained `.ssab` with its textures embedded. When bytes are the budget, the `./lite` build trims to Normal + blend, and the audio adapter loads only for an animation that has sound.
 
 ## Usage
 
