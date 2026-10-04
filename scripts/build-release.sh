@@ -547,15 +547,41 @@ if [ "$VERIFY" = "yes" ]; then
     done <<< "$PUBLIC_PKGS"
   fi
 
-  # ssplayer-core ships the runtime binary TWICE on purpose: wasm/ is the
-  # wasm-bindgen package the bundler entry imports, dist/ is the copy the IIFE
-  # build loads by URL from a CDN (its build step copies it there). A tarball
-  # with only the first one is a bundler-only release, and the CDN snippets in
-  # the docs 404 against it.
+  # ssplayer-core ships the runtime binary TWICE on purpose. wasm/ is the
+  # wasm-bindgen package, and its .wasm is the URL every CDN snippet in the docs
+  # hands to initialize(). dist/ holds the copy the ESM entry finds next to
+  # itself (new URL('ssruntime_bg.wasm', import.meta.url)) when initialize() is
+  # given no URL -- the file a bundler emits, and the one an ESM import from a
+  # CDN fetches; the build step copies it there. A tarball without that copy
+  # installs and type-checks, then 404s on the runtime in every bundled app.
   core_tgz="$OUT/npm/spritestudio-ssplayer-core-$(node -p "require('$ROOT_DIR/packages/ssplayer-core/package.json').version").tgz"
   if [ -f "$core_tgz" ]; then
     tar -tzf "$core_tgz" | grep -q '^package/dist/ssruntime_bg\.wasm$' \
-      || fail "$(basename "$core_tgz") has no dist/ssruntime_bg.wasm (the copy the IIFE build loads by URL)"
+      || fail "$(basename "$core_tgz") has no dist/ssruntime_bg.wasm (the copy the ESM entry loads when initialize() is given no URL)"
+  fi
+
+  # ssplayer-webgl and ssplayer-pixi build ssplayer-core's wasm glue into their
+  # CDN bundles, while every CDN snippet loads the runtime that glue drives from
+  # ssplayer-core@<its version>/wasm/. The two come out of one wasm-bindgen
+  # build and work only as a pair, so a player that goes out under a core
+  # version already released has to carry the glue of the runtime that version
+  # shipped: the SDK release scripts/SDK_VERSION.txt named at core's tag. The
+  # tags are what mark a version released -- release.yml pushes
+  # <dir>-v<version> for every package it releases.
+  core_version="$(node -p "require('$ROOT_DIR/packages/ssplayer-core/package.json').version")"
+  if git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/ssplayer-core-v${core_version}" > /dev/null; then
+    sdk_then="$(git -C "$ROOT_DIR" show "ssplayer-core-v${core_version}:scripts/SDK_VERSION.txt" 2>/dev/null | tr -d '[:space:]' || true)"
+    sdk_now="$(tr -d '[:space:]' < "$ROOT_DIR/scripts/SDK_VERSION.txt")"
+    if [ "$sdk_then" != "$sdk_now" ]; then
+      while IFS='|' read -r dir name version; do
+        [ -n "$dir" ] || continue
+        # A CDN bundle (`jsdelivr` names it) built on ssplayer-core.
+        node -e 'const p = require(process.argv[1]); process.exit(p.jsdelivr && (p.dependencies || {})["@spritestudio/ssplayer-core"] ? 0 : 1)' \
+          "$ROOT_DIR/packages/$dir/package.json" || continue
+        git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/${dir}-v${version}" > /dev/null && continue
+        fail "$name@$version carries the runtime glue of SDK $sdk_now, but its CDN snippets load the runtime of ssplayer-core@$core_version, released with SDK ${sdk_then:-(unknown)} -- release ssplayer-core too"
+      done <<< "$PUBLIC_PKGS"
+    fi
   fi
 
   # -- the plugin archives --

@@ -53,6 +53,7 @@
         const player = surface.createPlayer();
         await player.load(SSAB_URL);       // must be served over http(s), not file://
         player.setAnimation(ANIM);         // loops infinitely by default
+        player.setPlacement({});           // fit the animation's canvas into the surface
         player.play();
 
         setStatus(`Playing "${ANIM}" from ${SSAB_URL}`);

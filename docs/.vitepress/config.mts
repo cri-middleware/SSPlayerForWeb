@@ -121,7 +121,26 @@ export default withMermaid({
 
   // Shared across locales.
   themeConfig: {
-    search: { provider: 'local' },
+    search: {
+      provider: 'local',
+      options: {
+        // The API reference goes into the index by page title alone. TypeDoc
+        // writes a heading per member, and ssplayer-webgl and ssplayer-pixi
+        // re-export the core, so indexed whole it outweighs every other page
+        // thirty times over -- an index of megabytes that the search box
+        // downloads the first time it opens. The title still finds a class or
+        // function by name. Replacing _render drops VitePress's own handling
+        // of `search: false` frontmatter, so that is kept here.
+        _render(src, env, md) {
+          if (env.relativePath.startsWith('api/')) {
+            const title = /^# (.+)$/m.exec(src)
+            return title ? md.render(`# ${title[1]}`) : ''
+          }
+          const html = md.render(src, env)
+          return env.frontmatter?.search === false ? '' : html
+        },
+      },
+    },
     socialLinks: [
       { icon: 'github', link: GITHUB },
       { icon: 'x', link: 'https://x.com/spritestudio' },

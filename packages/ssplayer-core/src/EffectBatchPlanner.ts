@@ -52,7 +52,7 @@ export class EffectBatchPlanner<T extends InternalPlayerBase<T>> {
      * Gather every drawable particle command of the batch at `startRank`, in
      * draw order. Skips a fully transparent effect part and one whose slot is
      * not playing (`getEffectDrawPlan` returns null), and drops empty commands.
-     * Returns {@link count}.
+     * Returns {@link EffectBatchPlanner.count | count}.
      */
     public collect(player: T, frameData: FrameData, drawOrder: Uint16Array, startRank: number, count: number): number {
         this.count = 0;

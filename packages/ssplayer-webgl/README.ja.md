@@ -80,6 +80,7 @@ const player = surface.createPlayer();
 
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 player.setAnimation('run');
+player.setPlacement({});   // アニメーションのキャンバスをサーフェスに収める
 
 player.play();                       // drives itself via requestAnimationFrame
 ```
@@ -145,6 +146,7 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
     const player = surface.createPlayer();
     await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
     player.setAnimation('run');
+    player.setPlacement({});   // アニメーションのキャンバスをサーフェスに収める
     player.play();
   })();
 </script>
@@ -166,11 +168,12 @@ WASM URL の指定方法は3通り（要素ごとに最初に見つかったも�
   const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
   player.setAnimation('run');
+  player.setPlacement({});   // アニメーションのキャンバスをサーフェスに収める
   player.play();
 </script>
 ```
 
-両方の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります。
+`<ss-player>` 版とクラシック `<script>` 版の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります（`ss-player.html` と `webgl.html`）。
 
 ## エントリーポイント
 

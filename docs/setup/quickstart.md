@@ -55,6 +55,7 @@ async function main() {
   const player = surface.createPlayer();
   await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
   player.setAnimation('run');    // loopCount defaults to -1 (infinite)
+  player.setPlacement({});       // fit the animation's canvas into the surface
   player.play();
 }
 
@@ -84,7 +85,7 @@ async function main() {
   await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
   player.setAnimation('run');    // loopCount defaults to -1 (infinite)
 
-  player.position.set(640, 480);
+  player.position.set(640, 730);   // Ringo's origin is at its feet
   app.stage.addChild(player);
 
   // 3. Start playback

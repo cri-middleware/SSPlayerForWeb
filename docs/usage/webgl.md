@@ -129,6 +129,7 @@ async function main() {
   const player = surface.createPlayer();
   await player.load('/assets/Ringo.ssab');
   player.setAnimation('run');
+  player.setPlacement({});   // fit the animation's canvas into the surface
   player.play();
 }
 

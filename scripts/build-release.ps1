@@ -549,14 +549,44 @@ try {
                     }
                 }
 
-                # ssplayer-core ships the runtime binary TWICE on purpose: wasm/
-                # is the wasm-bindgen package the bundler entry imports, dist/ is
-                # the copy the IIFE build loads by URL from a CDN (its build step
-                # copies it there). A tarball with only the first one is a
-                # bundler-only release, and the CDN snippets in the docs 404
-                # against it.
+                # ssplayer-core ships the runtime binary TWICE on purpose. wasm/
+                # is the wasm-bindgen package, and its .wasm is the URL every CDN
+                # snippet in the docs hands to initialize(). dist/ holds the copy
+                # the ESM entry finds next to itself (new URL('ssruntime_bg.wasm',
+                # import.meta.url)) when initialize() is given no URL -- the file
+                # a bundler emits, and the one an ESM import from a CDN fetches;
+                # the build step copies it there. A tarball without that copy
+                # installs and type-checks, then 404s on the runtime in every
+                # bundled app.
                 if ($p.Dir -eq "ssplayer-core" -and -not ($entries -contains "package/dist/ssruntime_bg.wasm")) {
-                    Add-Failure "$tgzName has no dist/ssruntime_bg.wasm (the copy the IIFE build loads by URL)"
+                    Add-Failure "$tgzName has no dist/ssruntime_bg.wasm (the copy the ESM entry loads when initialize() is given no URL)"
+                }
+            }
+        }
+
+        # ssplayer-webgl and ssplayer-pixi build ssplayer-core's wasm glue into
+        # their CDN bundles, while every CDN snippet loads the runtime that glue
+        # drives from ssplayer-core@<its version>/wasm/. The two come out of one
+        # wasm-bindgen build and work only as a pair, so a player that goes out
+        # under a core version already released has to carry the glue of the
+        # runtime that version shipped: the SDK release scripts/SDK_VERSION.txt
+        # named at core's tag. The tags are what mark a version released --
+        # release.yml pushes <dir>-v<version> for every package it releases.
+        $coreVersion = (Get-Content (Join-Path $ROOT_DIR "packages/ssplayer-core/package.json") -Raw | ConvertFrom-Json).version
+        $coreTag = "ssplayer-core-v$coreVersion"
+        if ((Invoke-Tolerant { & git -C $ROOT_DIR rev-parse -q --verify "refs/tags/$coreTag" }) -eq 0) {
+            $sdkThen = ""
+            try { $sdkThen = ((& git -C $ROOT_DIR show "${coreTag}:scripts/SDK_VERSION.txt" 2>$null) -join "").Trim() } catch { }
+            $global:LASTEXITCODE = 0
+            $sdkNow = (Get-Content (Join-Path $ROOT_DIR "scripts/SDK_VERSION.txt") -Raw).Trim()
+            if ($sdkThen -ne $sdkNow) {
+                foreach ($p in $PUBLIC_PKGS) {
+                    # A CDN bundle (`jsdelivr` names it) built on ssplayer-core.
+                    $m = Get-Content (Join-Path $ROOT_DIR "packages/$($p.Dir)/package.json") -Raw | ConvertFrom-Json
+                    if (-not $m.jsdelivr -or -not ($m.dependencies -and $m.dependencies.'@spritestudio/ssplayer-core')) { continue }
+                    if ((Invoke-Tolerant { & git -C $ROOT_DIR rev-parse -q --verify "refs/tags/$($p.Dir)-v$($p.Version)" }) -eq 0) { continue }
+                    $then = if ($sdkThen) { $sdkThen } else { "(unknown)" }
+                    Add-Failure "$($p.Name)@$($p.Version) carries the runtime glue of SDK $sdkNow, but its CDN snippets load the runtime of ssplayer-core@$coreVersion, released with SDK $then -- release ssplayer-core too"
                 }
             }
         }

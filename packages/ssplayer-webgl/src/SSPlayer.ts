@@ -565,8 +565,8 @@ export class SSPlayer {
 
   /**
    * Limit playback to `[startFrame, endFrame]`. This narrows the range every
-   * other frame API reports and loops within — {@link startFrame},
-   * {@link endFrame} and {@link totalFrames} all follow it.
+   * other frame API reports and loops within — {@link SSPlayer.startFrame | startFrame},
+   * {@link SSPlayer.endFrame | endFrame} and {@link totalFrames} all follow it.
    */
   public setAnimationSection(startFrame: number, endFrame: number): void {
     this.internalPlayer.setAnimationSection(startFrame, endFrame);
