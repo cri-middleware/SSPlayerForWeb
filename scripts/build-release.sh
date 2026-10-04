@@ -560,6 +560,30 @@ if [ "$VERIFY" = "yes" ]; then
       || fail "$(basename "$core_tgz") has no dist/ssruntime_bg.wasm (the copy the ESM entry loads when initialize() is given no URL)"
   fi
 
+  # ssplayer-webgl and ssplayer-pixi build ssplayer-core's wasm glue into their
+  # CDN bundles, while every CDN snippet loads the runtime that glue drives from
+  # ssplayer-core@<its version>/wasm/. The two come out of one wasm-bindgen
+  # build and work only as a pair, so a player that goes out under a core
+  # version already released has to carry the glue of the runtime that version
+  # shipped: the SDK release scripts/SDK_VERSION.txt named at core's tag. The
+  # tags are what mark a version released -- release.yml pushes
+  # <dir>-v<version> for every package it releases.
+  core_version="$(node -p "require('$ROOT_DIR/packages/ssplayer-core/package.json').version")"
+  if git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/ssplayer-core-v${core_version}" > /dev/null; then
+    sdk_then="$(git -C "$ROOT_DIR" show "ssplayer-core-v${core_version}:scripts/SDK_VERSION.txt" 2>/dev/null | tr -d '[:space:]' || true)"
+    sdk_now="$(tr -d '[:space:]' < "$ROOT_DIR/scripts/SDK_VERSION.txt")"
+    if [ "$sdk_then" != "$sdk_now" ]; then
+      while IFS='|' read -r dir name version; do
+        [ -n "$dir" ] || continue
+        # A CDN bundle (`jsdelivr` names it) built on ssplayer-core.
+        node -e 'const p = require(process.argv[1]); process.exit(p.jsdelivr && (p.dependencies || {})["@spritestudio/ssplayer-core"] ? 0 : 1)' \
+          "$ROOT_DIR/packages/$dir/package.json" || continue
+        git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/${dir}-v${version}" > /dev/null && continue
+        fail "$name@$version carries the runtime glue of SDK $sdk_now, but its CDN snippets load the runtime of ssplayer-core@$core_version, released with SDK ${sdk_then:-(unknown)} -- release ssplayer-core too"
+      done <<< "$PUBLIC_PKGS"
+    fi
+  fi
+
   # -- the plugin archives --
   #
   # Keyed on the expected filenames, and only once the channel has been built at

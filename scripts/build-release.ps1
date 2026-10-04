@@ -564,6 +564,33 @@ try {
             }
         }
 
+        # ssplayer-webgl and ssplayer-pixi build ssplayer-core's wasm glue into
+        # their CDN bundles, while every CDN snippet loads the runtime that glue
+        # drives from ssplayer-core@<its version>/wasm/. The two come out of one
+        # wasm-bindgen build and work only as a pair, so a player that goes out
+        # under a core version already released has to carry the glue of the
+        # runtime that version shipped: the SDK release scripts/SDK_VERSION.txt
+        # named at core's tag. The tags are what mark a version released --
+        # release.yml pushes <dir>-v<version> for every package it releases.
+        $coreVersion = (Get-Content (Join-Path $ROOT_DIR "packages/ssplayer-core/package.json") -Raw | ConvertFrom-Json).version
+        $coreTag = "ssplayer-core-v$coreVersion"
+        if ((Invoke-Tolerant { & git -C $ROOT_DIR rev-parse -q --verify "refs/tags/$coreTag" }) -eq 0) {
+            $sdkThen = ""
+            try { $sdkThen = ((& git -C $ROOT_DIR show "${coreTag}:scripts/SDK_VERSION.txt" 2>$null) -join "").Trim() } catch { }
+            $global:LASTEXITCODE = 0
+            $sdkNow = (Get-Content (Join-Path $ROOT_DIR "scripts/SDK_VERSION.txt") -Raw).Trim()
+            if ($sdkThen -ne $sdkNow) {
+                foreach ($p in $PUBLIC_PKGS) {
+                    # A CDN bundle (`jsdelivr` names it) built on ssplayer-core.
+                    $m = Get-Content (Join-Path $ROOT_DIR "packages/$($p.Dir)/package.json") -Raw | ConvertFrom-Json
+                    if (-not $m.jsdelivr -or -not ($m.dependencies -and $m.dependencies.'@spritestudio/ssplayer-core')) { continue }
+                    if ((Invoke-Tolerant { & git -C $ROOT_DIR rev-parse -q --verify "refs/tags/$($p.Dir)-v$($p.Version)" }) -eq 0) { continue }
+                    $then = if ($sdkThen) { $sdkThen } else { "(unknown)" }
+                    Add-Failure "$($p.Name)@$($p.Version) carries the runtime glue of SDK $sdkNow, but its CDN snippets load the runtime of ssplayer-core@$coreVersion, released with SDK $then -- release ssplayer-core too"
+                }
+            }
+        }
+
         # -- the plugin archives --
         #
         # Keyed on the expected filenames, and only once the channel has been
