@@ -24,7 +24,10 @@ TARGET_DIR="${PROJECT_ROOT}/packages/ssplayer-core/src"
 
 echo "Generating FlatBuffers TypeScript code..."
 
-# Create target directory if it doesn't exist
+# flatc writes a file per table and never removes one, and the entrypoints
+# below export every file it finds. Start from nothing, so a table the schema
+# dropped is not left behind and still exported. src/ss holds flatc's output only.
+rm -rf "${TARGET_DIR}/ss"
 mkdir -p "${TARGET_DIR}"
 
 for f in "${SDK_DIR}/libs/ssruntime/fbs/"*.fbs; do
