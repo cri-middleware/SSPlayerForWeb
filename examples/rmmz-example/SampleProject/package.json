@@ -1,5 +1,6 @@
 {
     "name": "rmmz-game",
+    "private": true,
     "main": "index.html",
     "chromium-args": "--force-color-profile=srgb",
     "window": {
