@@ -57,12 +57,11 @@ work (e.g. an `.ssab` schema change), use a longer-lived `epic/*` branch and mer
 it back when it's coherent, so `main` stays deployable.
 
 There is **no `develop` branch here** — and that's intentional. Packages are
-versioned **independently** (via [Changesets](https://github.com/changesets/changesets)),
-so there is no single "promote develop → main = the release" moment that a
-Git-Flow `develop` branch would model; a release is simply a maintainer running the
-**Release** workflow on `main` once the accumulated changesets are worth shipping.
-Add a changeset to any PR that should trigger a version
-bump. Note this differs from other SpriteStudio repositories (e.g. the
+versioned **independently**, so there is no single "promote develop → main = the
+release" moment that a Git-Flow `develop` branch would model; a release is a
+maintainer running the **Release** workflow on `main` and naming the versions it
+sets. A pull request carries no version and no release note: both are decided when
+the release is cut. Note this differs from other SpriteStudio repositories (e.g. the
 lockstep-versioned SDK, which uses a `develop` branch): the branch model follows
 the versioning model, not the other way around.
 
@@ -113,6 +112,48 @@ The script also rewrites the namespace entrypoints `src/ss/runtime.ts` and
 `src/ss/format.ts`: run file by file, flatc leaves each of them holding only the
 last schema's exports. It is deliberately not part of `build:wasm` or
 `download:wasm` — run it only when a schema changes.
+
+### Building the documentation site
+
+```bash
+scripts/prepare-docs.sh    # pnpm install + the SDK wasm
+scripts/build-docs.sh      # TypeDoc, then VitePress -> docs/.vitepress/dist
+```
+
+`pages.yml` runs `build-docs.sh` too, so CI and a local build cannot drift. Two options earn their
+keep: `api=no` skips TypeDoc when only prose changed, and `base=/SSPlayerForWeb/` sets `DOCS_BASE`
+the way the project site needs it. **Building the docs is the only gate there is** — nothing builds
+them on a pull request, and a dead link fails the build, VitePress checking by default. This is
+*one* build for both locales, VitePress resolving `docs/ja` itself, which is why this
+`build-docs` takes no `locale=` where the Zensical player repos' do. The wasm is not optional:
+TypeDoc parses `packages/*/src`, which import the bindings.
+
+`docs/.vitepress/config.mts` builds the Open Graph and Twitter Card tags in `transformHead`, from
+the title and description VitePress has already resolved. **One code path serves both locales** —
+Japanese cards come from `locales.ja.description`, so localize by adding a per-locale config value,
+never by branching on the locale inside `transformHead`. `og:url` is built from `SITE_URL`,
+deliberately not from `base`, which is `/` during local dev.
+
+### Building the whole published site
+
+`scripts/build-pages.sh` builds everything into one directory (`_site` by default): the docs at the
+root, `ssconverter-web` for every schema version in `versions.json` under `/ssconverter/`, and the
+six examples under `/examples/`. `pages.yml` runs this same script, keeping only what is GitHub's
+— the checkout, the toolchain, the artifact upload and the deploy.
+
+`base=` defaults to `/<repo>/`, because a project site is served under it and a site built for `/`
+looks fine locally and 404s once deployed. `skip=<stages>` is what makes the script usable while
+iterating (`skip=install,wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter` rebuilds the
+docs alone); a skipped stage leaves its part out with a warning, while a stage that ran and produced
+nothing is an error. `sdk=download`, the default, takes the prebuilt wasm for
+`scripts/SDK_VERSION.txt`; `sdk=build` compiles it from the submodule and is the way through while
+that SDK release does not exist yet — but it reaches the `ssconverter` stage **only as far as the
+one schema version whose `sdk` tag matches `SDK_VERSION.txt`**, every other version still
+downloading the release it pins, which is the point of pinning it. Each version logs which of the
+two it took.
+
+Three things it needs that `pnpm install` does not: the SpriteStudio-SDK submodule, network
+access, and — on the `.sh` path only — `jq`, which the `.ps1` twin does without (it uses `ConvertFrom-Json`).
 
 ## Coding Standards
 
@@ -182,10 +223,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 ### ブランチとリリース
 本リポジトリは **トランクベース** です。`main` が唯一の長寿命ブランチで、常にリリース可能な状態を保ちます。通常は `main` から短命の作業ブランチを切ってください。`.ssab` スキーマ改修のような大規模・長期の作業は、`main` を汚さないよう長寿命の `epic/*` ブランチで進め、まとまった段階で `main` へマージします。
 
-**`develop` ブランチは設けていません**（意図的です）。パッケージは
-[Changesets](https://github.com/changesets/changesets) で**独立にバージョニング**しており、
-Git-Flow の `develop` が表す「develop→main 昇格＝リリース」という単一の瞬間が存在しません。リリースは、蓄積された changeset が出せる状態になった時点でメンテナが `main` 上で
-**Release ワークフローを実行すること**そのものです。バージョンを上げたい PR には changeset を1枚添えてください。この点は他の SpriteStudio リポジトリ（例: lockstep でバージョンを統一し `develop` 運用の SDK）とは異なります — **ブランチモデルはバージョニングモデルに従う**、という方針です。
+**`develop` ブランチは設けていません**（意図的です）。パッケージは**独立にバージョニング**しており、Git-Flow の `develop` が表す「develop→main 昇格＝リリース」という単一の瞬間が存在しません。リリースは、メンテナが設定するバージョンを指定して `main` 上で **Release ワークフローを実行すること**そのものです。プルリクエストはバージョンもリリースノートも持ちません。どちらもリリースのときに決めます。この点は他の SpriteStudio リポジトリ（例: lockstep でバージョンを統一し `develop` 運用の SDK）とは異なります — **ブランチモデルはバージョニングモデルに従う**、という方針です。
 
 このワークフローの実行と、それに先立つ事前確認はメンテナーの作業です（[RELEASING.md](./RELEASING.md) を参照）。
 
@@ -220,6 +258,34 @@ WASM とは違い **git で管理しています** — 通常のチェックア�
 このスクリプトは名前空間のエントリポイント `src/ss/runtime.ts` と
 `src/ss/format.ts` も書き直します。flatc をファイルごとに走らせると、どちらも最後のスキーマの export だけになってしまうためです。`build:wasm` や
 `download:wasm` には意図的に含めていません。スキーマが変わったときだけ実行します。
+
+### ドキュメントサイトのビルド
+
+```bash
+scripts/prepare-docs.sh    # pnpm install と SDK の wasm
+scripts/build-docs.sh      # TypeDoc のあと VitePress -> docs/.vitepress/dist
+```
+
+`pages.yml` も `build-docs.sh` を実行するので、CI と手元のビルドがずれません。役に立つオプションは
+2 つです。文章だけを直したときに TypeDoc を飛ばす `api=no` と、プロジェクトサイトに必要な
+`DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。**ゲートはこのビルドだけです。** プルリクエストでは docs はビルドされず、リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
+`docs/ja` を自分で解決するため、これは両ロケールを**一度に**ビルドします。Zensical の Player 群の
+`build-docs` が `locale=` を取るのに対し、こちらが取らないのはそのためです。wasm は省略できません。
+TypeDoc が読む `packages/*/src` がバインディングを import しているからです。
+
+`docs/.vitepress/config.mts` は Open Graph / Twitter Card タグを `transformHead` で、VitePress が解決済みのタイトルと説明から組み立てます。**1 つのコードパスが両ロケールを賄います。** 日本語のカードは `locales.ja.description` から来るので、ローカライズはロケールごとの設定値を足して行い、
+`transformHead` の中でロケール分岐を書かないでください。`og:url` は `base` ではなく `SITE_URL` から作ります（`base` はローカル開発では `/` になるためです）。
+
+### 公開サイト全体のビルド
+
+`scripts/build-pages.sh` が全体を 1 つのディレクトリ（既定 `_site`）に組み立てます。ルートに docs、
+`/ssconverter/` に `versions.json` の各スキーマバージョンの `ssconverter-web`、`/examples/` にサンプル 6 本です。`pages.yml` も同じスクリプトを実行し、GitHub 側の仕事（チェックアウト、ツールチェイン、アーティファクトのアップロード、デプロイ）だけを持ちます。
+
+`base=` の既定は `/<repo>/` です。プロジェクトサイトはその下で配信されるため、`/` 向けに建てたサイトはローカルでは問題なく見えて、デプロイすると 404 します。`skip=<stages>` が反復作業を可能にします（`skip=install,wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter` で docs だけ建て直せます）。スキップした段はその部分をサイトから外し警告を出しますが、走ったのに何も出さなかった段はエラーです。既定の `sdk=download` は `scripts/SDK_VERSION.txt` のビルド済み wasm を取得します。`sdk=build` は
+submodule からコンパイルし、その SDK リリースがまだ無いときの回避路ですが、`ssconverter` 段に届くのは **`sdk` タグが `SDK_VERSION.txt` と一致するスキーマバージョン 1 つだけ**です。他のバージョンは自分がピンしたリリースをダウンロードし続けます（それがピンの意味です）。どちらを取ったかは各バージョンがログに出します。
+
+`pnpm install` では足りないものが 3 つあります。SpriteStudio-SDK submodule、ネットワーク、そして
+`.sh` の経路でのみ `jq` です（`.ps1` 双子は `ConvertFrom-Json` で済ませます）。
 
 ## コーディング規約
 
