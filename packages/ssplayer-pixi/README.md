@@ -58,7 +58,7 @@ player.attachRenderer(app.renderer); // optional — see the mask note below
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 player.setAnimation('run');
 
-player.position.set(640, 480);
+player.position.set(640, 730);   // Ringo's origin is at its feet
 app.stage.addChild(player);
 
 player.play();
@@ -114,7 +114,7 @@ bundle reads `window.PIXI`. The renderer class is `SSPixiPlayer.SSPlayer`.
     const player = new SSPlayer();
     await player.load('./Ringo.ssab');   // serve over http(s), not file://
     player.setAnimation('run');
-    player.position.set(640, 480);
+    player.position.set(640, 730);   // Ringo's origin is at its feet
     app.stage.addChild(player);
     player.play();
   })();
@@ -140,7 +140,7 @@ Same rule: pass the WASM URL explicitly.
   const player = new SSPlayer();
   await player.load('./Ringo.ssab');
   player.setAnimation('run');
-  player.position.set(640, 480);
+  player.position.set(640, 730);   // Ringo's origin is at its feet
   app.stage.addChild(player);
   player.play();
 </script>

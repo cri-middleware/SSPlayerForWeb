@@ -86,6 +86,7 @@ const player = surface.createPlayer();
 
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 player.setAnimation('run');
+player.setPlacement({});   // fit the animation's canvas into the surface
 
 player.play();                       // drives itself via requestAnimationFrame
 ```
@@ -166,6 +167,7 @@ No peer dependencies to load first. The player class is `SSWebGLPlayer.SSSurface
     const player = surface.createPlayer();
     await player.load('./Ringo.ssab');   // serve over http(s), not file://
     player.setAnimation('run');
+    player.setPlacement({});   // fit the animation's canvas into the surface
     player.play();
   })();
 </script>
@@ -187,6 +189,7 @@ Same rule: pass the WASM URL explicitly.
   const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
   player.setAnimation('run');
+  player.setPlacement({});   // fit the animation's canvas into the surface
   player.play();
 </script>
 ```

@@ -52,6 +52,7 @@ async function main() {
   const player = surface.createPlayer();
   await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   player.setAnimation('run');    // loopCount の既定値は -1（無限ループ）
+  player.setPlacement({});       // アニメーションのキャンバスをサーフェスに収めます
   player.play();
 }
 
@@ -79,7 +80,7 @@ async function main() {
   await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   player.setAnimation('run');    // loopCount の既定値は -1（無限ループ）
 
-  player.position.set(640, 480);
+  player.position.set(640, 730);   // Ringo の原点は足元
   app.stage.addChild(player);
 
   // 3. 再生開始

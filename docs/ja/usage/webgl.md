@@ -101,6 +101,7 @@ async function main() {
   const player = surface.createPlayer();
   await player.load('/assets/Ringo.ssab');
   player.setAnimation('run');
+  player.setPlacement({});   // アニメーションのキャンバスをサーフェスに収めます
   player.play();
 }
 

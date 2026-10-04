@@ -53,7 +53,7 @@ player.attachRenderer(app.renderer); // 任意 — 下のマスクの注意を�
 await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
 player.setAnimation('run');
 
-player.position.set(640, 480);
+player.position.set(640, 730);   // Ringo の原点は足元
 app.stage.addChild(player);
 
 player.play();
@@ -99,7 +99,7 @@ CDN 経由）ではバンドラが行う自動パス解決が効きません。�
     const player = new SSPlayer();
     await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
     player.setAnimation('run');
-    player.position.set(640, 480);
+    player.position.set(640, 730);   // Ringo の原点は足元
     app.stage.addChild(player);
     player.play();
   })();
@@ -125,7 +125,7 @@ CDN 経由）ではバンドラが行う自動パス解決が効きません。�
   const player = new SSPlayer();
   await player.load('./Ringo.ssab');
   player.setAnimation('run');
-  player.position.set(640, 480);
+  player.position.set(640, 730);   // Ringo の原点は足元
   app.stage.addChild(player);
   player.play();
 </script>
