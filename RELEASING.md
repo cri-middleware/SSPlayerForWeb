@@ -6,7 +6,7 @@ Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](
 
 Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `gh` (run `gh auth login` once), and the repository needs the `SS_NPM_TOKEN` secret for the npm half.
 
-Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. The workflow writes them, builds and checks everything, commits them to `main`, publishes the public packages to npm, and gives every package it released a `<package>-v<version>` tag and a draft GitHub Release. The private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh` are never on npm: their Release, with the archive attached, is their only channel. A pull request carries no version and no release note — both are decided here.
+Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. The workflow writes them, builds and checks everything, commits them to `main`, publishes the public packages to npm, and gives every package it released a `<package>-v<version>` tag and a draft GitHub Release carrying its file — the npm tarball, or a plugin's archive. The private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh` are never on npm: their Release is their only channel. A pull request carries no version and no release note — both are decided here.
 
 ### 1. Decide the versions
 
@@ -25,11 +25,11 @@ gh run watch                                      # the run takes a few seconds 
 
 The run writes the versions, repoints the version-pinned CDN snippets in the docs, and commits; then it builds and checks everything with `scripts/build-release.sh`, and only after that pushes the commit, publishes to npm and drafts the Releases. A failure before the push leaves `main` and npm untouched, and so does a `main` that moved during the run, which rejects the push.
 
-With `versions` left empty, nothing is set, and every current version not yet released goes out: the first release, and the retry after a run that failed. `-f publish_npm=false` or `-f release_plugins=false` leaves that channel out.
+With `versions` left empty, nothing is set, and every current version not yet released goes out: the first release, and the retry after a run that failed. `-f release_plugins=false` leaves the plugins out. `-f publish_npm=false` skips npm and nothing else: the public packages still get their Releases, tarball attached, which is how they ship before npm can take them, and a later run with `versions` empty publishes them there.
 
 ### 3. Publish the drafts
 
-Open each draft on the [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) page. Its generated notes list every pull request since that package's previous tag, the other packages' included: cut them down to what this package gained. Check the archive on a plugin's, choose **Set as a pre-release** or **Set as the latest release**, and **Publish release**. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Watch the run through, then open the site: a failed run leaves the site as it was. Once the cause is fixed, re-run it.
+Open each draft on the [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) page. Its generated notes list every pull request since that package's previous tag, the other packages' included: cut them down to what this package gained. Check the attached file, choose **Set as a pre-release** or **Set as the latest release**, and **Publish release**. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Watch the run through, then open the site: a failed run leaves the site as it was. Once the cause is fixed, re-run it.
 
 ```bash
 gh run watch                                      # pages.yml; the run takes a few seconds to appear
@@ -65,7 +65,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `gh`（最初に一度 `gh auth login`）で、npm 側にはリポジトリの `SS_NPM_TOKEN` secret が要ります。
 
-パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。ワークフローはそれを書き込み、すべてをビルドして検査し、`main` へコミットし、公開パッケージを npm へ publish し、リリースした各パッケージに `<package>-v<version>` のタグと下書きの GitHub Release を作ります。`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインは npm には出ません。アーカイブを添付した Release が唯一の配布経路です。プルリクエストはバージョンもリリースノートも持ちません。どちらもここで決めます。
+パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。ワークフローはそれを書き込み、すべてをビルドして検査し、`main` へコミットし、公開パッケージを npm へ publish し、リリースした各パッケージに `<package>-v<version>` のタグと、そのファイル（npm の tarball か、プラグインのアーカイブ）を添付した下書きの GitHub Release を作ります。`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインは npm には出ません。Release が唯一の配布経路です。プルリクエストはバージョンもリリースノートも持ちません。どちらもここで決めます。
 
 ### 1. バージョンを決める
 
@@ -84,11 +84,11 @@ gh run watch                                      # run が一覧に出るまで
 
 run はバージョンを書き込み、docs のバージョン固定の CDN スニペットを追従させてコミットします。続けて `scripts/build-release.sh` ですべてをビルドして検査し、そのあとで初めてコミットを push し、npm へ publish し、Release の下書きを作ります。push より前に失敗すれば `main` も npm も変わりません。run の途中で `main` が進んでいた場合も、push が拒否されるので同じです。
 
-`versions` を空にすると何も設定せず、まだリリースしていない現在のバージョンをすべて出します。初回のリリースと、失敗した run のやり直しがこれです。`-f publish_npm=false` か `-f release_plugins=false` で、そのチャネルを外せます。
+`versions` を空にすると何も設定せず、まだリリースしていない現在のバージョンをすべて出します。初回のリリースと、失敗した run のやり直しがこれです。`-f release_plugins=false` でプラグインを外せます。`-f publish_npm=false` が飛ばすのは npm だけです。公開パッケージにも tarball を添付した Release は作られるので、npm に出せるようになるまではこれで配れます。あとで `versions` を空にして実行すれば npm にも出ます。
 
 ### 3. 下書きを公開する
 
-[Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) ページで下書きを 1 つずつ開きます。自動生成のノートには、そのパッケージの前回のタグ以降のプルリクエストが、他のパッケージのものも含めてすべて並ぶので、このパッケージが得たものだけに絞ります。プラグインの下書きでは添付のアーカイブを確かめ、**Set as a pre-release** か **Set as the latest release** を選んで、**Publish release** を押します。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。run を最後まで見届けてから、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因を直したら run を再実行します。
+[Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) ページで下書きを 1 つずつ開きます。自動生成のノートには、そのパッケージの前回のタグ以降のプルリクエストが、他のパッケージのものも含めてすべて並ぶので、このパッケージが得たものだけに絞ります。添付のファイルを確かめ、**Set as a pre-release** か **Set as the latest release** を選んで、**Publish release** を押します。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。run を最後まで見届けてから、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因を直したら run を再実行します。
 
 ```bash
 gh run watch                                      # pages.yml。run が一覧に出るまで数秒かかる
