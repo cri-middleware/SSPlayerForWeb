@@ -1,58 +1,49 @@
 name: Release
 
-# One-shot release, triggered manually from main. Two independent boolean inputs
-# (both default true) select what this dispatch uploads. Same ref + same inputs
-# always produce the same result, so the run stays deterministic:
+# One release, dispatched by hand from main. A maintainer names the versions;
+# everything after that is this workflow's, and the same ref with the same inputs
+# always produces the same result:
 #
-#   publish_npm=true      Consume the accumulated changesets: `changeset version`
-#                         bumps each affected package's version + CHANGELOG
-#                         (independent versioning), commit to main, build every
-#                         package (wasm fetched first), publish the PUBLIC ones to
-#                         npm (per-package `prepack` guard refuses a package whose
-#                         dist/wasm is missing), and push the commit + per-package
-#                         tags. No changesets pending is NOT a no-op: `changeset
-#                         publish` still ships any package whose CURRENT version is
-#                         absent from the registry, which is what makes the very
-#                         first release (and a retry after a half-failed one)
-#                         possible. Everything already published -> no-op.
+#   versions          `<package>@<version>` pairs separated by spaces, <package>
+#                     being the directory under packages/. scripts/set-versions.mjs
+#                     writes them and sync-doc-versions.mjs repoints the
+#                     version-pinned docs snippets, in one commit that reaches main
+#                     only once the build below has passed. Empty sets nothing and
+#                     releases whatever current version is not released yet: the
+#                     first release, and the retry after a run that died halfway.
 #
-#   release_plugins=true  The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyranoscript /
-#                         ssplayer-tyranobuilder) are
-#                         never on npm, so GitHub Releases are their only channel.
-#                         scripts/build-release.sh -- the same script a maintainer
-#                         runs locally to look the assets over first -- packs them
-#                         and checks them, and names them in release-dist/
-#                         manifest.json. changeset does not tag private packages,
-#                         so this cuts one Release per plugin off that manifest,
-#                         tagged `<pkg>@<version>` (prerelease when the version
-#                         contains a `-`). Already released -> skipped, so re-runs
-#                         and deferred plugin releases are safe.
+#   publish_npm       Each PUBLIC package's tarball -- the very file
+#                     scripts/build-release.sh packed and checked -- goes to npm,
+#                     unless npm already has that version. A version with a
+#                     prerelease part (X.Y.Z-beta.N) goes under that word's
+#                     dist-tag, so `latest` stays on the last full release and a
+#                     consumer asks for `<pkg>@beta` meanwhile.
 #
-# Common cases: defaults (true/true) = full release. release_plugins=false ships
-# npm only (cut the plugin Releases later with publish_npm=false + release_plugins
-# =true). Hold a plugin persistently by adding it to `ignore` in
-# .changeset/config.json instead.
+#   release_plugins   The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyranoscript /
+#                     ssplayer-tyranobuilder) are never on npm; their Release, with
+#                     the archive attached, is their only channel.
 #
-# Prerelease lines are handled by changesets' pre mode (`.changeset/pre.json`):
-# while it is active, `changeset version` produces `X.Y.Z-<tag>.N` and publishes
-# under that dist-tag instead of `latest`. Note this applies to a brand-new
-# package too, so while pre mode is on there is NO `latest` tag and
-# `npm install <pkg>` fails — consumers must ask for `<pkg>@<tag>` until
-# `pnpm changeset pre exit` + a release ends the line.
+# Every package released here gets a `<package>-v<version>` tag and a DRAFT
+# GitHub Release, notes generated from the pull requests since its previous tag.
+# A package whose Release already exists, draft or not, is skipped, so a re-run
+# never doubles one. A maintainer edits each draft and publishes it, and
+# publishing is what starts pages.yml.
 #
-# Runs on `main` only: the version-bump commit, the tags, and the published
-# code all follow whichever ref the workflow is dispatched from, so a release
-# must originate from main. Requires the `SS_NPM_TOKEN` secret (an npm automation
-# token — automation tokens bypass 2FA, which CI cannot satisfy interactively).
+# Requires the SS_NPM_TOKEN secret (an npm automation token -- automation tokens
+# bypass 2FA, which CI cannot satisfy interactively).
 on:
   workflow_dispatch:
     inputs:
+      versions:
+        description: 'Versions to set: <package>@<version>, space separated, <package> = directory under packages/. Empty releases the current versions.'
+        type: string
+        default: ''
       publish_npm:
-        description: 'Publish public packages to npm (changeset version + publish)'
+        description: 'Publish the public packages to npm and draft their Releases'
         type: boolean
         default: true
       release_plugins:
-        description: 'Cut GitHub Releases for private plugins (rmmz / tyrano / tyranobuilder)'
+        description: 'Draft the Releases of the private plugins (rmmz / tyranoscript / tyranobuilder)'
         type: boolean
         default: true
 
@@ -62,12 +53,12 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # push the version-bump commit + tags back to main
+  contents: write # the version commit, the tags and the Releases
   id-token: write # npm provenance (see NPM_CONFIG_PROVENANCE below)
 
 jobs:
   release:
-    # Refuse to publish from anywhere but main, even if dispatched on another ref.
+    # Refuse to release from anywhere but main, even if dispatched on another ref.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -90,19 +81,41 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Gate the whole release on a green build + test run. An npm version is
-      # immutable once published, so this must fail BEFORE anything is versioned
-      # or uploaded. `build` doubles as the typecheck (tsdown emits .d.ts, which
-      # fails on type errors); `test` needs the wasm, hence download:wasm first.
-      # ci:publish re-runs download+build afterwards against the bumped versions
-      # — the duplicate work is a few seconds and keeps the publish self-contained.
-      - name: Verify (build + test)
+      - name: Git identity
         run: |
-          pnpm run download:wasm
-          pnpm run build
-          pnpm run test
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Version, publish (npm) and release plugins (GitHub Releases)
+      # Committed here, before anything is built, so the commit holds the version
+      # change and nothing else; it is pushed only after the build has passed.
+      - name: Set the versions
+        if: inputs.versions != ''
+        env:
+          VERSIONS: ${{ inputs.versions }}
+        run: |
+          # One argument per pair, so the split is the point.
+          # shellcheck disable=SC2086
+          node scripts/set-versions.mjs $VERSIONS
+          node scripts/sync-doc-versions.mjs
+          git add -A
+          git commit -m "chore(release): $VERSIONS"
+
+      # scripts/build-release.sh IS the release build: the wasm, the build, the
+      # tests, the npm tarballs and the plugin archives, then the checks only a
+      # finished artifact can show. Everything published or attached below comes
+      # out of release-dist/, so what goes out is what was checked. Every option
+      # is spelled out, so a release cannot change because a default did.
+      - name: Build, test and check the release
+        run: ./scripts/build-release.sh skip=install sdk=download out=release-dist verify=yes clean=yes
+
+      # A main that moved during the run rejects this push, and the run stops
+      # before anything is published.
+      - name: Push the version commit
+        if: inputs.versions != ''
+        run: git push origin HEAD:main
+
+      - name: Publish to npm
+        if: inputs.publish_npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SS_NPM_TOKEN }}
           # npm provenance attestation needs a PUBLIC repository (plus the
@@ -111,123 +124,61 @@ jobs:
           # than degrading, so provenance stays off. Flip to 'true' the moment
           # the repo goes public — nothing else has to change.
           NPM_CONFIG_PROVENANCE: 'false'
-          # gh CLI auth for the plugin GitHub Releases (contents: write above).
+        run: |
+          set -euo pipefail
+          while IFS=$'\t' read -r name version file; do
+            if [ -n "$(npm view "${name}@${version}" version 2>/dev/null || true)" ]; then
+              echo "::notice::${name}@${version} is already on npm — skipping."
+              continue
+            fi
+            case "$version" in
+              *-*) dist_tag="${version#*-}"; dist_tag="${dist_tag%%.*}" ;;
+              *)   dist_tag="latest" ;;
+            esac
+            npm publish "release-dist/${file}" --tag "$dist_tag" --access public
+          done < <(jq -r '.npm[] | [.package, .version, .file] | @tsv' release-dist/manifest.json)
+
+      - name: Tag and draft the Releases
+        env:
           GH_TOKEN: ${{ github.token }}
           PUBLISH_NPM: ${{ inputs.publish_npm }}
           RELEASE_PLUGINS: ${{ inputs.release_plugins }}
         run: |
           set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sha="$(git rev-parse HEAD)"
 
-          built=0
+          # Which packages, under which tag, with which file, all comes from the
+          # manifest build-release.sh wrote, so a new package needs no change here.
+          rows="$(jq -r --arg npm "$PUBLISH_NPM" --arg plugins "$RELEASE_PLUGINS" '
+            (if $npm == "true" then .npm[] | [.package, .dir, .version, "-"] else empty end),
+            (if $plugins == "true" then .plugins[] | [.package, .dir, .version, .file] else empty end)
+            | @tsv' release-dist/manifest.json)"
+          if [ -z "$rows" ]; then
+            echo "::error::Nothing selected to release."
+            exit 1
+          fi
 
-          # --- npm channel (public packages) ------------------------------------
-          if [ "$PUBLISH_NPM" = "true" ]; then
-            # Consume accumulated changesets -> bump versions + CHANGELOG.
-            pnpm changeset version
-
-            # Repoint the version-pinned CDN/esm.sh snippets in the READMEs, the
-            # docs site and examples/cdn at whatever the manifests now say. These
-            # exist to be copy-pasted, and versions move independently per package,
-            # so without this a release that bumps one package leaves every snippet
-            # naming it pointing at a version that no longer pairs correctly.
-            # Runs before the status check below so the rewrite lands in the same
-            # commit as the bump.
-            node scripts/sync-doc-versions.mjs
-
-            # An empty tree here only means "no version changed" — it does NOT
-            # mean "nothing to publish". `changeset publish` compares each
-            # package against the registry and ships whatever is missing, which
-            # is how the FIRST release goes out (versions already committed, no
-            # changeset to consume) and how a run that died between publish and
-            # `git push` recovers. So always fall through to publish.
-            bumped=0
-            if [ -n "$(git status --porcelain)" ]; then
-              # Commit the bump (new CHANGELOG.md files are untracked, so add -A).
-              git add -A
-              git commit -m "chore: release packages"
-              bumped=1
+          while IFS=$'\t' read -r name dir version file; do
+            tag="${dir}-v${version}"
+            if gh release view "$tag" > /dev/null 2>&1; then
+              echo "::notice::${tag} already has a Release — skipping."
+              continue
+            fi
+            # The notes start at this package's previous tag. A prerelease sorts
+            # below its full release, so 7.0.1 starts at 7.0.0, not at 7.0.0-beta.N.
+            previous="$(git -c versionsort.suffix=- tag --list "${dir}-v*" --sort=-v:refname | grep -vx "$tag" | head -n 1 || true)"
+            # A run that tagged and then died left the tag behind; it is reused.
+            if ! git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
+              git tag -a "$tag" -m "$tag" "$sha"
+              git push origin "refs/tags/${tag}"
+            fi
+            args=(--verify-tag --title "${name} ${version}" --generate-notes --draft)
+            if [ -n "$previous" ]; then args+=(--notes-start-tag "$previous"); fi
+            case "$version" in *-*) args+=(--prerelease) ;; esac
+            if [ "$file" = "-" ]; then
+              gh release create "$tag" "${args[@]}"
             else
-              echo "::notice::No changesets pending — publishing the current versions as-is (no-op if already on npm)."
+              gh release create "$tag" "release-dist/${file}" "${args[@]}"
             fi
-
-            # ci:publish = download:wasm && build && changeset publish.
-            pnpm run ci:publish
-            built=1
-
-            # Push the bump commit first (only when there was one), then the
-            # per-package tags changeset created for what it actually published.
-            # They are lightweight tags, so --follow-tags would skip them.
-            if [ "$bumped" = "1" ]; then
-              git push origin HEAD:main
-            fi
-            git push origin --tags
-          else
-            echo "::notice::publish_npm=false — skipping npm version bump & publish."
-          fi
-
-          # --- GitHub Releases channel (private plugins) --------------------------
-          # Never on npm, so GitHub Releases are their only distribution channel.
-          if [ "$RELEASE_PLUGINS" = "true" ]; then
-            # The assets come from scripts/build-release.sh -- the same script a
-            # maintainer runs locally before dispatching this -- so what is
-            # uploaded here and what they looked at first cannot be different
-            # files. It also brings the checks that only a finished archive can
-            # show, none of which anything else in this workflow would catch:
-            # the RPG Maker MZ plugin carrying the no-SIMD runtime (MZ's NW.js
-            # cannot load a simd128 wasm), ssplayer.tbp keeping its exact name
-            # and its single top-level folder (the builder derives the plugin id
-            # from the filename, so a renamed one installs nothing), the
-            # TyranoScript readme with its version actually substituted.
-            #
-            # The plugins are packed from build outputs, so the wasm + build
-            # stages run unless the npm half above already did them.
-            # install/test/npm are always skipped: the dependencies are
-            # installed above, the tests gated this run before anything was
-            # versioned, and npm goes out through `changeset publish`, which
-            # packs from the workspace itself and could not use a tarball.
-            skip_stages="install,test,npm"
-            if [ "$built" = "1" ]; then skip_stages="install,wasm,build,test,npm"; fi
-            ./scripts/build-release.sh "skip=$skip_stages"
-
-            release_sha="$(git rev-parse HEAD)"
-
-            # changeset does not tag private packages, so the Releases are cut
-            # here. Which plugins exist, at which versions, under which file
-            # names, all comes from the manifest that build-release.sh just
-            # wrote -- the names live in that script and nowhere else, so adding
-            # a plugin needs no change to this workflow.
-            plugin_count="$(jq -r '.plugins | length' release-dist/manifest.json)"
-            if [ "$plugin_count" = "0" ]; then
-              echo "::error::release-dist/manifest.json lists no plugins — nothing to release."
-              exit 1
-            fi
-
-            # One Release per plugin whose current-version Release is absent;
-            # already released -> skip, so re-runs and deferred plugin releases
-            # stay idempotent. Read through a process substitution rather than a
-            # pipe, so the loop runs in this shell and a failing `gh` here fails
-            # the job.
-            while IFS=$'\t' read -r pkg version file; do
-              tag="${pkg}@${version}"
-              if gh release view "$tag" >/dev/null 2>&1; then
-                echo "::notice::${tag} already released — skipping."
-                continue
-              fi
-              prerelease=""
-              case "$version" in *-*) prerelease="--prerelease";; esac
-              # --draft: 添付物と自動生成ノートが揃った状態を人間が確認してから
-              # GitHub UI で公開する。draft は `gh release view` から見えるので、
-              # 上の重複チェックは draft のままでも効き、再実行しても二重に作らない。
-              gh release create "$tag" "release-dist/$file" \
-                --target "$release_sha" \
-                --title "${pkg} ${version}" \
-                --generate-notes \
-                --draft \
-                $prerelease
-              echo "::notice::Drafted ${tag} — publish it from the Releases page."
-            done < <(jq -r '.plugins[] | [.package, .version, .file] | @tsv' release-dist/manifest.json)
-          else
-            echo "::notice::release_plugins=false — skipping plugin GitHub Releases."
-          fi
+            echo "::notice::Drafted ${tag} — edit its notes and publish it from the Releases page."
+          done <<< "$rows"

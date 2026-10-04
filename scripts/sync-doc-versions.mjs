@@ -13,8 +13,8 @@
 // release and show up as spurious churn in the release commit.)
 //
 // This rewrites every `@spritestudio/<workspace-package>@<semver>` to that
-// package's current version. Run it right after `changeset version`, before the
-// release commit, so the docs ship correct in the same commit as the bump.
+// package's current version. Run it right after scripts/set-versions.mjs, before
+// the release commit, so the docs ship correct in the same commit as the bump.
 //
 //   node scripts/sync-doc-versions.mjs            rewrite in place
 //   node scripts/sync-doc-versions.mjs --check    report only, exit 1 if stale

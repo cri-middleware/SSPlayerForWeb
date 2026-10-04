@@ -14,30 +14,26 @@
 #   npm       The PUBLIC packages. `pnpm pack` is the same packing path
 #             `pnpm publish` takes -- the `files` allow-list, the `prepack`
 #             artifact guard, `workspace:^` rewritten to a real range -- so what
-#             lands here is what would be uploaded, minus the upload.
+#             lands here is the file release.yml uploads.
 #
 #   plugins   The PRIVATE packages, which are never on npm. Each one's own
 #             `pack` script produces exactly the file release.yml attaches to
 #             the Release it cuts.
 #
-# release.yml runs this script for the plugin assets it uploads, so CI and a
-# local run cannot drift: the archives inspected here are the ones the workflow
-# attaches to the Releases, built the same way and checked the same way. The
-# workflow keeps what is GitHub's -- the checkout, the npm publish, the Releases
-# themselves -- and reads <out>/manifest.json for what to attach to which.
+# release.yml runs this script for everything it uploads, so CI and a local run
+# cannot drift: the tarballs it publishes to npm and the archives it attaches to
+# the Releases are the files built and checked here, the same way. The workflow
+# keeps what is GitHub's and npm's -- the checkout, the version commit, the
+# publish, the tags and the Releases -- and reads <out>/manifest.json for which
+# file is which. Run locally before a release, this is the one look at an npm
+# tarball anyone gets while it can still be fixed: a published version is
+# immutable.
 #
-# The npm half is the exception, and cannot be otherwise: `changeset publish`
-# packs and uploads from the workspace itself, so there is no tarball to hand
-# it. Building those here buys the look BEFORE the release that the workflow
-# cannot offer -- an npm version is immutable, so the first time anyone would
-# otherwise see a tarball is after it can no longer be fixed.
-#
-# The versions are the working tree's, and this does not touch them.
-# `changeset version` runs inside the release, so a run from main before it
-# produces artifacts one bump behind what will be published; when changesets are
-# pending, the summary says so and names what each package would become. Bumping
-# here instead would leave the release's own decision half-made in the working
-# tree -- and it is a decision this script has no business making.
+# The versions are the working tree's, and this does not touch them. A release
+# sets them first (scripts/set-versions.mjs), so a run without that step builds
+# under the versions the tree has now. Setting them here would leave the
+# release's own decision half-made in the working tree -- and it is a decision
+# this script has no business making.
 #
 # The checks are the ones that would otherwise ship:
 #
@@ -120,11 +116,11 @@ echo "  -h | --help             Show this help"
   echo ""
   echo "Output: <out>/npm/*.tgz (the npm channel), <out>/plugins/* (the GitHub"
   echo "Releases channel), <out>/manifest.json naming both (release.yml reads it to"
-  echo "cut the plugin Releases) and SHA256SUMS over the lot."
+  echo "publish the tarballs and cut the Releases) and SHA256SUMS over the lot."
   echo ""
   echo "This builds a release; it does not make one. Nothing here publishes, tags,"
-  echo "commits, or bumps a version: the artifacts carry the versions the working"
-  echo "tree has right now, and the release bumps them itself (changeset version)."
+  echo "commits, or sets a version: the artifacts carry the versions the working"
+  echo "tree has right now, which a release sets first (scripts/set-versions.mjs)."
 }
 
 while [ $# -gt 0 ]; do
@@ -342,65 +338,6 @@ while IFS='|' read -r dir name version; do
   printf '  --       %-40s %s  (private, no pack script -- not a release artifact)\n' "$name" "$version"
 done <<< "$NEITHER"
 
-# --- what the release would call them --------------------------------------
-#
-# The tree is not bumped here, so say out loud where these versions stand
-# relative to the ones that will be published.
-PENDING=0
-for f in "$ROOT_DIR"/.changeset/*.md; do
-  [ -e "$f" ] || continue
-  case "$(basename "$f")" in README.md) ;; *) PENDING=$((PENDING + 1)) ;; esac
-done
-if [ "$PENDING" != "0" ]; then
-  echo ""
-  echo "note: $PENDING changeset(s) pending -- the release bumps before it builds, so"
-  echo "      the artifacts below are named one bump behind what it will publish:"
-  # `changeset status` REWRITES .changeset/pre.json as a side effect: it
-  # re-serializes the pre state and drops initialVersions/changesets from it.
-  # Nothing in this script is allowed to leave a modified working tree, and a
-  # gutted pre.json is not a harmless diff -- initialVersions is what the pre
-  # line's exit bumps from. So snapshot it and put it back.
-  PRE_JSON="$ROOT_DIR/.changeset/pre.json"
-  PRE_BACKUP=""
-  if [ -f "$PRE_JSON" ]; then
-    PRE_BACKUP="$(mktemp)"
-    cp "$PRE_JSON" "$PRE_BACKUP"
-  fi
-
-  STATUS_JSON="$(mktemp)"
-  if pnpm changeset status --output="$STATUS_JSON" > /dev/null 2>&1; then
-    node -e '
-      const { readFileSync } = require("node:fs");
-      const s = JSON.parse(readFileSync(process.argv[1], "utf8"));
-      for (const r of s.releases ?? []) {
-        if (r.type === "none") continue;
-        console.log(`        ${r.name}: ${r.oldVersion} -> ${r.newVersion}`);
-      }
-    ' "$STATUS_JSON" || true
-  fi
-  rm -f "$STATUS_JSON"
-
-  if [ -n "$PRE_BACKUP" ]; then
-    # Only when it actually changed, so an untouched file keeps its mtime.
-    cmp -s "$PRE_BACKUP" "$PRE_JSON" || cp "$PRE_BACKUP" "$PRE_JSON"
-    rm -f "$PRE_BACKUP"
-  elif [ -f "$PRE_JSON" ]; then
-    rm -f "$PRE_JSON"
-  fi
-fi
-
-# Pre mode changes what a version even means, and it is easy to forget it is on.
-if [ -f "$ROOT_DIR/.changeset/pre.json" ]; then
-  PRE_MODE="$(node -p "require('$ROOT_DIR/.changeset/pre.json').mode" 2>/dev/null || echo "")"
-  PRE_TAG="$(node -p "require('$ROOT_DIR/.changeset/pre.json').tag" 2>/dev/null || echo "")"
-  if [ "$PRE_MODE" = "pre" ]; then
-    echo ""
-    echo "note: changesets pre mode is ACTIVE (tag: $PRE_TAG) -- the release publishes"
-    echo "      under the '$PRE_TAG' dist-tag, so there is no 'latest' and a consumer has"
-    echo "      to ask for <pkg>@$PRE_TAG until 'pnpm changeset pre exit' ends the line."
-  fi
-fi
-
 if [ "$CLEAN" = "yes" ]; then
   rm -rf "$OUT"
 fi
@@ -491,9 +428,10 @@ fi
 
 # --- the manifest ----------------------------------------------------------
 # What this run produced, per channel, as data rather than as a listing to be
-# read. release.yml reads `.plugins[]` out of it to cut one GitHub Release per
-# plugin, which is what keeps the artifact names in exactly one place -- the
-# PLUGIN_ROWS table above -- so adding a plugin needs no change to the workflow.
+# read. release.yml publishes each `.npm[]` tarball and tags and drafts a
+# Release for every entry as `<dir>-v<version>`, which is what keeps the
+# artifact names in exactly one place -- the PLUGIN_ROWS table above -- so
+# adding a package needs no change to the workflow.
 #
 # It lists what is on disk, not what this run was asked to build, so a channel
 # whose stage was skipped comes out empty and the workflow can say so.
@@ -504,14 +442,14 @@ echo ">> [manifest] writing manifest.json"
     [ -n "$dir" ] || continue
     tgz="$(printf '%s' "$name" | sed 's|^@||; s|/|-|g')-${version}.tgz"
     if [ -f "$OUT/npm/$tgz" ]; then
-      printf 'npm|%s|%s|npm/%s\n' "$name" "$version" "$tgz"
+      printf 'npm|%s|%s|%s|npm/%s\n' "$name" "$dir" "$version" "$tgz"
     fi
   done <<< "$PUBLIC_PKGS"
   while IFS='|' read -r dir name version artifact; do
     [ -n "$dir" ] || continue
     base="$(basename "$artifact")"
     if [ -f "$OUT/plugins/$base" ]; then
-      printf 'plugins|%s|%s|plugins/%s\n' "$name" "$version" "$base"
+      printf 'plugins|%s|%s|%s|plugins/%s\n' "$name" "$dir" "$version" "$base"
     fi
   done <<< "$PLUGIN_PKGS"
 } | node -e '
@@ -520,8 +458,8 @@ echo ">> [manifest] writing manifest.json"
     const manifest = { npm: [], plugins: [] };
     for (const line of input.split("\n")) {
       if (!line) continue;
-      const [channel, pkg, version, file] = line.split("|");
-      manifest[channel].push({ package: pkg, version, file });
+      const [channel, pkg, dir, version, file] = line.split("|");
+      manifest[channel].push({ package: pkg, dir, version, file });
     }
     require("node:fs").writeFileSync(process.argv[1], JSON.stringify(manifest, null, 2) + "\n");
   });
@@ -709,10 +647,9 @@ echo ""
   done )
 echo ""
 echo "$APP: nothing was published. This is what a release would upload:"
-echo "  npm/*.tgz     what 'changeset publish' sends to npm (it packs from the"
-echo "                workspace itself, so it never reads these files)"
-echo "  plugins/*     the very files release.yml attaches to the per-plugin"
-echo "                GitHub Releases -- it runs this script to build them"
+echo "  npm/*.tgz     the very files release.yml publishes to npm"
+echo "  plugins/*     the very files release.yml attaches to the plugins'"
+echo "                GitHub Releases -- it runs this script to build both"
 if [ -d "$OUT/npm" ] && [ -n "$(find "$OUT/npm" -name '*.tgz' 2>/dev/null | head -n 1)" ]; then
   echo ""
   echo "$APP: try a tarball before shipping it -- install it into a scratch project:"
