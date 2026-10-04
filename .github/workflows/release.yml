@@ -17,14 +17,18 @@ name: Release
 #                     unless npm already has that version. A version with a
 #                     prerelease part (X.Y.Z-beta.N) goes under that word's
 #                     dist-tag, so `latest` stays on the last full release and a
-#                     consumer asks for `<pkg>@beta` meanwhile.
+#                     consumer asks for `<pkg>@beta` meanwhile. Off, the public
+#                     packages still get their Releases, tarball attached, which is
+#                     how they ship before npm can take them; a later run with
+#                     `versions` empty publishes them there.
 #
 #   release_plugins   The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyranoscript /
 #                     ssplayer-tyranobuilder) are never on npm; their Release, with
 #                     the archive attached, is their only channel.
 #
 # Every package released here gets a `<package>-v<version>` tag and a DRAFT
-# GitHub Release, notes generated from the pull requests since its previous tag.
+# GitHub Release carrying its file -- the npm tarball, or the plugin's archive --
+# and notes generated from the pull requests since its previous tag.
 # A package whose Release already exists, draft or not, is skipped, so a re-run
 # never doubles one. A maintainer edits each draft and publishes it, and
 # publishing is what starts pages.yml.
@@ -39,7 +43,7 @@ on:
         type: string
         default: ''
       publish_npm:
-        description: 'Publish the public packages to npm and draft their Releases'
+        description: 'Publish the public packages to npm (their Releases are drafted either way)'
         type: boolean
         default: true
       release_plugins:
@@ -141,7 +145,6 @@ jobs:
       - name: Tag and draft the Releases
         env:
           GH_TOKEN: ${{ github.token }}
-          PUBLISH_NPM: ${{ inputs.publish_npm }}
           RELEASE_PLUGINS: ${{ inputs.release_plugins }}
         run: |
           set -euo pipefail
@@ -149,8 +152,8 @@ jobs:
 
           # Which packages, under which tag, with which file, all comes from the
           # manifest build-release.sh wrote, so a new package needs no change here.
-          rows="$(jq -r --arg npm "$PUBLISH_NPM" --arg plugins "$RELEASE_PLUGINS" '
-            (if $npm == "true" then .npm[] | [.package, .dir, .version, "-"] else empty end),
+          rows="$(jq -r --arg plugins "$RELEASE_PLUGINS" '
+            (.npm[] | [.package, .dir, .version, .file]),
             (if $plugins == "true" then .plugins[] | [.package, .dir, .version, .file] else empty end)
             | @tsv' release-dist/manifest.json)"
           if [ -z "$rows" ]; then
@@ -175,10 +178,6 @@ jobs:
             args=(--verify-tag --title "${name} ${version}" --generate-notes --draft)
             if [ -n "$previous" ]; then args+=(--notes-start-tag "$previous"); fi
             case "$version" in *-*) args+=(--prerelease) ;; esac
-            if [ "$file" = "-" ]; then
-              gh release create "$tag" "${args[@]}"
-            else
-              gh release create "$tag" "release-dist/${file}" "${args[@]}"
-            fi
+            gh release create "$tag" "release-dist/${file}" "${args[@]}"
             echo "::notice::Drafted ${tag} — edit its notes and publish it from the Releases page."
           done <<< "$rows"
