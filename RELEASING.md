@@ -4,7 +4,7 @@ Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](
 
 ## Cutting a release
 
-Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `gh` (run `gh auth login` once), and the repository needs the `SS_NPM_TOKEN` secret for the npm half.
+Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `gh` (run `gh auth login` once), and the repository needs the `SS_NPM_TOKEN` secret for the npm half: an npm Granular Access Token with read and write access to the packages and **Bypass 2FA** turned on, since the workflow cannot answer a 2FA prompt.
 
 Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. The workflow writes them, builds and checks everything, commits them to `main`, publishes the public packages to npm, and gives every package it released a `<package>-v<version>` tag and a draft GitHub Release carrying its file — the npm tarball, or a plugin's archive. The private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh` are never on npm: their Release is their only channel. A pull request carries no version and no release note — both are decided here.
 
@@ -63,7 +63,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 ## リリースの手順
 
-このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `gh`（最初に一度 `gh auth login`）で、npm 側にはリポジトリの `SS_NPM_TOKEN` secret が要ります。
+このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `gh`（最初に一度 `gh auth login`）で、npm 側にはリポジトリの `SS_NPM_TOKEN` secret が要ります。これは npm の Granular Access Token で、パッケージへの読み書きの権限と **Bypass 2FA** を有効にしたものです。ワークフローは 2FA の入力に答えられないためです。
 
 パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。ワークフローはそれを書き込み、すべてをビルドして検査し、`main` へコミットし、公開パッケージを npm へ publish し、リリースした各パッケージに `<package>-v<version>` のタグと、そのファイル（npm の tarball か、プラグインのアーカイブ）を添付した下書きの GitHub Release を作ります。`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインは npm には出ません。Release が唯一の配布経路です。プルリクエストはバージョンもリリースノートも持ちません。どちらもここで決めます。
 
