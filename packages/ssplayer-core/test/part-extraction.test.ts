@@ -4,6 +4,7 @@ import { SSRuntimeManager } from '../src/SSRuntimeManager.js';
 import { SsAnimeBinary } from '../src/ss/format/ss-anime-binary.js';
 import { PartData } from '../src/ss/format/part-data.js';
 import { PartType } from '../src/ss/format/part-type.js';
+import { createEmptyKeyframes } from './empty-keyframes.js';
 
 // A host UI offers part names for the part overrides, and needs the type to
 // offer only the parts an override applies to. Built as a synthetic SSAB, like
@@ -20,11 +21,13 @@ function buildSsab(parts: { name: string; type: PartType }[]): Uint8Array {
     });
     const partsVec = SsAnimeBinary.createPartsVector(b, partOffsets);
     const animationsVec = SsAnimeBinary.createAnimationsVector(b, []);
+    const keyframes = createEmptyKeyframes(b);
     const packName = b.createString('pack');
     SsAnimeBinary.startSsAnimeBinary(b);
     SsAnimeBinary.addName(b, packName);
     SsAnimeBinary.addParts(b, partsVec);
     SsAnimeBinary.addAnimations(b, animationsVec);
+    SsAnimeBinary.addKeyframes(b, keyframes);
     SsAnimeBinary.finishSsAnimeBinaryBuffer(b, SsAnimeBinary.endSsAnimeBinary(b));
     return b.asUint8Array();
 }

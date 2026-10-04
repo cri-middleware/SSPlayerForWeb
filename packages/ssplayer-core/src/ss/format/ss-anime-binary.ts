@@ -11,6 +11,7 @@ import { EmbeddedAsset } from '../../ss/format/embedded-asset.js';
 import { ExternalInstance } from '../../ss/format/external-instance.js';
 import { ExternalTexture } from '../../ss/format/external-texture.js';
 import { FontBitmap } from '../../ss/format/font-bitmap.js';
+import { Keyframes } from '../../ss/format/keyframes.js';
 import { PartData } from '../../ss/format/part-data.js';
 import { SoundList } from '../../ss/format/sound-list.js';
 
@@ -144,8 +145,13 @@ embeddedAssetsLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
+keyframes(obj?:Keyframes):Keyframes|null {
+  const offset = this.bb!.__offset(this.bb_pos, 28);
+  return offset ? (obj || new Keyframes()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
 static startSsAnimeBinary(builder:flatbuffers.Builder) {
-  builder.startObject(12);
+  builder.startObject(13);
 }
 
 static addVersion(builder:flatbuffers.Builder, version:number) {
@@ -304,11 +310,16 @@ static startEmbeddedAssetsVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
+static addKeyframes(builder:flatbuffers.Builder, keyframesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(12, keyframesOffset, 0);
+}
+
 static endSsAnimeBinary(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   builder.requiredField(offset, 6) // name
   builder.requiredField(offset, 10) // parts
   builder.requiredField(offset, 12) // animations
+  builder.requiredField(offset, 28) // keyframes
   return offset;
 }
 
@@ -320,20 +331,4 @@ static finishSizePrefixedSsAnimeBinaryBuffer(builder:flatbuffers.Builder, offset
   builder.finish(offset, 'SSAB', true);
 }
 
-static createSsAnimeBinary(builder:flatbuffers.Builder, version:number, nameOffset:flatbuffers.Offset, nameHash:number, partsOffset:flatbuffers.Offset, animationsOffset:flatbuffers.Offset, cellmapsOffset:flatbuffers.Offset, effectsOffset:flatbuffers.Offset, soundListsOffset:flatbuffers.Offset, fontBitmapsOffset:flatbuffers.Offset, externalTexturesOffset:flatbuffers.Offset, externalInstancesOffset:flatbuffers.Offset, embeddedAssetsOffset:flatbuffers.Offset):flatbuffers.Offset {
-  SsAnimeBinary.startSsAnimeBinary(builder);
-  SsAnimeBinary.addVersion(builder, version);
-  SsAnimeBinary.addName(builder, nameOffset);
-  SsAnimeBinary.addNameHash(builder, nameHash);
-  SsAnimeBinary.addParts(builder, partsOffset);
-  SsAnimeBinary.addAnimations(builder, animationsOffset);
-  SsAnimeBinary.addCellmaps(builder, cellmapsOffset);
-  SsAnimeBinary.addEffects(builder, effectsOffset);
-  SsAnimeBinary.addSoundLists(builder, soundListsOffset);
-  SsAnimeBinary.addFontBitmaps(builder, fontBitmapsOffset);
-  SsAnimeBinary.addExternalTextures(builder, externalTexturesOffset);
-  SsAnimeBinary.addExternalInstances(builder, externalInstancesOffset);
-  SsAnimeBinary.addEmbeddedAssets(builder, embeddedAssetsOffset);
-  return SsAnimeBinary.endSsAnimeBinary(builder);
-}
 }

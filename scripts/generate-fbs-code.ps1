@@ -34,7 +34,10 @@ if (-not (Get-Command flatc -ErrorAction SilentlyContinue)) {
 
 Write-Host "Generating FlatBuffers TypeScript code..."
 
-# Create target directory if it doesn't exist
+# flatc writes a file per table and never removes one, and the entrypoints
+# below export every file it finds. Start from nothing, so a table the schema
+# dropped is not left behind and still exported. src/ss holds flatc's output only.
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $TargetDir "ss")
 New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 
 foreach ($subdir in @("libs/ssruntime/fbs", "libs/ssab/fbs")) {
