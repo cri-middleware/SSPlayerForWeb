@@ -6,6 +6,7 @@ import { CellMap } from '../src/ss/format/cell-map.js';
 import { ExternalTexture } from '../src/ss/format/external-texture.js';
 import { EmbeddedAsset } from '../src/ss/format/embedded-asset.js';
 import { Vec2 } from '../src/ss/format/vec2.js';
+import { createEmptyKeyframes } from './empty-keyframes.js';
 
 // A player must load BOTH tables: `DrawBatch.texture_hash` is a cell-map name
 // hash for an ordinary part, but a texture FILE-name hash for a part carrying a
@@ -58,12 +59,14 @@ function buildSsab(
     // texture tables.
     const partsVec = SsAnimeBinary.createPartsVector(b, []);
     const animationsVec = SsAnimeBinary.createAnimationsVector(b, []);
+    const keyframes = createEmptyKeyframes(b);
 
     const packName = b.createString('pack');
     SsAnimeBinary.startSsAnimeBinary(b);
     SsAnimeBinary.addName(b, packName);
     SsAnimeBinary.addParts(b, partsVec);
     SsAnimeBinary.addAnimations(b, animationsVec);
+    SsAnimeBinary.addKeyframes(b, keyframes);
     SsAnimeBinary.addCellmaps(b, cellmapsVec);
     SsAnimeBinary.addExternalTextures(b, externalsVec);
     SsAnimeBinary.addEmbeddedAssets(b, embeddedVec);

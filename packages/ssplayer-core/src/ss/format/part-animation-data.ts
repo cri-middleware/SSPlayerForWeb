@@ -4,18 +4,6 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { PartAnimationDataBoolValue } from '../../ss/format/part-animation-data-bool-value.js';
-import { PartAnimationDataCellValue } from '../../ss/format/part-animation-data-cell-value.js';
-import { PartAnimationDataDeform } from '../../ss/format/part-animation-data-deform.js';
-import { PartAnimationDataFloatValue } from '../../ss/format/part-animation-data-float-value.js';
-import { PartAnimationDataIntValue } from '../../ss/format/part-animation-data-int-value.js';
-import { PartAnimationDataPartColor } from '../../ss/format/part-animation-data-part-color.js';
-import { PartAnimationDataShader } from '../../ss/format/part-animation-data-shader.js';
-import { PartAnimationDataUIntValue } from '../../ss/format/part-animation-data-uint-value.js';
-import { PartAnimationDataVec2 } from '../../ss/format/part-animation-data-vec2.js';
-import { PartAnimationDataVertex } from '../../ss/format/part-animation-data-vertex.js';
-
-
 export class PartAnimationData {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -34,996 +22,350 @@ static getSizePrefixedRootAsPartAnimationData(bb:flatbuffers.ByteBuffer, obj?:Pa
   return (obj || new PartAnimationData()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-cellArray(index: number, obj?:PartAnimationDataCellValue):PartAnimationDataCellValue|null {
+cellKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 4);
-  return offset ? (obj || new PartAnimationDataCellValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-cellArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 4);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-positionXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+positionXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-positionXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-positionYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+positionYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-positionYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-positionZArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+positionZKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 10);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-positionZArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-rotationXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+rotationXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 12);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-rotationXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 12);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-rotationYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+rotationYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 14);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-rotationYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 14);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-rotationZArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+rotationZKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 16);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-rotationZArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 16);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-scaleXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+scaleXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 18);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-scaleXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 18);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-scaleYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+scaleYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 20);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-scaleYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 20);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-localScaleXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+localScaleXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 22);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-localScaleXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 22);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-localScaleYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+localScaleYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 24);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-localScaleYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 24);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-alphaArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+alphaKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 26);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-alphaArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 26);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-localAlphaArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+localAlphaKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 28);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-localAlphaArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 28);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-priorityArray(index: number, obj?:PartAnimationDataIntValue):PartAnimationDataIntValue|null {
+priorityKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 30);
-  return offset ? (obj || new PartAnimationDataIntValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-priorityArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 30);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-flipHArray(index: number, obj?:PartAnimationDataBoolValue):PartAnimationDataBoolValue|null {
+flipHKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 32);
-  return offset ? (obj || new PartAnimationDataBoolValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-flipHArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 32);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-flipVArray(index: number, obj?:PartAnimationDataBoolValue):PartAnimationDataBoolValue|null {
+flipVKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 34);
-  return offset ? (obj || new PartAnimationDataBoolValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-flipVArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 34);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-hideArray(index: number, obj?:PartAnimationDataBoolValue):PartAnimationDataBoolValue|null {
+hideKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 36);
-  return offset ? (obj || new PartAnimationDataBoolValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-hideArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 36);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-partColorArray(index: number, obj?:PartAnimationDataPartColor):PartAnimationDataPartColor|null {
+partColorKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 38);
-  return offset ? (obj || new PartAnimationDataPartColor()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-partColorArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 38);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-shaderArray(index: number, obj?:PartAnimationDataShader):PartAnimationDataShader|null {
+shaderKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 40);
-  return offset ? (obj || new PartAnimationDataShader()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-shaderArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 40);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-vertexArray(index: number, obj?:PartAnimationDataVertex):PartAnimationDataVertex|null {
+vertexKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 42);
-  return offset ? (obj || new PartAnimationDataVertex()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-vertexArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 42);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-pivotXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+pivotXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 44);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-pivotXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 44);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-pivotYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+pivotYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 46);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-pivotYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 46);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-anchorXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+anchorXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 48);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-anchorXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 48);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-anchorYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+anchorYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 50);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-anchorYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 50);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-sizeXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+sizeXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 52);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-sizeXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 52);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-sizeYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+sizeYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 54);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-sizeYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 54);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-imgFlipHArray(index: number, obj?:PartAnimationDataBoolValue):PartAnimationDataBoolValue|null {
+imgFlipHKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 56);
-  return offset ? (obj || new PartAnimationDataBoolValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-imgFlipHArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 56);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-imgFlipVArray(index: number, obj?:PartAnimationDataBoolValue):PartAnimationDataBoolValue|null {
+imgFlipVKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 58);
-  return offset ? (obj || new PartAnimationDataBoolValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-imgFlipVArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 58);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-uvTranslationXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+uvTranslationXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 60);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-uvTranslationXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 60);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-uvTranslationYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+uvTranslationYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 62);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-uvTranslationYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 62);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-uvRotationZArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+uvRotationZKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 64);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-uvRotationZArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 64);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-uvScaleXArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+uvScaleXKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 66);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-uvScaleXArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 66);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-uvScaleYArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+uvScaleYKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 68);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-uvScaleYArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 68);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-boundingRadiusArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+boundingRadiusKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 70);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-boundingRadiusArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 70);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-maskArray(index: number, obj?:PartAnimationDataFloatValue):PartAnimationDataFloatValue|null {
+maskKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 72);
-  return offset ? (obj || new PartAnimationDataFloatValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-maskArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 72);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-skewArray(index: number, obj?:PartAnimationDataVec2):PartAnimationDataVec2|null {
+skewKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 74);
-  return offset ? (obj || new PartAnimationDataVec2()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-skewArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 74);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-deformArray(index: number, obj?:PartAnimationDataDeform):PartAnimationDataDeform|null {
+deformKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 76);
-  return offset ? (obj || new PartAnimationDataDeform()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
-deformArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 76);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
-}
-
-textureArray(index: number, obj?:PartAnimationDataUIntValue):PartAnimationDataUIntValue|null {
+textureKeys():number {
   const offset = this.bb!.__offset(this.bb_pos, 78);
-  return offset ? (obj || new PartAnimationDataUIntValue()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
-}
-
-textureArrayLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 78);
-  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 4294967295;
 }
 
 static startPartAnimationData(builder:flatbuffers.Builder) {
   builder.startObject(38);
 }
 
-static addCellArray(builder:flatbuffers.Builder, cellArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(0, cellArrayOffset, 0);
+static addCellKeys(builder:flatbuffers.Builder, cellKeys:number) {
+  builder.addFieldInt32(0, cellKeys, 4294967295);
 }
 
-static createCellArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addPositionXKeys(builder:flatbuffers.Builder, positionXKeys:number) {
+  builder.addFieldInt32(1, positionXKeys, 4294967295);
 }
 
-static startCellArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addPositionYKeys(builder:flatbuffers.Builder, positionYKeys:number) {
+  builder.addFieldInt32(2, positionYKeys, 4294967295);
 }
 
-static addPositionXArray(builder:flatbuffers.Builder, positionXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(1, positionXArrayOffset, 0);
+static addPositionZKeys(builder:flatbuffers.Builder, positionZKeys:number) {
+  builder.addFieldInt32(3, positionZKeys, 4294967295);
 }
 
-static createPositionXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addRotationXKeys(builder:flatbuffers.Builder, rotationXKeys:number) {
+  builder.addFieldInt32(4, rotationXKeys, 4294967295);
 }
 
-static startPositionXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addRotationYKeys(builder:flatbuffers.Builder, rotationYKeys:number) {
+  builder.addFieldInt32(5, rotationYKeys, 4294967295);
 }
 
-static addPositionYArray(builder:flatbuffers.Builder, positionYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, positionYArrayOffset, 0);
+static addRotationZKeys(builder:flatbuffers.Builder, rotationZKeys:number) {
+  builder.addFieldInt32(6, rotationZKeys, 4294967295);
 }
 
-static createPositionYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addScaleXKeys(builder:flatbuffers.Builder, scaleXKeys:number) {
+  builder.addFieldInt32(7, scaleXKeys, 4294967295);
 }
 
-static startPositionYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addScaleYKeys(builder:flatbuffers.Builder, scaleYKeys:number) {
+  builder.addFieldInt32(8, scaleYKeys, 4294967295);
 }
 
-static addPositionZArray(builder:flatbuffers.Builder, positionZArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(3, positionZArrayOffset, 0);
+static addLocalScaleXKeys(builder:flatbuffers.Builder, localScaleXKeys:number) {
+  builder.addFieldInt32(9, localScaleXKeys, 4294967295);
 }
 
-static createPositionZArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addLocalScaleYKeys(builder:flatbuffers.Builder, localScaleYKeys:number) {
+  builder.addFieldInt32(10, localScaleYKeys, 4294967295);
 }
 
-static startPositionZArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addAlphaKeys(builder:flatbuffers.Builder, alphaKeys:number) {
+  builder.addFieldInt32(11, alphaKeys, 4294967295);
 }
 
-static addRotationXArray(builder:flatbuffers.Builder, rotationXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(4, rotationXArrayOffset, 0);
+static addLocalAlphaKeys(builder:flatbuffers.Builder, localAlphaKeys:number) {
+  builder.addFieldInt32(12, localAlphaKeys, 4294967295);
 }
 
-static createRotationXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addPriorityKeys(builder:flatbuffers.Builder, priorityKeys:number) {
+  builder.addFieldInt32(13, priorityKeys, 4294967295);
 }
 
-static startRotationXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addFlipHKeys(builder:flatbuffers.Builder, flipHKeys:number) {
+  builder.addFieldInt32(14, flipHKeys, 4294967295);
 }
 
-static addRotationYArray(builder:flatbuffers.Builder, rotationYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(5, rotationYArrayOffset, 0);
+static addFlipVKeys(builder:flatbuffers.Builder, flipVKeys:number) {
+  builder.addFieldInt32(15, flipVKeys, 4294967295);
 }
 
-static createRotationYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addHideKeys(builder:flatbuffers.Builder, hideKeys:number) {
+  builder.addFieldInt32(16, hideKeys, 4294967295);
 }
 
-static startRotationYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addPartColorKeys(builder:flatbuffers.Builder, partColorKeys:number) {
+  builder.addFieldInt32(17, partColorKeys, 4294967295);
 }
 
-static addRotationZArray(builder:flatbuffers.Builder, rotationZArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(6, rotationZArrayOffset, 0);
+static addShaderKeys(builder:flatbuffers.Builder, shaderKeys:number) {
+  builder.addFieldInt32(18, shaderKeys, 4294967295);
 }
 
-static createRotationZArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addVertexKeys(builder:flatbuffers.Builder, vertexKeys:number) {
+  builder.addFieldInt32(19, vertexKeys, 4294967295);
 }
 
-static startRotationZArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addPivotXKeys(builder:flatbuffers.Builder, pivotXKeys:number) {
+  builder.addFieldInt32(20, pivotXKeys, 4294967295);
 }
 
-static addScaleXArray(builder:flatbuffers.Builder, scaleXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(7, scaleXArrayOffset, 0);
+static addPivotYKeys(builder:flatbuffers.Builder, pivotYKeys:number) {
+  builder.addFieldInt32(21, pivotYKeys, 4294967295);
 }
 
-static createScaleXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addAnchorXKeys(builder:flatbuffers.Builder, anchorXKeys:number) {
+  builder.addFieldInt32(22, anchorXKeys, 4294967295);
 }
 
-static startScaleXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addAnchorYKeys(builder:flatbuffers.Builder, anchorYKeys:number) {
+  builder.addFieldInt32(23, anchorYKeys, 4294967295);
 }
 
-static addScaleYArray(builder:flatbuffers.Builder, scaleYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(8, scaleYArrayOffset, 0);
+static addSizeXKeys(builder:flatbuffers.Builder, sizeXKeys:number) {
+  builder.addFieldInt32(24, sizeXKeys, 4294967295);
 }
 
-static createScaleYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addSizeYKeys(builder:flatbuffers.Builder, sizeYKeys:number) {
+  builder.addFieldInt32(25, sizeYKeys, 4294967295);
 }
 
-static startScaleYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addImgFlipHKeys(builder:flatbuffers.Builder, imgFlipHKeys:number) {
+  builder.addFieldInt32(26, imgFlipHKeys, 4294967295);
 }
 
-static addLocalScaleXArray(builder:flatbuffers.Builder, localScaleXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(9, localScaleXArrayOffset, 0);
+static addImgFlipVKeys(builder:flatbuffers.Builder, imgFlipVKeys:number) {
+  builder.addFieldInt32(27, imgFlipVKeys, 4294967295);
 }
 
-static createLocalScaleXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addUvTranslationXKeys(builder:flatbuffers.Builder, uvTranslationXKeys:number) {
+  builder.addFieldInt32(28, uvTranslationXKeys, 4294967295);
 }
 
-static startLocalScaleXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addUvTranslationYKeys(builder:flatbuffers.Builder, uvTranslationYKeys:number) {
+  builder.addFieldInt32(29, uvTranslationYKeys, 4294967295);
 }
 
-static addLocalScaleYArray(builder:flatbuffers.Builder, localScaleYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(10, localScaleYArrayOffset, 0);
+static addUvRotationZKeys(builder:flatbuffers.Builder, uvRotationZKeys:number) {
+  builder.addFieldInt32(30, uvRotationZKeys, 4294967295);
 }
 
-static createLocalScaleYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addUvScaleXKeys(builder:flatbuffers.Builder, uvScaleXKeys:number) {
+  builder.addFieldInt32(31, uvScaleXKeys, 4294967295);
 }
 
-static startLocalScaleYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addUvScaleYKeys(builder:flatbuffers.Builder, uvScaleYKeys:number) {
+  builder.addFieldInt32(32, uvScaleYKeys, 4294967295);
 }
 
-static addAlphaArray(builder:flatbuffers.Builder, alphaArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(11, alphaArrayOffset, 0);
+static addBoundingRadiusKeys(builder:flatbuffers.Builder, boundingRadiusKeys:number) {
+  builder.addFieldInt32(33, boundingRadiusKeys, 4294967295);
 }
 
-static createAlphaArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
+static addMaskKeys(builder:flatbuffers.Builder, maskKeys:number) {
+  builder.addFieldInt32(34, maskKeys, 4294967295);
 }
 
-static startAlphaArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addSkewKeys(builder:flatbuffers.Builder, skewKeys:number) {
+  builder.addFieldInt32(35, skewKeys, 4294967295);
 }
 
-static addLocalAlphaArray(builder:flatbuffers.Builder, localAlphaArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(12, localAlphaArrayOffset, 0);
+static addDeformKeys(builder:flatbuffers.Builder, deformKeys:number) {
+  builder.addFieldInt32(36, deformKeys, 4294967295);
 }
 
-static createLocalAlphaArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startLocalAlphaArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addPriorityArray(builder:flatbuffers.Builder, priorityArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(13, priorityArrayOffset, 0);
-}
-
-static createPriorityArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startPriorityArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addFlipHArray(builder:flatbuffers.Builder, flipHArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(14, flipHArrayOffset, 0);
-}
-
-static createFlipHArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startFlipHArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addFlipVArray(builder:flatbuffers.Builder, flipVArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(15, flipVArrayOffset, 0);
-}
-
-static createFlipVArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startFlipVArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addHideArray(builder:flatbuffers.Builder, hideArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(16, hideArrayOffset, 0);
-}
-
-static createHideArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startHideArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addPartColorArray(builder:flatbuffers.Builder, partColorArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(17, partColorArrayOffset, 0);
-}
-
-static createPartColorArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startPartColorArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addShaderArray(builder:flatbuffers.Builder, shaderArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(18, shaderArrayOffset, 0);
-}
-
-static createShaderArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startShaderArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addVertexArray(builder:flatbuffers.Builder, vertexArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(19, vertexArrayOffset, 0);
-}
-
-static createVertexArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startVertexArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addPivotXArray(builder:flatbuffers.Builder, pivotXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(20, pivotXArrayOffset, 0);
-}
-
-static createPivotXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startPivotXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addPivotYArray(builder:flatbuffers.Builder, pivotYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(21, pivotYArrayOffset, 0);
-}
-
-static createPivotYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startPivotYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addAnchorXArray(builder:flatbuffers.Builder, anchorXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(22, anchorXArrayOffset, 0);
-}
-
-static createAnchorXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startAnchorXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addAnchorYArray(builder:flatbuffers.Builder, anchorYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(23, anchorYArrayOffset, 0);
-}
-
-static createAnchorYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startAnchorYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addSizeXArray(builder:flatbuffers.Builder, sizeXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(24, sizeXArrayOffset, 0);
-}
-
-static createSizeXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startSizeXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addSizeYArray(builder:flatbuffers.Builder, sizeYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(25, sizeYArrayOffset, 0);
-}
-
-static createSizeYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startSizeYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addImgFlipHArray(builder:flatbuffers.Builder, imgFlipHArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(26, imgFlipHArrayOffset, 0);
-}
-
-static createImgFlipHArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startImgFlipHArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addImgFlipVArray(builder:flatbuffers.Builder, imgFlipVArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(27, imgFlipVArrayOffset, 0);
-}
-
-static createImgFlipVArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startImgFlipVArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addUvTranslationXArray(builder:flatbuffers.Builder, uvTranslationXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(28, uvTranslationXArrayOffset, 0);
-}
-
-static createUvTranslationXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startUvTranslationXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addUvTranslationYArray(builder:flatbuffers.Builder, uvTranslationYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(29, uvTranslationYArrayOffset, 0);
-}
-
-static createUvTranslationYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startUvTranslationYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addUvRotationZArray(builder:flatbuffers.Builder, uvRotationZArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(30, uvRotationZArrayOffset, 0);
-}
-
-static createUvRotationZArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startUvRotationZArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addUvScaleXArray(builder:flatbuffers.Builder, uvScaleXArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(31, uvScaleXArrayOffset, 0);
-}
-
-static createUvScaleXArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startUvScaleXArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addUvScaleYArray(builder:flatbuffers.Builder, uvScaleYArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(32, uvScaleYArrayOffset, 0);
-}
-
-static createUvScaleYArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startUvScaleYArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addBoundingRadiusArray(builder:flatbuffers.Builder, boundingRadiusArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(33, boundingRadiusArrayOffset, 0);
-}
-
-static createBoundingRadiusArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startBoundingRadiusArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addMaskArray(builder:flatbuffers.Builder, maskArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(34, maskArrayOffset, 0);
-}
-
-static createMaskArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startMaskArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addSkewArray(builder:flatbuffers.Builder, skewArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(35, skewArrayOffset, 0);
-}
-
-static createSkewArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startSkewArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addDeformArray(builder:flatbuffers.Builder, deformArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(36, deformArrayOffset, 0);
-}
-
-static createDeformArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startDeformArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
-}
-
-static addTextureArray(builder:flatbuffers.Builder, textureArrayOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(37, textureArrayOffset, 0);
-}
-
-static createTextureArrayVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
-  for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
-  }
-  return builder.endVector();
-}
-
-static startTextureArrayVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+static addTextureKeys(builder:flatbuffers.Builder, textureKeys:number) {
+  builder.addFieldInt32(37, textureKeys, 4294967295);
 }
 
 static endPartAnimationData(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -1031,46 +373,46 @@ static endPartAnimationData(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
-static createPartAnimationData(builder:flatbuffers.Builder, cellArrayOffset:flatbuffers.Offset, positionXArrayOffset:flatbuffers.Offset, positionYArrayOffset:flatbuffers.Offset, positionZArrayOffset:flatbuffers.Offset, rotationXArrayOffset:flatbuffers.Offset, rotationYArrayOffset:flatbuffers.Offset, rotationZArrayOffset:flatbuffers.Offset, scaleXArrayOffset:flatbuffers.Offset, scaleYArrayOffset:flatbuffers.Offset, localScaleXArrayOffset:flatbuffers.Offset, localScaleYArrayOffset:flatbuffers.Offset, alphaArrayOffset:flatbuffers.Offset, localAlphaArrayOffset:flatbuffers.Offset, priorityArrayOffset:flatbuffers.Offset, flipHArrayOffset:flatbuffers.Offset, flipVArrayOffset:flatbuffers.Offset, hideArrayOffset:flatbuffers.Offset, partColorArrayOffset:flatbuffers.Offset, shaderArrayOffset:flatbuffers.Offset, vertexArrayOffset:flatbuffers.Offset, pivotXArrayOffset:flatbuffers.Offset, pivotYArrayOffset:flatbuffers.Offset, anchorXArrayOffset:flatbuffers.Offset, anchorYArrayOffset:flatbuffers.Offset, sizeXArrayOffset:flatbuffers.Offset, sizeYArrayOffset:flatbuffers.Offset, imgFlipHArrayOffset:flatbuffers.Offset, imgFlipVArrayOffset:flatbuffers.Offset, uvTranslationXArrayOffset:flatbuffers.Offset, uvTranslationYArrayOffset:flatbuffers.Offset, uvRotationZArrayOffset:flatbuffers.Offset, uvScaleXArrayOffset:flatbuffers.Offset, uvScaleYArrayOffset:flatbuffers.Offset, boundingRadiusArrayOffset:flatbuffers.Offset, maskArrayOffset:flatbuffers.Offset, skewArrayOffset:flatbuffers.Offset, deformArrayOffset:flatbuffers.Offset, textureArrayOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createPartAnimationData(builder:flatbuffers.Builder, cellKeys:number, positionXKeys:number, positionYKeys:number, positionZKeys:number, rotationXKeys:number, rotationYKeys:number, rotationZKeys:number, scaleXKeys:number, scaleYKeys:number, localScaleXKeys:number, localScaleYKeys:number, alphaKeys:number, localAlphaKeys:number, priorityKeys:number, flipHKeys:number, flipVKeys:number, hideKeys:number, partColorKeys:number, shaderKeys:number, vertexKeys:number, pivotXKeys:number, pivotYKeys:number, anchorXKeys:number, anchorYKeys:number, sizeXKeys:number, sizeYKeys:number, imgFlipHKeys:number, imgFlipVKeys:number, uvTranslationXKeys:number, uvTranslationYKeys:number, uvRotationZKeys:number, uvScaleXKeys:number, uvScaleYKeys:number, boundingRadiusKeys:number, maskKeys:number, skewKeys:number, deformKeys:number, textureKeys:number):flatbuffers.Offset {
   PartAnimationData.startPartAnimationData(builder);
-  PartAnimationData.addCellArray(builder, cellArrayOffset);
-  PartAnimationData.addPositionXArray(builder, positionXArrayOffset);
-  PartAnimationData.addPositionYArray(builder, positionYArrayOffset);
-  PartAnimationData.addPositionZArray(builder, positionZArrayOffset);
-  PartAnimationData.addRotationXArray(builder, rotationXArrayOffset);
-  PartAnimationData.addRotationYArray(builder, rotationYArrayOffset);
-  PartAnimationData.addRotationZArray(builder, rotationZArrayOffset);
-  PartAnimationData.addScaleXArray(builder, scaleXArrayOffset);
-  PartAnimationData.addScaleYArray(builder, scaleYArrayOffset);
-  PartAnimationData.addLocalScaleXArray(builder, localScaleXArrayOffset);
-  PartAnimationData.addLocalScaleYArray(builder, localScaleYArrayOffset);
-  PartAnimationData.addAlphaArray(builder, alphaArrayOffset);
-  PartAnimationData.addLocalAlphaArray(builder, localAlphaArrayOffset);
-  PartAnimationData.addPriorityArray(builder, priorityArrayOffset);
-  PartAnimationData.addFlipHArray(builder, flipHArrayOffset);
-  PartAnimationData.addFlipVArray(builder, flipVArrayOffset);
-  PartAnimationData.addHideArray(builder, hideArrayOffset);
-  PartAnimationData.addPartColorArray(builder, partColorArrayOffset);
-  PartAnimationData.addShaderArray(builder, shaderArrayOffset);
-  PartAnimationData.addVertexArray(builder, vertexArrayOffset);
-  PartAnimationData.addPivotXArray(builder, pivotXArrayOffset);
-  PartAnimationData.addPivotYArray(builder, pivotYArrayOffset);
-  PartAnimationData.addAnchorXArray(builder, anchorXArrayOffset);
-  PartAnimationData.addAnchorYArray(builder, anchorYArrayOffset);
-  PartAnimationData.addSizeXArray(builder, sizeXArrayOffset);
-  PartAnimationData.addSizeYArray(builder, sizeYArrayOffset);
-  PartAnimationData.addImgFlipHArray(builder, imgFlipHArrayOffset);
-  PartAnimationData.addImgFlipVArray(builder, imgFlipVArrayOffset);
-  PartAnimationData.addUvTranslationXArray(builder, uvTranslationXArrayOffset);
-  PartAnimationData.addUvTranslationYArray(builder, uvTranslationYArrayOffset);
-  PartAnimationData.addUvRotationZArray(builder, uvRotationZArrayOffset);
-  PartAnimationData.addUvScaleXArray(builder, uvScaleXArrayOffset);
-  PartAnimationData.addUvScaleYArray(builder, uvScaleYArrayOffset);
-  PartAnimationData.addBoundingRadiusArray(builder, boundingRadiusArrayOffset);
-  PartAnimationData.addMaskArray(builder, maskArrayOffset);
-  PartAnimationData.addSkewArray(builder, skewArrayOffset);
-  PartAnimationData.addDeformArray(builder, deformArrayOffset);
-  PartAnimationData.addTextureArray(builder, textureArrayOffset);
+  PartAnimationData.addCellKeys(builder, cellKeys);
+  PartAnimationData.addPositionXKeys(builder, positionXKeys);
+  PartAnimationData.addPositionYKeys(builder, positionYKeys);
+  PartAnimationData.addPositionZKeys(builder, positionZKeys);
+  PartAnimationData.addRotationXKeys(builder, rotationXKeys);
+  PartAnimationData.addRotationYKeys(builder, rotationYKeys);
+  PartAnimationData.addRotationZKeys(builder, rotationZKeys);
+  PartAnimationData.addScaleXKeys(builder, scaleXKeys);
+  PartAnimationData.addScaleYKeys(builder, scaleYKeys);
+  PartAnimationData.addLocalScaleXKeys(builder, localScaleXKeys);
+  PartAnimationData.addLocalScaleYKeys(builder, localScaleYKeys);
+  PartAnimationData.addAlphaKeys(builder, alphaKeys);
+  PartAnimationData.addLocalAlphaKeys(builder, localAlphaKeys);
+  PartAnimationData.addPriorityKeys(builder, priorityKeys);
+  PartAnimationData.addFlipHKeys(builder, flipHKeys);
+  PartAnimationData.addFlipVKeys(builder, flipVKeys);
+  PartAnimationData.addHideKeys(builder, hideKeys);
+  PartAnimationData.addPartColorKeys(builder, partColorKeys);
+  PartAnimationData.addShaderKeys(builder, shaderKeys);
+  PartAnimationData.addVertexKeys(builder, vertexKeys);
+  PartAnimationData.addPivotXKeys(builder, pivotXKeys);
+  PartAnimationData.addPivotYKeys(builder, pivotYKeys);
+  PartAnimationData.addAnchorXKeys(builder, anchorXKeys);
+  PartAnimationData.addAnchorYKeys(builder, anchorYKeys);
+  PartAnimationData.addSizeXKeys(builder, sizeXKeys);
+  PartAnimationData.addSizeYKeys(builder, sizeYKeys);
+  PartAnimationData.addImgFlipHKeys(builder, imgFlipHKeys);
+  PartAnimationData.addImgFlipVKeys(builder, imgFlipVKeys);
+  PartAnimationData.addUvTranslationXKeys(builder, uvTranslationXKeys);
+  PartAnimationData.addUvTranslationYKeys(builder, uvTranslationYKeys);
+  PartAnimationData.addUvRotationZKeys(builder, uvRotationZKeys);
+  PartAnimationData.addUvScaleXKeys(builder, uvScaleXKeys);
+  PartAnimationData.addUvScaleYKeys(builder, uvScaleYKeys);
+  PartAnimationData.addBoundingRadiusKeys(builder, boundingRadiusKeys);
+  PartAnimationData.addMaskKeys(builder, maskKeys);
+  PartAnimationData.addSkewKeys(builder, skewKeys);
+  PartAnimationData.addDeformKeys(builder, deformKeys);
+  PartAnimationData.addTextureKeys(builder, textureKeys);
   return PartAnimationData.endPartAnimationData(builder);
 }
 }
