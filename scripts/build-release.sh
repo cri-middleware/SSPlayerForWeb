@@ -554,9 +554,16 @@ if [ "$VERIFY" = "yes" ]; then
   # given no URL -- the file a bundler emits, and the one an ESM import from a
   # CDN fetches; the build step copies it there. A tarball without that copy
   # installs and type-checks, then 404s on the runtime in every bundled app.
+  #
+  # Every listing below, and the readme, is read into a variable before grep
+  # sees it. Piped straight into `grep -q`, grep exits at its first match, the
+  # writer dies of SIGPIPE on the rest, and pipefail reports the whole pipeline
+  # as failed -- a file that is there reads as missing, and a {{VERSION}} left
+  # in reads as substituted.
   core_tgz="$OUT/npm/spritestudio-ssplayer-core-$(node -p "require('$ROOT_DIR/packages/ssplayer-core/package.json').version").tgz"
   if [ -f "$core_tgz" ]; then
-    tar -tzf "$core_tgz" | grep -q '^package/dist/ssruntime_bg\.wasm$' \
+    listing="$(tar -tzf "$core_tgz")"
+    grep -q '^package/dist/ssruntime_bg\.wasm$' <<< "$listing" \
       || fail "$(basename "$core_tgz") has no dist/ssruntime_bg.wasm (the copy the ESM entry loads when initialize() is given no URL)"
   fi
 
@@ -602,12 +609,13 @@ if [ "$VERIFY" = "yes" ]; then
   if [ -f "$rmmz_zip" ]; then
     # Flat, because RPG Maker MZ loads plugins as files in js/plugins/ and the
     # plugin finds its wasm next to itself (document.currentScript).
+    listing="$(unzip -Z1 "$rmmz_zip")"
     for f in ssplayer-rpgmakermz.js ssruntime_bg.wasm; do
-      unzip -Z1 "$rmmz_zip" | grep -qx "$f" || fail "$(basename "$rmmz_zip") has no $f at the archive root"
+      grep -qx "$f" <<< "$listing" || fail "$(basename "$rmmz_zip") has no $f at the archive root"
     done
     # And the wasm is the no-SIMD build. MZ's NW.js Chromium predates simd128,
     # so the SIMD one installs, loads, and dies -- on a host nothing here runs.
-    if unzip -Z1 "$rmmz_zip" | grep -qx ssruntime_bg.wasm; then
+    if grep -qx ssruntime_bg.wasm <<< "$listing"; then
       unzip -p "$rmmz_zip" ssruntime_bg.wasm | cmp -s - "$ROOT_DIR/packages/ssplayer-core/wasm-nosimd/ssruntime_bg.wasm" \
         || fail "$(basename "$rmmz_zip") does not carry the no-SIMD runtime (RPG Maker MZ cannot load a simd128 wasm)"
     fi
@@ -616,12 +624,14 @@ if [ "$VERIFY" = "yes" ]; then
   tyrano_zip="$OUT/plugins/ssplayer-tyranoscript-plugin-$(node -p "require('$ROOT_DIR/packages/ssplayer-tyranoscript/package.json').version").zip"
   if [ -f "$tyrano_zip" ]; then
     # One folder, dropped whole into data/others/plugin/.
+    listing="$(unzip -Z1 "$tyrano_zip")"
     for f in ssplayer/init.ks ssplayer/main.js ssplayer/ssruntime_bg.wasm ssplayer/readme.txt; do
-      unzip -Z1 "$tyrano_zip" | grep -qx "$f" || fail "$(basename "$tyrano_zip") has no $f"
+      grep -qx "$f" <<< "$listing" || fail "$(basename "$tyrano_zip") has no $f"
     done
-    if unzip -Z1 "$tyrano_zip" | grep -qx ssplayer/readme.txt; then
+    if grep -qx ssplayer/readme.txt <<< "$listing"; then
       # The packer fills the version into the readme a creator actually reads.
-      if unzip -p "$tyrano_zip" ssplayer/readme.txt | grep -q '{{VERSION}}'; then
+      readme="$(unzip -p "$tyrano_zip" ssplayer/readme.txt)"
+      if grep -q '{{VERSION}}' <<< "$readme"; then
         fail "$(basename "$tyrano_zip") ships readme.txt with {{VERSION}} unsubstituted"
       fi
     fi
@@ -636,9 +646,10 @@ if [ "$VERIFY" = "yes" ]; then
     if [ "$tops" != "ssplayer" ]; then
       fail "ssplayer.tbp does not hold exactly one top-level folder named 'ssplayer' (found: $(printf '%s' "$tops" | tr '\n' ' '))"
     fi
+    listing="$(unzip -Z1 "$tbp")"
     for f in ssplayer/ssplayer.builder.js ssplayer/main.js ssplayer/init.ks \
              ssplayer/ssruntime_bg.wasm ssplayer/ssconverter_bg.wasm; do
-      unzip -Z1 "$tbp" | grep -qx "$f" || fail "ssplayer.tbp has no $f"
+      grep -qx "$f" <<< "$listing" || fail "ssplayer.tbp has no $f"
     done
   fi
 
