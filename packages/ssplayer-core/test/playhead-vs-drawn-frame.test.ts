@@ -68,4 +68,14 @@ describe('the playhead and the drawn frame are different questions', () => {
         player.setFrameNo(12.4);
         expect(player.runtimeManager.context.set_frame_no).toHaveBeenCalledWith(12.4);
     });
+
+    it('evaluates the frame that gets drawn for the part read-outs', () => {
+        // What a follower driven ahead of the draw reads has to be the frame the
+        // draw is about to show, not the playhead.
+        const player = makePlayer(false);
+        player.runtimeManager.prepareFrame = vi.fn();
+        player.setFrameNo(12.4);
+        player.evaluateDrawFrame();
+        expect(player.runtimeManager.prepareFrame).toHaveBeenCalledWith(12);
+    });
 });

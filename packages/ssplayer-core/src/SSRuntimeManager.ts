@@ -876,12 +876,13 @@ export class SSRuntimeManager {
     }
 
     /**
-     * The runtime's frame data for `frame`, as a zero-copy FlatBuffer view over
-     * WASM memory. The returned object is a per-manager scratch re-pointed on every
-     * call: don't retain it, and don't hold two at once.
+     * Evaluates `frame`: builds its frame data and leaves the per-part buffers
+     * (world matrices and the rest) on it. Returns the frame data's byte length,
+     * or 0 before an animation is set up or when the runtime rejects the frame.
+     * Allocates nothing — {@link getFrameData} is this plus a view over the bytes.
      */
-    public getFrameData(frame: number): FrameData | null {
-        if (this.currentAnimationIndex < 0) return null;
+    public prepareFrame(frame: number): number {
+        if (this.currentAnimationIndex < 0) return 0;
         try {
             // Subframe playback advances the playhead continuously, so at the
             // end/loop boundary get_frame_no() briefly returns a value in
@@ -896,17 +897,27 @@ export class SSRuntimeManager {
             // get_frame_data, so this path cost the Brain twice every frame;
             // prepare_frame_data builds it and returns the length, and the
             // pointer is then a pure read of what was just built.
-            const len = this.context.prepare_frame_data(clamped);
-            const ptr = this.context.get_frame_data_buf();
-            if (ptr === 0 || len === 0) return null;
-            
-            const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
-            const bb = new flatbuffers.ByteBuffer(buf);
-            return FrameData.getRootAsFrameData(bb, this._scratchFrameData);
+            return this.context.prepare_frame_data(clamped);
         } catch (e) {
             console.error(`WASM get_frame_data error at frame ${frame}:`, e);
-            return null;
+            return 0;
         }
+    }
+
+    /**
+     * The runtime's frame data for `frame`, as a zero-copy FlatBuffer view over
+     * WASM memory. The returned object is a per-manager scratch re-pointed on every
+     * call: don't retain it, and don't hold two at once.
+     */
+    public getFrameData(frame: number): FrameData | null {
+        const len = this.prepareFrame(frame);
+        if (len === 0) return null;
+        const ptr = this.context.get_frame_data_buf();
+        if (ptr === 0) return null;
+
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        const bb = new flatbuffers.ByteBuffer(buf);
+        return FrameData.getRootAsFrameData(bb, this._scratchFrameData);
     }
 
     public destroy() {

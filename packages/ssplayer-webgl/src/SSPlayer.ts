@@ -743,9 +743,12 @@ export class SSPlayer {
     // non-looping animation finishes on.
     this.pollEvents();
 
-    // World matrices are final for this frame: notify per-frame listeners (the
-    // point getPartTransform is valid for the new frame).
+    // Notify per-frame listeners, the point getPartTransform is valid for the new
+    // frame. The update above only moved the playhead, and the Surface draws —
+    // which is what evaluates a frame — after this, so evaluate it here first or
+    // the listeners read the previous frame's world matrices.
     if (this._frameListeners.size > 0) {
+      this.internalPlayer.evaluateDrawFrame();
       const f = this.internalPlayer.getFrameNo();
       this._frameListeners.emit(f);
     }

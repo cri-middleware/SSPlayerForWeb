@@ -264,8 +264,15 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     this.internalPlayer.update(deltaMs);
     if (!pausing) this.pollEvents();
 
-    // World matrices are now final for this frame: drive followers, then notify
-    // per-frame listeners (the point getPartTransform is valid for this frame).
+    // Drive followers, then notify per-frame listeners — the point
+    // getPartTransform is valid for this frame. The update above only moved the
+    // playhead, and the frame is evaluated when MZ renders us (_render), after
+    // this; evaluate it here first or both read the previous frame's world
+    // matrices. Driving the followers from _render instead would be too late:
+    // Pixi has already computed their transforms for that render by then.
+    if (this._follower.size > 0 || this._frameListeners.size > 0) {
+      this.internalPlayer.evaluateDrawFrame();
+    }
     if (this._follower.size > 0) this._follower.update();
     if (this._frameListeners.size > 0) {
       const f = this.internalPlayer.getFrameNo();
