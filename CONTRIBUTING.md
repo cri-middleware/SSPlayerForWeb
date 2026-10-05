@@ -1,5 +1,9 @@
 # Contributing to SSPlayerForWeb
 
+> [!IMPORTANT]
+> We are not accepting pull requests until a Contributor License Agreement
+> (CLA) is in place. Issues remain open for bug reports and requests.
+
 Thank you for your interest in contributing to SSPlayerForWeb! We welcome all
 kinds of contributions, including bug reports, feature requests, documentation
 improvements, and code contributions.
@@ -179,6 +183,9 @@ licensed under the project's [LICENSE.md](./LICENSE.md).
 ---
 
 # SSPlayerForWeb への貢献について
+
+> [!IMPORTANT]
+> コントリビューターライセンス契約（CLA）の準備が整うまで、プルリクエストは受け付けていません。バグ報告や要望は引き続き Issue で受け付けています。
 
 SSPlayerForWeb にご関心をお寄せいただき、ありがとうございます！ バグ報告、機能提案、ドキュメントの改善、コードの提供など、あらゆる形での貢献を歓迎します。
 
