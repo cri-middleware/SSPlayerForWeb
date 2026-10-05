@@ -513,3 +513,42 @@ describe('SSPlayer onAnimationStarted', () => {
     expect(started).toBe(1);
   });
 });
+
+describe('onFrame', () => {
+  // The Surface updates every player and then draws them, and the draw is what
+  // evaluates a frame. A listener that ran before it read the world matrices of
+  // the frame drawn last time.
+  function advancingPlayer() {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+    const order: string[] = [];
+    const ip = player.internalPlayer as unknown as {
+      isPlaying: boolean;
+      update: () => void;
+      evaluateDrawFrame: ReturnType<typeof vi.fn>;
+      runtimeManager: { context: { get_passed_event_count: () => number } };
+    };
+    ip.isPlaying = true;
+    ip.update = () => order.push('update');
+    ip.evaluateDrawFrame = vi.fn(() => order.push('evaluate'));
+    ip.runtimeManager.context.get_passed_event_count = () => 0;
+    return { surface, player, ip, order };
+  }
+
+  it('fires once the frame it reports has been evaluated', () => {
+    const { surface, player, order } = advancingPlayer();
+    player.onFrame(() => order.push('listener'));
+
+    surface.update(16);
+
+    expect(order).toEqual(['update', 'evaluate', 'listener']);
+  });
+
+  it('evaluates nothing ahead of the draw when nobody listens', () => {
+    const { surface, ip } = advancingPlayer();
+
+    surface.update(16);
+
+    expect(ip.evaluateDrawFrame).not.toHaveBeenCalled();
+  });
+});

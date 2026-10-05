@@ -1235,20 +1235,32 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     //
     // Read a part's current-frame transform so an external object can follow it
     // (a weapon, effect or hitbox tracking a null part). Unlike the overrides
-    // above these are pure reads: they report whatever frame the last update() /
-    // setFrameNo() finalized, so call them after the player has advanced (a facade
-    // drives its attachments from its per-frame seam). Part indices are stable
-    // within one SSAB, so resolve a name once and pass the index if you follow a
-    // part every frame.
+    // above these are pure reads: they report the frame last evaluated, and
+    // update() / setFrameNo() evaluate nothing — they only move the playhead. A
+    // frame is evaluated when the renderer draws it, or by evaluateDrawFrame(),
+    // so a facade whose per-frame seam runs before its draw evaluates first.
+    // Part indices are stable within one SSAB, so resolve a name once and pass
+    // the index if you follow a part every frame.
+
+    /**
+     * Evaluates the frame the renderer is about to draw ({@link getDrawFrame}),
+     * so the part read-outs report it. Called by a facade that drives its
+     * followers or `onFrame` listeners before its own draw: without it they read
+     * the frame drawn last time, one behind. The draw evaluates the frame again,
+     * so call it only when something is going to read. Allocates nothing.
+     */
+    public evaluateDrawFrame(): void {
+        this.runtimeManager.prepareFrame(this.getDrawFrame());
+    }
 
     /**
      * The part's current-frame transform as a 2D affine `[m00, m01, m10, m11,
      * tx, ty]` in animation-local (Y-down) space, copied out of WASM (safe to
      * retain). Returns null when the part name/index is unknown in the current
      * animation. Pass `out` (a `Float32Array(6)`) to avoid allocation. Valid for
-     * the frame the last update()/setFrameNo() produced; the matrix is computed
-     * for every part regardless of `hide`, so a hidden part still reports where
-     * it would be.
+     * the frame last evaluated — the last one drawn, or the one
+     * {@link evaluateDrawFrame} evaluated; the matrix is computed for every part
+     * regardless of `hide`, so a hidden part still reports where it would be.
      *
      * {@link flipX} / {@link flipY} / {@link offsetX} / {@link offsetY} are
      * included: this reports where the part is actually drawn, so a follower
