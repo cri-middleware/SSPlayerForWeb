@@ -51,12 +51,15 @@ if (versions.size === 0) {
 // git ls-files so build outputs, node_modules and the SDK submodule are all
 // excluded for free. Test trees are skipped: a fixture may pin a version on
 // purpose, and rewriting it would break the assertion it exists to make.
+// Changelogs are skipped too: an entry names the version it was written for, and
+// rewriting it would rewrite the history it records.
 const tracked = execFileSync('git', ['ls-files'], { cwd: repoRoot, encoding: 'utf8' })
   .split('\n')
   .filter(Boolean)
   .filter((f) => /\.(md|html|ts|tsx|js|mjs|cjs|vue)$/.test(f))
   .filter((f) => !f.startsWith('SpriteStudio-SDK/'))
-  .filter((f) => !/(^|\/)(test|tests|__tests__)\//.test(f));
+  .filter((f) => !/(^|\/)(test|tests|__tests__)\//.test(f))
+  .filter((f) => !/(^|\/)CHANGELOG\.md$/.test(f));
 
 // `@scope/name@1.2.3-beta.4` — a literal semver only, so `@beta` is left alone.
 const PIN = /(@spritestudio\/[a-z0-9-]+)@(\d+\.\d+\.\d+(?:-[0-9a-z.-]+)?)/gi;
