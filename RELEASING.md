@@ -4,7 +4,7 @@ Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](
 
 ## Cutting a release
 
-Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git`, `gh` (run `gh auth login` once) and `jq`, and for step 6, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
+Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git`, `gh` (run `gh auth login` once) and `jq`, and for step 6, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. Each public package on npm needs a trusted publisher for this repository's `release.yml`, allowed to stage. npm sets one up only for a package it already has, so a package's first version goes out by hand (step 6). The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
 
 Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the four public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
 
@@ -70,7 +70,7 @@ RUN=$(gh run list -w release.yml -e workflow_dispatch --json databaseId,createdA
 gh run watch "${RUN:?}" --exit-status             # RUN is empty until the run appears: repeat the last two lines
 ```
 
-The run writes the versions, dates their changelog sections, repoints the version-pinned snippets in the package READMEs and `examples/cdn`, and commits; then it builds and checks everything with `scripts/build-release.sh`, and only after that pushes the commit, gives every package it releases a `<package>-v<version>` tag, and drafts its Release. A failure before the push leaves `main` untouched, and so does a `main` that moved during the run, which rejects the push. Then see what it made:
+The run writes the versions, dates their changelog sections, repoints the version-pinned snippets in the package READMEs and `examples/cdn`, and commits; then it builds and checks everything with `scripts/build-release.sh`, and only after that pushes the commit, gives every package it releases a `<package>-v<version>` tag, drafts its Release, and stages each public package on npm, where it waits for step 6. A failure before the push leaves `main` untouched, and so does a `main` that moved during the run, which rejects the push. Then see what it made:
 
 ```bash
 git fetch origin --tags
@@ -78,11 +78,11 @@ git log --oneline -1 origin/main                  # chore(release): <the version
 gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'   # its drafts
 ```
 
-`-f release_plugins=false` leaves the plugins out. `publish_npm` stays off until npm trusted publishing is set up, and step 6 publishes by hand meanwhile.
+`-f release_plugins=false` leaves the plugins out. A package npm does not have yet cannot be staged, so a run that releases one — the first release is one — adds `-f publish_npm=false`, and step 6 publishes it by hand.
 
 ### 5. Check the drafts
 
-Each draft carries its package's file and a link to its changelog. Look at the files before anything goes to npm: until then, a fault is undone by deleting the draft (see [Undoing a release](#undoing-a-release)), and after it, only a new version fixes it.
+Each draft carries its package's file and a link to its changelog. Look at the files before anything on npm is approved: until then, a fault is undone by deleting the draft and rejecting what was staged (see [Undoing a release](#undoing-a-release)), and after it, only a new version fixes it.
 
 ```bash
 dir=$(mktemp -d)
@@ -94,15 +94,24 @@ ls -R "$dir"                                      # one file each: a .tgz for np
 
 `tar -tzf <file>.tgz` lists what an npm tarball holds, and `unzip -l <file>` what a plugin's archive holds.
 
-### 6. Publish to npm
+### 6. Approve on npm
 
-**A person runs this step**: `npm login` and every publish ask for a 2FA code. The public packages go to npm from the very tarball on their draft, before any Release is published, so that by the time a Release announces a version, `npm install` and the CDN snippets in the READMEs find it. The loop goes in dependency order and stops at the first failure, so that no version reaches npm before one it depends on, and it takes the dist-tag from the version: the prerelease's word (`beta`), or `latest` for a full release. A release with no public package publishes nothing here.
+**A person runs this step**: approving, like publishing by hand, asks for a 2FA code. A version the run staged stays out of sight on npm until a maintainer approves it, and approving applies the dist-tag it was staged under. Approve before any Release is published, so that by the time a Release announces a version, `npm install` and the CDN snippets in the READMEs find it; and in dependency order — `ssplayer-core` and `ssconverter-core`, then `ssplayer-webgl` and `ssplayer-pixi` — so that no version is public before one it depends on. Approve on npmjs.com, or here:
 
 ```bash
 npm login                                         # once
+for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do
+  npm stage list "@spritestudio/$pkg"             # each staged version, with its stage id
+done
+npm stage approve <stage-id>                      # once per staged version, in the order above
+```
+
+A package the run did not stage — every one in a run with `publish_npm=false`, and any after a failed **Stage on npm** — is published by hand instead, from the very tarball on its draft. The loop goes in dependency order and stops at the first failure, and it takes the dist-tag from the version: the prerelease's word (`beta`), or `latest` for a full release.
+
+```bash
 dir=$(mktemp -d)
 drafts=$(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName')
-for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # dependencies first
+for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # dependencies first; leave out any the run staged
   tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
   [ -n "$tag" ] || continue
   version=${tag#"$pkg-v"}
@@ -131,7 +140,7 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 
 ## Undoing a release
 
-**An npm version is permanent**: it cannot be withdrawn, only superseded. So is a published Release, whose file users have downloaded by its tag. A fault found after either is fixed by a new version. Before that:
+**A version npm has made public is permanent**, whether approved or published by hand: it cannot be withdrawn, only superseded. So is a published Release, whose file users have downloaded by its tag. A fault found after either is fixed by a new version. A staged version is not public yet, and `npm stage reject <stage-id>` removes it (a person, with 2FA). Before that:
 
 *   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`, and watched as in step 4. The **Re-run** button would replay the old commit, and its push would be rejected.
 
@@ -139,21 +148,22 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
     gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
     ```
 
-*   A run that failed after the push is run again with `versions` empty, before anything else is merged into `main`: the retry builds `main` as it then is, reuses the tags it had pushed, and drafts the Releases still missing.
+*   A run that failed after the push is run again with `versions` empty, before anything else is merged into `main`: the retry builds `main` as it then is, reuses the tags it had pushed, drafts the Releases still missing, and stages what npm does not have, skipping a version already staged.
 
     ```bash
     gh workflow run release.yml --ref main
     ```
 
-*   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main`.
+*   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — and reject what the run staged for them. Merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main` and stages them again.
 
     ```bash
     gh release delete <tag> --cleanup-tag --yes       # once per draft; deletes the tag too, here and on GitHub
+    npm stage reject <stage-id>                       # once per staged version; a person, with 2FA
     ```
 
 ## Building the release locally
 
-`scripts/build-release.sh` is the release build, and `release.yml` runs exactly this script for everything it uploads. It builds *both* channels into one directory (`release-dist` by default) and publishes neither: `<out>/npm/*.tgz` (`pnpm pack` for every package that is not `private`, so the `files` allow-list, the `prepack` artifact guard and the `workspace:^` rewrite all apply) and `<out>/plugins/*` (each private package's own `pack` script), plus `SHA256SUMS` over both. The workflow publishes those very tarballs and attaches those very archives, reading `<out>/manifest.json` to know which file belongs to which package. It builds under the versions the working tree has and sets none, so it can be run on any checkout to see what the packages would ship:
+`scripts/build-release.sh` is the release build, and `release.yml` runs exactly this script for everything it uploads. It builds *both* channels into one directory (`release-dist` by default) and publishes neither: `<out>/npm/*.tgz` (`pnpm pack` for every package that is not `private`, so the `files` allow-list, the `prepack` artifact guard and the `workspace:^` rewrite all apply) and `<out>/plugins/*` (each private package's own `pack` script), plus `SHA256SUMS` over both. The workflow stages those very tarballs and attaches those very archives, reading `<out>/manifest.json` to know which file belongs to which package. It builds under the versions the working tree has and sets none, so it can be run on any checkout to see what the packages would ship:
 
 ```bash
 scripts/build-release.sh                          # -> release-dist/
@@ -173,7 +183,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 ## リリースの手順
 
-このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git`、`gh`（最初に一度 `gh auth login`）、`jq`、それに手順 6 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
+このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git`、`gh`（最初に一度 `gh auth login`）、`jq`、それに手順 6 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。npm 側では、公開パッケージごとに、このリポジトリの `release.yml` を trusted publisher として登録し、stage を許可しておきます。npm はすでにあるパッケージにしか trusted publisher を設定できないので、パッケージの最初のバージョンは手作業で出します（手順 6）。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
 
 パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す 4 つの公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
 
@@ -239,7 +249,7 @@ RUN=$(gh run list -w release.yml -e workflow_dispatch --json databaseId,createdA
 gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は空。最後の 2 行を繰り返す
 ```
 
-run はバージョンを書き込み、changelog の節に日付を入れ、パッケージの README と `examples/cdn` にあるバージョン固定のスニペットを追従させてコミットします。続けて `scripts/build-release.sh` ですべてをビルドして検査し、そのあとで初めてコミットを push し、リリースする各パッケージに `<package>-v<version>` のタグを打ち、Release の下書きを作ります。push より前に失敗すれば `main` は変わりません。run の途中で `main` が進んでいた場合も、push が拒否されるので同じです。終わったら、できたものを確かめます。
+run はバージョンを書き込み、changelog の節に日付を入れ、パッケージの README と `examples/cdn` にあるバージョン固定のスニペットを追従させてコミットします。続けて `scripts/build-release.sh` ですべてをビルドして検査し、そのあとで初めてコミットを push し、リリースする各パッケージに `<package>-v<version>` のタグを打ち、Release の下書きを作り、公開パッケージを npm に stage します。stage したものは手順 6 を待ちます。push より前に失敗すれば `main` は変わりません。run の途中で `main` が進んでいた場合も、push が拒否されるので同じです。終わったら、できたものを確かめます。
 
 ```bash
 git fetch origin --tags
@@ -247,11 +257,11 @@ git log --oneline -1 origin/main                  # chore(release): <指定し�
 gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'   # できた下書き
 ```
 
-`-f release_plugins=false` でプラグインを外せます。`publish_npm` は npm の trusted publishing を設定するまでオフのままにし、それまでは手順 6 で手動で publish します。
+`-f release_plugins=false` でプラグインを外せます。npm にまだ無いパッケージは stage できないので、それを出す run（初回のリリースがそうです）には `-f publish_npm=false` を足し、手順 6 で手作業で publish します。
 
 ### 5. 下書きを確かめる
 
-下書きには、パッケージのファイルと changelog へのリンクが入っています。npm に何か出す前に、ファイルを確かめます。それまでなら下書きを消せば取り消せますが（「リリースの取り消し」を参照）、出した後は新しいバージョンでしか直せません。
+下書きには、パッケージのファイルと changelog へのリンクが入っています。npm で何か承認する前に、ファイルを確かめます。それまでなら、下書きを消して stage したものを取り下げれば取り消せますが（「リリースの取り消し」を参照）、承認した後は新しいバージョンでしか直せません。
 
 ```bash
 dir=$(mktemp -d)
@@ -263,15 +273,24 @@ ls -R "$dir"                                      # 1 つずつ。npm 用は .tg
 
 npm の tarball の中身は `tar -tzf <file>.tgz`、プラグインのアーカイブの中身は `unzip -l <file>` で一覧できます。
 
-### 6. npm に publish する
+### 6. npm で承認する
 
-**この手順は人が行います。** `npm login` と、publish のたびに 2FA のコードを求められるためです。公開パッケージは、下書きに添付された tarball そのものを npm に出します。どの Release を公開するよりも先に行い、Release がバージョンを告知する時点で、`npm install` と README の CDN スニペットがそのバージョンを見つけられるようにします。ループは依存の順に進み、最初の失敗で止まるので、依存先より先に npm に載るバージョンはありません。dist-tag はバージョンから決めます。プレリリースならその語（`beta`）、正式版なら `latest` です。公開パッケージを含まないリリースでは、ここで publish するものはありません。
+**この手順は人が行います。** 承認も、手作業の publish も、2FA のコードを求められるためです。run が stage したバージョンは、maintainer が承認するまで npm 上で見えないままで、承認すると stage したときの dist-tag が付きます。どの Release を公開するよりも先に承認し、Release がバージョンを告知する時点で、`npm install` と README の CDN スニペットがそのバージョンを見つけられるようにします。順番は依存の順で、`ssplayer-core` と `ssconverter-core`、続けて `ssplayer-webgl` と `ssplayer-pixi` です。依存先より先に公開されるバージョンが無いようにするためです。承認は npmjs.com でも、次のコマンドでもできます。
 
 ```bash
 npm login                                         # 最初に一度
+for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do
+  npm stage list "@spritestudio/$pkg"             # stage されたバージョンと、その stage id
+done
+npm stage approve <stage-id>                      # stage されたバージョンごとに 1 回。上の順に
+```
+
+run が stage しなかったパッケージは、下書きに添付された tarball そのものを手作業で publish します。`publish_npm=false` で実行した run のパッケージすべてと、**Stage on npm** が失敗した後のパッケージがこれにあたります。ループは依存の順に進んで最初の失敗で止まり、dist-tag をバージョンから決めます。プレリリースならその語（`beta`）、正式版なら `latest` です。
+
+```bash
 dir=$(mktemp -d)
 drafts=$(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName')
-for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # 依存先から
+for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # 依存先から。run が stage したものは外す
   tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
   [ -n "$tag" ] || continue
   version=${tag#"$pkg-v"}
@@ -300,7 +319,7 @@ gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は�
 
 ## リリースの取り消し
 
-**npm のバージョンは恒久的です。** 取り下げられず、新しいバージョンで置き換えるしかありません。公開した Release も同じで、利用者はそのタグでファイルを取得しています。どちらかの後に見つかった不具合は、新しいバージョンで直します。それより前なら次のとおりです。
+**npm で公開されたバージョンは恒久的です。** 承認したものも手作業で publish したものも、取り下げられず、新しいバージョンで置き換えるしかありません。公開した Release も同じで、利用者はそのタグでファイルを取得しています。どちらかの後に見つかった不具合は、新しいバージョンで直します。stage しただけのバージョンはまだ公開されておらず、`npm stage reject <stage-id>` で取り下げられます（人が 2FA で行います）。それより前なら次のとおりです。
 
 *   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直し、手順 4 と同じように見届けます。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
 
@@ -308,21 +327,22 @@ gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は�
     gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
     ```
 
-*   push の後に失敗した run は、ほかの変更が `main` にマージされる前に、`versions` を空にして実行し直します。やり直しはその時点の `main` をビルドし、push 済みのタグはそのまま使い、まだ無い Release の下書きを作ります。
+*   push の後に失敗した run は、ほかの変更が `main` にマージされる前に、`versions` を空にして実行し直します。やり直しはその時点の `main` をビルドし、push 済みのタグはそのまま使い、まだ無い Release の下書きを作り、npm に無いものを stage します。stage 済みのバージョンは飛ばします。
 
     ```bash
     gh workflow run release.yml --ref main
     ```
 
-*   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれます。
+*   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、run がそれらについて stage したものを取り下げます。修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれ、もう一度 stage されます。
 
     ```bash
     gh release delete <tag> --cleanup-tag --yes       # 下書きごとに 1 回。タグも手元と GitHub の両方から消える
+    npm stage reject <stage-id>                       # stage されたバージョンごとに 1 回。人が 2FA で行う
     ```
 
 ## リリースのローカルビルド
 
-`scripts/build-release.sh` がリリースのビルドそのもので、`release.yml` はアップロードするものすべてについて、このスクリプトを実行しているだけです。**両方**のチャネルを 1 つのディレクトリ（既定 `release-dist`）にビルドし、どちらも publish しません。`<out>/npm/*.tgz`（`private` でない全パッケージの `pnpm pack`。`files` 許可リスト、`prepack` の成果物ガード、`workspace:^` の書き換えが適用されます）と `<out>/plugins/*`（各 private パッケージ自身の `pack` スクリプトの出力）、そして両方に対する `SHA256SUMS` です。ワークフローはこの tarball とアーカイブをそのまま publish・添付し、どのファイルがどのパッケージのものかを `<out>/manifest.json` から読みます。ビルドは作業ツリーにあるバージョンで行い、バージョンを書き換えないので、どのチェックアウトでも、パッケージが何を出荷するかを確かめるのに使えます。
+`scripts/build-release.sh` がリリースのビルドそのもので、`release.yml` はアップロードするものすべてについて、このスクリプトを実行しているだけです。**両方**のチャネルを 1 つのディレクトリ（既定 `release-dist`）にビルドし、どちらも publish しません。`<out>/npm/*.tgz`（`private` でない全パッケージの `pnpm pack`。`files` 許可リスト、`prepack` の成果物ガード、`workspace:^` の書き換えが適用されます）と `<out>/plugins/*`（各 private パッケージ自身の `pack` スクリプトの出力）、そして両方に対する `SHA256SUMS` です。ワークフローはこの tarball を npm に stage し、アーカイブをそのまま添付し、どのファイルがどのパッケージのものかを `<out>/manifest.json` から読みます。ビルドは作業ツリーにあるバージョンで行い、バージョンを書き換えないので、どのチェックアウトでも、パッケージが何を出荷するかを確かめるのに使えます。
 
 ```bash
 scripts/build-release.sh                          # -> release-dist/
