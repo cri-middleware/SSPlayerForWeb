@@ -4,7 +4,7 @@ Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](
 
 ## Cutting a release
 
-Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git`, `gh` (run `gh auth login` once) and `jq`, and for step 6, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. Each public package on npm needs a trusted publisher for this repository's `release.yml`, allowed to stage. npm sets one up only for a package it already has, so a package's first version goes out by hand (step 6). The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
+Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git`, `gh` 2.87 or later (run `gh auth login` once) and `jq`, and for step 6, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. Each public package on npm needs a trusted publisher for this repository's `release.yml`, allowed to stage. npm sets one up only for a package it already has, so a package's first version goes out by hand (step 6). The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
 
 Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the four public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
 
@@ -63,11 +63,8 @@ scripts/build-pages.sh                            # -> _site/, the site pages.ym
 ### 4. Run the release
 
 ```bash
-since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
-sleep 10
-RUN=$(gh run list -w release.yml -e workflow_dispatch --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | last | .databaseId // empty")
-gh run watch "${RUN:?}" --exit-status             # RUN is empty until the run appears: repeat the last two lines
+RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
+gh run watch "${RUN:?}" --exit-status
 ```
 
 The run writes the versions, dates their changelog sections, repoints the version-pinned snippets in the package READMEs and `examples/cdn`, and commits; then it builds and checks everything with `scripts/build-release.sh`, and only after that pushes the commit, gives every package it releases a `<package>-v<version>` tag, drafts its Release, and stages each public package on npm, where it waits for step 6. A failure before the push leaves `main` untouched, and so does a `main` that moved during the run, which rejects the push. Then see what it made:
@@ -124,16 +121,15 @@ done
 
 ### 7. Publish the Releases
 
-Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the newest.
+Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the last Release's.
 
 ```bash
-since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+tag=
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
-sleep 10
-RUN=$(gh run list -w pages.yml -e release --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | first | .databaseId // empty")
-gh run watch "${RUN:?}" --exit-status             # RUN is empty until the run appears: repeat the last two lines
+RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
+gh run watch "${RUN:?}" --exit-status             # RUN is empty for the few seconds before the run appears
 ```
 
 Then open the site. A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun "$RUN"`; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
@@ -142,16 +138,18 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 
 **A version npm has made public is permanent**, whether approved or published by hand: it cannot be withdrawn, only superseded. So is a published Release, whose file users have downloaded by its tag. A fault found after either is fixed by a new version. A staged version is not public yet, and `npm stage reject <stage-id>` removes it (a person, with 2FA). Before that:
 
-*   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`, and watched as in step 4. The **Re-run** button would replay the old commit, and its push would be rejected.
+*   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`. The **Re-run** button would replay the old commit, and its push would be rejected.
 
     ```bash
-    gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
+    RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
+    gh run watch "${RUN:?}" --exit-status
     ```
 
 *   A run that failed after the push is run again with `versions` empty, before anything else is merged into `main`: the retry builds `main` as it then is, reuses the tags it had pushed, drafts the Releases still missing, and stages what npm does not have, skipping a version already staged.
 
     ```bash
-    gh workflow run release.yml --ref main
+    RUN=$(gh workflow run release.yml --ref main | sed 's|.*/||')
+    gh run watch "${RUN:?}" --exit-status
     ```
 
 *   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — and reject what the run staged for them. Merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main` and stages them again.
@@ -183,7 +181,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 ## リリースの手順
 
-このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git`、`gh`（最初に一度 `gh auth login`）、`jq`、それに手順 6 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。npm 側では、公開パッケージごとに、このリポジトリの `release.yml` を trusted publisher として登録し、stage を許可しておきます。npm はすでにあるパッケージにしか trusted publisher を設定できないので、パッケージの最初のバージョンは手作業で出します（手順 6）。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
+このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git`、`gh` 2.87 以降（最初に一度 `gh auth login`）、`jq`、それに手順 6 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。npm 側では、公開パッケージごとに、このリポジトリの `release.yml` を trusted publisher として登録し、stage を許可しておきます。npm はすでにあるパッケージにしか trusted publisher を設定できないので、パッケージの最初のバージョンは手作業で出します（手順 6）。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
 
 パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す 4 つの公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
 
@@ -242,11 +240,8 @@ scripts/build-pages.sh                            # -> _site/。pages.yml がデ
 ### 4. リリースを実行する
 
 ```bash
-since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
-sleep 10
-RUN=$(gh run list -w release.yml -e workflow_dispatch --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | last | .databaseId // empty")
-gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は空。最後の 2 行を繰り返す
+RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
+gh run watch "${RUN:?}" --exit-status
 ```
 
 run はバージョンを書き込み、changelog の節に日付を入れ、パッケージの README と `examples/cdn` にあるバージョン固定のスニペットを追従させてコミットします。続けて `scripts/build-release.sh` ですべてをビルドして検査し、そのあとで初めてコミットを push し、リリースする各パッケージに `<package>-v<version>` のタグを打ち、Release の下書きを作り、公開パッケージを npm に stage します。stage したものは手順 6 を待ちます。push より前に失敗すれば `main` は変わりません。run の途中で `main` が進んでいた場合も、push が拒否されるので同じです。終わったら、できたものを確かめます。
@@ -303,16 +298,15 @@ done
 
 ### 7. Release を公開する
 
-下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのはいちばん新しい run です。
+下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。
 
 ```bash
-since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+tag=
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
-sleep 10
-RUN=$(gh run list -w pages.yml -e release --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | first | .databaseId // empty")
-gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は空。最後の 2 行を繰り返す
+RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
+gh run watch "${RUN:?}" --exit-status             # run が一覧に出るまでの数秒間は RUN が空になる
 ```
 
 終わったら、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、`gh run rerun "$RUN"` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
@@ -321,16 +315,18 @@ gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は�
 
 **npm で公開されたバージョンは恒久的です。** 承認したものも手作業で publish したものも、取り下げられず、新しいバージョンで置き換えるしかありません。公開した Release も同じで、利用者はそのタグでファイルを取得しています。どちらかの後に見つかった不具合は、新しいバージョンで直します。stage しただけのバージョンはまだ公開されておらず、`npm stage reject <stage-id>` で取り下げられます（人が 2FA で行います）。それより前なら次のとおりです。
 
-*   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直し、手順 4 と同じように見届けます。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
+*   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直します。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
 
     ```bash
-    gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
+    RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
+    gh run watch "${RUN:?}" --exit-status
     ```
 
 *   push の後に失敗した run は、ほかの変更が `main` にマージされる前に、`versions` を空にして実行し直します。やり直しはその時点の `main` をビルドし、push 済みのタグはそのまま使い、まだ無い Release の下書きを作り、npm に無いものを stage します。stage 済みのバージョンは飛ばします。
 
     ```bash
-    gh workflow run release.yml --ref main
+    RUN=$(gh workflow run release.yml --ref main | sed 's|.*/||')
+    gh run watch "${RUN:?}" --exit-status
     ```
 
 *   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、run がそれらについて stage したものを取り下げます。修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれ、もう一度 stage されます。
