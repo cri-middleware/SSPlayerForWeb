@@ -4,9 +4,11 @@ Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](
 
 ## Cutting a release
 
-Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git` and `gh` (run `gh auth login` once), and for step 5, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
+Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git`, `gh` (run `gh auth login` once) and `jq`, and for step 6, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
 
 Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the four public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
+
+Only step 4 and its retry under [Undoing a release](#undoing-a-release) read a value set by hand, `VERSIONS`, and they refuse one that is empty. Every other block works out what it needs from git and GitHub, so each can run in a new shell.
 
 ### 1. Decide the versions
 
@@ -14,15 +16,25 @@ Look at what each package gained since its previous tag. A package that depends 
 
 ```bash
 git fetch origin --tags
-git tag --list '*-v*' --sort=-creatordate         # every release so far, newest first
-git log --oneline ssplayer-core-v7.0.0-beta.1..origin/main -- packages/ssplayer-core   # before its first release: origin/main alone
-git diff --stat ssplayer-core-v7.0.0-beta.1 origin/main -- scripts/SDK_VERSION.txt   # any output: a player release takes ssplayer-core along
+for pkg in $(git ls-tree -r --name-only origin/main -- packages | sed -n 's|^packages/\([^/]*\)/CHANGELOG\.md$|\1|p'); do   # every package a release can carry
+  prev=$(git -c versionsort.suffix=- tag --list "$pkg-v*" --sort=-v:refname | head -n 1)
+  echo "== $pkg, last released: ${prev:-never}"
+  git log --oneline ${prev:+"$prev.."}origin/main -- "packages/$pkg"
+done
+prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refname | head -n 1)
+[ -z "$prev" ] || git diff --stat "$prev" origin/main -- scripts/SDK_VERSION.txt   # any output: a player release takes ssplayer-core along
 ```
 
 A run releases every package whose current version has no Release yet, named or not. So the first release names every package at the version it already has, or leaves the plugins out with `-f release_plugins=false`:
 
 ```text
 ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
+```
+
+Write the decision down for step 4:
+
+```bash
+VERSIONS="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
 ```
 
 ### 2. Write the changelog
@@ -39,11 +51,23 @@ gh pr create -B main --fill
 gh pr merge release-notes --merge --delete-branch
 ```
 
-### 3. Run the release
+### 3. Build the site
+
+`pages.yml` builds the site only once a Release is published, from its tag, and a re-run builds that same tag: a fault in the docs or the examples found then can only be fixed in `main` and deployed from there. So build the site now, from the `main` the release will be cut from. `scripts/build-pages.sh` is the script `pages.yml` runs, and it needs the SpriteStudio-SDK submodule and network access. A failure is fixed by a pull request into `main` before step 4.
 
 ```bash
-gh workflow run release.yml --ref main -f versions="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"   # prints the run's URL, which ends in its <run-id>
-gh run watch <run-id>
+git switch main && git pull --ff-only && git submodule update --init
+scripts/build-pages.sh                            # -> _site/, the site pages.yml would deploy
+```
+
+### 4. Run the release
+
+```bash
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
+sleep 10
+RUN=$(gh run list -w release.yml -e workflow_dispatch --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | last | .databaseId // empty")
+gh run watch "${RUN:?}" --exit-status             # RUN is empty until the run appears: repeat the last two lines
 ```
 
 The run writes the versions, dates their changelog sections, repoints the version-pinned snippets in the package READMEs and `examples/cdn`, and commits; then it builds and checks everything with `scripts/build-release.sh`, and only after that pushes the commit, gives every package it releases a `<package>-v<version>` tag, and drafts its Release. A failure before the push leaves `main` untouched, and so does a `main` that moved during the run, which rejects the push. Then see what it made:
@@ -51,19 +75,18 @@ The run writes the versions, dates their changelog sections, repoints the versio
 ```bash
 git fetch origin --tags
 git log --oneline -1 origin/main                  # chore(release): <the versions>
-git tag --points-at origin/main                   # one tag per package released
-gh release list --limit 10                        # their drafts
+gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'   # its drafts
 ```
 
-With `versions` left empty, nothing is set, and every current version not yet released goes out: the retry after a run that failed. `-f release_plugins=false` leaves the plugins out. `publish_npm` stays off until npm trusted publishing is set up, and step 5 publishes by hand meanwhile.
+`-f release_plugins=false` leaves the plugins out. `publish_npm` stays off until npm trusted publishing is set up, and step 6 publishes by hand meanwhile.
 
-### 4. Check the drafts
+### 5. Check the drafts
 
 Each draft carries its package's file and a link to its changelog. Look at the files before anything goes to npm: until then, a fault is undone by deleting the draft (see [Undoing a release](#undoing-a-release)), and after it, only a new version fixes it.
 
 ```bash
 dir=$(mktemp -d)
-for tag in ssplayer-core-v7.0.0-beta.2 ssplayer-webgl-v7.0.0-beta.2; do   # every draft the run made
+for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release download "$tag" -D "$dir/$tag"
 done
 ls -R "$dir"                                      # one file each: a .tgz for npm, an archive for a plugin
@@ -71,47 +94,49 @@ ls -R "$dir"                                      # one file each: a .tgz for np
 
 `tar -tzf <file>.tgz` lists what an npm tarball holds, and `unzip -l <file>` what a plugin's archive holds.
 
-### 5. Publish to npm
+### 6. Publish to npm
 
-The public packages go to npm from the very tarball on their draft, before any Release is published, so that by the time a Release announces a version, `npm install` and the CDN snippets in the READMEs find it. Go in dependency order — `ssplayer-core` and `ssconverter-core`, then `ssplayer-webgl` and `ssplayer-pixi` — so that no version reaches npm before one it depends on. `--tag` is the prerelease's word (`beta`); leave it out for a full release. npm asks for a 2FA code for each. A release with no public package skips this step.
+**A person runs this step**: `npm login` and every publish ask for a 2FA code. The public packages go to npm from the very tarball on their draft, before any Release is published, so that by the time a Release announces a version, `npm install` and the CDN snippets in the READMEs find it. The loop goes in dependency order and stops at the first failure, so that no version reaches npm before one it depends on, and it takes the dist-tag from the version: the prerelease's word (`beta`), or `latest` for a full release. A release with no public package publishes nothing here.
 
 ```bash
 npm login                                         # once
 dir=$(mktemp -d)
-for tag in ssplayer-core-v7.0.0-beta.2 ssplayer-webgl-v7.0.0-beta.2; do   # the public packages released, dependencies first
+drafts=$(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName')
+for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # dependencies first
+  tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
+  [ -n "$tag" ] || continue
+  version=${tag#"$pkg-v"}
+  case "$version" in *-*) dist=${version#*-}; dist=${dist%%.*} ;; *) dist=latest ;; esac
   gh release download "$tag" -p '*.tgz' -D "$dir/$tag"
-  npm publish "$dir/$tag"/*.tgz --tag beta --access public
+  npm publish "$dir/$tag"/*.tgz --tag "$dist" --access public || break
+  npm view "@spritestudio/$pkg" dist-tags
 done
-npm view @spritestudio/ssplayer-core dist-tags    # beta: the version just published
 ```
 
-### 6. Publish the Releases
+### 7. Publish the Releases
 
-Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publish each one, here or with **Publish release** on the [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) page:
+Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the newest.
 
 ```bash
-for tag in ssplayer-core-v7.0.0-beta.2 ssplayer-webgl-v7.0.0-beta.2; do
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
+sleep 10
+RUN=$(gh run list -w pages.yml -e release --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | first | .databaseId // empty")
+gh run watch "${RUN:?}" --exit-status             # RUN is empty until the run appears: repeat the last two lines
 ```
 
-Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled. Watch the newest through, then open the site:
-
-```bash
-gh run list --workflow pages.yml --limit 3        # the newest is the one to watch
-gh run watch <run-id>
-```
-
-A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun <run-id>`; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
+Then open the site. A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun "$RUN"`; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
 
 ## Undoing a release
 
 **An npm version is permanent**: it cannot be withdrawn, only superseded. So is a published Release, whose file users have downloaded by its tag. A fault found after either is fixed by a new version. Before that:
 
-*   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`. The **Re-run** button would replay the old commit, and its push would be rejected.
+*   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`, and watched as in step 4. The **Re-run** button would replay the old commit, and its push would be rejected.
 
     ```bash
-    gh workflow run release.yml --ref main -f versions="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
+    gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
     ```
 
 *   A run that failed after the push is run again with `versions` empty, before anything else is merged into `main`: the retry builds `main` as it then is, reuses the tags it had pushed, and drafts the Releases still missing.
@@ -123,7 +148,7 @@ A failed run leaves the site as it was. When the cause was a setting outside the
 *   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main`.
 
     ```bash
-    gh release delete ssplayer-core-v7.0.0-beta.2 --cleanup-tag --yes   # deletes the tag too, here and on GitHub
+    gh release delete <tag> --cleanup-tag --yes       # once per draft; deletes the tag too, here and on GitHub
     ```
 
 ## Building the release locally
@@ -148,9 +173,11 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 ## リリースの手順
 
-このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git` と `gh`（最初に一度 `gh auth login`）、それに手順 5 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
+このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git`、`gh`（最初に一度 `gh auth login`）、`jq`、それに手順 6 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
 
 パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す 4 つの公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
+
+手で設定する値 `VERSIONS` を読むのは、手順 4 と「リリースの取り消し」にあるその再実行だけで、空なら実行を拒否します。ほかのブロックは必要なものを git と GitHub から求めるので、どれも新しいシェルで実行できます。
 
 ### 1. バージョンを決める
 
@@ -158,15 +185,25 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 ```bash
 git fetch origin --tags
-git tag --list '*-v*' --sort=-creatordate         # これまでのリリース。新しい順
-git log --oneline ssplayer-core-v7.0.0-beta.1..origin/main -- packages/ssplayer-core   # 初回リリースの前は origin/main だけ
-git diff --stat ssplayer-core-v7.0.0-beta.1 origin/main -- scripts/SDK_VERSION.txt   # 何か出たら、プレイヤーのリリースに ssplayer-core も含める
+for pkg in $(git ls-tree -r --name-only origin/main -- packages | sed -n 's|^packages/\([^/]*\)/CHANGELOG\.md$|\1|p'); do   # リリースで出せるパッケージすべて
+  prev=$(git -c versionsort.suffix=- tag --list "$pkg-v*" --sort=-v:refname | head -n 1)
+  echo "== $pkg, last released: ${prev:-never}"
+  git log --oneline ${prev:+"$prev.."}origin/main -- "packages/$pkg"
+done
+prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refname | head -n 1)
+[ -z "$prev" ] || git diff --stat "$prev" origin/main -- scripts/SDK_VERSION.txt   # 何か出たら、プレイヤーのリリースに ssplayer-core も含める
 ```
 
 run は、指定したかどうかに関わらず、現在のバージョンにまだ Release が無いパッケージをすべて出します。そのため初回のリリースでは、全パッケージをいま持っているバージョンのまま指定するか、`-f release_plugins=false` でプラグインを外します。
 
 ```text
 ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
+```
+
+決めたものを手順 4 のために書き留めます。
+
+```bash
+VERSIONS="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
 ```
 
 ### 2. changelog を書く
@@ -183,11 +220,23 @@ gh pr create -B main --fill
 gh pr merge release-notes --merge --delete-branch
 ```
 
-### 3. リリースを実行する
+### 3. サイトをビルドする
+
+`pages.yml` がサイトをビルドするのは Release を公開したときだけで、そのタグから作ります。再実行しても同じタグをビルドするだけなので、そこで docs やサンプルの不具合が見つかると、`main` で直してそこからデプロイするしかありません。そこで、リリースを切る `main` から、先にサイトをビルドしておきます。`scripts/build-pages.sh` は `pages.yml` が実行するスクリプトそのもので、SpriteStudio-SDK の submodule とネットワーク接続が要ります。失敗したら、手順 4 の前にプルリクエストで `main` を直します。
 
 ```bash
-gh workflow run release.yml --ref main -f versions="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"   # run の URL が出る。末尾が <run-id>
-gh run watch <run-id>
+git switch main && git pull --ff-only && git submodule update --init
+scripts/build-pages.sh                            # -> _site/。pages.yml がデプロイするサイト
+```
+
+### 4. リリースを実行する
+
+```bash
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
+sleep 10
+RUN=$(gh run list -w release.yml -e workflow_dispatch --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | last | .databaseId // empty")
+gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は空。最後の 2 行を繰り返す
 ```
 
 run はバージョンを書き込み、changelog の節に日付を入れ、パッケージの README と `examples/cdn` にあるバージョン固定のスニペットを追従させてコミットします。続けて `scripts/build-release.sh` ですべてをビルドして検査し、そのあとで初めてコミットを push し、リリースする各パッケージに `<package>-v<version>` のタグを打ち、Release の下書きを作ります。push より前に失敗すれば `main` は変わりません。run の途中で `main` が進んでいた場合も、push が拒否されるので同じです。終わったら、できたものを確かめます。
@@ -195,19 +244,18 @@ run はバージョンを書き込み、changelog の節に日付を入れ、パ
 ```bash
 git fetch origin --tags
 git log --oneline -1 origin/main                  # chore(release): <指定したバージョン>
-git tag --points-at origin/main                   # リリースしたパッケージごとに 1 つ
-gh release list --limit 10                        # その下書き
+gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'   # できた下書き
 ```
 
-`versions` を空にすると何も設定せず、まだリリースしていない現在のバージョンをすべて出します。失敗した run のやり直しがこれです。`-f release_plugins=false` でプラグインを外せます。`publish_npm` は npm の trusted publishing を設定するまでオフのままにし、それまでは手順 5 で手動で publish します。
+`-f release_plugins=false` でプラグインを外せます。`publish_npm` は npm の trusted publishing を設定するまでオフのままにし、それまでは手順 6 で手動で publish します。
 
-### 4. 下書きを確かめる
+### 5. 下書きを確かめる
 
 下書きには、パッケージのファイルと changelog へのリンクが入っています。npm に何か出す前に、ファイルを確かめます。それまでなら下書きを消せば取り消せますが（「リリースの取り消し」を参照）、出した後は新しいバージョンでしか直せません。
 
 ```bash
 dir=$(mktemp -d)
-for tag in ssplayer-core-v7.0.0-beta.2 ssplayer-webgl-v7.0.0-beta.2; do   # run が作った下書きすべて
+for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release download "$tag" -D "$dir/$tag"
 done
 ls -R "$dir"                                      # 1 つずつ。npm 用は .tgz、プラグインはアーカイブ
@@ -215,47 +263,49 @@ ls -R "$dir"                                      # 1 つずつ。npm 用は .tg
 
 npm の tarball の中身は `tar -tzf <file>.tgz`、プラグインのアーカイブの中身は `unzip -l <file>` で一覧できます。
 
-### 5. npm に publish する
+### 6. npm に publish する
 
-公開パッケージは、下書きに添付された tarball そのものを npm に出します。どの Release を公開するよりも先に行い、Release がバージョンを告知する時点で、`npm install` と README の CDN スニペットがそのバージョンを見つけられるようにします。依存の順に、`ssplayer-core` と `ssconverter-core`、続けて `ssplayer-webgl` と `ssplayer-pixi` の順で出し、依存先より先に npm に載るバージョンが無いようにします。`--tag` はプレリリースの語（`beta`）で、正式版では付けません。npm はパッケージごとに 2FA のコードを求めます。公開パッケージを含まないリリースでは、この手順は飛ばします。
+**この手順は人が行います。** `npm login` と、publish のたびに 2FA のコードを求められるためです。公開パッケージは、下書きに添付された tarball そのものを npm に出します。どの Release を公開するよりも先に行い、Release がバージョンを告知する時点で、`npm install` と README の CDN スニペットがそのバージョンを見つけられるようにします。ループは依存の順に進み、最初の失敗で止まるので、依存先より先に npm に載るバージョンはありません。dist-tag はバージョンから決めます。プレリリースならその語（`beta`）、正式版なら `latest` です。公開パッケージを含まないリリースでは、ここで publish するものはありません。
 
 ```bash
 npm login                                         # 最初に一度
 dir=$(mktemp -d)
-for tag in ssplayer-core-v7.0.0-beta.2 ssplayer-webgl-v7.0.0-beta.2; do   # リリースした公開パッケージ。依存先から
+drafts=$(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName')
+for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # 依存先から
+  tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
+  [ -n "$tag" ] || continue
+  version=${tag#"$pkg-v"}
+  case "$version" in *-*) dist=${version#*-}; dist=${dist%%.*} ;; *) dist=latest ;; esac
   gh release download "$tag" -p '*.tgz' -D "$dir/$tag"
-  npm publish "$dir/$tag"/*.tgz --tag beta --access public
+  npm publish "$dir/$tag"/*.tgz --tag "$dist" --access public || break
+  npm view "@spritestudio/$pkg" dist-tags
 done
-npm view @spritestudio/ssplayer-core dist-tags    # beta: いま出したバージョン
 ```
 
-### 6. Release を公開する
+### 7. Release を公開する
 
-下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。1 つずつ公開します。下のコマンドでも、[Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) ページの **Publish release** でも構いません。
+下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのはいちばん新しい run です。
 
 ```bash
-for tag in ssplayer-core-v7.0.0-beta.2 ssplayer-webgl-v7.0.0-beta.2; do
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
+sleep 10
+RUN=$(gh run list -w pages.yml -e release --json databaseId,createdAt -q "map(select(.createdAt >= \"$since\")) | first | .databaseId // empty")
+gh run watch "${RUN:?}" --exit-status             # run が出るまで RUN は空。最後の 2 行を繰り返す
 ```
 
-公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されます。いちばん新しい run を最後まで見届けてから、サイトを開いて確かめます。
-
-```bash
-gh run list --workflow pages.yml --limit 3        # いちばん新しいものを見る
-gh run watch <run-id>
-```
-
-run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、`gh run rerun <run-id>` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
+終わったら、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、`gh run rerun "$RUN"` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
 
 ## リリースの取り消し
 
 **npm のバージョンは恒久的です。** 取り下げられず、新しいバージョンで置き換えるしかありません。公開した Release も同じで、利用者はそのタグでファイルを取得しています。どちらかの後に見つかった不具合は、新しいバージョンで直します。それより前なら次のとおりです。
 
-*   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直します。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
+*   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直し、手順 4 と同じように見届けます。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
 
     ```bash
-    gh workflow run release.yml --ref main -f versions="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
+    gh workflow run release.yml --ref main -f versions="${VERSIONS:?}"
     ```
 
 *   push の後に失敗した run は、ほかの変更が `main` にマージされる前に、`versions` を空にして実行し直します。やり直しはその時点の `main` をビルドし、push 済みのタグはそのまま使い、まだ無い Release の下書きを作ります。
@@ -267,7 +317,7 @@ run が失敗してもサイトは元のまま残ります。原因がリポジ�
 *   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれます。
 
     ```bash
-    gh release delete ssplayer-core-v7.0.0-beta.2 --cleanup-tag --yes   # タグも手元と GitHub の両方から消える
+    gh release delete <tag> --cleanup-tag --yes       # 下書きごとに 1 回。タグも手元と GitHub の両方から消える
     ```
 
 ## リリースのローカルビルド
