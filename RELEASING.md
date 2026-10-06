@@ -8,7 +8,7 @@ Anyone with the Write role on this repository can cut a release: it is one run o
 
 Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the four public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
 
-Only step 4 and its retry under [Undoing a release](#undoing-a-release) read a value set by hand, `VERSIONS`, and they refuse one that is empty. Every other block works out what it needs from git and GitHub, so each can run in a new shell.
+Every block runs as written in a new shell: it works out what it needs from git and GitHub. One value is set by hand, written as a placeholder to fill in: `<versions>`, the pairs from step 1 in quotes, in step 4 and its retry under [Undoing a release](#undoing-a-release). A block that acts on a draft or a staged version takes it as `<tag>` or `<stage-id>` the same way. Left as it is, a placeholder stops its line with a syntax error, and a list left unquoted leaves `VERSIONS` unset, which the dispatch refuses: an empty `versions` is the retry of whatever is not yet released.
 
 ### 1. Decide the versions
 
@@ -31,11 +31,7 @@ A run releases every package whose current version has no Release yet, named or 
 ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
 ```
 
-Write the decision down for step 4:
-
-```bash
-VERSIONS="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
-```
+Step 4 takes the decision in place of its `<versions>`, in quotes, as in `"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"`.
 
 ### 2. Write the changelog
 
@@ -63,6 +59,7 @@ scripts/build-pages.sh                            # -> _site/, the site pages.ym
 ### 4. Run the release
 
 ```bash
+VERSIONS=<versions>                               # the pairs from step 1, in quotes
 RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
 gh run watch "${RUN:?}" --exit-status
 ```
@@ -150,6 +147,7 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 *   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`. The **Re-run** button would replay the old commit, and its push would be rejected.
 
     ```bash
+    VERSIONS=<versions>                               # the pairs from step 1, in quotes
     RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
     gh run watch "${RUN:?}" --exit-status
     ```
@@ -164,7 +162,7 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 *   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — and reject what the run staged for them. Merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main` and stages them again.
 
     ```bash
-    gh release delete <tag> --cleanup-tag --yes       # once per draft; deletes the tag on GitHub
+    gh release delete --cleanup-tag --yes <tag>       # once per draft; deletes the tag on GitHub
     git tag -d <tag>                                  # and here, or the next fetch refuses the re-tag
     npm stage reject <stage-id>                       # once per staged version; a person, with 2FA
     ```
@@ -195,7 +193,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す 4 つの公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
 
-手で設定する値 `VERSIONS` を読むのは、手順 4 と「リリースの取り消し」にあるその再実行だけで、空なら実行を拒否します。ほかのブロックは必要なものを git と GitHub から求めるので、どれも新しいシェルで実行できます。
+どのブロックも、新しいシェルで書かれたとおりに実行できます。必要なものは git と GitHub から求めます。手で設定する値は 1 つで、埋めるプレースホルダとして書いてあります。手順 4 と「リリースの取り消し」にあるその再実行の `<versions>` で、手順 1 で決めた組を引用符で囲んで入れます。下書きや stage したバージョンに対して操作するブロックも、それを `<tag>` や `<stage-id>` で受け取ります。埋めずに実行すると、その行は構文エラーで止まります。組を引用符で囲み忘れると `VERSIONS` は設定されず、dispatch はそれを拒否します。空の `versions` は、まだリリースしていないものすべての再実行になるためです。
 
 ### 1. バージョンを決める
 
@@ -218,11 +216,7 @@ run は、指定したかどうかに関わらず、現在のバージョンに�
 ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
 ```
 
-決めたものを手順 4 のために書き留めます。
-
-```bash
-VERSIONS="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
-```
+手順 4 は、決めた組を引用符で囲んで `<versions>` の位置に受け取ります（`"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"` など）。
 
 ### 2. changelog を書く
 
@@ -250,6 +244,7 @@ scripts/build-pages.sh                            # -> _site/。pages.yml がデ
 ### 4. リリースを実行する
 
 ```bash
+VERSIONS=<versions>                               # 手順 1 の組を引用符で囲む
 RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
 gh run watch "${RUN:?}" --exit-status
 ```
@@ -337,6 +332,7 @@ gh run watch "${RUN:?}" --exit-status
 *   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直します。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
 
     ```bash
+    VERSIONS=<versions>                               # 手順 1 の組を引用符で囲む
     RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
     gh run watch "${RUN:?}" --exit-status
     ```
@@ -351,7 +347,7 @@ gh run watch "${RUN:?}" --exit-status
 *   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、run がそれらについて stage したものを取り下げます。修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれ、もう一度 stage されます。
 
     ```bash
-    gh release delete <tag> --cleanup-tag --yes       # 下書きごとに 1 回。GitHub のタグを消す
+    gh release delete --cleanup-tag --yes <tag>       # 下書きごとに 1 回。GitHub のタグを消す
     git tag -d <tag>                                  # 手元のタグも消す。残すと次の fetch が打ち直したタグを拒む
     npm stage reject <stage-id>                       # stage されたバージョンごとに 1 回。人が 2FA で行う
     ```
