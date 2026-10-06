@@ -4,16 +4,19 @@
 //   node scripts/set-versions.mjs ssplayer-core@7.0.0-beta.2
 //   node scripts/set-versions.mjs ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2
 //
-// Each argument is <directory under packages/>@<version>. Only the "version"
-// field of that package.json changes, in place, so the rest of the file stays as
-// it was. release.yml runs this with its `versions` input and then
-// sync-doc-versions.mjs; run the same two locally to see what a release would
-// build, and `git checkout -- .` to put the tree back.
+// Each argument is <directory under packages/>@<version>. Two files of that
+// package change, in place: the "version" field of its package.json, and its
+// CHANGELOG.md, whose `## [Unreleased]` notes become `## [<version>] - <date>`
+// under a fresh, empty `## [Unreleased]`. release.yml runs this with its
+// `versions` input and then sync-doc-versions.mjs; run the same two locally to
+// see what a release would build, and `git checkout -- .` to put the tree back.
 //
 // Packages are versioned independently, so a version moves only when it is named
-// here. Every argument is checked before any file is written, and a version may
-// not go backwards: npm takes any version it has not seen, and one published by
-// mistake can never be withdrawn.
+// here. Every argument is checked before any file is written. A version may not
+// go backwards: npm takes any version it has not seen, and one published by
+// mistake can never be withdrawn. A version the CHANGELOG already has a heading
+// for is released, and nothing under `## [Unreleased]` leaves a release with no
+// notes. Naming the version a package already has cuts its first release.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -61,6 +64,7 @@ if (args.length === 0) {
   process.exit(2);
 }
 
+const today = new Date().toISOString().slice(0, 10);
 const plan = [];
 const errors = [];
 const seen = new Set();
@@ -91,19 +95,43 @@ for (const arg of args) {
     continue;
   }
   const order = compare(want, have);
-  if (order === 0) {
-    errors.push(`${dir}: already ${current}`);
-  } else if (order < 0) {
+  if (order < 0) {
     errors.push(`${dir}: ${version} is lower than its current ${current}`);
-  } else {
+    continue;
+  }
+  let next = null;
+  if (order > 0) {
     const escaped = current.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const next = text.replace(new RegExp(`("version"\\s*:\\s*")${escaped}(")`), `$1${version}$2`);
+    next = text.replace(new RegExp(`("version"\\s*:\\s*")${escaped}(")`), `$1${version}$2`);
     if (JSON.stringify({ ...JSON.parse(text), version }) !== JSON.stringify(JSON.parse(next))) {
       errors.push(`${dir}: "version" could not be changed alone in its package.json -- set it by hand`);
-    } else {
-      plan.push({ dir, path, next, current, version });
+      continue;
     }
   }
+
+  const logPath = join(ROOT, 'packages', dir, 'CHANGELOG.md');
+  if (!existsSync(logPath)) {
+    errors.push(`${dir}: there is no packages/${dir}/CHANGELOG.md`);
+    continue;
+  }
+  const lines = readFileSync(logPath, 'utf8').split('\n');
+  if (lines.some((l) => l.startsWith(`## [${version}]`))) {
+    errors.push(`${dir}: ${version} is already released -- its CHANGELOG.md has a heading for it`);
+    continue;
+  }
+  const top = lines.findIndex((l) => l.trimEnd() === '## [Unreleased]');
+  if (top < 0) {
+    errors.push(`${dir}: its CHANGELOG.md has no '## [Unreleased]' heading`);
+    continue;
+  }
+  const end = lines.findIndex((l, i) => i > top && l.startsWith('## '));
+  const notes = lines.slice(top + 1, end < 0 ? lines.length : end);
+  if (!notes.some((l) => l.trim() !== '' && !l.startsWith('#'))) {
+    errors.push(`${dir}: nothing under '## [Unreleased]' in its CHANGELOG.md -- write what ${version} gains first`);
+    continue;
+  }
+  lines.splice(top, 1, '## [Unreleased]', '', `## [${version}] - ${today}`);
+  plan.push({ dir, path, next, current, version, logPath, log: lines.join('\n') });
 }
 
 if (errors.length > 0) {
@@ -113,6 +141,7 @@ if (errors.length > 0) {
 }
 
 for (const p of plan) {
-  writeFileSync(p.path, p.next);
-  console.log(`${p.dir}: ${p.current} -> ${p.version}`);
+  if (p.next !== null) writeFileSync(p.path, p.next);
+  writeFileSync(p.logPath, p.log);
+  console.log(p.next !== null ? `${p.dir}: ${p.current} -> ${p.version}` : `${p.dir}: ${p.version}`);
 }

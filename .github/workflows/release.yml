@@ -6,13 +6,18 @@ name: Release
 #
 #   versions          `<package>@<version>` pairs separated by spaces, <package>
 #                     being the directory under packages/. scripts/set-versions.mjs
-#                     writes them and sync-doc-versions.mjs repoints the
-#                     version-pinned docs snippets, in one commit that reaches main
-#                     only once the build below has passed. Empty sets nothing and
-#                     releases whatever current version is not released yet: the
-#                     first release, and the retry after a run that died halfway.
+#                     writes them and turns each package's `## [Unreleased]` notes
+#                     into that version's CHANGELOG.md section, and
+#                     sync-doc-versions.mjs repoints the version-pinned docs
+#                     snippets, in one commit that reaches main only once the build
+#                     below has passed. Empty sets nothing and releases whatever
+#                     current version is not released yet: the retry after a run
+#                     that died halfway.
 #
-#   publish_npm       Each PUBLIC package's tarball -- the very file
+#   publish_npm       Off by default: until npm trusted publishing replaces the
+#                     token, a maintainer publishes each public package by hand
+#                     from the tarball on its Release (RELEASING.md). On, each
+#                     PUBLIC package's tarball -- the very file
 #                     scripts/build-release.sh packed and checked -- goes to npm,
 #                     unless npm already has that version. A version with a
 #                     prerelease part (X.Y.Z-beta.N) goes under that word's
@@ -28,14 +33,14 @@ name: Release
 #
 # Every package released here gets a `<package>-v<version>` tag and a DRAFT
 # GitHub Release carrying its file -- the npm tarball, or the plugin's archive --
-# and notes generated from the pull requests since its previous tag.
+# and a link to its CHANGELOG.md, which is where the notes are.
 # A package whose Release already exists, draft or not, is skipped, so a re-run
-# never doubles one. A maintainer edits each draft and publishes it, and
+# never doubles one. A maintainer checks each draft and publishes it, and
 # publishing is what starts pages.yml.
 #
-# Requires the SS_NPM_TOKEN secret: an npm Granular Access Token with read and
-# write access to the packages and Bypass 2FA turned on. That is off by default,
-# and without it the publish asks for a 2FA code CI cannot give.
+# publish_npm needs the SS_NPM_TOKEN secret: an npm Granular Access Token with
+# read and write access to the packages and Bypass 2FA turned on, which npm
+# leaves off; without it the publish asks for a 2FA code CI cannot give.
 on:
   workflow_dispatch:
     inputs:
@@ -46,7 +51,7 @@ on:
       publish_npm:
         description: 'Publish the public packages to npm (their Releases are drafted either way)'
         type: boolean
-        default: true
+        default: false
       release_plugins:
         description: 'Draft the Releases of the private plugins (rmmz / tyranoscript / tyranobuilder)'
         type: boolean
@@ -113,6 +118,27 @@ jobs:
       - name: Build, test and check the release
         run: ./scripts/build-release.sh skip=install sdk=download out=release-dist verify=yes clean=yes
 
+      # A Release carries a link to its package's CHANGELOG.md and no notes of
+      # its own, so a version without a section there would go out with nothing
+      # to say. set-versions.mjs writes the section for the versions it sets; a
+      # run with `versions` empty releases what main already carries, and this is
+      # where a version nobody wrote notes for stops.
+      - name: Check the changelogs
+        env:
+          RELEASE_PLUGINS: ${{ inputs.release_plugins }}
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS=$'\t' read -r dir version; do
+            if ! awk -v h="## [${version}] - " 'index($0, h) == 1 { found = 1 } END { exit !found }' "packages/${dir}/CHANGELOG.md" 2>/dev/null; then
+              echo "::error::packages/${dir}/CHANGELOG.md has no '## [${version}]' section."
+              status=1
+            fi
+          done < <(jq -r --arg plugins "$RELEASE_PLUGINS" '
+            (.npm[]), (if $plugins == "true" then .plugins[] else empty end)
+            | [.dir, .version] | @tsv' release-dist/manifest.json)
+          exit "$status"
+
       # A main that moved during the run rejects this push, and the run stops
       # before anything is published.
       - name: Push the version commit
@@ -168,17 +194,14 @@ jobs:
               echo "::notice::${tag} already has a Release — skipping."
               continue
             fi
-            # The notes start at this package's previous tag. A prerelease sorts
-            # below its full release, so 7.0.1 starts at 7.0.0, not at 7.0.0-beta.N.
-            previous="$(git -c versionsort.suffix=- tag --list "${dir}-v*" --sort=-v:refname | grep -vx "$tag" | head -n 1 || true)"
             # A run that tagged and then died left the tag behind; it is reused.
             if ! git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
               git tag -a "$tag" -m "$tag" "$sha"
               git push origin "refs/tags/${tag}"
             fi
-            args=(--verify-tag --title "${name} ${version}" --generate-notes --draft)
-            if [ -n "$previous" ]; then args+=(--notes-start-tag "$previous"); fi
+            notes="See [CHANGELOG.md](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${tag}/packages/${dir}/CHANGELOG.md) for what changed."
+            args=(--verify-tag --title "${name} ${version}" --notes "$notes" --draft)
             case "$version" in *-*) args+=(--prerelease) ;; esac
             gh release create "$tag" "release-dist/${file}" "${args[@]}"
-            echo "::notice::Drafted ${tag} — edit its notes and publish it from the Releases page."
+            echo "::notice::Drafted ${tag} — check it and publish it from the Releases page."
           done <<< "$rows"

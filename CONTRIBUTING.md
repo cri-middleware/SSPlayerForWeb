@@ -64,8 +64,8 @@ There is **no `develop` branch here** — and that's intentional. Packages are
 versioned **independently**, so there is no single "promote develop → main = the
 release" moment that a Git-Flow `develop` branch would model; a release is a
 maintainer running the **Release** workflow on `main` and naming the versions it
-sets. A pull request carries no version and no release note: both are decided when
-the release is cut. Note this differs from other SpriteStudio repositories (e.g. the
+sets. A pull request carries no version and no changelog entry: a maintainer writes
+both when the release is cut. Note this differs from other SpriteStudio repositories (e.g. the
 lockstep-versioned SDK, which uses a `develop` branch): the branch model follows
 the versioning model, not the other way around.
 
@@ -230,7 +230,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 ### ブランチとリリース
 本リポジトリは **トランクベース** です。`main` が唯一の長寿命ブランチで、常にリリース可能な状態を保ちます。通常は `main` から短命の作業ブランチを切ってください。`.ssab` スキーマ改修のような大規模・長期の作業は、`main` を汚さないよう長寿命の `epic/*` ブランチで進め、まとまった段階で `main` へマージします。
 
-**`develop` ブランチは設けていません**（意図的です）。パッケージは**独立にバージョニング**しており、Git-Flow の `develop` が表す「develop→main 昇格＝リリース」という単一の瞬間が存在しません。リリースは、メンテナが設定するバージョンを指定して `main` 上で **Release ワークフローを実行すること**そのものです。プルリクエストはバージョンもリリースノートも持ちません。どちらもリリースのときに決めます。この点は他の SpriteStudio リポジトリ（例: lockstep でバージョンを統一し `develop` 運用の SDK）とは異なります — **ブランチモデルはバージョニングモデルに従う**、という方針です。
+**`develop` ブランチは設けていません**（意図的です）。パッケージは**独立にバージョニング**しており、Git-Flow の `develop` が表す「develop→main 昇格＝リリース」という単一の瞬間が存在しません。リリースは、メンテナが設定するバージョンを指定して `main` 上で **Release ワークフローを実行すること**そのものです。プルリクエストはバージョンも changelog の項目も持ちません。どちらもリリースのときにメンテナが書きます。この点は他の SpriteStudio リポジトリ（例: lockstep でバージョンを統一し `develop` 運用の SDK）とは異なります — **ブランチモデルはバージョニングモデルに従う**、という方針です。
 
 このワークフローの実行と、それに先立つ事前確認はメンテナーの作業です（[RELEASING.md](./RELEASING.md) を参照）。
 
