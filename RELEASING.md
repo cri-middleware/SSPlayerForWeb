@@ -121,18 +121,27 @@ done
 
 ### 7. Publish the Releases
 
-Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the last Release's.
+Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples.
 
 ```bash
-tag=
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
-RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
-gh run watch "${RUN:?}" --exit-status             # RUN is empty for the few seconds before the run appears
 ```
 
-Then open the site. A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun "$RUN"`; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
+Then watch the deploy. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the one for the Release published last. The block finds that Release itself, and waits up to a minute for its run, which appears a few seconds after it.
+
+```bash
+tag=$(gh release list --json tagName,publishedAt,isDraft -q '[.[] | select(.isDraft | not)] | sort_by(.publishedAt) | last | .tagName')
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
+  [ -n "$RUN" ] && break
+  sleep 5
+done
+gh run watch "${RUN:?}" --exit-status
+```
+
+Then open the site. A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun <run-id>`, the run the block watched; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
 
 ## Undoing a release
 
@@ -299,18 +308,27 @@ done
 
 ### 7. Release を公開する
 
-下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。
+下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。
 
 ```bash
-tag=
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
-RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
-gh run watch "${RUN:?}" --exit-status             # run が一覧に出るまでの数秒間は RUN が空になる
 ```
 
-終わったら、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、`gh run rerun "$RUN"` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
+続けてデプロイを見届けます。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。ブロックはその Release を自分で探し、run が一覧に出るまで最大 1 分待ちます。run は Release の公開から数秒遅れて出るためです。
+
+```bash
+tag=$(gh release list --json tagName,publishedAt,isDraft -q '[.[] | select(.isDraft | not)] | sort_by(.publishedAt) | last | .tagName')
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
+  [ -n "$RUN" ] && break
+  sleep 5
+done
+gh run watch "${RUN:?}" --exit-status
+```
+
+終わったら、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、ブロックが見届けた run を `gh run rerun <run-id>` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
 
 ## リリースの取り消し
 
