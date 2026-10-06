@@ -155,7 +155,8 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 *   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — and reject what the run staged for them. Merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main` and stages them again.
 
     ```bash
-    gh release delete <tag> --cleanup-tag --yes       # once per draft; deletes the tag too, here and on GitHub
+    gh release delete <tag> --cleanup-tag --yes       # once per draft; deletes the tag on GitHub
+    git tag -d <tag>                                  # and here, or the next fetch refuses the re-tag
     npm stage reject <stage-id>                       # once per staged version; a person, with 2FA
     ```
 
@@ -332,7 +333,8 @@ gh run watch "${RUN:?}" --exit-status             # run が一覧に出るまで
 *   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、run がそれらについて stage したものを取り下げます。修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれ、もう一度 stage されます。
 
     ```bash
-    gh release delete <tag> --cleanup-tag --yes       # 下書きごとに 1 回。タグも手元と GitHub の両方から消える
+    gh release delete <tag> --cleanup-tag --yes       # 下書きごとに 1 回。GitHub のタグを消す
+    git tag -d <tag>                                  # 手元のタグも消す。残すと次の fetch が打ち直したタグを拒む
     npm stage reject <stage-id>                       # stage されたバージョンごとに 1 回。人が 2FA で行う
     ```
 
