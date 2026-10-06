@@ -14,18 +14,20 @@ name: Release
 #                     current version is not released yet: the retry after a run
 #                     that died halfway.
 #
-#   publish_npm       Off by default: until npm trusted publishing replaces the
-#                     token, a maintainer publishes each public package by hand
-#                     from the tarball on its Release (RELEASING.md). On, each
-#                     PUBLIC package's tarball -- the very file
-#                     scripts/build-release.sh packed and checked -- goes to npm,
-#                     unless npm already has that version. A version with a
-#                     prerelease part (X.Y.Z-beta.N) goes under that word's
-#                     dist-tag, so `latest` stays on the last full release and a
-#                     consumer asks for `<pkg>@beta` meanwhile. Off, the public
-#                     packages still get their Releases, tarball attached, which is
-#                     how they ship before npm can take them; a later run with
-#                     `versions` empty publishes them there.
+#   publish_npm       Each PUBLIC package's tarball -- the very file
+#                     scripts/build-release.sh packed and checked -- is staged on
+#                     npm through trusted publishing, unless npm already has that
+#                     version, staged or published. Nothing is public until a
+#                     maintainer approves it with 2FA, on npmjs.com or with
+#                     `npm stage approve`. A version with a prerelease part
+#                     (X.Y.Z-beta.N) is staged under that word's dist-tag, so
+#                     `latest` stays on the last full release and a consumer asks
+#                     for `<pkg>@beta` meanwhile. Off, the public packages still
+#                     get their Releases, tarball attached. That is how a
+#                     package's first version ships: npm sets up a trusted
+#                     publisher only for a package it already has, so a
+#                     maintainer publishes that version by hand from the tarball
+#                     (RELEASING.md).
 #
 #   release_plugins   The PRIVATE plugins (ssplayer-rmmz / ssplayer-tyranoscript /
 #                     ssplayer-tyranobuilder) are never on npm; their Release, with
@@ -38,9 +40,9 @@ name: Release
 # never doubles one. A maintainer checks each draft and publishes it, and
 # publishing is what starts pages.yml.
 #
-# publish_npm needs the SS_NPM_TOKEN secret: an npm Granular Access Token with
-# read and write access to the packages and Bypass 2FA turned on, which npm
-# leaves off; without it the publish asks for a 2FA code CI cannot give.
+# Staging needs no secret. Each public package on npm has a trusted publisher
+# for this repository and this workflow file, allowed to stage, and the job's
+# id-token is what npm trusts.
 on:
   workflow_dispatch:
     inputs:
@@ -49,9 +51,9 @@ on:
         type: string
         default: ''
       publish_npm:
-        description: 'Publish the public packages to npm (their Releases are drafted either way)'
+        description: 'Stage the public packages on npm, for a maintainer to approve (their Releases are drafted either way)'
         type: boolean
-        default: false
+        default: true
       release_plugins:
         description: 'Draft the Releases of the private plugins (rmmz / tyranoscript / tyranobuilder)'
         type: boolean
@@ -64,7 +66,7 @@ concurrency:
 
 permissions:
   contents: write # the version commit, the tags and the Releases
-  id-token: write # npm provenance (see NPM_CONFIG_PROVENANCE below)
+  id-token: write # trusted publishing on npm
 
 jobs:
   release:
@@ -145,30 +147,6 @@ jobs:
         if: inputs.versions != ''
         run: git push origin HEAD:main
 
-      - name: Publish to npm
-        if: inputs.publish_npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.SS_NPM_TOKEN }}
-          # npm provenance attestation needs a PUBLIC repository (plus the
-          # id-token: write permission above, which is already granted). This
-          # repo is still private, and npm rejects the publish outright rather
-          # than degrading, so provenance stays off. Flip to 'true' the moment
-          # the repo goes public — nothing else has to change.
-          NPM_CONFIG_PROVENANCE: 'false'
-        run: |
-          set -euo pipefail
-          while IFS=$'\t' read -r name version file; do
-            if [ -n "$(npm view "${name}@${version}" version 2>/dev/null || true)" ]; then
-              echo "::notice::${name}@${version} is already on npm — skipping."
-              continue
-            fi
-            case "$version" in
-              *-*) dist_tag="${version#*-}"; dist_tag="${dist_tag%%.*}" ;;
-              *)   dist_tag="latest" ;;
-            esac
-            npm publish "release-dist/${file}" --tag "$dist_tag" --access public
-          done < <(jq -r '.npm[] | [.package, .version, .file] | @tsv' release-dist/manifest.json)
-
       - name: Tag and draft the Releases
         env:
           GH_TOKEN: ${{ github.token }}
@@ -205,3 +183,38 @@ jobs:
             gh release create "$tag" "release-dist/${file}" "${args[@]}"
             echo "::notice::Drafted ${tag} — check it and publish it from the Releases page."
           done <<< "$rows"
+
+      # npm 11.21 is the first CLI that sets a dist-tag through trusted
+      # publishing, and Node 22 ships npm 10.
+      - name: Update npm
+        if: inputs.publish_npm
+        run: npm install -g npm@11.21.0
+
+      # Last, so that a failure here leaves the tags and the drafts in place, for
+      # a re-run with `versions` empty or a maintainer to finish. npm lists a
+      # staged version only once it is approved, so staging one again is refused
+      # with a 409, which is skipped like a version npm already has.
+      - name: Stage on npm
+        if: inputs.publish_npm
+        run: |
+          set -euo pipefail
+          while IFS=$'\t' read -r name version file; do
+            if [ -n "$(npm view "${name}@${version}" version 2>/dev/null || true)" ]; then
+              echo "::notice::${name}@${version} is already on npm — skipping."
+              continue
+            fi
+            case "$version" in
+              *-*) dist_tag="${version#*-}"; dist_tag="${dist_tag%%.*}" ;;
+              *)   dist_tag="latest" ;;
+            esac
+            if ! out="$(npm stage publish "release-dist/${file}" --tag "$dist_tag" --access public 2>&1)"; then
+              echo "$out"
+              if grep -qE "409 Conflict.*previously (published|staged) version \"${version}\"" <<< "$out"; then
+                echo "::notice::${name}@${version} is already staged — skipping."
+                continue
+              fi
+              exit 1
+            fi
+            echo "$out"
+            echo "::notice::Staged ${name}@${version} under '${dist_tag}' — approve it on npmjs.com or with npm stage approve."
+          done < <(jq -r '.npm[] | [.package, .version, .file] | @tsv' release-dist/manifest.json)
