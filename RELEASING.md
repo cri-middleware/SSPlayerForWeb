@@ -10,6 +10,8 @@ Packages are versioned independently, and a release names the versions it sets, 
 
 Every block runs as written in a new shell: it works out what it needs from git and GitHub. One value is set by hand, written as a placeholder to fill in: `<versions>`, the pairs from step 1 in quotes, in step 4 and its retry under [Undoing a release](#undoing-a-release). A block that acts on a draft or a staged version takes it as `<tag>` or `<stage-id>` the same way. Left as it is, a placeholder stops its line with a syntax error, and a list left unquoted leaves `VERSIONS` unset, which the dispatch refuses: an empty `versions` is the retry of whatever is not yet released.
 
+An agent can run every block. A person decides two steps — the merge in step 2, which puts the notes on `main`, and step 7, which publishes the Releases for good — and runs step 6, which asks for a 2FA code.
+
 ### 1. Decide the versions
 
 Look at what each package gained since its previous tag. A package that depends on another through `workspace:^` needs a release of its own only when it needs what the other added. One dependency is stricter than that: `ssplayer-webgl` and `ssplayer-pixi` build `ssplayer-core`'s wasm glue into their CDN bundles, while the CDN snippets load the runtime itself from `ssplayer-core`'s version, and the two work only as a pair. So once `scripts/SDK_VERSION.txt` names another SDK than it did at `ssplayer-core`'s tag, releasing either player means releasing `ssplayer-core` too, and `scripts/build-release.sh` stops the run otherwise. A version with a prerelease part (`7.0.0-beta.2`) goes to npm under that word's dist-tag (`beta`), and only a full release moves `latest`.
@@ -44,6 +46,11 @@ git add packages/*/CHANGELOG.md THIRD_PARTY_NOTICES.md
 git commit -m "docs: changelog for the next release"
 git push -u origin release-notes
 gh pr create -B main --fill
+```
+
+**A person runs the merge**, which puts the notes on `main`: choose **Create a merge commit** on the pull request's page, or run
+
+```bash
 gh pr merge release-notes --merge --delete-branch
 ```
 
@@ -118,7 +125,7 @@ done
 
 ### 7. Publish the Releases
 
-Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples.
+**A person publishes the Releases**: a published Release is permanent. Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples.
 
 ```bash
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
@@ -195,6 +202,8 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 どのブロックも、新しいシェルで書かれたとおりに実行できます。必要なものは git と GitHub から求めます。手で設定する値は 1 つで、埋めるプレースホルダとして書いてあります。手順 4 と「リリースの取り消し」にあるその再実行の `<versions>` で、手順 1 で決めた組を引用符で囲んで入れます。下書きや stage したバージョンに対して操作するブロックも、それを `<tag>` や `<stage-id>` で受け取ります。埋めずに実行すると、その行は構文エラーで止まります。組を引用符で囲み忘れると `VERSIONS` は設定されず、dispatch はそれを拒否します。空の `versions` は、まだリリースしていないものすべての再実行になるためです。
 
+どのブロックもエージェントに実行させられます。2 つの手順は人が判断します。ノートを `main` に入れる手順 2 のマージと、取り消せない公開を行う手順 7 です。2FA のコードを求められる手順 6 も人が行います。
+
 ### 1. バージョンを決める
 
 各パッケージが前回のタグから何を得たかを見ます。`workspace:^` で別のパッケージに依存するパッケージは、相手が足したものを必要とするときだけ自分もリリースします。ただし 1 か所だけ、これより厳しい依存があります。`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を組み込み、CDN スニペットはランタイム本体を `ssplayer-core` の版から読み込みます。この 2 つは対でしか動きません。そのため `scripts/SDK_VERSION.txt` の SDK が `ssplayer-core` のタグの時点と変わっていれば、どちらかのプレイヤーをリリースするときは `ssplayer-core` もリリースします。そうしないと `scripts/build-release.sh` が実行を止めます。プレリリース部分のあるバージョン（`7.0.0-beta.2`）は、その語の dist-tag（`beta`）で npm に出ます。`latest` を動かすのは正式版だけです。
@@ -229,6 +238,11 @@ git add packages/*/CHANGELOG.md THIRD_PARTY_NOTICES.md
 git commit -m "docs: changelog for the next release"
 git push -u origin release-notes
 gh pr create -B main --fill
+```
+
+**マージは人が行います。** ノートが `main` に入るためです。プルリクエストのページで **Create a merge commit** を選ぶか、次を実行します。
+
+```bash
 gh pr merge release-notes --merge --delete-branch
 ```
 
@@ -303,7 +317,7 @@ done
 
 ### 7. Release を公開する
 
-下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。
+**Release の公開は人が行います。** 公開した Release は取り消せないためです。下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。
 
 ```bash
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
