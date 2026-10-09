@@ -8,7 +8,9 @@ Anyone with the Write role on this repository can cut a release: it is one run o
 
 Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the four public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
 
-Only step 4 and its retry under [Undoing a release](#undoing-a-release) read a value set by hand, `VERSIONS`, and they refuse one that is empty. Every other block works out what it needs from git and GitHub, so each can run in a new shell.
+Every block runs as written in a new shell: it works out what it needs from git and GitHub. One value is set by hand, written as a placeholder to fill in: `<versions>`, the pairs from step 1 in quotes, in step 4 and its retry under [Undoing a release](#undoing-a-release). A block that acts on a draft or a staged version takes it as `<tag>` or `<stage-id>` the same way. Left as it is, a placeholder stops its line with a syntax error, and a list left unquoted leaves `VERSIONS` unset, which the dispatch refuses: an empty `versions` is the retry of whatever is not yet released.
+
+An agent can run every block. A person decides two steps — the merge in step 2, which puts the notes on `main`, and step 7, which publishes the Releases for good — and runs step 6, which asks for a 2FA code.
 
 ### 1. Decide the versions
 
@@ -31,11 +33,7 @@ A run releases every package whose current version has no Release yet, named or 
 ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
 ```
 
-Write the decision down for step 4:
-
-```bash
-VERSIONS="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
-```
+Step 4 takes the decision in place of its `<versions>`, in quotes, as in `"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"`.
 
 ### 2. Write the changelog
 
@@ -48,6 +46,11 @@ git add packages/*/CHANGELOG.md THIRD_PARTY_NOTICES.md
 git commit -m "docs: changelog for the next release"
 git push -u origin release-notes
 gh pr create -B main --fill
+```
+
+**A person runs the merge**, which puts the notes on `main`: choose **Create a merge commit** on the pull request's page, or run
+
+```bash
 gh pr merge release-notes --merge --delete-branch
 ```
 
@@ -63,6 +66,7 @@ scripts/build-pages.sh                            # -> _site/, the site pages.ym
 ### 4. Run the release
 
 ```bash
+VERSIONS=<versions>                               # the pairs from step 1, in quotes
 RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
 gh run watch "${RUN:?}" --exit-status
 ```
@@ -121,18 +125,27 @@ done
 
 ### 7. Publish the Releases
 
-Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the last Release's.
+**A person publishes the Releases**: a published Release is permanent. Nothing on a draft needs writing, and a version with a `-` is already marked as a pre-release. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples.
 
 ```bash
-tag=
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
-RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
-gh run watch "${RUN:?}" --exit-status             # RUN is empty for the few seconds before the run appears
 ```
 
-Then open the site. A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun "$RUN"`; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
+Then watch the deploy. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the one for the Release published last. The block finds that Release itself, and waits up to a minute for its run, which appears a few seconds after it.
+
+```bash
+tag=$(gh release list --json tagName,publishedAt,isDraft -q '[.[] | select(.isDraft | not)] | sort_by(.publishedAt) | last | .tagName')
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
+  [ -n "$RUN" ] && break
+  sleep 5
+done
+gh run watch "${RUN:?}" --exit-status
+```
+
+Then open the site. A failed run leaves the site as it was. When the cause was a setting outside the repository, re-run it with `gh run rerun <run-id>`, the run the block watched; a fix in the repository goes into `main` by pull request and deploys with `gh workflow run pages.yml --ref main`.
 
 ## Undoing a release
 
@@ -141,6 +154,7 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 *   A run that failed before the push is run again with the same versions, once the cause is fixed in `main`. The **Re-run** button would replay the old commit, and its push would be rejected.
 
     ```bash
+    VERSIONS=<versions>                               # the pairs from step 1, in quotes
     RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
     gh run watch "${RUN:?}" --exit-status
     ```
@@ -155,8 +169,7 @@ Then open the site. A failed run leaves the site as it was. When the cause was a
 *   A fault found in a draft takes its tag down too. Delete the draft of every package the fault reaches — `ssplayer-webgl` and `ssplayer-pixi` carry `ssplayer-core`'s wasm glue in their CDN bundles — and reject what the run staged for them. Merge the fix into `main`, correcting the version's changelog section if it needs it, and run again with `versions` empty, which tags the same versions on the fixed `main` and stages them again.
 
     ```bash
-    gh release delete <tag> --cleanup-tag --yes       # once per draft; deletes the tag on GitHub
-    git tag -d <tag>                                  # and here, or the next fetch refuses the re-tag
+    gh release delete --cleanup-tag --yes <tag>       # once per draft; deletes the tag too, here and on GitHub
     npm stage reject <stage-id>                       # once per staged version; a person, with 2FA
     ```
 
@@ -186,7 +199,9 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す 4 つの公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
 
-手で設定する値 `VERSIONS` を読むのは、手順 4 と「リリースの取り消し」にあるその再実行だけで、空なら実行を拒否します。ほかのブロックは必要なものを git と GitHub から求めるので、どれも新しいシェルで実行できます。
+どのブロックも、新しいシェルで書かれたとおりに実行できます。必要なものは git と GitHub から求めます。手で設定する値は 1 つで、埋めるプレースホルダとして書いてあります。手順 4 と「リリースの取り消し」にあるその再実行の `<versions>` で、手順 1 で決めた組を引用符で囲んで入れます。下書きや stage したバージョンに対して操作するブロックも、それを `<tag>` や `<stage-id>` で受け取ります。埋めずに実行すると、その行は構文エラーで止まります。組を引用符で囲み忘れると `VERSIONS` は設定されず、dispatch はそれを拒否します。空の `versions` は、まだリリースしていないものすべての再実行になるためです。
+
+どのブロックもエージェントに実行させられます。2 つの手順は人が判断します。ノートを `main` に入れる手順 2 のマージと、取り消せない公開を行う手順 7 です。2FA のコードを求められる手順 6 も人が行います。
 
 ### 1. バージョンを決める
 
@@ -209,11 +224,7 @@ run は、指定したかどうかに関わらず、現在のバージョンに�
 ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
 ```
 
-決めたものを手順 4 のために書き留めます。
-
-```bash
-VERSIONS="ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"
-```
+手順 4 は、決めた組を引用符で囲んで `<versions>` の位置に受け取ります（`"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"` など）。
 
 ### 2. changelog を書く
 
@@ -226,6 +237,11 @@ git add packages/*/CHANGELOG.md THIRD_PARTY_NOTICES.md
 git commit -m "docs: changelog for the next release"
 git push -u origin release-notes
 gh pr create -B main --fill
+```
+
+**マージは人が行います。** ノートが `main` に入るためです。プルリクエストのページで **Create a merge commit** を選ぶか、次を実行します。
+
+```bash
 gh pr merge release-notes --merge --delete-branch
 ```
 
@@ -241,6 +257,7 @@ scripts/build-pages.sh                            # -> _site/。pages.yml がデ
 ### 4. リリースを実行する
 
 ```bash
+VERSIONS=<versions>                               # 手順 1 の組を引用符で囲む
 RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
 gh run watch "${RUN:?}" --exit-status
 ```
@@ -299,18 +316,27 @@ done
 
 ### 7. Release を公開する
 
-下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。
+**Release の公開は人が行います。** 公開した Release は取り消せないためです。下書きに書き足すものはありません。`-` を含むバージョンは、すでに pre-release になっています。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。
 
 ```bash
-tag=
 for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
   gh release edit "$tag" --draft=false
 done
-RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
-gh run watch "${RUN:?}" --exit-status             # run が一覧に出るまでの数秒間は RUN が空になる
 ```
 
-終わったら、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、`gh run rerun "$RUN"` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
+続けてデプロイを見届けます。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。ブロックはその Release を自分で探し、run が一覧に出るまで最大 1 分待ちます。run は Release の公開から数秒遅れて出るためです。
+
+```bash
+tag=$(gh release list --json tagName,publishedAt,isDraft -q '[.[] | select(.isDraft | not)] | sort_by(.publishedAt) | last | .tagName')
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  RUN=$(gh run list -w pages.yml -b "${tag:?}" -L 1 --json databaseId -q '.[0].databaseId')
+  [ -n "$RUN" ] && break
+  sleep 5
+done
+gh run watch "${RUN:?}" --exit-status
+```
+
+終わったら、サイトを開いて確かめます。run が失敗してもサイトは元のまま残ります。原因がリポジトリの外の設定にあったなら、ブロックが見届けた run を `gh run rerun <run-id>` で再実行します。リポジトリ内の修正は、プルリクエストで `main` に入れてから `gh workflow run pages.yml --ref main` でデプロイします。
 
 ## リリースの取り消し
 
@@ -319,6 +345,7 @@ gh run watch "${RUN:?}" --exit-status             # run が一覧に出るまで
 *   push より前に失敗した run は、原因を `main` で直してから、同じバージョンを指定して実行し直します。**Re-run** ボタンは古いコミットをそのまま再生するので、push が拒否されます。
 
     ```bash
+    VERSIONS=<versions>                               # 手順 1 の組を引用符で囲む
     RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
     gh run watch "${RUN:?}" --exit-status
     ```
@@ -333,8 +360,7 @@ gh run watch "${RUN:?}" --exit-status             # run が一覧に出るまで
 *   下書きに不具合が見つかったら、タグもいっしょに消します。不具合が及ぶすべてのパッケージの下書きを消し（`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を含みます）、run がそれらについて stage したものを取り下げます。修正を `main` にマージして（必要ならそのバージョンの changelog の節も直して）、`versions` を空にして実行し直します。直した `main` に同じバージョンのタグが打たれ、もう一度 stage されます。
 
     ```bash
-    gh release delete <tag> --cleanup-tag --yes       # 下書きごとに 1 回。GitHub のタグを消す
-    git tag -d <tag>                                  # 手元のタグも消す。残すと次の fetch が打ち直したタグを拒む
+    gh release delete --cleanup-tag --yes <tag>       # 下書きごとに 1 回。タグも手元と GitHub の両方から消える
     npm stage reject <stage-id>                       # stage されたバージョンごとに 1 回。人が 2FA で行う
     ```
 
