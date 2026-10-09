@@ -5,7 +5,7 @@ description: "The ssplayer-tyranoscript plugin for TyranoScript: the scenario ta
 # TyranoScript
 
 ::: warning Beta
-`@spritestudio/ssplayer-tyranoscript` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
+`@spritestudio/ssplayer-tyranoscript` is in **beta**. The scenario-authoring
 tags are complete, but names and behavior may still change before `7.0.0`. Rendering is
 built on [`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
 :::
