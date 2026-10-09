@@ -45,8 +45,6 @@ export { MinMax2AndVec2ValueTable } from './format/min-max2-and-vec2-value-table
 export { MinMax2ValueEntry } from './format/min-max2-value-entry.js';
 export { MinMax2 } from './format/min-max2.js';
 export { NoneValueEntry } from './format/none-value-entry.js';
-export { PartAnimationDataEffect } from './format/part-animation-data-effect.js';
-export { PartAnimationDataInstance } from './format/part-animation-data-instance.js';
 export { PartAnimationData } from './format/part-animation-data.js';
 export { PartAttributeAudio } from './format/part-attribute-audio.js';
 export { PartAttributeCell } from './format/part-attribute-cell.js';
