@@ -1,8 +1,8 @@
 /*:
  * @target MZ
  * @plugindesc SpriteStudio player for RPG Maker MZ (PixiJS v5 direct-draw). Plays .ssab animations attached to pictures.
- * @author SpriteStudio-SDK
- * @url https://github.com/cri-middleware/SpriteStudio-SDK
+ * @author CRI Middleware Co., Ltd.
+ * @url https://cri-middleware.github.io/SSPlayerForWeb/usage/rmmz
  * @help ssplayer-rpgmakermz.js
  *
  * Plays SpriteStudio (.ssab) animations inside RPG Maker MZ, drawn directly into
@@ -440,8 +440,8 @@
 /*:ja
  * @target MZ
  * @plugindesc RPG Maker MZ 用 SpriteStudio プレイヤー（PixiJS v5 ダイレクトドロー）。ピクチャに .ssab アニメを表示します。
- * @author SpriteStudio-SDK
- * @url https://github.com/cri-middleware/SpriteStudio-SDK
+ * @author 株式会社 CRI・ミドルウェア
+ * @url https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz
  * @help ssplayer-rpgmakermz.js
  *
  * SpriteStudio（.ssab）アニメを MZ の PixiJS v5 レンダラへ直接描画し、キャラや
