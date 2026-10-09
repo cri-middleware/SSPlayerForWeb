@@ -8,7 +8,7 @@ description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, plugi
      docs/index.md for why. -->
 
 ::: warning Beta
-`@spritestudio/ssplayer-rmmz` is in **beta** (`7.0.0-beta.1`). Its rendering is built on
+`@spritestudio/ssplayer-rmmz` is in **beta**. Its rendering is built on
 [`ssplayer-webgl`](/usage/webgl)'s `SSWebGLRenderer`.
 :::
 

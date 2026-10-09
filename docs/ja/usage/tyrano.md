@@ -5,7 +5,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 # TyranoScript で使う
 
 ::: warning ベータ版
-`@spritestudio/ssplayer-tyranoscript` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
+`@spritestudio/ssplayer-tyranoscript` は **ベータ版**です。シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
 [`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
 :::
 

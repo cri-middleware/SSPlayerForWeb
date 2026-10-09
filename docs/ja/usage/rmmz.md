@@ -8,7 +8,7 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
      docs/index.md for why. -->
 
 ::: warning ベータ版
-`@spritestudio/ssplayer-rmmz` は **ベータ版**（`7.0.0-beta.1`）です。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
+`@spritestudio/ssplayer-rmmz` は **ベータ版**です。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
 `SSWebGLRenderer` を土台にしています。
 :::
 
