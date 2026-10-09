@@ -6,14 +6,10 @@ Play **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ** — shown in corr
 Z-order with your characters and pictures.
 
 > **Who this is for:** RPG Maker MZ game creators adding SpriteStudio animations via plugin commands — no coding required. Building the plugin itself? → [For contributors](#for-contributors--building-from-source).
-> **Status:** beta (`7.0.0-beta.1`), private — **not on npm**.
-> Distributed as a plugin ZIP attached to **GitHub Releases** once the first release
-> ships. No release exists yet, so today you build it from source (see
-> [For contributors](#for-contributors--building-from-source)).
+> **Status:** beta (`7.0.0-beta.1`).
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
-run the bundled sample MZ project in your browser (🚧 live once the first release is
-published).
+run the bundled sample MZ project in your browser.
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo. This page has two parts:
 **[Using the plugin](#using-the-plugin)** (for RPG Maker MZ game creators) and
@@ -32,13 +28,13 @@ drive it from event commands.*
 
 ## 1. Install
 
-1. Get `ssplayer-rpgmakermz.js` **and** `ssruntime_bg.wasm` — plus `ssconverter_bg.wasm`
-   if you want test play to convert your `.sspj` for you
-   ([below](#convert-on-test-play)). **No release is published yet** — for now you must
-   build them yourself (see [For contributors](#for-contributors--building-from-source)).
-   Once the first release ships, you'll download the plugin ZIP from **GitHub Releases**
-   instead.
-2. Copy them into your project's `js/plugins/` (flat — the WASM files must sit next to
+1. Download `ssplayer-rmmz-plugin-<version>.zip` from
+   [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true): open the Release named
+   `@spritestudio/ssplayer-rmmz <version>` and take the file under **Assets**, not the
+   *Source code* archives. It holds `ssplayer-rpgmakermz.js`, `ssruntime_bg.wasm` and
+   `ssconverter_bg.wasm`; the last is needed only if you want test play to convert your
+   `.sspj` for you ([below](#convert-on-test-play)).
+2. Extract them into your project's `js/plugins/` (flat — the WASM files must sit next to
    the `.js`).
 3. Enable **ssplayer-rpgmakermz** in the Plugin Manager. No parameters — the WASM files
    are auto-loaded from the same folder as the plugin `.js`.
@@ -49,7 +45,7 @@ drive it from event commands.*
 runtime file the plugin actually plays. Convert your `.sspj` with either:
 
 - **Web — no install:** the hosted converter at
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** (🚧 live after the first release) — drop the
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop the
   **folder** containing your `.sspj` project in and download the `.ssab` (+ its texture) as a zip file.
 - **Desktop:** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases).
 

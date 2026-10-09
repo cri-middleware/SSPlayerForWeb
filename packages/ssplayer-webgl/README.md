@@ -14,7 +14,7 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
 the `<ss-player>` element running in your browser; drop your own `.ssab` file onto the
-page to play it (🚧 live once the first release is published).
+page to play it.
 
 ## ✨ Why SpriteStudio with plain WebGL?
 

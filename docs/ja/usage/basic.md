@@ -11,7 +11,7 @@ description: WebGL と PixiJS のプレイヤーに共通する再生制御 API�
 
 ▶️ **<a href="../../examples/webgl/" target="_blank" rel="noreferrer">WebGL デモ</a>** ·
 **<a href="../../examples/pixi/" target="_blank" rel="noreferrer">PixiJS デモ</a>** —
-このページの API が動いている状態をバックエンド別に見られます。どちらも `.ssab` のドロップ再生に対応しています（最初のリリース公開後に有効化されます 🚧）。
+このページの API が動いている状態をバックエンド別に見られます。どちらも `.ssab` のドロップ再生に対応しています。
 
 ## 読み込みとアニメーション選択
 

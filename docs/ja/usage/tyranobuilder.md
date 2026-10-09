@@ -7,8 +7,6 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 ::: warning ベータ版
 `@spritestudio/ssplayer-tyranobuilder` は **ベータ版**（`7.0.0-beta.1`）です。コンポーネント構成やフォルダ構成は `7.0.0` までに変わる可能性があります。動作確認は **TyranoBuilder Ver 3.00**
 （Electron 24.8.8）の macOS で行っています。Windows は未検証です。
-
-**リリースはまだ 1 つもありません。** 正式リリース後は `ssplayer.tbp` が **GitHub Releases** で配布される予定です。現時点では [ソースからビルド](#building-from-source)してください。
 :::
 
 **SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。
@@ -20,7 +18,7 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
      docs/index.md for why. -->
 
 ▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
-TyranoScript 版のサンプルシーンです。ランタイムは同じなのでビルダー専用のデモはありません。コンポーネントで配置した結果もここと同じ見た目になります（最初のリリース公開後に有効化されます 🚧）。
+TyranoScript 版のサンプルシーンです。ランタイムは同じなのでビルダー専用のデモはありません。コンポーネントで配置した結果もここと同じ見た目になります。
 
 ## プラグインの構成
 
@@ -44,7 +42,7 @@ TyranoScript 版のサンプルシーンです。ランタイムは同じなの�
 必要なのは `ssplayer.tbp` だけです。TyranoScript 用プラグイン ZIP の中身はすべて含まれているため、**あの ZIP を重ねて入れないでください。** 展開先はどちらも `data/others/plugin/ssplayer/` で、両方入れるとエディタ側とランタイム側でバージョンがずれます。
 :::
 
-1. [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) から `ssplayer.tbp` をダウンロードします。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。
 2. ティラノビルダーで **プラグイン設定 → 追加 → そのファイルを選択**。
 
 **ファイル名は変えないでください。** ティラノビルダーはファイル名からプラグイン id を決め、その id でアーカイブ内の `<id>/<id>.builder.js` を探します。`ssplayer-1.2.0.tbp` にすると何もインストールされません。バージョンはファイル名ではなくリリース側で管理します。

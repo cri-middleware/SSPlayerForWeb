@@ -17,13 +17,15 @@ dropdowns alongside your other assets.
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 the editor plugin itself can't run in a browser, but this is the same runtime it
-embeds, driven by a TyranoScript sample (🚧 live after the first release).
+embeds, driven by a TyranoScript sample.
 
 ## Install
 
-Download `ssplayer.tbp` from the
-[Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) page, then
-in TyranoBuilder: **plugin settings → add → pick that file**.
+Download `ssplayer.tbp` from
+[GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) — open the Release named
+`@spritestudio/ssplayer-tyranobuilder <version>` and take the file under **Assets**, not
+the *Source code* archives — then in TyranoBuilder: **plugin settings → add → pick that
+file**.
 
 **Do not rename the file.** TyranoBuilder takes the plugin's name from it, so
 `ssplayer.tbp` has to stay `ssplayer.tbp`.

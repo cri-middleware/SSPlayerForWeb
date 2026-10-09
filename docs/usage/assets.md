@@ -27,7 +27,7 @@ if you want effects. The downloaded project feeds any of the tools below as-is.
 
 | Tool | Best for | Getting it |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> (🚧 live once the first release is published) |
+| [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> |
 | [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
 | [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core@beta` |
@@ -41,8 +41,7 @@ A tool that converts a `.sspj` project in the browser and downloads the result a
 
 It is hosted beside these docs at
 <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>, so there is
-nothing to install (🚧 live once the first release is published). The bundled Node CLI
-is a developer tool.
+nothing to install. The bundled Node CLI is a developer tool.
 
 ::: warning Supported browsers
 Folder selection uses the **File System Access API** (`showDirectoryPicker` /

@@ -12,8 +12,7 @@ together.
      docs/index.md for why. -->
 
 ▶️ **<a href="../examples/pixi/" target="_blank" rel="noreferrer">Live demo</a>** — a PixiJS
-v8 app playing several animations; drop a `.ssab` onto it to play your own (goes live once
-the first release is published 🚧).
+v8 app playing several animations; drop a `.ssab` onto it to play your own.
 
 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">Part override demo</a>** —
 the same renderer swapping a part's colour, cell and visibility at runtime (see

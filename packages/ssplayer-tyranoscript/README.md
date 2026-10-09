@@ -19,17 +19,14 @@ writing `[ss_*]` tags in your scenario — no coding required.
 > ([`ROADMAP.md`](./ROADMAP.md)).
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
-the bundled TyranoScript sample, running in your browser (🚧 live after the first release).
+the bundled TyranoScript sample, running in your browser.
 
 ## Install
 
-There is **no released build yet.** For now the only way to get the plugin is to
-build it from source — see [For contributors — building from source](#for-contributors--building-from-source).
-
-Once the first release ships, a ZIP will be attached to the project's GitHub
-Releases. To install it you will:
-
-1. Download and unzip the release, which contains an `ssplayer/` folder.
+1. Download `ssplayer-tyranoscript-plugin-<version>.zip` from
+   [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true): open the Release named
+   `@spritestudio/ssplayer-tyranoscript <version>` and take the file under **Assets**, not
+   the *Source code* archives. Unzip it; it contains an `ssplayer/` folder.
 2. Copy that `ssplayer/` folder into your Tyrano project at `data/others/plugin/`.
 3. Load it from your scenario with `[plugin name="ssplayer"]` (see the example below).
 
@@ -58,7 +55,7 @@ runtime file the plugin actually plays — it's what `[ss_new storage="..."]` lo
 Convert your `.sspj` with either:
 
 - **Web — no install:** the hosted converter at
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** (🚧 live after the first release) — drop the
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** — drop the
   **folder** containing your `.sspj` project in and download the `.ssab` (+ its
   texture) as a zip file.
 - **Desktop:** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases).
@@ -431,8 +428,8 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip
 ```
 
-`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}`. Attach it to a **GitHub
-Release**; users extract `ssplayer/` into `data/others/plugin/`. The distribution
+`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}`, the archive the package's
+**GitHub Release** carries; users extract `ssplayer/` into `data/others/plugin/`. The distribution
 template lives in [`plugin/`](./plugin/README.md).
 
 Plugin layout on disk:

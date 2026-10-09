@@ -38,7 +38,7 @@ features:
 
 ## ブラウザで試す
 
-インストール不要、すべてブラウザ上で動作します（🚧 初回リリースの公開後に有効になります）:
+インストール不要、すべてブラウザ上で動作します:
 
 - 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
 - ▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">単体 WebGL サンプル</a>** — `<ss-player>` Web コンポーネント
@@ -105,7 +105,7 @@ graph LR
 | [`ssconverter-web`](/ja/usage/assets) | `.sspj` → `.ssab` 変換ツール（ブラウザツール + Node CLI）です。 |
 | [`@spritestudio/ssconverter-core`](/ja/usage/assets) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合）です。 |
 
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（非公開・npm 未公開。プラグインとして導入します）:
+**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（npm では配布しません。GitHub Releases からプラグインとして導入します）:
 
 | パッケージ | 用途 |
 |---|---|

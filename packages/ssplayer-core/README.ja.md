@@ -16,7 +16,7 @@
 ▶️ このコアがレンダラーを駆動している様子:
 **[WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** ·
 **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
-どちらも同じ WASM 再生コアの上に薄い描画層を載せたものです（🚧 初回リリース後に公開）。
+どちらも同じ WASM 再生コアの上に薄い描画層を載せたものです。
 
 このパッケージは、`core` を直接扱う次の 2 種類の対象者のためのものです。
 

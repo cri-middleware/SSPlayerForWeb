@@ -12,7 +12,7 @@ Engine-agnostic WebAssembly core that converts SpriteStudio projects (`.sspj`) t
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** —
 [`ssconverter-web`] is this core running in the browser; drop a `.sspj` in to see what
-it produces (🚧 live once the first release is published).
+it produces.
 
 This package is the wasm build of the Rust [`libssconverter`] crate plus a small
 ergonomic TypeScript layer. It has **no filesystem or DOM dependencies** — bytes

@@ -11,12 +11,12 @@ SpriteStudio のプロジェクトをフォルダに置いておくと、プロ�
 > を使ってください（同じ `[ss_*]` タグを TyranoScript に追加します）。**ステータス:** beta。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
-エディタ用プラグイン自体はブラウザで動かせませんが、これは同梱しているランタイムと同じもので、TyranoScript のサンプルで動かしています（🚧 初回リリース後に公開）。
+エディタ用プラグイン自体はブラウザで動かせませんが、これは同梱しているランタイムと同じもので、TyranoScript のサンプルで動かしています。
 
 ## インストール
 
-[Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases) から
-`ssplayer.tbp` をダウンロードし、TyranoBuilder の**プラグイン設定 → 追加 → そのファイルを選択**。
+[GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から
+`ssplayer.tbp` をダウンロードし（`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release の **Assets** にあるファイルです。*Source code* のアーカイブではありません）、TyranoBuilder の**プラグイン設定 → 追加 → そのファイルを選択**。
 
 **ファイル名は変えないでください。** TyranoBuilder はファイル名からプラグイン名を決めるため、`ssplayer.tbp` のままである必要があります。
 

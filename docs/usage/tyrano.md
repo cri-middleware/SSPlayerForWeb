@@ -8,10 +8,6 @@ description: "The ssplayer-tyranoscript plugin for TyranoScript: the scenario ta
 `@spritestudio/ssplayer-tyranoscript` is in **beta** (`7.0.0-beta.1`). The scenario-authoring
 tags are complete, but names and behavior may still change before `7.0.0`. Rendering is
 built on [`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
-
-**There are no releases yet.** Once the first release ships, a plugin ZIP will be
-distributed on **GitHub Releases** — but for now the only way to obtain it is to
-[build from source](#building-from-source).
 :::
 
 Show and play **SpriteStudio** (`.ssab`) animations inside a **TyranoScript** visual novel by
@@ -23,8 +19,7 @@ layer stack alongside characters, backgrounds, and messages.
      docs/index.md for why. -->
 
 ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — a
-visual-novel scene driven entirely by `[ss_*]` tags (goes live once the first release is
-published 🚧).
+visual-novel scene driven entirely by `[ss_*]` tags.
 
 ::: tip Building in TyranoBuilder?
 See [TyranoBuilder](/usage/tyranobuilder) instead. It is the same runtime, reached from the
@@ -70,11 +65,11 @@ half (components and auto-conversion), so it is the only download you need.
 different versions.
 :::
 
-There is **no released build yet**, so for now you [build from source](#building-from-source).
-Once the first release ships, download the plugin ZIP from **GitHub Releases** and:
-
-1. Unzip it — it contains an `ssplayer/` folder holding `init.ks` (the loader),
-   `main.js` (the plugin), and `ssruntime_bg.wasm` (the runtime).
+1. Download `ssplayer-tyranoscript-plugin-<version>.zip` from
+   [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true): open the Release named
+   `@spritestudio/ssplayer-tyranoscript <version>` and take the file under **Assets**, not
+   the *Source code* archives. Unzip it — it contains an `ssplayer/` folder holding
+   `init.ks` (the loader), `main.js` (the plugin), and `ssruntime_bg.wasm` (the runtime).
 2. Copy that `ssplayer/` folder into your Tyrano project at `data/others/plugin/`.
 3. Load it from your scenario with `[plugin name="ssplayer"]`.
 
@@ -347,8 +342,8 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
-`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` — attach it to a GitHub
-Release; users extract `ssplayer/` into `data/others/plugin/`.
+`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` — the archive the GitHub
+Release carries; extract `ssplayer/` into `data/others/plugin/`.
 
 To try it in the bundled example:
 

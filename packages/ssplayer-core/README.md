@@ -17,8 +17,7 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 ▶️ See this core driving a renderer:
 **[WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** ·
 **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
-both are thin drawing layers over the same WASM playback core (🚧 live once the first
-release is published).
+both are thin drawing layers over the same WASM playback core.
 
 This package is for the two audiences who do:
 

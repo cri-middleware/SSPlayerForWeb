@@ -49,7 +49,7 @@ features:
 
 ## Try it live
 
-No install — these run entirely in your browser (🚧 live once the first release is published):
+No install — these run entirely in your browser:
 
 - 🛠️ **<a href="./ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser (start here)
 - ▶️ **<a href="./examples/webgl/" target="_blank" rel="noreferrer">Standalone WebGL example</a>** — the `<ss-player>` Web Component
@@ -114,8 +114,8 @@ For details on the three paths (SSConverter GUI / `ssconverter-web` / `ssconvert
 | [`ssconverter-web`](/usage/assets) | `.sspj` → `.ssab` conversion tool (browser tool + Node CLI). |
 | [`@spritestudio/ssconverter-core`](/usage/assets) | Engine-agnostic WASM conversion core (for embedding conversion in your own app). |
 
-**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, private and not on npm
-(you install them as plugin bundles):
+**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, not on npm
+(you install them as plugin bundles from GitHub Releases):
 
 | Package | What it's for |
 |---|---|

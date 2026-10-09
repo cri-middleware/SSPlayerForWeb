@@ -10,8 +10,8 @@
 #
 #   1. checks out the SpriteStudio-SDK submodule
 #   2. pnpm install
-#   3. the WASM: pnpm run download:wasm; while the SDK has published no release for it to
-#      download, builds it from source (pnpm run build:wasm, which needs Rust and wasm-pack)
+#   3. the WASM: pnpm run download:wasm; when that fails, builds it from source
+#      (pnpm run build:wasm, which needs Rust and wasm-pack)
 #   4. pnpm run build, the packages the examples consume
 #   5. the example's assets (pnpm run deploy-examples)
 #   6. starts the example's dev server and opens it (Ctrl-C stops it)
@@ -57,10 +57,10 @@ if [ ! -f packages/ssplayer-core/wasm/ssruntime_bg.wasm ] || [ ! -f packages/ssc
   echo ">> $APP: pnpm run download:wasm"
   if ! pnpm run download:wasm; then
     command -v cargo > /dev/null 2>&1 && command -v wasm-pack > /dev/null 2>&1 || {
-      echo "$APP: there is no SDK release to download the WASM from yet, and building it needs Rust (https://rustup.rs) and wasm-pack (cargo install wasm-pack)" >&2
+      echo "$APP: the WASM could not be downloaded, and building it needs Rust (https://rustup.rs) and wasm-pack (cargo install wasm-pack)" >&2
       exit 1
     }
-    echo ">> $APP: no release to download from; building the WASM from source (pnpm run build:wasm)"
+    echo ">> $APP: the download failed; building the WASM from source (pnpm run build:wasm)"
     pnpm run build:wasm
   fi
 fi
