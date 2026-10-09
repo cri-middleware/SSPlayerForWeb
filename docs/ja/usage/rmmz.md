@@ -8,18 +8,14 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
      docs/index.md for why. -->
 
 ::: warning ベータ版
-`@spritestudio/ssplayer-rmmz` は **ベータ版**（`7.0.0-beta.1`）です。パッケージは
-**private で、npm には公開されていません**。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
+`@spritestudio/ssplayer-rmmz` は **ベータ版**（`7.0.0-beta.1`）です。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
 `SSWebGLRenderer` を土台にしています。
-
-**リリースはまだ 1 つもありません。** 正式リリース後はプラグイン ZIP が
-**GitHub Releases** で配布される予定ですが、現時点で入手する唯一の方法は[ソースからのビルド](#building-from-source)です。npm からのインストールはできません。
 :::
 
 このプラグインを使うと、**RPG ツクール MZ** のゲームで **SpriteStudio**（`.ssab`）のアニメーションを再生できます。アニメーションは MZ の PixiJS v5 レンダラーへ直接描画されるため、キャラクターやピクチャと正しい Z 順で重なります。
 
 ▶️ **<a href="../../examples/rmmz/" target="_blank" rel="noreferrer">ライブデモ</a>** —
-同梱のサンプル MZ プロジェクトをブラウザーで実行できます（最初のリリース公開後に有効化されます 🚧）。
+同梱のサンプル MZ プロジェクトをブラウザーで実行できます。
 
 ## しくみ
 
@@ -34,8 +30,8 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 
 ## 1. インストール
 
-1. `ssplayer-rpgmakermz.js` **と** `ssruntime_bg.wasm` を用意します。テストプレイで `.sspj` を自動変換したい場合は `ssconverter_bg.wasm` も用意します（[後述](#convert-on-test-play)）。**まだリリースが公開されていない**ため、当面は自分でビルドしてください（[ソースからビルドする](#building-from-source)）。最初のリリース後は **GitHub Releases** からプラグイン ZIP をダウンロードできるようになります。
-2. これらをプロジェクトの `js/plugins/` へフラットに置きます（WASM は `.js` と同じ場所に置く必要があります）。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中身は `ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm` の 3 つで、`ssconverter_bg.wasm` はテストプレイで `.sspj` を自動変換したい場合にだけ使います（[後述](#convert-on-test-play)）。
+2. これらをプロジェクトの `js/plugins/` へフラットに展開します（WASM は `.js` と同じ場所に置く必要があります）。
 3. プラグイン管理で **ssplayer-rpgmakermz** を有効化します。パラメーターはありません。WASM はプラグイン `.js` と同じフォルダーから自動で読み込まれます。
 
 ## 2. アニメーションの変換（.sspj → .ssab）

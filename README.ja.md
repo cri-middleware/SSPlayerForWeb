@@ -8,7 +8,7 @@
 
 ## 🌐 ブラウザで試す
 
-インストール不要、すべてブラウザ上で動作します（🚧 初回リリースの公開後に有効になります）:
+インストール不要、すべてブラウザ上で動作します:
 
 - 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
 - ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — 依存ゼロの単体レンダラー（`<ss-player>` Web コンポーネント）。※`.ssab` のD&D再生に対応
@@ -21,10 +21,10 @@
 
 詳細なドキュメントは `docs/` フォルダ内で提供しています（VitePress にてホスティング）。読者の目的に応じて段階的に読み進められる構成です。
 
-- [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/ja/) — 🚧 初回リリース後に公開
+- [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/ja/)
 - [**日本語ドキュメント**](./docs/ja/index.md) · [**English docs**](./docs/index.md)
-- [**AI アシスタント向け**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — このドキュメントを Markdown で提供します。`llms.txt`（ページの目次）と `llms-full.txt`（全ページを 1 ファイルに）は英語版のページを集めたもので、日本語の各ページは `ja/` 配下の `.md` で取れます — 🚧 初回リリース後に公開
-- [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player の入口 — 🚧 初回リリース後に公開
+- [**AI アシスタント向け**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — このドキュメントを Markdown で提供します。`llms.txt`（ページの目次）と `llms-full.txt`（全ページを 1 ファイルに）は英語版のページを集めたもので、日本語の各ページは `ja/` 配下の `.md` で取れます
+- [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player の入口
 
 ### クイックリンク (日本語)
 - [インストール](./docs/ja/setup/install.md)
@@ -60,17 +60,13 @@
 
 ### 導入する
 
-> 🚧 パッケージは **まだ npm に公開されていません**。この導線は初回リリース後に利用できます。それまでは下のチェックアウト経由でお試しください。
-
 Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.5 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。詳しい手順はドキュメントにあります:
 
 **[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
 
 ### チェックアウトからサンプルを動かす
 
-🚧 こちらが 2 つめの扉です。パッケージ公開前に評価したい場合か、本体を開発する場合の入口。
-
-**前提条件:** [Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/)（本リポジトリは pnpm workspaces を使用します）。🚧 SDK はまだリリースを公開していないため、ダウンロードできるプリビルドの WASM コアはありません。公開されるまでは WASM をソースからビルドするので、**Rust**（[rustup](https://rustup.rs/) 経由）と **wasm-pack**（`cargo install wasm-pack`）が必要です。
+**前提条件:** [Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/)（本リポジトリは pnpm workspaces を使用します）。WASM コアは SDK の Releases からビルド済みのものをダウンロードします。ソースからビルドする場合は **Rust**（[rustup](https://rustup.rs/) 経由）と **wasm-pack**（`cargo install wasm-pack`）が必要です。
 
 ```bash
 git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
@@ -83,15 +79,15 @@ pnpm run example                         # 下のすべての手順を実行し�
 ```bash
 git submodule update --init --recursive  # SpriteStudio-SDK（サンプル素材＋コア）を取得
 pnpm install                             # 依存関係のインストール & ワークスペースの初期化
-pnpm run build:wasm                      # WASM をソースからビルド（Rust + wasm-pack）
+pnpm run download:wasm                   # ビルド済みの WASM を取得（Rust ツールチェーン不要）
 pnpm run build                           # すべての TypeScript パッケージをビルド
 pnpm run deploy-examples                 # examples が読み込む .ssab アセットを生成
 cd examples/webgl-example
 pnpm run dev                             # 開発サーバを起動してアニメーションを確認
 ```
-examples は **ビルド済み** のパッケージをワークスペース参照で利用します。`packages/` 配下の TypeScript を変更したら `pnpm run build` を、Rust コアを変更したら `pnpm run build:wasm` を、サンプルプロジェクトを編集したら `pnpm run deploy-examples` を再実行してください。
+examples は **ビルド済み** のパッケージをワークスペース参照で利用します。`packages/` 配下の TypeScript を変更したら `pnpm run build` を、Rust コアを変更したら `download:wasm` の代わりに `pnpm run build:wasm` を、サンプルプロジェクトを編集したら `pnpm run deploy-examples` を再実行してください。
 
-**SDK がリリースを公開したら**、`pnpm run build:wasm` の代わりに `pnpm run download:wasm` でプリビルドの WASM を取得でき、Rust ツールチェーンは不要になります。変更を貢献する場合は、[CONTRIBUTING.md](./CONTRIBUTING.md) にコーディング規約と WASM FFI のルールがあります。
+変更を貢献する場合は、[CONTRIBUTING.md](./CONTRIBUTING.md) にコーディング規約と WASM FFI のルールがあります。
 
 ## 💡 概要
 

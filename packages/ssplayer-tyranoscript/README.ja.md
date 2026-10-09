@@ -10,15 +10,11 @@
 > ⚠️ **beta。** シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。未完了の作業はリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
-同梱の TyranoScript サンプルをブラウザで動かせます（🚧 初回リリース後に公開）。
+同梱の TyranoScript サンプルをブラウザで動かせます。
 
 ## インストール
 
-**まだリリース版はありません。** 現状で入手する唯一の方法はソースからのビルドです（[コントリビューター向け — ソースからビルド](#コントリビューター向け--ソースからビルド) を参照）。
-
-最初のリリース以降は、プロジェクトの GitHub Releases に ZIP が添付されます。導入手順は次の通りです:
-
-1. リリースをダウンロードして解凍すると、`ssplayer/` フォルダが入っています。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍すると `ssplayer/` フォルダが入っています。
 2. その `ssplayer/` フォルダを Tyrano プロジェクトの `data/others/plugin/` にコピーします。
 3. シナリオから `[plugin name="ssplayer"]` で読み込みます（下記の例を参照）。
 
@@ -37,7 +33,7 @@
 `.ssab` です。`.sspj` を次のいずれかで変換してください。
 
 - **Web（インストール不要）：** ホスト版コンバータ
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>**（🚧 初回リリース後に利用可能）を開き、`.sspj`
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** を開き、`.sspj`
   プロジェクトが入ったフォルダ（ディレクトリ）をドロップすると `.ssab`（＋テクスチャ）が
   zip ファイルでダウンロードできます。
 - **デスクトップ：** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases) を使います。
@@ -318,8 +314,8 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip
 ```
 
-`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。これを
-**GitHub Releases のアセットに添付**し、利用者は `ssplayer/` を `data/others/plugin/` に展開します。配布テンプレは [`plugin/`](./plugin/README.md) にあります。
+`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。パッケージの
+**GitHub Release** に添付されるのはこのアーカイブで、利用者は `ssplayer/` を `data/others/plugin/` に展開します。配布テンプレは [`plugin/`](./plugin/README.md) にあります。
 
 ディスク上のプラグイン配置:
 

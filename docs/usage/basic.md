@@ -11,8 +11,7 @@ This page collects the playback-control API shared by `SSPlayer` (both the WebGL
 
 ▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">WebGL demo</a>** ·
 **<a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS demo</a>** — this API on a
-running player, one per backend; both play a `.ssab` dropped onto the page (they go live once
-the first release is published 🚧).
+running player, one per backend; both play a `.ssab` dropped onto the page.
 
 ## Loading and selecting an animation
 

@@ -10,7 +10,7 @@ SpriteStudio のプロジェクト（`.sspj`）をランタイムバイナリ（
 > **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** —
-[`ssconverter-web`] はこのコアをブラウザ上で動かしたものです。`.sspj` を投げ込むと、このコアが何を出力するかを確認できます（🚧 初回リリース後に公開）。
+[`ssconverter-web`] はこのコアをブラウザ上で動かしたものです。`.sspj` を投げ込むと、このコアが何を出力するかを確認できます。
 
 このパッケージは、Rust の [`libssconverter`] クレートを wasm ビルドしたものに、小さく使いやすい TypeScript レイヤーを添えたものです。**ファイルシステムや DOM への依存はありません**（bytes in, bytes out）。そのため、同じコアがブラウザ・Node・Worker・エッジランタイムのいずれでも動作します。[`ssconverter-web`]（Web UI）やその Node CLI といったホストが、周囲の I/O を受け持ちます。
 

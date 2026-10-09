@@ -10,7 +10,7 @@ description: PixiJS v8 で作られたアプリ向けのレンダラー。バッ
      docs/index.md for why. -->
 
 ▶️ **<a href="../../examples/pixi/" target="_blank" rel="noreferrer">ライブデモ</a>** —
-PixiJS v8 アプリで複数のアニメを再生する例です。`.ssab` をドロップすれば手元のデータも再生できます（最初のリリース公開後に有効化されます 🚧）。
+PixiJS v8 アプリで複数のアニメを再生する例です。`.ssab` をドロップすれば手元のデータも再生できます。
 
 🎨 **<a href="../../examples/override/" target="_blank" rel="noreferrer">パーツ上書きデモ</a>** —
 同じレンダラーでパーツの色 / セル / 表示を実行時に差し替える例です（[パーツ制御](/ja/customize/part-overrides)）。

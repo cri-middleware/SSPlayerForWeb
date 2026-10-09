@@ -68,10 +68,11 @@ file directly (`file://`) will fail on CORS.
 Override the asset or animation via query string:
 `pixi.html?ssab=./MyAnim_embedded.ssab&anim=idle`
 
-## Before these packages are published to npm
+## Against the locally-built bundles
 
-The CDN URLs (`cdn.jsdelivr.net/npm/@spritestudio/...`) resolve **only after** the
-packages are published. To try the samples against your **locally-built** bundles first:
+The CDN URLs (`cdn.jsdelivr.net/npm/@spritestudio/...`) load the published packages. To try
+the samples against your **locally-built** bundles instead — a change that is not released
+yet, say:
 
 1. Build the packages from the repo root:
 
@@ -79,7 +80,7 @@ packages are published. To try the samples against your **locally-built** bundle
    pnpm run build   # builds ssplayer-core, ssplayer-pixi, ssplayer-webgl, … (writes dist/browser + wasm/)
    ```
 
-2. In the HTML, keep `pixi.js` on the CDN (it's already published) but repoint the
+2. In the HTML, keep `pixi.js` on the CDN but repoint the
    **player bundle** and the **WASM URL** at the local files:
 
    | In the page | Change from | Change to |

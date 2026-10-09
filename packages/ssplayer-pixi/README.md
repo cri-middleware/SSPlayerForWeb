@@ -11,8 +11,7 @@ PixiJS v8 renderer for the **SpriteStudio** player. High-performance **direct dr
 > **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — a
-PixiJS v8 app playing `.ssab`; drop your own file onto the page to play it (🚧 live once
-the first release is published).
+PixiJS v8 app playing `.ssab`; drop your own file onto the page to play it.
 
 🎨 **[Part override demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** —
 per-part colour / cell / visibility overrides at runtime (source in

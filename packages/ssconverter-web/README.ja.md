@@ -25,7 +25,7 @@ SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤー
 
 **ブラウザツール**はインストール不要です。
 **[ssconverter-web（ホスト版）](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)**
-を開いてください（🚧 初回リリース後に公開）。
+を開いてください。
 
 **CLI**（およびブラウザツールをソースから起動する場合）は、monorepo を clone して一度インストールする必要があります。
 
@@ -37,12 +37,12 @@ pnpm run download:wasm   # ビルド済みの変換 WASM を取得（ツール�
 ```
 
 `download:wasm` は、**git で管理されていない**
-`@spritestudio/ssconverter-core` の `wasm/ssconverter_bg.wasm` を取得します。🚧 SDK はまだリリースを公開していないため取得できるものがありません。代わりに `pnpm run build:wasm` を実行してください(Rust と wasm-pack が必要です)。どちらかを一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリルートで実行します）。
+`@spritestudio/ssconverter-core` の `wasm/ssconverter_bg.wasm` を取得します。一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリルートで実行します）。
 
 ## ブラウザツール
 
 GitHub Pages の **[/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)**
-でホストしています（🚧 初回リリース後に公開）。clone 済みであれば、Vite **開発サーバー**でも同じツールを起動できます（表示された URL を開いてください）。
+でホストしています。clone 済みであれば、Vite **開発サーバー**でも同じツールを起動できます（表示された URL を開いてください）。
 
 ```bash
 pnpm --filter @spritestudio/ssconverter-web dev

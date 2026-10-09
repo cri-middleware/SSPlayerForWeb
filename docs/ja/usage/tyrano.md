@@ -7,8 +7,6 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 ::: warning ベータ版
 `@spritestudio/ssplayer-tyranoscript` は **ベータ版**（`7.0.0-beta.1`）です。シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。描画は
 [`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
-
-**リリースはまだ 1 つもありません。** 正式リリース後はプラグイン ZIP が **GitHub Releases** で配布される予定ですが、現時点で入手する唯一の方法は [ソースからのビルド](#building-from-source)です。
 :::
 
 **TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**
@@ -18,7 +16,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
      docs/index.md for why. -->
 
 ▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
-`[ss_*]` タグだけで組んだヴィジュアルノベルのシーンです（最初のリリース公開後に有効化されます 🚧）。
+`[ss_*]` タグだけで組んだヴィジュアルノベルのシーンです。
 
 ::: tip ティラノビルダーで制作する場合
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。ランタイムは同じで、タグを書く代わりにコンポーネントパレットから配置でき、`.sspj` の変換も自動で行われます。このページのタグ一覧はそのまま有効です（各コンポーネントが書き出すのがこれらのタグです）。
@@ -50,9 +48,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 ここで説明するプラグイン ZIP は **TyranoScript 用**です。**ティラノビルダー**で制作する場合は代わりに `ssplayer.tbp` を入れてください。`.tbp` はこの ZIP の 3 ファイルをそのまま内包した上で、エディタ側（コンポーネントと自動変換）を追加したものなので、ダウンロードはそれ 1 つで足ります。**どちらか一方だけを入れてください。** 展開先はどちらも同じ `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
 :::
 
-**まだリリースが公開されていない**ため、当面は [ソースからビルド](#building-from-source)してください。最初のリリース以降は、**GitHub Releases** からプラグイン ZIP をダウンロードして次のように導入します。
-
-1. 解凍すると `ssplayer/` フォルダが入っています（`init.ks`＝ローダ、`main.js`＝プラグイン本体、
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍すると `ssplayer/` フォルダが入っています（`init.ks`＝ローダ、`main.js`＝プラグイン本体、
    `ssruntime_bg.wasm`＝ランタイム）。
 2. その `ssplayer/` フォルダを Tyrano プロジェクトの `data/others/plugin/` にコピーします。
 3. シナリオから `[plugin name="ssplayer"]` で読み込みます。
@@ -263,7 +259,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
-`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。これを GitHub Release のアセットに添付し、利用者は `ssplayer/` を `data/others/plugin/` に展開します。
+`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。GitHub Release に添付されているのと同じアーカイブで、`ssplayer/` を `data/others/plugin/` に展開して使います。
 
 同梱のサンプルで試す場合は次のとおりです。
 

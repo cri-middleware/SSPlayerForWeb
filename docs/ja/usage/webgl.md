@@ -10,7 +10,7 @@ description: エンジンに依存しない単体の WebGL レンダラー。ss-
      docs/index.md for why. -->
 
 ▶️ **<a href="../../examples/webgl/" target="_blank" rel="noreferrer">ライブデモ</a>** —
-フレームワークなしのページで `<ss-player>` を動かす例です。`.ssab` をドロップすれば手元のデータも再生できます（最初のリリース公開後に有効化されます 🚧）。
+フレームワークなしのページで `<ss-player>` を動かす例です。`.ssab` をドロップすれば手元のデータも再生できます。
 
 ## インストール
 

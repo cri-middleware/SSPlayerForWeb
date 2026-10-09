@@ -8,7 +8,7 @@ A high-performance player for **[SpriteStudio](https://www.webtech.co.jp/sprites
 
 ## 🌐 Try it live
 
-No install — these run entirely in your browser (🚧 live once the first release is published):
+No install — these run entirely in your browser:
 
 - 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — convert `.sspj` → `.ssab` entirely client-side (start here)
 - ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — zero-dependency standalone renderer (the `<ss-player>` Web Component). *Supports D&D of `.ssab` files.*
@@ -21,10 +21,10 @@ No install — these run entirely in your browser (🚧 live once the first rele
 
 Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) and is structured step-by-step according to what you want to do:
 
-- [**Documentation site (hosted)**](https://cri-middleware.github.io/SSPlayerForWeb/) — 🚧 live after the first release
+- [**Documentation site (hosted)**](https://cri-middleware.github.io/SSPlayerForWeb/)
 - [**Documentation (English)**](./docs/index.md) · [**日本語ドキュメント**](./docs/ja/index.md)
-- [**For AI assistants**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — these docs as Markdown: `llms.txt` indexes the English pages and `llms-full.txt` holds all of them in one file; each Japanese page is available as `.md` under `ja/` — 🚧 live after the first release
-- [**SpriteStudio Docs (portal)**](https://cri-middleware.github.io/SpriteStudio-Docs/) — the SDK and every official player in one place — 🚧 live after the first release
+- [**For AI assistants**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — these docs as Markdown: `llms.txt` indexes the English pages and `llms-full.txt` holds all of them in one file; each Japanese page is available as `.md` under `ja/`
+- [**SpriteStudio Docs (portal)**](https://cri-middleware.github.io/SpriteStudio-Docs/) — the SDK and every official player in one place
 
 ### Quick Links
 - [Installation](./docs/setup/install.md)
@@ -62,17 +62,13 @@ events, per-part overrides, custom textures — is the same path further in, und
 
 ### Install it
 
-> 🚧 The packages are **not published to npm yet** — this path opens up after the first release. Until then, the checkout route below is the way to try things locally.
-
 No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab` (authored in **SpriteStudio 7.5 or later**), and play it in a few lines. The full walkthrough lives in the docs:
 
 **[Installation](./docs/setup/install.md)** · **[Quick Start](./docs/setup/quickstart.md)** · **[Preparing assets (.sspj → .ssab)](./docs/usage/assets.md)**
 
 ### Running the examples from a checkout
 
-🚧 This is the second door — evaluating SpriteStudio Player for Web before the packages ship, or working on it.
-
-**Prerequisites:** [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) (this repo uses pnpm workspaces). 🚧 The SDK has published no release yet, so there is no pre-built WASM core to download: until it does, the WASM is built from source, which needs **Rust** (via [rustup](https://rustup.rs/)) and **wasm-pack** (`cargo install wasm-pack`).
+**Prerequisites:** [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) (this repo uses pnpm workspaces). The WASM core is downloaded pre-built from the SDK's Releases; building it from source instead needs **Rust** (via [rustup](https://rustup.rs/)) and **wasm-pack** (`cargo install wasm-pack`).
 
 ```bash
 git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
@@ -85,15 +81,15 @@ pnpm run example                         # every step below, then the <ss-player
 ```bash
 git submodule update --init --recursive  # SpriteStudio-SDK (sample source + core)
 pnpm install                             # install deps & initialize the workspace
-pnpm run build:wasm                      # build the WASM from source (Rust + wasm-pack)
+pnpm run download:wasm                   # fetch the pre-built WASM (no Rust toolchain needed)
 pnpm run build                           # build all TypeScript packages
 pnpm run deploy-examples                 # generate the .ssab assets the examples load
 cd examples/webgl-example
 pnpm run dev                             # open the dev server and see the animation
 ```
-The examples consume the **built** packages via workspace references — re-run `pnpm run build` whenever you change TypeScript under `packages/`, `pnpm run build:wasm` whenever you change the Rust core, and `pnpm run deploy-examples` if you edit the sample projects.
+The examples consume the **built** packages via workspace references — re-run `pnpm run build` whenever you change TypeScript under `packages/`, `pnpm run build:wasm` (in place of `download:wasm`) whenever you change the Rust core, and `pnpm run deploy-examples` if you edit the sample projects.
 
-**Once the SDK publishes a release**, `pnpm run download:wasm` fetches the pre-built WASM in place of `pnpm run build:wasm`, and no Rust toolchain is needed. Contributing the change back? [CONTRIBUTING.md](./CONTRIBUTING.md) covers the coding standards and WASM FFI rules.
+Contributing the change back? [CONTRIBUTING.md](./CONTRIBUTING.md) covers the coding standards and WASM FFI rules.
 
 ## 💡 Overview
 

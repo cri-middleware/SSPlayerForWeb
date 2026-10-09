@@ -10,8 +10,8 @@
 #
 #   1. checks out the SpriteStudio-SDK submodule
 #   2. pnpm install
-#   3. the WASM: pnpm run download:wasm; while the SDK has published no release for it to
-#      download, builds it from source (pnpm run build:wasm, which needs Rust and wasm-pack)
+#   3. the WASM: pnpm run download:wasm; when that fails, builds it from source
+#      (pnpm run build:wasm, which needs Rust and wasm-pack)
 #   4. pnpm run build, the packages the examples consume
 #   5. the example's assets (pnpm run deploy-examples)
 #   6. starts the example's dev server and opens it (Ctrl-C stops it)
@@ -82,9 +82,9 @@ if (Missing "packages/ssplayer-core/wasm/ssruntime_bg.wasm", "packages/ssconvert
     & pnpm run download:wasm
     if ($LASTEXITCODE -ne 0) {
         if (-not ((Get-Command cargo -ErrorAction SilentlyContinue) -and (Get-Command wasm-pack -ErrorAction SilentlyContinue))) {
-            Fail "there is no SDK release to download the WASM from yet, and building it needs Rust (https://rustup.rs) and wasm-pack (cargo install wasm-pack)"
+            Fail "the WASM could not be downloaded, and building it needs Rust (https://rustup.rs) and wasm-pack (cargo install wasm-pack)"
         }
-        Write-Host ">> ${APP}: no release to download from; building the WASM from source (pnpm run build:wasm)"
+        Write-Host ">> ${APP}: the download failed; building the WASM from source (pnpm run build:wasm)"
         Run pnpm @("run", "build:wasm")
     }
 }

@@ -8,9 +8,6 @@ description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto impo
 `@spritestudio/ssplayer-tyranobuilder` is in **beta** (`7.0.0-beta.1`). The component set and
 the folder layout may still change before `7.0.0`. Verified on **TyranoBuilder Ver 3.00**
 (Electron 24.8.8) on macOS; Windows is untested.
-
-**There are no releases yet.** Once the first release ships, `ssplayer.tbp` will be
-distributed on **GitHub Releases** — for now, [build it from source](#building-from-source).
 :::
 
 Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
@@ -25,7 +22,7 @@ animations as `[ss_*]` tags.
 
 ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — the
 TyranoScript sample scene. There is no separate Builder demo because it is the same runtime:
-what the components place is what you see here (goes live once the first release is published 🚧).
+what the components place is what you see here.
 
 ## One plugin, two halves
 
@@ -55,7 +52,9 @@ the editor half, so **do not also install that ZIP** — both unpack to
 :::
 
 1. Download `ssplayer.tbp` from
-   [Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases).
+   [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true): open the Release named
+   `@spritestudio/ssplayer-tyranobuilder <version>` and take the file under **Assets**, not
+   the *Source code* archives.
 2. In TyranoBuilder: **plugin settings → add → pick that file**.
 
 **Do not rename the file.** TyranoBuilder derives the plugin's id from the filename and then

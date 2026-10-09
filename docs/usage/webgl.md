@@ -14,7 +14,7 @@ frameworkless pages.
 
 ▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">Live demo</a>** — the
 `<ss-player>` Web Component in a frameworkless page; drop a `.ssab` onto it to play your
-own (goes live once the first release is published 🚧).
+own.
 
 ## Install
 

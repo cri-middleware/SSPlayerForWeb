@@ -8,7 +8,7 @@ This file lists unfinished work that is specific to the TyranoScript plugin; wor
 
 ## Distribution & verification
 
-- [ ] **Submit to the Tyrano plugin library** — `plugin/README.md` is laid out for the plugin.tyrano.jp listing; the submission itself is not made. Blocked on: the first release.
+- [ ] **Submit to the Tyrano plugin library** — `plugin/README.md` is laid out for the plugin.tyrano.jp listing; the submission itself is not made.
 
 ## Backlog
 

@@ -4,10 +4,10 @@
 
 **SpriteStudio**（`.ssab`）アニメーションを **RPG ツクール MZ** で再生するプラグインです。キャラやピクチャと正しい前後関係（Zオーダー）で表示されます。
 
-> **対象読者:** RPG ツクール MZ でゲームを作る人。プラグインコマンドで SpriteStudio アニメを追加します（コード不要）。プラグイン自体をいじる場合は → [コントリビューター向け](#コントリビューター向け--ソースからビルド)。**ステータス:** beta（`7.0.0-beta.1`）・private（**npm 未公開**）。初回リリース後、**GitHub Releases** にプラグイン ZIP を添付して配布します。まだリリースは存在しないため、現時点ではソースからビルドします（→ [コントリビューター向け](#コントリビューター向け--ソースからビルド) 参照）。
+> **対象読者:** RPG ツクール MZ でゲームを作る人。プラグインコマンドで SpriteStudio アニメを追加します（コード不要）。プラグイン自体をいじる場合は → [コントリビューター向け](#コントリビューター向け--ソースからビルド)。**ステータス:** beta（`7.0.0-beta.1`）。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
-同梱のサンプル MZ プロジェクトをブラウザで動かせます（🚧 初回リリース後に公開）。
+同梱のサンプル MZ プロジェクトをブラウザで動かせます。
 
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。この README は2部構成になっています。
 **[プラグインの使い方](#プラグインの使い方)**（RPG ツクール MZ でゲームを作る方向け）と、
@@ -23,8 +23,8 @@
 
 ## 1. 導入
 
-1. `ssplayer-rpgmakermz.js` と `ssruntime_bg.wasm` を用意します。テストプレイで `.sspj` を自動変換したい場合は `ssconverter_bg.wasm` も用意します（[後述](#テストプレイで変換する)）。**まだリリースは公開されていません** — 現時点では自分でビルドしてください（→ [コントリビューター向け](#コントリビューター向け--ソースからビルド) 参照）。初回リリース後は、**GitHub Releases** からプラグイン ZIP をダウンロードできるようになります。
-2. これらを `js/plugins/` にフラットに配置します（WASM は `.js` と同じ場所に置いてください）。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中身は `ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm` の 3 つで、`ssconverter_bg.wasm` はテストプレイで `.sspj` を自動変換したい場合にだけ使います（[後述](#テストプレイで変換する)）。
+2. これらを `js/plugins/` にフラットに展開します（WASM は `.js` と同じ場所に置いてください）。
 3. プラグイン管理で **ssplayer-rpgmakermz** を有効化します。パラメータはありません（WASM はプラグイン `.js` と同じフォルダから自動で読み込まれます）。
 
 ## 2. アニメを変換する（.sspj → .ssab）
@@ -32,7 +32,7 @@
 `.sspj` は SpriteStudio で編集するプロジェクトファイル、`.ssab` はプラグインが実際に再生する変換済み（プリビルド）のランタイムファイルです。`.sspj` を次のいずれかで変換してください。
 
 - **Web（インストール不要）：** ホスト版コンバータ
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>**（🚧 初回リリース後に利用可能）を開き、`.sspj`
+  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** を開き、`.sspj`
   プロジェクトが入ったフォルダ（ディレクトリ）をドロップすると `.ssab`（＋テクスチャ）が
   zip ファイルでダウンロードできます。
 - **デスクトップ：** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases) を使います。
