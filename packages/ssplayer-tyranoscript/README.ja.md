@@ -18,6 +18,8 @@
 2. その `ssplayer/` フォルダを Tyrano プロジェクトの `data/others/plugin/` にコピーします。
 3. シナリオから `[plugin name="ssplayer"]` で読み込みます（下記の例を参照）。
 
+**置き場所とフォルダ名は変えられません。** `[plugin name="x"]` は TyranoScript で `[call storage="../others/plugin/x/init.ks"]` を表す省略形なので、プラグインはちょうど `data/others/plugin/ssplayer/` に置く必要があります。フォルダ名を変えたり別の場所へ移したりすると、`[plugin name="ssplayer"]` は何も見つけられません。`init.ks` の中のパスも、この場所を前提に書いてあります。
+
 フォルダには 3 ファイルが入ります: `init.ks`（ローダ）、`main.js`（プラグイン本体）、
 `ssruntime_bg.wasm`（アニメーションランタイム）。`.ssab` アニメファイルは
 `data/others/ssdata/` に置きます。
