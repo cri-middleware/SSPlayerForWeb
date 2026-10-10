@@ -51,6 +51,9 @@ export default withMermaid({
   // VitePress build has no --base CLI flag.
   base: process.env.DOCS_BASE || '/',
 
+  // VitePress puts no `base` in front of a `head` href, so the icon's spells it out.
+  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: `${process.env.DOCS_BASE || '/'}favicon.svg` }]],
+
   // `llms.txt` and `llms-full.txt` for readers who hand the docs to an AI assistant, plus a
   // Markdown copy of every page beside its HTML. The two aggregates leave out the Japanese
   // pages (the plugin writes one pair for the whole site) and the TypeDoc symbol pages, which
@@ -97,9 +100,9 @@ export default withMermaid({
   // and description VitePress has already resolved (frontmatter > locale > site), which is
   // also how the ja pages get Japanese cards without a second code path.
   //
-  // No og:image: there is no SpriteStudio artwork in this repository to point at, and
-  // `summary_large_image` without one renders as nothing. Add the file under docs/public/
-  // and switch the card type when artwork exists.
+  // No og:image: the only SpriteStudio artwork in this repository is the SVG favicon, link
+  // previews do not show SVG, and `summary_large_image` without an image renders as nothing.
+  // Add a PNG or JPEG under docs/public/ and switch the card type when there is one.
   transformHead({ pageData, siteData, title, description }) {
     const path = pageData.relativePath
       .replace(/(^|\/)index\.md$/, '$1')
