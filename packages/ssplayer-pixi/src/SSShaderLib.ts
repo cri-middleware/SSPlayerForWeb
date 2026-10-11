@@ -38,9 +38,12 @@ import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 
 
 // ---------------------------------------------------------------------------
-// GLSL (WebGL2 / GLSL ES 3.00) — shared preamble + helpers.
-// `finalColor` is the implicit fragment output Pixi injects (see
-// PartsColorShader); `uColor` is Pixi's (tint.rgb * worldAlpha, worldAlpha).
+// GLSL — shared preamble + helpers.
+// With no `#version 300 es`, PixiJS compiles these as GLSL ES 1.00 on WebGL2 as
+// well, defining `in`, `finalColor` and `texture` onto their ES 1.00 forms; ES
+// 3.00-only code fails to link and the part draws nothing. `finalColor` is the
+// fragment output (see PartsColorShader); `uColor` is Pixi's
+// (tint.rgb * worldAlpha, worldAlpha).
 // ---------------------------------------------------------------------------
 const GL_HEAD = `
 in vec2 vUV;
@@ -480,6 +483,8 @@ const WAVE_WGSL = `
 `;
 
 // --- ss-move (directional smear; bounded sample loop) ---
+// ES 1.00 refuses a loop bound that is not a constant, so the loop runs to the
+// cap and breaks at the count.
 const MOVE_GL = `
     float fDistance = ss_param0;
     float fDirection = ss_param1;
@@ -492,7 +497,8 @@ const MOVE_GL = `
     Coord += Vel * float(iCount);
     Coord -= Vel;
     vec4 Pixel = ssTex(Coord);
-    for (int i = 1; i < iCount; i++) {
+    for (int i = 1; i < 128; i++) {
+        if (i >= iCount) break;
         Coord -= Vel;
         Pixel = mix(ssTex(Coord), Pixel, 0.96 * abs(fPower));
     }
