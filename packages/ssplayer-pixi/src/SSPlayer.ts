@@ -302,6 +302,15 @@ export class SSPlayer extends Container {
      * (mask parts themselves stay hidden, as they carry no colour).
      */
     public maskEnabled: boolean = true;
+
+    // What the last renderFrame drew from. A stopped player repaints only when
+    // one of these has changed since (see update).
+    private _drawnFrame = NaN;
+    private _drawnAnimation = '';
+    private readonly _drawnAffine = new Float32Array(6);
+    private _drawnAffineActive = false;
+    private _drawnMaskEnabled = true;
+    private _drawnWithRenderer = false;
     
     /**
      * Optional AudioManager. If set, setAnimation will automatically preload sounds
@@ -1204,7 +1213,14 @@ export class SSPlayer extends Container {
     }
 
     private update(ticker: Ticker) {
-        if (!this.internalPlayer.isPlaying) return;
+        if (!this.internalPlayer.isPlaying) {
+            // Stopped, nothing advances, so the last drawing stands unless what it
+            // was drawn from has changed: a seek, another animation, a flip or an
+            // offset, masking switched, or the renderer the masks need arriving.
+            // Overrides and texture swaps repaint on the spot (afterOverride).
+            if (this.drawnFromChanged()) this.renderFrame(this.internalPlayer.getDrawFrame());
+            return;
+        }
 
         const deltaMs = ticker.deltaMS;
 
@@ -1242,8 +1258,30 @@ export class SSPlayer extends Container {
         }
     }
 
+    /** Whether anything renderFrame draws from has changed since it last ran. */
+    private drawnFromChanged(): boolean {
+        const ip = this.internalPlayer;
+        if (ip.getDrawFrame() !== this._drawnFrame || ip.currentAnimation !== this._drawnAnimation) return true;
+        if (this.maskEnabled !== this._drawnMaskEnabled || (this.renderer !== null) !== this._drawnWithRenderer) return true;
+        const affine = ip.getRootAffine();
+        if ((affine !== null) !== this._drawnAffineActive) return true;
+        if (affine) {
+            for (let i = 0; i < 6; i++) if (affine[i] !== this._drawnAffine[i]) return true;
+        }
+        return false;
+    }
+
     private renderFrame(frameNo: number) {
-        const frameData = this.internalPlayer.runtimeManager.getFrameData(frameNo);
+        const ip = this.internalPlayer;
+        this._drawnFrame = frameNo;
+        this._drawnAnimation = ip.currentAnimation;
+        const affine = ip.getRootAffine();
+        this._drawnAffineActive = affine !== null;
+        if (affine) this._drawnAffine.set(affine);
+        this._drawnMaskEnabled = this.maskEnabled;
+        this._drawnWithRenderer = this.renderer !== null;
+
+        const frameData = ip.runtimeManager.getFrameData(frameNo);
         if (!frameData) return;
 
         for (let i = 0; i < this.meshPool.length; i++) {
