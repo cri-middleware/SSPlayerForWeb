@@ -1,0 +1,104 @@
+name: CI
+
+# Two tiers, as in SpriteStudio-SDK. Every pull request runs
+# scripts/build-release.sh with sdk=build: the wasm compiled from the SDK
+# submodule, every package built and tested, and the npm tarballs and plugin
+# archives packed and checked, as release.yml does with the pinned SDK release.
+# The weekly run and a dispatch also build the Pages site the way pages.yml does.
+# main takes every pull request and a release is dispatched from it, so there is
+# no release PR to run the weekly tier on.
+on:
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - '.gitignore'
+      - 'LICENSE*'
+  # The weekly run also writes the main caches that PRs restore from, since PRs
+  # do not save.
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-build:
+    name: 📦 Build, test and pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout (with SpriteStudio-SDK submodule)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # build-runtime.sh runs the SDK's release-web.sh, which needs the wasm
+      # target and wasm-pack.
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          # Pinned by SHA, so the channel must be named explicitly here.
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: SpriteStudio-SDK
+          # Only main writes caches. A PR's cache is visible to that PR alone, so
+          # saving one per PR would only fill the 10 GB quota and evict the main
+          # caches every PR restores from.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        with:
+          tool: wasm-pack
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build, test and check the release
+        run: ./scripts/build-release.sh skip=install sdk=build out=release-dist verify=yes clean=yes
+
+  # The weekly tier: the site pages.yml publishes, built the same way, so a
+  # broken page surfaces here rather than when a release is published.
+  docs:
+    name: 📚 Pages site
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout (with SpriteStudio-SDK submodule)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Build site
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: ./scripts/build-pages.sh base="/$REPO_NAME/" out=_site
