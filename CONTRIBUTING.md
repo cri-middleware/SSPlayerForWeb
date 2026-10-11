@@ -126,8 +126,8 @@ scripts/build-docs.sh      # TypeDoc, then VitePress -> docs/.vitepress/dist
 
 `pages.yml` runs `build-docs.sh` too, so CI and a local build cannot drift. Two options earn their
 keep: `api=no` skips TypeDoc when only prose changed, and `base=/SSPlayerForWeb/` sets `DOCS_BASE`
-the way the project site needs it. **Building the docs is the only gate there is** — nothing builds
-them on a pull request, and a dead link fails the build, VitePress checking by default. This is
+the way the project site needs it. **Building the docs is the only gate before the merge** — nothing builds
+them on a pull request (CI builds the site weekly), and a dead link fails the build, VitePress checking by default. This is
 *one* build for both locales, VitePress resolving `docs/ja` itself, which is why this
 `build-docs` takes no `locale=` where the Zensical player repos' do. The wasm is not optional:
 TypeDoc parses `packages/*/src`, which import the bindings.
@@ -275,7 +275,7 @@ scripts/build-docs.sh      # TypeDoc のあと VitePress -> docs/.vitepress/dist
 
 `pages.yml` も `build-docs.sh` を実行するので、CI と手元のビルドがずれません。役に立つオプションは
 2 つです。文章だけを直したときに TypeDoc を飛ばす `api=no` と、プロジェクトサイトに必要な
-`DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。**ゲートはこのビルドだけです。** プルリクエストでは docs はビルドされず、リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
+`DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。**マージ前のゲートはこのビルドだけです。** プルリクエストでは docs はビルドされず（CI がサイトをビルドするのは週次です）、リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
 `docs/ja` を自分で解決するため、これは両ロケールを**一度に**ビルドします。Zensical の Player 群の
 `build-docs` が `locale=` を取るのに対し、こちらが取らないのはそのためです。wasm は省略できません。
 TypeDoc が読む `packages/*/src` がバインディングを import しているからです。

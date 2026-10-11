@@ -18,7 +18,7 @@ that is useful information, not a problem.
 
 - [ ] `pnpm run build:wasm` (or `download:wasm`), `pnpm run build`, `pnpm test` — read the summary; the conversion suites skip without the converter WASM
 - [ ] `pnpm run dev` in `examples/webgl-example` or `examples/pixi-example`
-- [ ] `scripts/build-docs.sh`, if the docs changed — nothing else builds them
+- [ ] `scripts/build-docs.sh`, if the docs changed — nothing on a pull request builds them
 - [ ] Not run — see notes below / 未実行（理由は下記）
 
 **Environment / 環境:** browser or Node.js version, rendering engine and version, OS
