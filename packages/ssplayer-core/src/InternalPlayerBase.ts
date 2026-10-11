@@ -1375,7 +1375,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             const ev = this.runtimeManager.context.get_active_effect_event(partIndex);
             if (ev) {
                 // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
-                item.visible = item.slot.raw.step(ev, frame, deltaSeconds, this.getFrameRate(), parentLooped, true, 2);
+                // draw = true: this runs before the tick's draw_order exists. Omitted, it reads as false and nothing draws.
+                item.visible = item.slot.raw.step(ev, frame, deltaSeconds, this.getFrameRate(), parentLooped, true, 2, true);
                 if ((ev as any).free) (ev as any).free();
             } else {
                 item.visible = false;
