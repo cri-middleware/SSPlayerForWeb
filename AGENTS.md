@@ -44,7 +44,9 @@ editor plugins.
 
 *   **No per-frame allocations in the playback hot path.** Typed arrays view `wasmMemory.buffer` directly
     rather than copying out of it.
-*   **The player facades are split by rendering strategy**: `DirectInternalPlayer` draws directly (PixiJS v8
-    through its BatchRenderer), `SceneGraphInternalPlayer` through a hierarchy (RPG Maker MZ, PixiJS v5).
-    Add a renderer by choosing one, not by widening the other.
+*   **A renderer draws the runtime's draw batches, not its parts.** Every package drives
+    `DirectInternalPlayer`. A part draws alone only where it needs state of its own: an integration shader,
+    or a stencil-masked part in WebGL.
+*   **Pooled GPU geometry keeps its buffers and grows.** Rebuilt on every size change, a particle effect
+    creates GPU buffers each frame.
 *   **Anything exposed from `ssruntime` must be a C-API that `wasm-bindgen` can bind.**

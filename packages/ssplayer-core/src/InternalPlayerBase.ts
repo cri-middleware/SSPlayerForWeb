@@ -6,6 +6,7 @@ import { IAudioManager } from './IAudioManager.js';
 import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
 import { InstancePackProvider, resolveInstancePacks } from './PackResolver.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
+import { addSharedPack, retainSharedPack } from './SharedPacks.js';
 import { canvasRectFrom, type SSPlacementBox } from './Placement.js';
 
 export interface EffectChildState {
@@ -145,8 +146,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * @param buffer The raw byte array of the SSAB file.
      * @param ssabUrl Optional source URL of the SSAB. When given, textures and
      *   instance packs resolve relative to its directory (siblings of the SSAB —
-     *   the structure ssconverter emits). Omit for inline / ArrayBuffer loads
-     *   whose textures are supplied by hash rather than fetched.
+     *   the structure ssconverter emits), and a player already holding the same
+     *   bytes from the same URL shares its pack instead of a copy (SharedPacks).
+     *   Omit for inline / ArrayBuffer loads whose textures are supplied by hash
+     *   rather than fetched.
      */
     public bindResource(buffer: Uint8Array, ssabUrl?: string) {
         if (ssabUrl !== undefined) {
@@ -157,12 +160,15 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this._ssabUrl = ssabUrl;
             this._assetBaseUrl = ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
         }
+        // Looked up before the bound pack is released, so rebinding the file this
+        // player already holds keeps that pack rather than building it again.
+        const shared = ssabUrl !== undefined ? retainSharedPack(ssabUrl, buffer) : null;
         if (this._ssabResource) {
             this._ssabResource.destroy();
         }
         this._instancePackResources.forEach(res => res.destroy());
         this._instancePackResources.clear();
-        this._ssabResource = new SSABResource(buffer);
+        this._ssabResource = shared ? shared.resource : new SSABResource(buffer);
         this.runtimeManager.bindResource(this._ssabResource);
         // Nothing is set up on the new pack, whatever was set up on the old one.
         // Without this, `setAnimation` would take a name that merely *matches*
@@ -176,11 +182,21 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._resourcesReady = false;
         this._soundsPreloadedFor = null;
         this._soundsPromise = null;
+        if (shared) {
+            this._texturePaths = shared.texturePaths;
+            this._animationNames = shared.animationNames;
+            return;
+        }
         this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer);
         // Cached here rather than left to the caller, because the alternative is
         // holding on to the whole SSAB (megabytes) or re-fetching it just to read
         // a couple of dozen strings — both of which adapters were doing.
         this._animationNames = SSRuntimeManager.extractAnimationNames(buffer);
+        if (ssabUrl !== undefined) {
+            const ctx = this.runtimeManager.context;
+            addSharedPack(ssabUrl, this._ssabResource, this._texturePaths, this._animationNames,
+                { ptr: ctx.get_ssab_buf(), len: ctx.get_ssab_len() });
+        }
     }
 
     /**

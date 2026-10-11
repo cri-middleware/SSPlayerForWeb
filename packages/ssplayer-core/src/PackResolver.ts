@@ -1,5 +1,6 @@
 import { SSRuntimeManager, SSABResource } from './SSRuntimeManager.js';
 import { IResourceManager } from './IResourceManager.js';
+import { addSharedPack, retainSharedPack } from './SharedPacks.js';
 
 /**
  * Host-supplied resolver for instance-referenced animation packs. Given the
@@ -61,6 +62,7 @@ export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): P
             // fall back to fetching a sibling `<base>/<name>.ssab`.
             let subBuf: Uint8Array | null = null;
             let fromProvider = false;
+            let url: string | null = null;
             if (provider) {
                 const provided = await provider(ref.name, ref.hash);
                 if (provided) {
@@ -69,7 +71,7 @@ export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): P
                 }
             }
             if (!subBuf) {
-                const url = prefix + ref.name + '.ssab';
+                url = prefix + ref.name + '.ssab';
                 const response = await fetch(url);
                 if (!response.ok) {
                     console.warn(`Failed to load instance pack "${ref.name}" from ${url}: ${response.statusText}`);
@@ -78,7 +80,15 @@ export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): P
                 subBuf = new Uint8Array(await response.arrayBuffer());
             }
 
-            const resource = new SSABResource(subBuf);
+            // A pack fetched from a URL is shared with every player holding the
+            // same bytes from it (SharedPacks). A provider's bytes have no URL to
+            // share by, like a pack bound without one.
+            const shared = url !== null ? retainSharedPack(url, subBuf) : null;
+            const resource = shared ? shared.resource : new SSABResource(subBuf);
+            const texPaths = shared ? shared.texturePaths : SSRuntimeManager.extractTexturePaths(subBuf);
+            if (url !== null && !shared) {
+                addSharedPack(url, resource, texPaths, SSRuntimeManager.extractAnimationNames(subBuf));
+            }
             into.set(ref.hash, resource);
 
             // Load the referenced pack's textures into the shared cache.
@@ -92,7 +102,6 @@ export async function resolveInstancePacks(opts: ResolveInstancePacksOptions): P
                 const embedded = loadBytes
                     ? new Map(SSRuntimeManager.extractEmbeddedTextures(subBuf).map(e => [e.hash, e.bytes] as const))
                     : null;
-                const texPaths = SSRuntimeManager.extractTexturePaths(subBuf);
                 await Promise.all(texPaths.map(info => {
                     const bytes = embedded?.get(info.hash);
                     if (bytes && loadBytes) return loadBytes(bytes, info.hash);

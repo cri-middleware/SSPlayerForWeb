@@ -1,4 +1,4 @@
-import { Container, Mesh, Geometry, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
+import { Container, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
 import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
@@ -6,6 +6,7 @@ import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
 import { MaskWriteShader, MaskWriteShaderWGSL } from './MaskWriteShader.js';
 import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPartsColorShader.js';
 import { PixiResourceManager } from './PixiResourceManager.js';
+import { PooledGeometry, PooledMesh } from './PooledMesh.js';
 import { SS_SHADER_SOURCES } from './SSShaderLib.js';
 // SpriteStudio framebuffer blend modes (Invert / Exclusion / Sub) registered as
 // fixed-function GPU blend states — the same mechanism SpriteStudio uses — rather
@@ -145,7 +146,7 @@ export class SSPlayer extends Container {
 
     public readonly internalPlayer: DirectInternalPlayer;
 
-    private meshPool: Mesh<any>[] = [];
+    private meshPool: PooledMesh[] = [];
     private activeMeshes: number = 0;
 
     // Reused per-frame scratch so the render hot path allocates nothing: a
@@ -252,11 +253,11 @@ export class SSPlayer extends Container {
     // coverage meshes (MaskWrite) share the normal layout; masked-content
     // meshes carry the extra aMaskUV attribute (MaskedPartsColor); effect
     // meshes drop aVarg (EffectShader). See MeshLayout.
-    private maskMeshPool: Mesh<any>[] = [];
+    private maskMeshPool: PooledMesh[] = [];
     private activeMaskMeshes: number = 0;
-    private maskedMeshPool: Mesh<any>[] = [];
+    private maskedMeshPool: PooledMesh[] = [];
     private activeMaskedMeshes: number = 0;
-    private effectMeshPool: Mesh<any>[] = [];
+    private effectMeshPool: PooledMesh[] = [];
     private activeEffectMeshes: number = 0;
     // Pooled offscreen coverage textures (one per mask-bearing context per frame).
     private rtPool: RenderTexture[] = [];
@@ -301,6 +302,15 @@ export class SSPlayer extends Container {
      * (mask parts themselves stay hidden, as they carry no colour).
      */
     public maskEnabled: boolean = true;
+
+    // What the last renderFrame drew from. A stopped player repaints only when
+    // one of these has changed since (see update).
+    private _drawnFrame = NaN;
+    private _drawnAnimation = '';
+    private readonly _drawnAffine = new Float32Array(6);
+    private _drawnAffineActive = false;
+    private _drawnMaskEnabled = true;
+    private _drawnWithRenderer = false;
     
     /**
      * Optional AudioManager. If set, setAnimation will automatically preload sounds
@@ -606,10 +616,10 @@ export class SSPlayer extends Container {
         this.maskedShaders.clear();
         this.ssShaderPools.clear();
 
-        for (const m of this.meshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.maskedMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.maskMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
-        for (const m of this.effectMeshPool) m.destroy({ children: true, texture: false, textureSource: false });
+        for (const m of this.meshPool) destroyMesh(m);
+        for (const m of this.maskedMeshPool) destroyMesh(m);
+        for (const m of this.maskMeshPool) destroyMesh(m);
+        for (const m of this.effectMeshPool) destroyMesh(m);
         this.meshPool.length = 0;
         this.maskedMeshPool.length = 0;
         this.maskMeshPool.length = 0;
@@ -1203,7 +1213,14 @@ export class SSPlayer extends Container {
     }
 
     private update(ticker: Ticker) {
-        if (!this.internalPlayer.isPlaying) return;
+        if (!this.internalPlayer.isPlaying) {
+            // Stopped, nothing advances, so the last drawing stands unless what it
+            // was drawn from has changed: a seek, another animation, a flip or an
+            // offset, masking switched, or the renderer the masks need arriving.
+            // Overrides and texture swaps repaint on the spot (afterOverride).
+            if (this.drawnFromChanged()) this.renderFrame(this.internalPlayer.getDrawFrame());
+            return;
+        }
 
         const deltaMs = ticker.deltaMS;
 
@@ -1241,8 +1258,30 @@ export class SSPlayer extends Container {
         }
     }
 
+    /** Whether anything renderFrame draws from has changed since it last ran. */
+    private drawnFromChanged(): boolean {
+        const ip = this.internalPlayer;
+        if (ip.getDrawFrame() !== this._drawnFrame || ip.currentAnimation !== this._drawnAnimation) return true;
+        if (this.maskEnabled !== this._drawnMaskEnabled || (this.renderer !== null) !== this._drawnWithRenderer) return true;
+        const affine = ip.getRootAffine();
+        if ((affine !== null) !== this._drawnAffineActive) return true;
+        if (affine) {
+            for (let i = 0; i < 6; i++) if (affine[i] !== this._drawnAffine[i]) return true;
+        }
+        return false;
+    }
+
     private renderFrame(frameNo: number) {
-        const frameData = this.internalPlayer.runtimeManager.getFrameData(frameNo);
+        const ip = this.internalPlayer;
+        this._drawnFrame = frameNo;
+        this._drawnAnimation = ip.currentAnimation;
+        const affine = ip.getRootAffine();
+        this._drawnAffineActive = affine !== null;
+        if (affine) this._drawnAffine.set(affine);
+        this._drawnMaskEnabled = this.maskEnabled;
+        this._drawnWithRenderer = this.renderer !== null;
+
+        const frameData = ip.runtimeManager.getFrameData(frameNo);
         if (!frameData) return;
 
         for (let i = 0; i < this.meshPool.length; i++) {
@@ -1338,6 +1377,9 @@ export class SSPlayer extends Container {
         let memBuf = getWasmMemory().buffer;
 
         const maskFlags = manager.getPartMaskFlags();
+        // Whether this frame carries any `SHDR` (integration-shader) attribute, so
+        // shader-free content never scans its batches for one.
+        const hasShaders = frameData.shadersLength() > 0;
 
         // Mask coverage pre-pass, once per tree at the root: number every part
         // of the instance tree on one draw sequence and rasterise every writer
@@ -1512,134 +1554,102 @@ export class SSPlayer extends Container {
             // parts use a separate pool (carrying aMaskUV) and shader.
             const masked = cov !== null && target;
 
-            if (kind === DrawBatchKind.Normal) {
-                for (let c = 0; c < count; c++) {
-                    const partIdx = drawOrder[startRank + c];
-                    // draw_as_mask parts are pure masks: coverage only, no colour.
-                    if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
-                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
-                    if (alpha <= 0) continue;
-                    if (dropInside && polarityOf(partIdx)) continue;
-
-                    const mesh = masked
-                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, 5, 12, 'masked')
-                        : this.acquireMesh(this.meshPool, this.activeMeshes++, 5, 12, 'parts');
-
-                    const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
-                    const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
-                    const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
-                    const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
-
-                    geometryBuilder.buildNormal(
-                        partIdx, frameData, invTexW, invTexH,
-                        positions, uvs, colors, vargs
-                    );
-                    mesh.geometry.getBuffer('aPosition').update();
-                    mesh.geometry.getBuffer('aUV').update();
-                    mesh.geometry.getBuffer('aColor').update();
-                    mesh.geometry.getBuffer('aVarg').update();
-
-                    // SpriteStudio integration shader (`SHDR`): if this part
-                    // carries a shader attribute resolving to a built-in `ss-*`
-                    // program, draw it with that program (param0..7 + cell rect
-                    // + pixel size as per-part uniforms) instead of the plain
-                    // PartsColorShader. Not combined with masking (v1) — a
-                    // masked shader part falls back to the plain masked path.
-                    const shaderIdx = masked ? -1 : this._raw.partShaderOf(frameData, partIdx);
-                    const ssShader = shaderIdx >= 0
-                        ? this.resolveSsShader(frameData, shaderIdx, uvs, texture, invTexW, invTexH)
-                        : null;
-
-                    this.finishPart(mesh, 5, masked,
-                        seq ? seq[startRank + c] : 0,
-                        polarityOf(partIdx),
-                        cov, texture, blendMode, parentAlpha, ssShader);
-                }
-            } else if (kind === DrawBatchKind.Shape) {
-                const shapeVertexCounts = manager.getShapeVertexCounts();
-
-                for (let c = 0; c < count; c++) {
-                    const partIdx = drawOrder[startRank + c];
-                    if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
-                    const numVerts = shapeVertexCounts[partIdx];
-                    if (numVerts < 3) continue;
-
-                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
-                    if (alpha <= 0) continue;
-                    if (dropInside && polarityOf(partIdx)) continue;
-
-                    const numIndices = (numVerts - 2) * 3;
-                    const mesh = masked
-                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, numVerts, numIndices, 'masked')
-                        : this.acquireMesh(this.meshPool, this.activeMeshes++, numVerts, numIndices, 'parts');
-
-                    const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
-                    const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
-                    const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
-                    const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
-                    const indices = mesh.geometry.getIndex().data as Uint32Array;
-
-                    geometryBuilder.buildShape(
-                        partIdx, frameData, numVerts, invTexW, invTexH,
-                        positions, uvs, colors, vargs, indices
-                    );
-
-                    mesh.geometry.getBuffer('aPosition').update();
-                    mesh.geometry.getBuffer('aUV').update();
-                    mesh.geometry.getBuffer('aColor').update();
-                    mesh.geometry.getBuffer('aVarg').update();
-                    mesh.geometry.getIndex().update();
-
-                    this.finishPart(mesh, numVerts, masked,
-                        seq ? seq[startRank + c] : 0,
-                        polarityOf(partIdx),
-                        cov, texture, blendMode, parentAlpha);
-                }
-            } else if (kind === DrawBatchKind.Mesh) {
+            if (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape) {
                 const meshVOff = manager.getMeshVertexOffsets();
                 const meshIOff = manager.getMeshIndexOffsets();
+                const shapeVertexCounts = manager.getShapeVertexCounts();
 
+                // SpriteStudio integration shader (`SHDR`): a part carrying one
+                // draws with its own ss-* program and per-part uniforms (param0..7,
+                // cell rect, pixel size), so a Normal batch holding one is drawn
+                // part by part, in order, as ssplayer-webgl draws it. Not combined
+                // with masking (v1): a masked shader part takes the masked path.
+                if (kind === DrawBatchKind.Normal && !masked && hasShaders &&
+                    this.batchHasShader(frameData, drawOrder, startRank, count, maskFlags)) {
+                    for (let c = 0; c < count; c++) {
+                        const partIdx = drawOrder[startRank + c];
+                        if (!this.drawsPart(partIdx, frameData, maskFlags, dropInside, ctxVisibleInside)) continue;
+                        const mesh = this.acquireMesh(this.meshPool, this.activeMeshes++, 5, 12, 'parts');
+                        const geometry = mesh.geometry;
+                        const uvs = geometry.getBuffer('aUV').data as Float32Array;
+                        geometryBuilder.buildNormal(
+                            partIdx, frameData, invTexW, invTexH,
+                            geometry.getBuffer('aPosition').data as Float32Array, uvs,
+                            geometry.getBuffer('aColor').data as Float32Array,
+                            geometry.getBuffer('aVarg').data as Float32Array
+                        );
+                        writeQuadIndices(geometry.getIndex().data as Uint32Array, 0, 0);
+                        uploadMesh(mesh, 5, 12);
+
+                        const shaderIdx = this._raw.partShaderOf(frameData, partIdx);
+                        const ssShader = shaderIdx >= 0
+                            ? this.resolveSsShader(frameData, shaderIdx, uvs, texture, invTexW, invTexH)
+                            : null;
+                        this.finishPart(mesh, null, texture, blendMode, parentAlpha, ssShader);
+                    }
+                    continue;
+                }
+
+                // Every other content batch is one mesh. Its parts share the
+                // texture, the blend and the parent chain's alpha; each part's own
+                // alpha and colour ride on its vertices, and so do a masked part's
+                // number on the tree sequence and its polarity (aMaskUV).
+                let totalVerts = 0;
+                let totalIndices = 0;
                 for (let c = 0; c < count; c++) {
                     const partIdx = drawOrder[startRank + c];
-                    if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
-                    const alpha = this._raw.partAlphaOf(frameData, partIdx);
-                    if (alpha <= 0) continue;
-                    if (dropInside && polarityOf(partIdx)) continue;
-
-                    const v0 = meshVOff[partIdx];
-                    const v1 = meshVOff[partIdx + 1];
-                    const i0 = meshIOff[partIdx];
-                    const i1 = meshIOff[partIdx + 1];
-
-                    const pCount = v1 - v0;
-                    const iCount = i1 - i0;
-                    if (pCount === 0 || iCount === 0) continue;
-
-                    const mesh = masked
-                        ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, pCount, iCount, 'masked')
-                        : this.acquireMesh(this.meshPool, this.activeMeshes++, pCount, iCount, 'parts');
-
-                    const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
-                    const uvs = mesh.geometry.getBuffer('aUV').data as Float32Array;
-                    const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
-                    const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
-                    const indices = mesh.geometry.getIndex().data as Uint32Array;
-
-                    geometryBuilder.buildMesh(
-                        partIdx, frameData, pCount, iCount, invTexW, invTexH,
-                        positions, uvs, colors, vargs, indices
-                    );
-                    mesh.geometry.getBuffer('aPosition').update();
-                    mesh.geometry.getBuffer('aUV').update();
-                    mesh.geometry.getBuffer('aColor').update();
-                    mesh.geometry.getBuffer('aVarg').update();
-                    mesh.geometry.getIndex().update();
-
-                    this.finishPart(mesh, pCount, masked,
-                        seq ? seq[startRank + c] : 0,
-                        polarityOf(partIdx),
-                        cov, texture, blendMode, parentAlpha);
+                    if (!this.drawsPart(partIdx, frameData, maskFlags, dropInside, ctxVisibleInside)) continue;
+                    totalVerts += this.partVertices(kind, partIdx, meshVOff, meshIOff, shapeVertexCounts);
+                    totalIndices += this._partIndices;
                 }
+                if (totalVerts === 0 || totalIndices === 0) continue;
+
+                const mesh = masked
+                    ? this.acquireMesh(this.maskedMeshPool, this.activeMaskedMeshes++, totalVerts, totalIndices, 'masked')
+                    : this.acquireMesh(this.meshPool, this.activeMeshes++, totalVerts, totalIndices, 'parts');
+                const geometry = mesh.geometry;
+                const positions = geometry.getBuffer('aPosition').data as Float32Array;
+                const uvs = geometry.getBuffer('aUV').data as Float32Array;
+                const colors = geometry.getBuffer('aColor').data as Float32Array;
+                const vargs = geometry.getBuffer('aVarg').data as Float32Array;
+                const indices = geometry.getIndex().data as Uint32Array;
+
+                let vOffset = 0;
+                let iOffset = 0;
+                for (let c = 0; c < count; c++) {
+                    const partIdx = drawOrder[startRank + c];
+                    // The same two calls as the count above, so the offsets land
+                    // exactly on the totals.
+                    if (!this.drawsPart(partIdx, frameData, maskFlags, dropInside, ctxVisibleInside)) continue;
+                    const numVerts = this.partVertices(kind, partIdx, meshVOff, meshIOff, shapeVertexCounts);
+                    if (numVerts === 0) continue;
+                    const numIndices = this._partIndices;
+
+                    if (kind === DrawBatchKind.Normal) {
+                        geometryBuilder.buildNormal(
+                            partIdx, frameData, invTexW, invTexH,
+                            positions, uvs, colors, vargs, vOffset
+                        );
+                        writeQuadIndices(indices, iOffset, vOffset);
+                    } else if (kind === DrawBatchKind.Shape) {
+                        geometryBuilder.buildShape(
+                            partIdx, frameData, numVerts, invTexW, invTexH,
+                            positions, uvs, colors, vargs, indices, vOffset, iOffset
+                        );
+                    } else {
+                        geometryBuilder.buildMesh(
+                            partIdx, frameData, numVerts, numIndices, invTexW, invTexH,
+                            positions, uvs, colors, vargs, indices, vOffset, iOffset
+                        );
+                    }
+                    if (masked) {
+                        this.fillMaskUV(mesh, vOffset, numVerts, seq ? seq[startRank + c] : 0, polarityOf(partIdx), cov!);
+                    }
+                    vOffset += numVerts;
+                    iOffset += numIndices;
+                }
+                uploadMesh(mesh, totalVerts, totalIndices);
+                this.finishPart(mesh, masked ? cov : null, texture, blendMode, parentAlpha);
             } else if (kind === DrawBatchKind.Effect) {
                 // Particle geometry is simulated in the WASM runtime and returned as an
                 // EffectDrawPlan per effect part: one command per (cellmap, blend) emitter
@@ -1697,25 +1707,21 @@ export class SSPlayer extends Container {
                         iOff += d.quadCount * 6;
                     }
 
-                    mesh.geometry.getBuffer('aPosition').update();
-                    mesh.geometry.getBuffer('aUV').update();
-                    mesh.geometry.getBuffer('aColor').update();
-                    mesh.geometry.getIndex().update();
-
                     const effectTex = this.pixiResourceManager.getTexture(cellmap) || Texture.WHITE;
                     // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
                     const bMode = (blend === 1) ? SS_ADD_BLEND : SS_MIX_BLEND;
                     if (masked) {
-                        const vargBuf = mesh.geometry.getBuffer('aVarg');
-                        const vargs = vargBuf.data as Float32Array;
+                        const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
                         for (let v = 0; v < pCount; v++) {
                             vargs[v * 4 + 0] = 1; vargs[v * 4 + 1] = 0; vargs[v * 4 + 2] = 1; vargs[v * 4 + 3] = 0;
                         }
-                        vargBuf.update();
-                        this.finishPart(mesh, pCount, true, fxSeq, fxInside, cov, effectTex, bMode, parentAlpha);
+                        this.fillMaskUV(mesh, 0, pCount, fxSeq, fxInside, cov!);
+                        uploadMesh(mesh, pCount, iCount);
+                        this.finishPart(mesh, cov, effectTex, bMode, parentAlpha);
                         g = h;
                         continue;
                     }
+                    uploadMesh(mesh, pCount, iCount);
                     mesh.shader = this.getEffectShader(effectTex) as any;
                     mesh.blendMode = bMode;
                     // Per-part opacity was folded into the vertex alpha above, so the mesh
@@ -1731,12 +1737,11 @@ export class SSPlayer extends Container {
     }
 
     /**
-     * Set shader / blend / alpha for a content part and add it to the display
-     * list. For masked parts, binds the masked shader (with this context's
-     * coverage + writer metadata) and fills the per-vertex coverage UVs; for
-     * unmasked parts, the plain PartsColor shader.
+     * Set shader / blend / alpha for a content mesh and add it to the display
+     * list: the masked shader, sampling `cov`, when the mesh is clipped; else
+     * the part's integration shader, or the plain PartsColor shader.
      *
-     * `alpha` here is the PARENT-CHAIN opacity only (parentAlpha). The part's own
+     * `alpha` here is the PARENT-CHAIN opacity only (parentAlpha). A part's own
      * hierarchical alpha (state.alpha()) is carried per-vertex in aColor.a by the
      * GeometryBuilder — pre-multiplied into parts_color by the runtime, or written
      * directly for the default path — and the shader's output alpha is
@@ -1744,38 +1749,28 @@ export class SSPlayer extends Container {
      * would double-apply it.
      */
     private finishPart(
-        mesh: Mesh<any>,
-        numVerts: number,
-        masked: boolean,
-        maskSeq: number,
-        maskMode: number,
+        mesh: PooledMesh,
         cov: MaskCoverage | null,
         texture: Texture,
         blendMode: any,
         alpha: number,
         ssShader: Shader | null = null
     ): void {
-        if (masked && cov) {
-            // maskMode = visible_inside_mask: show inside (1) vs outside (0).
-            this.fillMaskUV(mesh, numVerts, maskSeq, maskMode, cov);
-            mesh.shader = this.getMaskedShader(texture, cov) as any;
-        } else {
-            // SpriteStudio integration shader if the part carries one, else the
-            // plain PartsColor shader (masked parts never take a shader — v1).
-            mesh.shader = (ssShader ?? this.getPartsColorShader(texture)) as any;
-        }
+        mesh.shader = cov ? this.getMaskedShader(texture, cov) : (ssShader ?? this.getPartsColorShader(texture));
         mesh.blendMode = blendMode;
         mesh.alpha = alpha;
         mesh.visible = true;
         this._art.addChild(mesh);
     }
 
-    /** Write per-vertex aMaskUV (coverage uv, tree sequence number, polarity) for a masked part. */
-    private fillMaskUV(mesh: Mesh<any>, numVerts: number, thisSeq: number, mode: number, cov: MaskCoverage): void {
+    /**
+     * Write aMaskUV (coverage uv, tree sequence number, polarity) for one masked
+     * part's `count` vertices from `first`. Uploaded with the rest of the mesh.
+     */
+    private fillMaskUV(mesh: PooledMesh, first: number, count: number, thisSeq: number, mode: number, cov: MaskCoverage): void {
         const positions = mesh.geometry.getBuffer('aPosition').data as Float32Array;
-        const buf = mesh.geometry.getBuffer('aMaskUV');
-        const muv = buf.data as Float32Array;
-        for (let v = 0; v < numVerts; v++) {
+        const muv = mesh.geometry.getBuffer('aMaskUV').data as Float32Array;
+        for (let v = first, end = first + count; v < end; v++) {
             const x = positions[v * 2];
             const y = positions[v * 2 + 1];
             muv[v * 4 + 0] = (x - cov.minX) * cov.invW;
@@ -1783,7 +1778,61 @@ export class SSPlayer extends Container {
             muv[v * 4 + 2] = thisSeq;
             muv[v * 4 + 3] = mode;
         }
-        buf.update();
+    }
+
+    /** Whether any part a Normal batch draws carries an integration shader (`SHDR`). */
+    private batchHasShader(
+        frameData: FrameData, drawOrder: Uint16Array, startRank: number, count: number, maskFlags: Uint8Array | null
+    ): boolean {
+        for (let c = 0; c < count; c++) {
+            const partIdx = drawOrder[startRank + c];
+            if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) continue;
+            if (this._raw.partShaderOf(frameData, partIdx) >= 0) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Whether a content part draws its colour this frame: not a pure mask
+     * (draw_as_mask, coverage only), not fully transparent, and not a target
+     * that draws only inside a mask when there is no coverage to be inside of.
+     */
+    private drawsPart(
+        partIdx: number, frameData: FrameData, maskFlags: Uint8Array | null,
+        dropInside: boolean, ctxVisibleInside: boolean
+    ): boolean {
+        if (maskFlags && (maskFlags[partIdx] & 0x08) !== 0) return false;
+        if (this._raw.partAlphaOf(frameData, partIdx) <= 0) return false;
+        return !(dropInside && composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0));
+    }
+
+    // Index count of the part last sized by partVertices.
+    private _partIndices = 0;
+
+    /**
+     * A content part's vertex count, 0 when it has no geometry this frame,
+     * leaving its index count in `_partIndices`.
+     */
+    private partVertices(
+        kind: number, partIdx: number,
+        meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array
+    ): number {
+        if (kind === DrawBatchKind.Normal) {
+            this._partIndices = 12;
+            return 5;
+        }
+        if (kind === DrawBatchKind.Shape) {
+            const numVerts = shapeVertexCounts[partIdx];
+            // A triangle fan needs three vertices.
+            if (numVerts < 3) return 0;
+            this._partIndices = (numVerts - 2) * 3;
+            return numVerts;
+        }
+        const numVerts = meshVOff[partIdx + 1] - meshVOff[partIdx];
+        const numIndices = meshIOff[partIdx + 1] - meshIOff[partIdx];
+        if (numVerts === 0 || numIndices === 0) return 0;
+        this._partIndices = numIndices;
+        return numVerts;
     }
 
     /**
@@ -1905,16 +1954,14 @@ export class SSPlayer extends Container {
         const colors = mesh.geometry.getBuffer('aColor').data as Float32Array;
         const vargs = mesh.geometry.getBuffer('aVarg').data as Float32Array;
 
+        const indices = mesh.geometry.getIndex().data as Uint32Array;
         if (geomKind === 1) {
-            const indices = mesh.geometry.getIndex().data as Uint32Array;
             gb.buildShape(partIdx, fd, numVerts, invTexW, invTexH, positions, uvs, colors, vargs, indices);
-            mesh.geometry.getIndex().update();
         } else if (geomKind === 2) {
-            const indices = mesh.geometry.getIndex().data as Uint32Array;
             gb.buildMesh(partIdx, fd, numVerts, numIndices, invTexW, invTexH, positions, uvs, colors, vargs, indices);
-            mesh.geometry.getIndex().update();
         } else {
             gb.buildNormal(partIdx, fd, invTexW, invTexH, positions, uvs, colors, vargs);
+            writeQuadIndices(indices, 0, 0);
         }
 
         // Tile first, then the channel and bit inside it.
@@ -1932,12 +1979,9 @@ export class SSPlayer extends Container {
             if (x < bbox[0]) bbox[0] = x; if (x > bbox[2]) bbox[2] = x;
             if (y < bbox[1]) bbox[1] = y; if (y > bbox[3]) bbox[3] = y;
         }
-        mesh.geometry.getBuffer('aPosition').update();
-        mesh.geometry.getBuffer('aUV').update();
-        mesh.geometry.getBuffer('aColor').update();
-        mesh.geometry.getBuffer('aVarg').update();
+        uploadMesh(mesh, numVerts, numIndices);
 
-        mesh.shader = this.getMaskWriteShader(texture) as any;
+        mesh.shader = this.getMaskWriteShader(texture);
         mesh.blendMode = 'add';
         mesh.alpha = 1;
         mesh.visible = true;
@@ -2043,34 +2087,38 @@ export class SSPlayer extends Container {
         return shader;
     }
 
-    private acquireMesh(pool: Mesh<any>[], index: number, requiredVertices: number, requiredIndices: number, layout: MeshLayout): Mesh {
-        if (index < pool.length) {
-            let m = pool[index];
-            const pBuf = m.geometry.getBuffer('aPosition');
-            const iBuf = m.geometry.getIndex();
-            if (pBuf.data.length !== requiredVertices * 2 || iBuf.data.length !== requiredIndices) {
-                m.destroy({ children: true, texture: false, textureSource: false });
-                m = this.createNewMesh(requiredVertices, requiredIndices, layout);
+    /**
+     * The pool's mesh at `index`, able to hold `vertices` / `indices` and set to
+     * draw exactly those. A slot keeps its buffers while the draw fits them and
+     * grows by half again when it does not, so a draw that changes size every
+     * frame — a particle count — settles on one set of buffers. Rebuilding on
+     * every size change would create GPU buffers each frame, which PixiJS frees
+     * only in its GC, a minute after their last use.
+     */
+    private acquireMesh(pool: PooledMesh[], index: number, vertices: number, indices: number, layout: MeshLayout): PooledMesh {
+        let m = pool[index];
+        if (!m) {
+            m = this.createNewMesh(vertices, indices, layout);
+            pool[index] = m;
+        } else {
+            const capacityVerts = m.geometry.getBuffer('aPosition').data.length / 2;
+            const capacityIndices = m.geometry.getIndex().data.length;
+            if (capacityVerts < vertices || capacityIndices < indices) {
+                destroyMesh(m);
+                m = this.createNewMesh(
+                    Math.max(vertices, Math.ceil(capacityVerts * 1.5)),
+                    Math.max(indices, Math.ceil(capacityIndices * 1.5)),
+                    layout
+                );
                 pool[index] = m;
             }
-            if (requiredIndices === 12) {
-                const indices = m.geometry.getIndex().data as Uint32Array;
-                indices[0] = 0; indices[1] = 1; indices[2] = 4;
-                indices[3] = 1; indices[4] = 3; indices[5] = 4;
-                indices[6] = 3; indices[7] = 2; indices[8] = 4;
-                indices[9] = 2; indices[10] = 0; indices[11] = 4;
-            }
-            (m as any).size = requiredIndices; // Tell PixiJS how many indices to draw
-            return m;
         }
-
-        const m = this.createNewMesh(requiredVertices, requiredIndices, layout);
-        (m as any).size = requiredIndices;
-        pool.push(m);
+        m.geometry.usedVertices = vertices;
+        m.geometry.indexCount = indices;
         return m;
     }
 
-    private createNewMesh(requiredVertices: number, requiredIndices: number, layout: MeshLayout): Mesh<any> {
+    private createNewMesh(requiredVertices: number, requiredIndices: number, layout: MeshLayout): PooledMesh {
         const positionsBuffer = new Buffer({
             data: new Float32Array(requiredVertices * 2),
             usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
@@ -2084,7 +2132,7 @@ export class SSPlayer extends Container {
             usage: BufferUsage.INDEX | BufferUsage.COPY_DST
         });
 
-        const geometry = new Geometry();
+        const geometry = new PooledGeometry();
         geometry.addAttribute('aPosition', { buffer: positionsBuffer, size: 2 });
         geometry.addAttribute('aUV', { buffer: uvsBuffer, size: 2 });
         geometry.addIndex(indicesBuffer);
@@ -2118,20 +2166,43 @@ export class SSPlayer extends Container {
             } as any);
         }
 
-        if (requiredIndices === 12) {
-            const indices = geometry.getIndex().data as Uint32Array;
-            indices[0] = 0; indices[1] = 1; indices[2] = 4;
-            indices[3] = 1; indices[4] = 3; indices[5] = 4;
-            indices[6] = 3; indices[7] = 2; indices[8] = 4;
-            indices[9] = 2; indices[10] = 0; indices[11] = 4;
-        }
-
-        const mesh = new Mesh({
-            geometry: geometry
-        });
-
-        return mesh as Mesh<any>;
+        return new PooledMesh({ geometry });
     }
 
 
+}
+
+/**
+ * Upload this frame's draw of a pooled mesh — its first `vertices` vertices and
+ * `indices` indices — rather than the slot's whole capacity.
+ */
+function uploadMesh(mesh: PooledMesh, vertices: number, indices: number): void {
+    const geometry = mesh.geometry;
+    geometry.getBuffer('aPosition').update(vertices * 8);
+    geometry.getBuffer('aUV').update(vertices * 8);
+    geometry.getBuffer('aColor').update(vertices * 16);
+    geometry.attributes.aVarg?.buffer.update(vertices * 16);
+    geometry.attributes.aMaskUV?.buffer.update(vertices * 16);
+    geometry.getIndex().update(indices * 4);
+}
+
+/**
+ * A Normal part's quad as four triangles around its centre vertex, written to
+ * `out` from `at` with vertex numbers starting at `base`.
+ */
+function writeQuadIndices(out: Uint32Array, at: number, base: number): void {
+    out[at] = base; out[at + 1] = base + 1; out[at + 2] = base + 4;
+    out[at + 3] = base + 1; out[at + 4] = base + 3; out[at + 5] = base + 4;
+    out[at + 6] = base + 3; out[at + 7] = base + 2; out[at + 8] = base + 4;
+    out[at + 9] = base + 2; out[at + 10] = base; out[at + 11] = base + 4;
+}
+
+/**
+ * Destroy a pooled mesh together with its geometry's buffers. Mesh.destroy
+ * leaves the geometry alone, and its GPU buffers to PixiJS's GC.
+ */
+function destroyMesh(mesh: PooledMesh): void {
+    const geometry = mesh.geometry;
+    mesh.destroy({ children: true, texture: false, textureSource: false });
+    geometry.destroy(true);
 }

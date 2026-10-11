@@ -125,6 +125,12 @@ export const finalizationRegistry = new FinalizationRegistry((heldValue: { free:
 
 export class SSABResource {
     public raw: SSRuntimeResource;
+    // Players holding this resource. Only a pack shared by URL (SharedPacks) has
+    // more than one; each holder releases it with one destroy(), and the runtime
+    // resource is freed with the last.
+    private _holders = 1;
+    /** Called once the runtime resource has been freed. */
+    public onFreed: (() => void) | null = null;
 
     constructor(data: Uint8Array) {
         // The runtime parses a pack without verifying it, so gate here, the one
@@ -144,13 +150,19 @@ export class SSABResource {
         finalizationRegistry.register(this, this.raw, this);
     }
 
+    /** One more player holds this resource, and will destroy() it once. */
+    public retain(): this {
+        this._holders++;
+        return this;
+    }
+
     public destroy() {
-        if (this.raw) {
-            finalizationRegistry.unregister(this);
-            this.raw.free();
-            // @ts-ignore
-            this.raw = null;
-        }
+        if (!this.raw || --this._holders > 0) return;
+        finalizationRegistry.unregister(this);
+        this.raw.free();
+        // @ts-ignore
+        this.raw = null;
+        this.onFreed?.();
     }
 }
 
