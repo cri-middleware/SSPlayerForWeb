@@ -891,7 +891,8 @@ export class SSRuntimeManager {
      * Evaluates `frame`: builds its frame data and leaves the per-part buffers
      * (world matrices and the rest) on it. Returns the frame data's byte length,
      * or 0 before an animation is set up or when the runtime rejects the frame.
-     * Allocates nothing — {@link getFrameData} is this plus a view over the bytes.
+     * Allocates nothing — {@link getFrameData} is this plus a view over the bytes,
+     * and the effect draw plans of the parts the frame draws.
      */
     public prepareFrame(frame: number): number {
         if (this.currentAnimationIndex < 0) return 0;
@@ -917,6 +918,13 @@ export class SSRuntimeManager {
     }
 
     /**
+     * Called with every frame {@link getFrameData} hands out, before it is handed
+     * out: the player builds the draw plans of the effect parts that frame draws.
+     * Returns whether it built any, which can grow WASM memory.
+     */
+    public onFrameData: ((frameData: FrameData) => boolean) | null = null;
+
+    /**
      * The runtime's frame data for `frame`, as a zero-copy FlatBuffer view over
      * WASM memory. The returned object is a per-manager scratch re-pointed on every
      * call: don't retain it, and don't hold two at once.
@@ -927,9 +935,15 @@ export class SSRuntimeManager {
         const ptr = this.context.get_frame_data_buf();
         if (ptr === 0) return null;
 
-        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
-        const bb = new flatbuffers.ByteBuffer(buf);
-        return FrameData.getRootAsFrameData(bb, this._scratchFrameData);
+        const memory = getWasmMemory();
+        const buf = new Uint8Array(memory.buffer, ptr, len);
+        const frameData = FrameData.getRootAsFrameData(new flatbuffers.ByteBuffer(buf), this._scratchFrameData);
+        // A plan onFrameData builds can grow WASM memory, which detaches `buf`. The
+        // frame data stays where it is, so the view is minted again over the new
+        // buffer and the caller never holds a detached one.
+        if (!this.onFrameData?.(frameData) || memory.buffer === buf.buffer) return frameData;
+        return FrameData.getRootAsFrameData(
+            new flatbuffers.ByteBuffer(new Uint8Array(memory.buffer, ptr, len)), this._scratchFrameData);
     }
 
     public destroy() {
@@ -943,4 +957,4 @@ export class SSRuntimeManager {
     }
 }
 
-export { SSRuntimeContext, SSRuntimeResource, SSRuntimeInstanceSlot, SSRuntimeEffectSlot, EffectDrawPlan };
+export { SSRuntimeContext, SSRuntimeResource, SSRuntimeInstanceSlot, SSRuntimeEffectSlot, WebEffectEventInfo, EffectDrawPlan };

@@ -1,5 +1,7 @@
 import * as flatbuffers from 'flatbuffers';
-import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, EffectDrawPlan, getWasmMemory, hashString } from './SSRuntimeManager.js';
+import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirection, WebPlaybackStyle, EffectDrawPlan, WebEffectEventInfo, getWasmMemory, hashString } from './SSRuntimeManager.js';
+import type { FrameData } from './ss/runtime/frame-data.js';
+import { PartState } from './ss/runtime/part-state.js';
 import { SSBlendOp, SSOverridePriority } from './PartOverride.js';
 import { IResourceManager } from './IResourceManager.js';
 import { IAudioManager } from './IAudioManager.js';
@@ -12,6 +14,12 @@ import { canvasRectFrom, type SSPlacementBox } from './Placement.js';
 export interface EffectChildState {
     slot: EffectSlotHandle;
     visible: boolean;
+    /** The last step's event while its draw plan is not built, else null. */
+    ev: WebEffectEventInfo | null;
+    /** The parent frame of the last step. */
+    frame: number;
+    /** Whether the last frame handed out drew the part (buildEffectPlans). */
+    drawn: boolean;
 }
 
 export interface InstanceChildState<T> {
@@ -59,9 +67,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _catchUpPending: boolean = false;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
+    private readonly _partState = new PartState();
 
     constructor(resourceManager?: IResourceManager) {
         this.runtimeManager = new SSRuntimeManager();
+        this.runtimeManager.onFrameData = frameData => this.buildEffectPlans(frameData);
 
         if (resourceManager) {
             this._resourceManager = resourceManager;
@@ -448,15 +458,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
         private setupEffectChildren() {
-        this._effectChildren.forEach(child => child.slot.destroy());
-        this._effectChildren.clear();
+        this.destroyEffectChildren();
         if (!this._ssabResource) return;
 
         const parts = this.runtimeManager.getEffectParts();
         for (const part of parts) {
             try {
                 const slot = new EffectSlotHandle(this._ssabResource.raw, part.hash, part.seed);
-                this._effectChildren.set(part.partIndex, { slot, visible: false });
+                this._effectChildren.set(part.partIndex, { slot, visible: false, ev: null, frame: 0, drawn: true });
             } catch (e) {
                 console.error(`Failed to create EffectSlot for part ${part.partIndex}`, e);
             }
@@ -473,8 +482,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
-        this._effectChildren.forEach(child => child.slot.destroy());
-        this._effectChildren.clear();
+        this.destroyEffectChildren();
 
         const refs = this.runtimeManager.getInstanceParts();
         for (const ref of refs) {
@@ -806,7 +814,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     
     public getEffectDrawPlan(partIndex: number): EffectDrawPlan | null {
         const item = this._effectChildren.get(partIndex);
-        if (!item || !item.visible) return null;
+        if (!item) return null;
+        // A frame handed out has built the plans of the parts it draws. One asked
+        // for that the last step left unbuilt is built here.
+        if (item.ev) this.buildEffectPlan(item);
+        if (!item.visible) return null;
 
         const ptr = item.slot.raw.get_draw_plan_buf();
         const len = item.slot.raw.get_draw_plan_len();
@@ -1372,16 +1384,68 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
         const frame = this.runtimeManager.context.get_frame_no();
         for (const [partIndex, item] of this._effectChildren.entries()) {
+            // Every slot steps every tick, drawn or not, or an effect playing on its
+            // own clock would freeze while its part is hidden. Whether this tick
+            // draws the part is known only once the frame is evaluated, after this,
+            // so the step takes the last frame's word for it. A part hidden there
+            // moves just its clock and transitions, and keeps the step in case the
+            // frame draws it after all (buildEffectPlans).
             const ev = this.runtimeManager.context.get_active_effect_event(partIndex);
-            if (ev) {
-                // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
-                // draw = true: this runs before the tick's draw_order exists. Omitted, it reads as false and nothing draws.
-                item.visible = item.slot.raw.step(ev, frame, deltaSeconds, this.getFrameRate(), parentLooped, true, 2, true);
-                if ((ev as any).free) (ev as any).free();
+            // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
+            item.visible = item.slot.raw.step(ev, frame, deltaSeconds, this.getFrameRate(), parentLooped, true, 2, item.drawn);
+            item.ev?.free();
+            if (item.drawn) {
+                ev.free();
+                item.ev = null;
             } else {
-                item.visible = false;
+                item.ev = ev;
+                item.frame = frame;
             }
         }
+    }
+
+    /**
+     * Note which effect parts `frameData` draws, for the next step to go by, and
+     * build the plan of any it draws whose last step guessed it hidden. The
+     * runtime manager calls this with every frame it hands out, so a renderer
+     * reaching an effect batch finds the plan built. Returns whether it built one.
+     */
+    private buildEffectPlans(frameData: FrameData): boolean {
+        if (this._effectChildren.size === 0) return false;
+
+        // The runtime leaves a hidden part out of the draw order. Every flag is
+        // read before the first build, which can grow WASM memory and detach
+        // `frameData`.
+        const parts = frameData.partsLength();
+        let unbuilt = false;
+        for (const [partIndex, item] of this._effectChildren.entries()) {
+            item.drawn = partIndex < parts && !frameData.parts(partIndex, this._partState)!.hide();
+            if (item.drawn && item.ev) unbuilt = true;
+        }
+        if (!unbuilt) return false;
+        for (const item of this._effectChildren.values()) {
+            if (item.drawn && item.ev) this.buildEffectPlan(item);
+        }
+        return true;
+    }
+
+    /**
+     * Step the slot again on its last step's event and frame, with no time passing
+     * and draw = true. That moves nothing, and builds the plan the last step would
+     * have built had it drawn: the particles are a function of the effect's time.
+     */
+    private buildEffectPlan(item: EffectChildState) {
+        item.visible = item.slot.raw.step(item.ev!, item.frame, 0, this.getFrameRate(), false, true, 2, true);
+        item.ev!.free();
+        item.ev = null;
+    }
+
+    private destroyEffectChildren() {
+        this._effectChildren.forEach(child => {
+            child.ev?.free();
+            child.slot.destroy();
+        });
+        this._effectChildren.clear();
     }
 
     private stepInstanceSlots(deltaSeconds: number, parentLooped: boolean) {
@@ -1447,8 +1511,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
-        this._effectChildren.forEach(child => child.slot.destroy());
-        this._effectChildren.clear();
+        this.destroyEffectChildren();
 
         // Free child instance contexts first (they reference the pack resources).
         this.runtimeManager.destroy();

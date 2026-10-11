@@ -432,6 +432,9 @@ importers:
 
   packages/ssplayer-core:
     devDependencies:
+      '@spritestudio/ssconverter-core':
+        specifier: workspace:*
+        version: link:../ssconverter-core
       copyfiles:
         specifier: ^2.4.1
         version: 2.4.1
