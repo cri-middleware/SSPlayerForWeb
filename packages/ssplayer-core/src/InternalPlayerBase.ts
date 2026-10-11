@@ -1307,11 +1307,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Whether the part is hidden on the current frame — the animation's `hide`
-     * keyframe (the same visibility the renderer honours), read at the frame the
-     * renderer drew ({@link getDrawFrame}). Returns null when the part is
-     * unknown. This reflects the animation, not a {@link setPartVisibilityOverride}
-     * force-hide.
+     * Whether the part is hidden on the current frame — its `hide` at the frame
+     * the renderer draws ({@link getDrawFrame}), the same visibility the renderer
+     * honours: the animation's `hide` keyframe with a
+     * {@link setPartVisibilityOverride} force-hide and its cascade applied. The
+     * frame is evaluated when this is called, so an override reads back at once,
+     * before it has been drawn. Returns null when the part is unknown.
      */
     public isPartHidden(part: number | string): boolean | null {
         const index = this.resolveKnownPartIndex(part);
