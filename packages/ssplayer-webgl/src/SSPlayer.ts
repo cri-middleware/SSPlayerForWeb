@@ -907,7 +907,7 @@ export class SSPlayer {
     return this.internalPlayer.getPartTransform(part, out);
   }
 
-  /** Whether the part is hidden on the current frame (animation `hide`), or null if unknown. */
+  /** Whether the part is hidden on the current frame (its `hide`, a visibility override included), or null if unknown. */
   public isPartHidden(part: number | string): boolean | null {
     return this.internalPlayer.isPartHidden(part);
   }
