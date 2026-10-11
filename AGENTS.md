@@ -36,8 +36,11 @@ A pnpm workspace of browser packages over the Rust core, compiled to WebAssembly
 | `ssplayer-pixi` | PixiJS v8 renderer bindings. |
 | `ssplayer-webgl` | Standalone WebGL1/2 renderer and the `<ss-player>` Web Component. |
 | `ssplayer-rmmz` | RPG Maker MZ renderer bindings. |
+| `ssplayer-tyranoscript` | TyranoScript / TyranoBuilder plugin bindings, on top of `ssplayer-webgl`. |
+| `ssplayer-tyranobuilder` | TyranoBuilder editor tooling: ships the TyranoScript runtime and converts `.sspj` in the editor. |
 | `ssconverter-core` | Engine-agnostic WebAssembly converter core (`.sspj` → `.ssab` / `.ssqb`). |
 | `ssconverter-web` | A host over it: the browser converter UI and the Node CLI. |
+| `ssconverter-importer` | The auto-importer the editor plugins share: converts only the `.sspj` that changed. |
 
 `examples/` holds a Vite test server per renderer. The Rust core is the `SpriteStudio-SDK`
 submodule.
