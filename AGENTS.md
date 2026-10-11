@@ -57,24 +57,24 @@ submodule.
 
 ## Invariants
 
-- **`@spritestudio/ssplayer-core` stays decoupled** from every rendering engine and from
-  browser-specific DOM APIs. It is the wrapper around the Rust WebAssembly logic and nothing else;
-  engine bindings are their own packages.
-- **Transfer between WebAssembly and JavaScript is zero-copy.** Use typed arrays that view
-  `wasmMemory.buffer` directly rather than copying out of it, so playback allocates nothing per
-  frame and gives the collector nothing to pause for.
-- **WASM memory is not collected for you.** Every object holding a WASM allocation registers with
-  a `FinalizationRegistry` that calls its `free()`, so a dropped reference cannot leak.
-- **The player facades are split by rendering strategy**, and that split is the architecture:
-  `DirectInternalPlayer` draws directly (PixiJS v8 through its BatchRenderer),
-  `SceneGraphInternalPlayer` draws through a hierarchy (RPG Maker MZ, PixiJS v5). Add a renderer
-  by choosing one of them, not by widening the other.
-- **Generated WASM is not tracked in git**, so a fresh checkout has to build or download it before
-  anything else works. The FlatBuffers accessors under `packages/ssplayer-core/src/ss/` **are**
-  tracked: regenerate and commit them after a schema change, and never hand-edit them.
-- **Anything exposed from `ssruntime` must be a C-API compatible with `wasm-bindgen`.**
-- **Dependencies are added per workspace** (`pnpm add <pkg> --filter <workspace>`), never to the
-  root by reflex.
-- **`ssconverter-core` keeps its wasm glue external** (`deps.neverBundle`), so the glue can never
-  desync from the wasm binary in `wasm/`.
-- **TypeScript is strict; avoid `any`.**
+*   **`@spritestudio/ssplayer-core` stays decoupled** from every rendering engine and from
+    browser-specific DOM APIs. It is the wrapper around the Rust WebAssembly logic and nothing else;
+    engine bindings are their own packages.
+*   **Transfer between WebAssembly and JavaScript is zero-copy.** Use typed arrays that view
+    `wasmMemory.buffer` directly rather than copying out of it, so playback allocates nothing per
+    frame and gives the collector nothing to pause for.
+*   **WASM memory is not collected for you.** Every object holding a WASM allocation registers with
+    a `FinalizationRegistry` that calls its `free()`, so a dropped reference cannot leak.
+*   **The player facades are split by rendering strategy**, and that split is the architecture:
+    `DirectInternalPlayer` draws directly (PixiJS v8 through its BatchRenderer),
+    `SceneGraphInternalPlayer` draws through a hierarchy (RPG Maker MZ, PixiJS v5). Add a renderer
+    by choosing one of them, not by widening the other.
+*   **Generated WASM is not tracked in git**, so a fresh checkout has to build or download it before
+    anything else works. The FlatBuffers accessors under `packages/ssplayer-core/src/ss/` **are**
+    tracked: regenerate and commit them after a schema change, and never hand-edit them.
+*   **Anything exposed from `ssruntime` must be a C-API compatible with `wasm-bindgen`.**
+*   **Dependencies are added per workspace** (`pnpm add <pkg> --filter <workspace>`), never to the
+    root by reflex.
+*   **`ssconverter-core` keeps its wasm glue external** (`deps.neverBundle`), so the glue can never
+    desync from the wasm binary in `wasm/`.
+*   **TypeScript is strict; avoid `any`.**
