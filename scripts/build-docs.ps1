@@ -16,7 +16,8 @@
 #   2. Dead links fail the build. VitePress checks them by default and the config
 #      does not set `ignoreDeadLinks`, so this is the equivalent of the siblings'
 #      --strict. Nothing builds the docs on a pull request (pages.yml runs on a
-#      published release and on dispatch), so this run is the only gate.
+#      published release and on dispatch, ci.yml weekly), so this run is the only
+#      gate before the merge.
 #   3. `base` is env-driven. docs/.vitepress/config.mts reads DOCS_BASE and falls
 #      back to '/', because a project site is served under /<repo>/ while local
 #      builds are served from the root. Pass base= rather than setting it.
@@ -59,7 +60,7 @@ function Show-Usage {
     Write-Host "  -h | --help             Show this help"
     Write-Host ""
     Write-Host "Output: docs/.vitepress/dist -- one build, both locales (VitePress resolves"
-    Write-Host "docs/ja itself). A dead link fails the build, which is the only gate there is:"
+    Write-Host "docs/ja itself). A dead link fails the build, which is the only gate before the merge:"
     Write-Host "nothing builds the docs on a pull request."
     Write-Host ""
     Write-Host "Install the toolchain first with scripts/prepare-docs.ps1."
