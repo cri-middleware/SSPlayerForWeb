@@ -218,6 +218,9 @@ export class SSRuntimeManager {
     // construction). See WasmViewCache.
     private readonly viewCache = new WasmViewCache(getWasmMemory);
     private readonly _scratchFrameData = new FrameData();
+    private readonly _lastFrameData = new FrameData();
+    private _lastFrameBytes: Uint8Array | null = null;
+    private _lastFrameBuffer: flatbuffers.ByteBuffer | null = null;
 
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
@@ -944,6 +947,24 @@ export class SSRuntimeManager {
         if (!this.onFrameData?.(frameData) || memory.buffer === buf.buffer) return frameData;
         return FrameData.getRootAsFrameData(
             new flatbuffers.ByteBuffer(new Uint8Array(memory.buffer, ptr, len)), this._scratchFrameData);
+    }
+
+    /**
+     * The frame data the last evaluation built ({@link prepareFrame}, which every
+     * draw and {@link InternalPlayerBase.evaluateDrawFrame} go through), read
+     * without evaluating anything. Null before the first evaluation. A view over
+     * WASM memory with a scratch of its own: don't retain it.
+     */
+    public getLastFrameData(): FrameData | null {
+        const ptr = this.context.get_frame_data_buf();
+        const len = this.context.get_frame_data_len();
+        if (ptr === 0 || len === 0) return null;
+        const bytes = this.viewCache.view('lastFrameData', ptr, len, Uint8Array);
+        if (bytes !== this._lastFrameBytes) {
+            this._lastFrameBytes = bytes;
+            this._lastFrameBuffer = new flatbuffers.ByteBuffer(bytes);
+        }
+        return FrameData.getRootAsFrameData(this._lastFrameBuffer!, this._lastFrameData);
     }
 
     public destroy() {

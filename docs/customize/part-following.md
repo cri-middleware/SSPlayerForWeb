@@ -178,7 +178,7 @@ The `examples/part-follow` demo does exactly this: the Ringo character's skinned
     - The part name does not exist in the current animation (always hidden, regardless of the `onHide` setting)
     - The part is hidden on this frame and `onHide` is `'hide'`
 - It only restores a hide **it imposed itself**, though. A target you hid with `visible = false` stays hidden, including through a detach.
-- `isPartHidden()` reports the part's `hide` in the frame the player draws: the animation's **`hide` keyframe** with any force-hide from `setPartVisibilityOverride()` applied, its cascade included (see [Part control](/customize/part-overrides)). It evaluates that frame when you call it, so an override reads back at once, before the frame is drawn.
+- `isPartHidden()` reports the part's `hide` in the frame the player last drew, the same frame `getPartTransform()` reports: the animation's **`hide` keyframe** with any force-hide from `setPartVisibilityOverride()` applied, its cascade included (see [Part control](/customize/part-overrides)). It evaluates nothing, so an override reads back from the next frame drawn, together with the drawing.
 - A part's world matrix is computed every frame regardless of `hide`, so with `onHide: 'follow'` (the default) **a hidden part is still followed**.
 - Part names resolve against the parts of the animation the player itself is running. **Parts inside an Instance part (the child animation) cannot be specified** (the Instance part itself can).
 - Calling `attachToPart()` twice with the same target replaces the earlier attachment.
