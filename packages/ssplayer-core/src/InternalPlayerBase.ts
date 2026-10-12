@@ -1307,21 +1307,29 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Whether the part is hidden on the current frame — its `hide` at the frame
-     * the renderer draws ({@link getDrawFrame}), the same visibility the renderer
+     * Whether the part is hidden on the frame last evaluated — the last one
+     * drawn, or the one {@link evaluateDrawFrame} evaluated, the same frame
+     * {@link getPartTransform} reads. That is the visibility the renderer
      * honours: the animation's `hide` keyframe with a
-     * {@link setPartVisibilityOverride} force-hide and its cascade applied. The
-     * frame is evaluated when this is called, so an override reads back at once,
-     * before it has been drawn. Returns null when the part is unknown.
+     * {@link setPartVisibilityOverride} force-hide and its cascade applied.
+     *
+     * It evaluates nothing, so an override reads back from the next frame
+     * evaluated, as it is drawn. Evaluating here would also change what the next
+     * update builds: an `OverwriteOnNextKeyframe` override set right after
+     * {@link play} or a seek goes back to the animation if any frame is built
+     * before that update. Returns false for a known part before any frame has
+     * been evaluated, and null when the part is unknown.
      */
     public isPartHidden(part: number | string): boolean | null {
         const index = this.resolveKnownPartIndex(part);
         if (index < 0) return null;
-        const frameData = this.runtimeManager.getFrameData(this.getDrawFrame());
+        const frameData = this.runtimeManager.getLastFrameData();
         // The frame's parts vector is num_parts long, ordered by part index
         // (same indexing as the renderer's per-part reads), so `index` addresses
-        // this part directly. A part absent from the frame reads as visible.
-        const state = frameData ? frameData.parts(index) : null;
+        // this part directly. The frame can be one built before another pack was
+        // bound, hence the bound. A part absent from the frame reads as visible.
+        if (!frameData || index >= frameData.partsLength()) return false;
+        const state = frameData.parts(index, this._partState);
         return state ? state.hide() : false;
     }
 

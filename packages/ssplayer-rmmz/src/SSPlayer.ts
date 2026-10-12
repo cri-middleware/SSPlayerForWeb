@@ -621,7 +621,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     return this.internalPlayer.getPartTransform(part, out);
   }
 
-  /** Whether the part is hidden on the current frame (its `hide`, a visibility override included), or null if unknown. */
+  /** Whether the part is hidden on the frame last drawn (its `hide`, a visibility override included), or null if unknown. */
   public isPartHidden(part: number | string): boolean | null {
     return this.internalPlayer.isPartHidden(part);
   }
