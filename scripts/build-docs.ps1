@@ -22,10 +22,11 @@
 #      back to '/', because a project site is served under /<repo>/ while local
 #      builds are served from the root. Pass base= rather than setting it.
 #
-# What this does NOT build: the packages, the examples, and ssconverter-web. The
-# root `pnpm run docs` builds the packages first, but the site does not consume
-# them -- TypeDoc reads packages/*/src, not their dist -- and the examples and
-# converter are separate outputs that pages.yml assembles around this one.
+# What this does NOT build: the renderer packages, the examples, and
+# ssconverter-web. TypeDoc reads packages/*/src, not their dist; the one dist it
+# needs is ssplayer-core's, which the docs package's own `api` script builds
+# first. The examples and converter are separate outputs that pages.yml
+# assembles around this one.
 #
 # `vitepress dev` and `vitepress preview` are deliberately not wrapped: they
 # validate nothing and are foreground processes with no arguments worth
