@@ -18,6 +18,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => ({
   },
   DirectInternalPlayer: class {
     isPlaying = true;
+    isTicking = true;
     isPausing = false;
     runtimeManager = { context: { get_passed_event_count: () => 0 } };
     update = vi.fn(() => fake.order.push('update'));

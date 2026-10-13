@@ -524,11 +524,13 @@ describe('onFrame', () => {
     const order: string[] = [];
     const ip = player.internalPlayer as unknown as {
       isPlaying: boolean;
+      isTicking: boolean;
       update: () => void;
       evaluateDrawFrame: ReturnType<typeof vi.fn>;
       runtimeManager: { context: { get_passed_event_count: () => number } };
     };
     ip.isPlaying = true;
+    ip.isTicking = true;
     ip.update = () => order.push('update');
     ip.evaluateDrawFrame = vi.fn(() => order.push('evaluate'));
     ip.runtimeManager.context.get_passed_event_count = () => 0;
