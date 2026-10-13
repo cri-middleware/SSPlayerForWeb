@@ -51,6 +51,7 @@ vi.mock('@spritestudio/ssplayer-core', async () => ({
   DirectInternalPlayer: class {
     currentAnimation = 'Anime_1';
     isPausing = false;
+    isHeld = false;
     audioManager: unknown = null;
     subFrameEnabled = false;
     flipX = false;
@@ -525,6 +526,8 @@ describe('onFrame', () => {
     const ip = player.internalPlayer as unknown as {
       isPlaying: boolean;
       isTicking: boolean;
+      isPausing: boolean;
+      isHeld: boolean;
       update: () => void;
       evaluateDrawFrame: ReturnType<typeof vi.fn>;
       runtimeManager: { context: { get_passed_event_count: () => number } };
@@ -552,5 +555,18 @@ describe('onFrame', () => {
     surface.update(16);
 
     expect(ip.evaluateDrawFrame).not.toHaveBeenCalled();
+  });
+
+  it('is not called while a pause holds the clock, though track 0 has finished', () => {
+    const { surface, player, ip, order } = advancingPlayer();
+    player.onFrame(() => order.push('listener'));
+    // Track 0 has run out under an overlay, so track 0 reads as not paused.
+    ip.isPlaying = false;
+    ip.isPausing = false;
+    ip.isHeld = true;
+
+    surface.update(16);
+
+    expect(order).toEqual(['update']);
   });
 });

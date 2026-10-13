@@ -1461,7 +1461,7 @@ export class SSPlayer extends Container {
         // internalPlayer.update() still advances `independent` effect / instance
         // slots on their own clock (see InternalPlayerBase.update), so paused
         // particles / sub-animations keep running and we re-render below.
-        const pausing = this.internalPlayer.isPausing;
+        const pausing = this.internalPlayer.isHeld;
         this.internalPlayer.update(deltaMs);
         if (!pausing) {
             // Drain the events accumulated by this update (user-data / signal /

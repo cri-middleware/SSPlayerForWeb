@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import * as nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { convertProject, init as initConverter } from '@spritestudio/ssconverter-core';
 import { initializeWasm } from '../src/SSRuntimeManager.js';
 import { DirectInternalPlayer } from '../src/DirectInternalPlayer.js';
@@ -307,6 +307,33 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
                 const stopped = player.getTrackFrame(1)!;
                 run(player, 200);
                 expect(player.getTrackFrame(1)).toBe(stopped);
+                player.destroy();
+            });
+
+            it('holds the overlays on a pause after track 0 finishes, though isPausing reads false', async () => {
+                const player = await ringoPlayer('attack1');
+                player.setLoopCount(1);
+                player.play();
+                player.setTrackAnimation(1, 'walk');
+                run(player, 1000);
+                expect(player.isFinished).toBe(true);
+
+                player.pause();
+                expect(player.isPausing).toBe(false);
+                expect(player.isHeld).toBe(true);
+                expect(player.isTicking).toBe(true);
+                const held = player.getTrackFrame(1)!;
+                // A held player steps its independent slots and leaves the clock alone.
+                const advance = vi.spyOn(player.runtimeManager, 'update');
+                run(player, 200);
+                expect(player.getTrackFrame(1)).toBe(held);
+                expect(advance).not.toHaveBeenCalled();
+                advance.mockRestore();
+
+                player.resume();
+                expect(player.isHeld).toBe(false);
+                run(player, 200);
+                expect(player.getTrackFrame(1)!).toBeGreaterThan(held);
                 player.destroy();
             });
 

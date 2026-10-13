@@ -200,6 +200,9 @@ is track 0's alone.
 
 **Track 0 finishing does not stop the character's clock.** The tracks above it and any
 fade carry on, and `isFinished` turns true as usual. `stop()` stops all of it.
+`pause()` and `resume()` hold and lift all of it too. `isPlaying` and `isPausing`
+describe track 0, though, so once track 0 has finished both stay false, through a
+pause as well.
 
 ## Scrubbing a track: continuous control
 
