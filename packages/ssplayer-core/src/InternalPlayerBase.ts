@@ -625,7 +625,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // Re-arm the finished edge so a replayed animation reports its next
         // completion (is_finished stays latched until play/setup).
         this._prevFinished = false;
-        this._halted = false;
 
         // Restarting playback should also reset independent slots (effects and
         // instances). Reset them IN PLACE: rebuilding the children here
@@ -682,15 +681,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public stop() {
         this.runtimeManager.context.stop();
-        this._halted = true;
         this._ran = false;
     }
 
-    // Set by stop() and cleared by play(): the one thing that tells a stopped
-    // character from one whose track 0 merely ran out, which `isPlaying` and
-    // `isFinished` cannot — a stop raises neither, and a stop after the end
-    // leaves `isFinished` latched.
-    private _halted: boolean = false;
     // Whether the last update() moved the runtime's clock. The runtime keeps its
     // track loop pulses until its next update, so a tick that did not run one
     // would otherwise report the last tick's loop again.
@@ -708,8 +701,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public get isTicking(): boolean {
         if (this.isPlaying) return true;
-        if (this._halted || !this.isFinished) return false;
         const ctx = this.runtimeManager.context;
+        // The clock, not track 0: a stop raises neither `isPlaying` nor
+        // `isFinished`, and a stop after the end leaves `isFinished` latched.
+        if (!ctx.is_clock_playing() || !this.isFinished) return false;
         return ctx.get_track_count() > 1 || ctx.get_track_fade_progress(0) !== undefined;
     }
 
