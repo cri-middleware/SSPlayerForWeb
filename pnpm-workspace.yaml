@@ -16,7 +16,7 @@ minimumReleaseAgeExclude:
   - '@vitest/spy@5.0.4'
   - vitest@5.0.4
   - '@mermaid-js/parser@2.0.1'
-  - mermaid@12.1.0
+  - mermaid@12.2.0
   - data-urls@8.0.0
   - tr46@7.0.0
   - whatwg-url@17.2.0
