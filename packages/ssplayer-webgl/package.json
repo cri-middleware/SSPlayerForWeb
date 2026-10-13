@@ -58,6 +58,7 @@
   },
   "files": [
     "dist",
+    "docs",
     "README.md",
     "README.ja.md",
     "CHANGELOG.md",
@@ -71,8 +72,8 @@
     "@spritestudio/ssplayer-core": "workspace:^"
   },
   "scripts": {
-    "build": "tsdown",
-    "clean": "rimraf dist",
+    "build": "tsdown && node ../../scripts/copy-docs.mjs docs",
+    "clean": "rimraf dist docs",
     "size": "node scripts/measure-size.mjs",
     "test": "vitest run",
     "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
