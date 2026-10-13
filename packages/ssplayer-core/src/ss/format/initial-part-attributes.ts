@@ -101,7 +101,7 @@ localAlpha():number {
 
 priority():number {
   const offset = this.bb!.__offset(this.bb_pos, 32);
-  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
 }
 
 flipH():boolean {
@@ -290,7 +290,7 @@ static addLocalAlpha(builder:flatbuffers.Builder, localAlpha:number) {
 }
 
 static addPriority(builder:flatbuffers.Builder, priority:number) {
-  builder.addFieldFloat32(14, priority, 0.0);
+  builder.addFieldInt32(14, priority, 0);
 }
 
 static addFlipH(builder:flatbuffers.Builder, flipH:boolean) {

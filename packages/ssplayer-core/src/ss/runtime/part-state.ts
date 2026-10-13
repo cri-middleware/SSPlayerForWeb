@@ -66,7 +66,7 @@ localAlpha():number {
 }
 
 priority():number {
-  return this.bb!.readFloat32(this.bb_pos + 56);
+  return this.bb!.readInt32(this.bb_pos + 56);
 }
 
 pivotX():number {
@@ -211,7 +211,7 @@ static createPartState(builder:flatbuffers.Builder, update_flag: bigint, positio
   builder.writeFloat32(anchor_x);
   builder.writeFloat32(pivot_y);
   builder.writeFloat32(pivot_x);
-  builder.writeFloat32(priority);
+  builder.writeInt32(priority);
   builder.writeFloat32(local_alpha);
   builder.writeFloat32(alpha);
   builder.writeFloat32(local_scale_y);
