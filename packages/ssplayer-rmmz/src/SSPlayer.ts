@@ -282,7 +282,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     // isTicking rather than isPlaying: track 0 running out does not stop the
     // character's clock while another track or a fade still has to run.
     if (!this.internalPlayer.isTicking) return;
-    const pausing = this.internalPlayer.isPausing;
+    const pausing = this.internalPlayer.isHeld;
     this.internalPlayer.update(deltaMs);
     if (!pausing) this.pollEvents();
 

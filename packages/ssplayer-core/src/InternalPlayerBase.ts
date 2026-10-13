@@ -709,6 +709,19 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
+     * Whether a {@link pause} holds the character's clock — what a renderer reads,
+     * rather than {@link isPausing}, to tell whether a tick moves the timeline and
+     * so has events to poll.
+     *
+     * Wider than `isPausing` in the same case as {@link isTicking}: `isPausing`
+     * reports track 0, so once track 0 has finished it stays false through a
+     * pause, while the pause still holds the tracks above it and any fade.
+     */
+    public get isHeld(): boolean {
+        return this.runtimeManager.context.is_clock_pausing();
+    }
+
+    /**
      * Updates the animation frame by the given delta time.
      *
      * When paused, the main timeline is NOT advanced, but the effect / instance
@@ -725,7 +738,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         if (!this.isTicking) return;
         const deltaSeconds = deltaMs / 1000.0;
 
-        if (this.isPausing) {
+        if (this.isHeld) {
             // Paused: keep independent slots advancing; do not touch the timeline.
             this.stepEffectSlots(deltaSeconds, false);
             this.stepInstanceSlots(deltaSeconds, false);

@@ -874,7 +874,7 @@ export class SSPlayer {
     // otherwise it still advances `independent` slots, but passes no events and
     // reaches no frame — so skip polling and the per-frame listeners then. Read
     // the condition before the update, since the update can change it.
-    const advancing = !this.internalPlayer.isPausing;
+    const advancing = !this.internalPlayer.isHeld;
     this.internalPlayer.update(deltaMs);
     if (!advancing) return;
 
