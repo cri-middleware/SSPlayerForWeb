@@ -6,6 +6,7 @@ import type { SoundAsset } from './IAudioManager.js';
 import { FrameData } from './ss/runtime/frame-data.js';
 import { SsAnimeBinary } from './ss/format/ss-anime-binary.js';
 import { AnimationData } from './ss/format/animation-data.js';
+import type { EventsPerFrame } from './ss/format/events-per-frame.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
 import { PartType } from './ss/format/part-type.js';
 import { PartTypeEffect } from './ss/format/part-type-effect.js';
@@ -197,9 +198,9 @@ export class SSRuntimeManager {
     private partSkinnedFlags: Uint8Array | null = null;
 
     /**
-     * Index of the currently set-up animation within the SSAB `animations`
-     * table, or -1 before setup / if the name didn't resolve. Event polling
-     * uses it to read that animation's per-frame events table. Stored as an
+     * Index of track 0's main animation within the SSAB `animations` table, or
+     * -1 before setup / if the name didn't resolve: the set-up one, until a
+     * crossfade or a track animation on track 0 hands it over. Stored as an
      * index (not a FlatBuffer view) so it survives WASM memory growth — the
      * view is re-derived on demand in `getCurrentAnimationData`.
      */
@@ -343,6 +344,52 @@ export class SSRuntimeManager {
         } catch (e) {
             console.warn("Failed to parse SSAB for Effect parts setup.", e);
         }
+    }
+
+    /**
+     * Fade `track` to `animationName` over `durationMs`. On track 0 the incoming
+     * animation becomes the main one from this call on, so the per-animation
+     * reads ({@link getCurrentAnimationData}, {@link prepareFrame}'s guard) follow
+     * it here rather than when the fade completes.
+     *
+     * Nothing else {@link setupAnimation} caches needs redoing: the parts table,
+     * and with it the mask flags and the effect parts, belongs to the pack.
+     */
+    public crossfade(track: number, animationName: string, durationMs: number): void {
+        this.context.crossfade(track, animationName, durationMs);
+        if (track === 0) this.followTrackZero();
+    }
+
+    /** Put `animationName` on `track`. On track 0 it becomes the main animation, as in {@link crossfade}. */
+    public setTrackAnimation(track: number, animationName: string): void {
+        this.context.set_track_animation(track, animationName);
+        if (track === 0) this.followTrackZero();
+    }
+
+    private followTrackZero(): void {
+        this.currentAnimationIndex = this.context.get_current_animation_index() ?? -1;
+    }
+
+    /**
+     * The per-frame events entry the `index`-th passed event of the last update
+     * points at, or null.
+     *
+     * Looked up in the table of **the animation whose source fired it**, not the
+     * one set up: once a crossfade on track 0 hands the track to another
+     * animation, or an overlay is let fire, the index belongs to that animation's
+     * table, and reading it from the set-up one reports a different event or none.
+     */
+    public getPassedEvents(index: number): EventsPerFrame | null {
+        if (!this.resource) return null;
+        const source = this.context.get_passed_event_source_handle(index);
+        const animationIndex = this.context.get_source_animation_index(source);
+        if (animationIndex === undefined) return null;
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return null;
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(new flatbuffers.ByteBuffer(buf));
+        return ssab.animations(animationIndex)?.events(this.context.get_passed_event_index(index)) ?? null;
     }
 
     public getEffectParts(): { partIndex: number, hash: number, seed: number }[] {
