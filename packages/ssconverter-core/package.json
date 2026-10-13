@@ -34,6 +34,7 @@
   },
   "files": [
     "dist",
+    "docs",
     "wasm",
     "README.md",
     "README.ja.md",
@@ -50,8 +51,8 @@
     "directory": "packages/ssconverter-core"
   },
   "scripts": {
-    "build": "tsdown",
-    "clean": "rimraf dist",
+    "build": "tsdown && node ../../scripts/copy-docs.mjs docs",
+    "clean": "rimraf dist docs",
     "test": "vitest run",
     "prepack": "node ../../scripts/verify-publish-artifacts.mjs"
   },

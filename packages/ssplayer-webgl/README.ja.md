@@ -4,7 +4,7 @@
 
 **SpriteStudio** プレイヤー向けの、軽量で依存ゼロの **WebGL1/2** レンダラー。Rust/WebAssembly コアで駆動し、宣言的で JavaScript 不要な利用を可能にするドロップインの **`<ss-player>` カスタム要素** を備えています。
 
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
+[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](https://cri-middleware.github.io/SSPlayerForWeb/ja/) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり、オフラインで読めます（入口は `docs/README.md`）。
 
 > **対象読者:** フレームワークを使わない Web 開発者 — SpriteStudio プレイヤーを任意のページに、`<ss-player>` という HTML タグ 1 つ、または `SSPlayer` の JS API で、ランタイム依存ゼロで組み込めます。**インストール:** `npm install @spritestudio/ssplayer-webgl@beta`
 > **目的が違う場合:** → [パッケージ表](../../README.ja.md#-どのパッケージを使うか) — すでに PixiJS や RPG ツクール MZ を使っていますか? それ専用のレンダラーがあります。

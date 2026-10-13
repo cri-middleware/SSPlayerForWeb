@@ -14,7 +14,7 @@
 🎨 **[パーツ上書きデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** —
 実行時にパーツ単位で色 / セル / 表示を上書きするサンプル（ソースは `examples/override-example`）。
 
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](../../docs/) を参照してください。
+[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](https://cri-middleware.github.io/SSPlayerForWeb/ja/) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり、オフラインで読めます（入口は `docs/README.md`）。
 
 ## ✨ なぜ PixiJS で SpriteStudio を使うのか？
 

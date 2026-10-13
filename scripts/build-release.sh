@@ -544,6 +544,22 @@ if [ "$VERIFY" = "yes" ]; then
           fail "$(basename "$tgz") has a wasm/ directory with no .wasm in it"
         fi
       done <<< "$(node -p "(require('$ROOT_DIR/packages/$dir/package.json').files || []).join('\n')")"
+
+      # docs/README.md is the front door to the pages the package carries
+      # (scripts/copy-docs.mjs). Every page it links to is looked up in this
+      # tarball, so renaming one fails the release instead of shipping a link
+      # that goes nowhere.
+      if grep -qx 'package/docs/README.md' "$entries"; then
+        front="$(tar -xzOf "$tgz" package/docs/README.md)"
+        links="$(grep -oE ']\([^):#]+\.md' <<< "$front" | sed 's/^](//' || true)"
+        [ -n "$links" ] || fail "$(basename "$tgz"): no page links parsed out of docs/README.md -- the check proved nothing"
+        for link in $links; do
+          grep -qxF "package/docs/$link" "$entries" \
+            || fail "$(basename "$tgz"): docs/README.md links to $link, which is not in it"
+        done
+      else
+        fail "$(basename "$tgz") has no docs/README.md"
+      fi
     done <<< "$PUBLIC_PKGS"
   fi
 

@@ -10,7 +10,7 @@ Engine-agnostic WebAssembly core for the **SpriteStudio** player.
 
 > **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
-Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](../../docs/).
+Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline.
 
 > **Just want to render animations?** Pick a renderer from the [package table](../../README.md#-which-package-should-i-use) — you don't use `core` directly.
 
