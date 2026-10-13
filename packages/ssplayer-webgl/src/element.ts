@@ -192,7 +192,11 @@ export class SSPlayerElement extends HTMLElement {
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    if (oldValue === newValue) return;
+    // `animation` is compared with what the player plays, below, not with the old
+    // attribute value: a crossfade or setAnimation made on the player moves
+    // track 0 off the name the attribute still holds, and writing that name back
+    // has to switch back to it.
+    if (oldValue === newValue && name !== 'animation') return;
     // Before connect the player doesn't exist yet; connectedCallback reads the
     // current attribute values, so there's nothing to react to here.
     const player = this._player;
@@ -205,7 +209,7 @@ export class SSPlayerElement extends HTMLElement {
       case 'animation':
         // Reflected onto the player synchronously, so an unknown name throws right
         // here — report it like the async paths do.
-        if (newValue) {
+        if (newValue && newValue !== player.currentAnimation) {
           try { this.applyAnimation(newValue); } catch (err) { this.fail(err); }
         }
         break;

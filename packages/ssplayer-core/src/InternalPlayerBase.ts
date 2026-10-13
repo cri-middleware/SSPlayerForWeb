@@ -3,6 +3,7 @@ import { SSRuntimeManager, SSABResource, WebCoordinateSystem, WebPlaybackDirecti
 import type { FrameData } from './ss/runtime/frame-data.js';
 import { PartState } from './ss/runtime/part-state.js';
 import { SSBlendOp, SSOverridePriority } from './PartOverride.js';
+import { SSTrackBlend, SSTrackSync } from './Tracks.js';
 import { IResourceManager } from './IResourceManager.js';
 import { IAudioManager } from './IAudioManager.js';
 import { InstanceSlotHandle, EffectSlotHandle } from './SlotHandles.js';
@@ -389,7 +390,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * nothing: the playhead stays, the instance tree is not rebuilt, and the
      * override layer survives. This is what every Player in the family does, and
      * it is what lets a state machine call `setAnimation(state.clip)` every frame
-     * without thinking about it. To *restart* the animation call {@link play},
+     * without thinking about it. An animation a {@link crossfade} on track 0
+     * brought in counts as selected from the moment it was called, so naming it
+     * mid-fade leaves the fade running, and naming the one it faded out from
+     * switches back to it. To *restart* the animation call {@link play},
      * which heads out; to drop the overrides call
      * {@link clearAllPartOverrides}.
      *
@@ -418,12 +422,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
                 { cause },
             );
         }
-        this._animationName = animationName;
-        this._canvasRect = undefined;
-        // Per-transition in the runtime, so the caller's count has to go back on
-        // after every switch. Speed, frame skip and the playback direction all
-        // survive setup on their own and need nothing here.
-        this.runtimeManager.context.set_loop_count(this._loopCount);
+        this.trackZeroSwitched(animationName);
 
         this.setupInstanceChildren();
         this.setupEffectChildren();
@@ -434,6 +433,30 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         void this.preloadSounds().catch(e => {
             console.error('[SSPlayer] Failed to preload the pack sounds', e);
         });
+    }
+
+    /**
+     * Record that track 0 now plays `animationName`, by whichever call handed it
+     * over: {@link setAnimation}, or a {@link setTrackAnimation} or
+     * {@link crossfade} on track 0, which hand it over from the call on rather
+     * than when a fade completes. Recording it there and then is what keeps
+     * `setAnimation` from taking the animation a crossfade left behind for the
+     * one still selected — and skipping the switch back to it.
+     *
+     * A crossfade keeps playing, so this raises no start; `play()` is the only
+     * thing that does.
+     */
+    private trackZeroSwitched(animationName: string): void {
+        this._animationName = animationName;
+        this._canvasRect = undefined;
+        // Nothing the previous animation reported describes this one.
+        this._prevFinished = false;
+        this._justLooped = false;
+        this._justFinished = false;
+        // Per-animation in the runtime, so the caller's count has to go back on
+        // after every switch. Speed, frame skip, the frame rate and the playback
+        // direction belong to the track and survive on their own.
+        this.runtimeManager.context.set_loop_count(this._loopCount);
     }
 
     /**
@@ -573,7 +596,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
-     * Gets the current animation name.
+     * The animation track 0 plays: the one {@link setAnimation} selected, or the
+     * one a {@link crossfade} or {@link setTrackAnimation} on track 0 laid there
+     * since — from the call on, not from the end of the fade. `''` before the
+     * first selection.
      */
     public get currentAnimation(): string {
         return this._animationName;
@@ -599,6 +625,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // Re-arm the finished edge so a replayed animation reports its next
         // completion (is_finished stays latched until play/setup).
         this._prevFinished = false;
+        this._halted = false;
 
         // Restarting playback should also reset independent slots (effects and
         // instances). Reset them IN PLACE: rebuilding the children here
@@ -655,6 +682,35 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public stop() {
         this.runtimeManager.context.stop();
+        this._halted = true;
+        this._ran = false;
+    }
+
+    // Set by stop() and cleared by play(): the one thing that tells a stopped
+    // character from one whose track 0 merely ran out, which `isPlaying` and
+    // `isFinished` cannot — a stop raises neither, and a stop after the end
+    // leaves `isFinished` latched.
+    private _halted: boolean = false;
+    // Whether the last update() moved the runtime's clock. The runtime keeps its
+    // track loop pulses until its next update, so a tick that did not run one
+    // would otherwise report the last tick's loop again.
+    private _ran: boolean = false;
+
+    /**
+     * Whether {@link update} has anything to move — what a renderer gates its
+     * per-tick work on, rather than {@link isPlaying}.
+     *
+     * Wider than `isPlaying` in one case: track 0 running out does not stop the
+     * character's clock. The tracks above it and any fade carry on, and only
+     * track 0 reports the end, so a character whose track 0 has finished still
+     * ticks while it has another track or a fade to run. {@link stop} stops all
+     * of it.
+     */
+    public get isTicking(): boolean {
+        if (this.isPlaying) return true;
+        if (this._halted || !this.isFinished) return false;
+        const ctx = this.runtimeManager.context;
+        return ctx.get_track_count() > 1 || ctx.get_track_fade_progress(0) !== undefined;
     }
 
     /**
@@ -665,12 +721,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * running on their own clock (SpriteStudio independent semantics; mirrors
      * SSPlayerForGodot). The runtime's `step()` ignores the delta for
      * non-independent slots — they stay synced to the (frozen) parent frame — so
-     * passing the real delta unconditionally is safe. When fully stopped, nothing
-     * advances.
+     * passing the real delta unconditionally is safe. When nothing ticks
+     * ({@link isTicking}), nothing advances.
      * @param deltaMs The elapsed time since the last frame in milliseconds.
      */
     public update(deltaMs: number) {
-        if (!this.isPlaying) return;
+        this._ran = false;
+        if (!this.isTicking) return;
         const deltaSeconds = deltaMs / 1000.0;
 
         if (this.isPausing) {
@@ -682,6 +739,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
         // Delegate to the manager so animation playback advances
         this.runtimeManager.update(deltaMs);
+        this._ran = true;
         this.stepEffectSlots(deltaSeconds, this.runtimeManager.context.just_looped());
         this.stepInstanceSlots(deltaSeconds, this.runtimeManager.context.just_looped());
     }
@@ -767,7 +825,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * Whether every configured loop has played.
      *
      * A **state**, not a pulse: it latches when playback completes and stays
-     * true until the next {@link play} or {@link setAnimation}. Never true under
+     * true until the next {@link play} or switch of track 0's animation
+     * ({@link setAnimation}, or a {@link crossfade} or {@link setTrackAnimation}
+     * on track 0). It is track 0's: an overlay track finishing does not raise
+     * it, and neither does the outgoing side of a crossfade. Never true under
      * an infinite loop count, and **not raised by {@link stop}** — a commanded
      * stop is not a completion, which is what makes this readable as "the run
      * ended on its own" where `!isPlaying` cannot tell the two apart.
@@ -925,8 +986,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * How many times to play: `n` cycles then stop, `-1` loops forever, and `0`
      * asks for the same as `-1` rather than "no cycles".
      *
-     * Kept across a `setAnimation`, because it is the caller's configuration
-     * rather than the animation's.
+     * Kept across a `setAnimation`, and across a {@link crossfade} or
+     * {@link setTrackAnimation} on track 0, because it is the caller's
+     * configuration rather than the animation's.
      */
     public setLoopCount(count: number) {
         this._loopCount = count;
@@ -947,6 +1009,310 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     public isFrameSkipEnabled(): boolean {
         return this.runtimeManager.context.get_skip_frames();
+    }
+
+    // --- Motion blending: tracks and sources ---
+    //
+    // Pass-throughs to the runtime's track stack, on this player's own context.
+    // Tracks fold onto the setup pose in ascending order; track 0 is what
+    // setAnimation establishes, and it carries the structure (the discrete
+    // attributes, the default events, the playback state). A track's alpha is
+    // its strength; a source's weight only sets proportions among the
+    // animations sharing one track. Instance children are not layered: they
+    // run their own contexts, driven by their slots from this one's frame.
+    //
+    // A read of a track or source that does not exist answers `undefined`; a
+    // command on one throws, naming the call. setAnimation folds the stack back
+    // to track 0, dropping the tracks above with their settings and putting
+    // every track's sync back to Free, so a host that layers on top lays its
+    // tracks again after each switch. Track 0's own playback settings survive.
+    //
+    // A track's playback settings (speed, frame rate, frame skip, direction)
+    // are the track's, not its animation's: they reach every animation on it
+    // now, both sides of a crossfade included, and every one laid on it later.
+    // Track 0's are the transport above (setSpeedScale and the rest). The loop
+    // count is the exception: it belongs to the animation, and laying another
+    // one starts it looping forever again — on track 0 this player puts the
+    // host's count back, as setAnimation does.
+
+    /** Number of tracks, empty ones included; 0 before an animation is set up. */
+    public get trackCount(): number {
+        return this.runtimeManager.context.get_track_count();
+    }
+
+    /**
+     * Put `animationName` on `track`, replacing what it was playing, with no
+     * fade. Tracks are made as needed. On track 0 it becomes the
+     * {@link currentAnimation} from the call on; unlike {@link setAnimation} it
+     * leaves the stack above and the instance children as they are.
+     */
+    public setTrackAnimation(track: number, animationName: string): void {
+        this.trackCommand(`setTrackAnimation(${track}, "${animationName}")`,
+            () => this.runtimeManager.setTrackAnimation(track, animationName), animationName);
+        if (track === 0) this.trackZeroSwitched(animationName);
+    }
+
+    /** Silence a track. Track 0 cannot be emptied: fade it to alpha 0 with {@link fadeTrack} instead. */
+    public clearTrack(track: number): void {
+        this.trackCommand(`clearTrack(${track})`, ctx => ctx.clear_track(track));
+    }
+
+    /**
+     * How much of `track` survives onto the pose below — the strength of a
+     * layer. Not clamped: above 1 extrapolates, 0 or below contributes nothing.
+     */
+    public setTrackAlpha(track: number, alpha: number): void {
+        this.trackCommand(`setTrackAlpha(${track}, ${alpha})`, ctx => ctx.set_track_alpha(track, alpha));
+    }
+
+    public getTrackAlpha(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_alpha(track);
+    }
+
+    /** {@link SSTrackBlend.Mix} lerps onto what is below; {@link SSTrackBlend.Additive} adds the offset from the setup pose. */
+    public setTrackBlend(track: number, blend: SSTrackBlend): void {
+        this.trackCommand(`setTrackBlend(${track}, ${blend})`, ctx => ctx.set_track_blend(track, blend));
+    }
+
+    public getTrackBlend(track: number): SSTrackBlend | undefined {
+        return this.runtimeManager.context.get_track_blend(track);
+    }
+
+    /**
+     * Where the animations laid on `track` from now on start:
+     * {@link SSTrackSync.Free} from their head, {@link SSTrackSync.Start} at the
+     * phase track 0 stands at. Set it **before** laying — it covers
+     * {@link setTrackAnimation}, {@link crossfade} (track 0's too) and
+     * {@link addTrackSource}.
+     */
+    public setTrackSync(track: number, sync: SSTrackSync): void {
+        this.trackCommand(`setTrackSync(${track}, ${sync})`, ctx => ctx.set_track_sync(track, sync));
+    }
+
+    public getTrackSync(track: number): SSTrackSync | undefined {
+        return this.runtimeManager.context.get_track_sync(track);
+    }
+
+    /** Seek `track`'s animation — how a continuous-control axis is driven, with its speed at 0. */
+    public setTrackFrame(track: number, frame: number): void {
+        this.trackCommand(`setTrackFrame(${track}, ${frame})`, ctx => ctx.set_track_frame(track, frame));
+    }
+
+    public getTrackFrame(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_frame(track);
+    }
+
+    /**
+     * `track`'s playback speed, a multiple of its frame rate; 0 parks it where
+     * {@link setTrackFrame} puts it. On track 0 this is {@link setSpeedScale}.
+     */
+    public setTrackSpeed(track: number, speed: number): void {
+        this.trackCommand(`setTrackSpeed(${track}, ${speed})`, ctx => ctx.set_track_speed(track, speed));
+    }
+
+    /** What {@link setTrackSpeed} stored; a negative speed reads back as the 0 it became. */
+    public getTrackSpeed(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_speed(track);
+    }
+
+    /** {@link setFrameRate} for one track. */
+    public setTrackFrameRate(track: number, fps: number): void {
+        this.trackCommand(`setTrackFrameRate(${track}, ${fps})`, ctx => ctx.set_track_frame_rate(track, fps));
+    }
+
+    /** The rate `track`'s animation plays at, the override or the authored rate; 0 for a track with neither. */
+    public getTrackFrameRate(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_frame_rate(track);
+    }
+
+    /** {@link setFrameSkipEnabled} for one track. */
+    public setTrackFrameSkipEnabled(track: number, skip: boolean): void {
+        this.trackCommand(`setTrackFrameSkipEnabled(${track}, ${skip})`, ctx => ctx.set_track_skip_frames(track, skip));
+    }
+
+    public getTrackFrameSkipEnabled(track: number): boolean | undefined {
+        return this.runtimeManager.context.get_track_skip_frames(track);
+    }
+
+    /** {@link setPlaybackDirection} for one track. */
+    public setTrackPlaybackDirection(track: number, direction: WebPlaybackDirection, style: WebPlaybackStyle): void {
+        this.trackCommand(`setTrackPlaybackDirection(${track}, ${direction}, ${style})`,
+            ctx => ctx.set_track_playback_direction(track, direction, style));
+    }
+
+    public getTrackPlaybackDirection(track: number): WebPlaybackDirection | undefined {
+        return this.runtimeManager.context.get_track_playback_direction(track);
+    }
+
+    public getTrackPlaybackStyle(track: number): WebPlaybackStyle | undefined {
+        return this.runtimeManager.context.get_track_playback_style(track);
+    }
+
+    /**
+     * How many times `track`'s animation plays before it holds its last frame;
+     * `-1` (or `0`) loops forever. Throws on a track with no animation, and an
+     * animation is laid looping forever, so set it after laying. A finished
+     * track keeps mixing its last frame in until the host fades or clears it.
+     *
+     * On track 0 this is {@link setLoopCount}: the player keeps the count and
+     * puts it back on every animation laid there.
+     */
+    public setTrackLoopCount(track: number, count: number): void {
+        this.trackCommand(`setTrackLoopCount(${track}, ${count})`, ctx => ctx.set_track_loop_count(track, count));
+        // Written past the kept count, the next switch of track 0 would put the
+        // old one back.
+        if (track === 0) this._loopCount = count;
+    }
+
+    /** `-1` for a track that loops forever; `undefined` for one with no animation. */
+    public getTrackLoopCount(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_loop_count(track);
+    }
+
+    /**
+     * Whether `track`'s animation has played its loop count out and holds its
+     * last frame. A **state**, as {@link isFinished} is for track 0; there is no
+     * listener for it. Only track 0 finishing ends the character's playback.
+     */
+    public isTrackFinished(track: number): boolean {
+        return this.runtimeManager.context.is_track_finished(track);
+    }
+
+    /**
+     * Whether the last {@link update} wrapped `track`'s animation back to its
+     * start — a **pulse**, as `justLooped` is for track 0. False after an update
+     * that moved nothing (paused, stopped), since the runtime keeps its pulse
+     * until it next runs.
+     */
+    public trackJustLooped(track: number): boolean {
+        return this._ran && this.runtimeManager.context.track_just_looped(track);
+    }
+
+    /**
+     * How far into a crossfade on `track` the outgoing animation keeps firing
+     * events: while its share of the track, `1 - progress`, is at least
+     * `threshold`. The default, `Infinity`, silences it the moment the fade
+     * begins — on track 0, just as the incoming one starts firing; `0.5` keeps
+     * it firing for the first half. Kept by the track, so it holds for every
+     * crossfade on it, and track 0's survives {@link setAnimation}.
+     */
+    public setTrackOutgoingEventThreshold(track: number, threshold: number): void {
+        this.trackCommand(`setTrackOutgoingEventThreshold(${track}, ${threshold})`,
+            ctx => ctx.set_track_outgoing_event_threshold(track, threshold));
+    }
+
+    public getTrackOutgoingEventThreshold(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_outgoing_event_threshold(track);
+    }
+
+    /**
+     * Fade `track` to `animationName` over `durationMs`, from whatever it is
+     * playing; every source on it fades out together. Advanced by
+     * {@link update}, and an empty track starts playing at once.
+     *
+     * On track 0, `animationName` takes over **from the call on**, not when the
+     * fade completes: it is the {@link currentAnimation}, its state is what
+     * {@link isFinished} and the frame read-outs report, its events fire, and it
+     * plays with the speed, direction and loop count the host set. The outgoing
+     * one running out mid-fade does not finish the character. The instance
+     * children are not rebuilt the way {@link setAnimation} rebuilds them: the
+     * instance and effect parts belong to the pack, so they carry on.
+     *
+     * Crossfading again mid-fade takes the fade over where it stands, so the
+     * pose does not jump.
+     */
+    public crossfade(track: number, animationName: string, durationMs: number): void {
+        this.trackCommand(`crossfade(${track}, "${animationName}", ${durationMs})`,
+            () => this.runtimeManager.crossfade(track, animationName, durationMs), animationName);
+        if (track === 0) this.trackZeroSwitched(animationName);
+    }
+
+    /**
+     * Drive `track`'s alpha to `targetAlpha` over `durationMs` — how strongly
+     * it applies, not what it plays (that is {@link crossfade}). Fading track 0
+     * to 0 settles the character onto the setup pose.
+     */
+    public fadeTrack(track: number, targetAlpha: number, durationMs: number): void {
+        this.trackCommand(`fadeTrack(${track}, ${targetAlpha}, ${durationMs})`,
+            ctx => ctx.fade_track(track, targetAlpha, durationMs));
+    }
+
+    /** How far the fade on `track` has got, 0 to 1; `undefined` when it is not fading. */
+    public getTrackFadeProgress(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_fade_progress(track);
+    }
+
+    /** Stop the fade on `track`, leaving alpha and weights where they stand. */
+    public cancelTrackFade(track: number): void {
+        this.trackCommand(`cancelTrackFade(${track})`, ctx => ctx.cancel_track_fade(track));
+    }
+
+    /**
+     * The source carrying `track`'s animation — the one {@link setAnimation},
+     * {@link setTrackAnimation} or {@link crossfade} laid there (mid-crossfade,
+     * the incoming one); `undefined` when it has none.
+     */
+    public getTrackMainSource(track: number): number | undefined {
+        return this.runtimeManager.context.get_track_main_source(track);
+    }
+
+    /**
+     * Lay `animationName` on `track` beside what it already carries, at
+     * `weight`, and return its handle. On an empty track it becomes the main
+     * source. A handle stays valid until its source is released — by a
+     * crossfade completing, {@link clearTrack} or {@link setAnimation} — and is
+     * then reused, so drop it then.
+     */
+    public addTrackSource(track: number, animationName: string, weight: number): number {
+        return this.trackCommand(`addTrackSource(${track}, "${animationName}", ${weight})`,
+            ctx => ctx.add_track_source(track, animationName, weight), animationName);
+    }
+
+    /** A source's share **within its track**; weights are ratios, so (0.7, 0.3) and (7, 3) mix alike. */
+    public setSourceWeight(source: number, weight: number): void {
+        this.trackCommand(`setSourceWeight(${source}, ${weight})`, ctx => ctx.set_source_weight(source, weight));
+    }
+
+    public getSourceWeight(source: number): number | undefined {
+        return this.runtimeManager.context.get_source_weight(source);
+    }
+
+    /** Seek one source — how a host keeps sources of different lengths in step. */
+    public setSourceFrame(source: number, frame: number): void {
+        this.trackCommand(`setSourceFrame(${source}, ${frame})`, ctx => ctx.set_source_frame(source, frame));
+    }
+
+    public getSourceFrame(source: number): number | undefined {
+        return this.runtimeManager.context.get_source_frame(source);
+    }
+
+    /**
+     * The weight at or above which `source` fires its events. Only track 0's
+     * main source fires by default — the default threshold is `Infinity` — so
+     * lower this to the source's weight or below to have another one fire too.
+     */
+    public setSourceEventThreshold(source: number, threshold: number): void {
+        this.trackCommand(`setSourceEventThreshold(${source}, ${threshold})`,
+            ctx => ctx.set_source_event_threshold(source, threshold));
+    }
+
+    public getSourceEventThreshold(source: number): number | undefined {
+        return this.runtimeManager.context.get_source_event_threshold(source);
+    }
+
+    /**
+     * Run one track or source command against the runtime. The wasm boundary
+     * throws the runtime's error enum as a bare string ("TrackNotFound"), naming
+     * neither the call nor the pack; this layer knows both. A call that names
+     * an animation also names the pack it looked in, as setAnimation's does.
+     */
+    private trackCommand<R>(call: string, action: (ctx: SSRuntimeManager['context']) => R, animationName?: string): R {
+        try {
+            return action(this.runtimeManager.context);
+        } catch (cause) {
+            const where = animationName !== undefined ? ` on ${this._ssabUrl || 'the loaded pack'}` : '';
+            throw new Error(`[SSPlayer] ${call} failed${where} (${String(cause)}).`, { cause });
+        }
     }
 
     // --- Part overrides ---

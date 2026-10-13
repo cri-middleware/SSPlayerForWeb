@@ -70,6 +70,11 @@ texture object (no dedicated type to import).
 [`SSDecomposedTransform`](/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform.md), and
 on PixiJS also [`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/type-aliases/SSPartAttachment.md).
 
+**Motion blending** — see [Motion blending](/customize/motion-blending).
+[`SSTrackBlend`](/api/@spritestudio/ssplayer-core/enumerations/SSTrackBlend.md) and
+[`SSTrackSync`](/api/@spritestudio/ssplayer-core/enumerations/SSTrackSync.md), what
+`setTrackBlend` and `setTrackSync` take. Sources are plain `number` handles.
+
 **Playback enums.**
 [`WebPlaybackDirection`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackDirection.md) and
 [`WebPlaybackStyle`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackStyle.md) are the two

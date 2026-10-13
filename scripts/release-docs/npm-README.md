@@ -17,6 +17,7 @@ This folder is the documentation of SpriteStudio Player for Web, as Markdown, fr
 | How to produce `.ssab` files, including converting in your own app with `@spritestudio/ssconverter-core` | [usage/assets.md](usage/assets.md) |
 | How to react to events and user data | [customize/events.md](customize/events.md) |
 | How to hide parts, swap their cells or tint them, and how to follow a part | [customize/part-overrides.md](customize/part-overrides.md), [customize/part-following.md](customize/part-following.md) |
+| How to layer animations and crossfade between them | [customize/motion-blending.md](customize/motion-blending.md) |
 | What is not supported | [limitations.md](limitations.md) |
 | How a program written for SS6Player for Web maps onto this one | [migration_from_ss6.md](migration_from_ss6.md) |
 

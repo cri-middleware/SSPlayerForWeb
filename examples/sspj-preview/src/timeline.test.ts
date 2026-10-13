@@ -87,6 +87,7 @@ const userData = (over: Partial<SSUserDataEvent> = {}): SSUserDataEvent => ({
   partName: 'body',
   frameNo: 5,
   str: 'hit',
+  source: 0,
   ...over,
 });
 
@@ -197,6 +198,7 @@ describe('the event strip', () => {
       soundNameHash: 2,
       soundName: 'step',
       loopNum: 2,
+      source: 0,
     });
     fake.fire.signal({
       partIndex: 2,
@@ -205,6 +207,7 @@ describe('the event strip', () => {
       active: true,
       commandId: 'Attack',
       params: { power: 10 },
+      source: 0,
     });
     fake.fire.userData(userData({ frameNo: 5 }));
 

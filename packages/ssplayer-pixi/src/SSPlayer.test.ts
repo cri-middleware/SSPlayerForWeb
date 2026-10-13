@@ -14,7 +14,7 @@ function stubPlayer(isPlaying: boolean) {
   const player = Object.create(SSPlayer.prototype) as SSPlayer;
   const renderFrame = vi.fn();
   Object.assign(player, {
-    internalPlayer: { isPlaying, getDrawFrame: () => 7, setCellmapTexture: vi.fn() },
+    internalPlayer: { isPlaying, isTicking: isPlaying, getDrawFrame: () => 7, setCellmapTexture: vi.fn() },
     renderFrame,
   });
   return { player, renderFrame };

@@ -11,6 +11,7 @@ export default defineConfig({
         index: resolve(__dirname, 'index.html'),
         element: resolve(__dirname, 'element.html'),
         multi: resolve(__dirname, 'multi.html'),
+        blend: resolve(__dirname, 'blend.html'),
       },
     },
     minify: 'terser',

@@ -1,5 +1,5 @@
 import { Container, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -36,6 +36,12 @@ export interface SSUserDataEvent {
      * noticed on, since one tick can step across several.
      */
     frameNo: number;
+    /**
+     * The source that fired it: a handle like those getTrackMainSource and
+     * addTrackSource return. Tells track 0's main animation from an overlay
+     * or from the outgoing side of a crossfade.
+     */
+    source: number;
     integer?: number;
     str?: string;
     /** User-data rectangle as authored (left/top/right/bottom). */
@@ -57,6 +63,12 @@ export interface SSSignalEvent {
      * noticed on, since one tick can step across several.
      */
     frameNo: number;
+    /**
+     * The source that fired it: a handle like those getTrackMainSource and
+     * addTrackSource return. Tells track 0's main animation from an overlay
+     * or from the outgoing side of a crossfade.
+     */
+    source: number;
     active: boolean;
     commandId: string | null;
     params: Record<string, boolean | number | string>;
@@ -75,6 +87,12 @@ export interface SSAudioEvent {
      * noticed on, since one tick can step across several.
      */
     frameNo: number;
+    /**
+     * The source that fired it: a handle like those getTrackMainSource and
+     * addTrackSource return. Tells track 0's main animation from an overlay
+     * or from the outgoing side of a crossfade.
+     */
+    source: number;
     soundListNameHash: number;
     soundNameHash: number;
     soundName: string | null;
@@ -781,7 +799,9 @@ export class SSPlayer extends Container {
      * Whether every configured loop has played.
      *
      * A **state**, not a pulse: it latches on completion and stays true until
-     * the next {@link play} or {@link setAnimation}. Never true under an
+     * the next {@link play} or switch of track 0's animation ({@link setAnimation},
+     * or a {@link crossfade} on track 0). It is track 0's, so an overlay track
+     * finishing does not raise it. Never true under an
      * infinite loop count, and **not raised by {@link stop}** — so unlike
      * `!isPlaying` it tells a run that ended on its own apart from one that was
      * stopped. Take {@link onAnimationFinished} for the one-shot edge.
@@ -835,6 +855,219 @@ export class SSPlayer extends Container {
 
     public set frameSkipEnabled(value: boolean) {
         this.internalPlayer.setFrameSkipEnabled(value);
+    }
+
+    // --- Motion blending: tracks and sources ---
+    //
+    // Pass-throughs to the core player, which owns the contract (see
+    // InternalPlayerBase): track 0 is what setAnimation establishes, the tracks
+    // above it layer onto it, a track's alpha is its strength and a source's
+    // weight only a ratio within its track. A read of a track or source that is
+    // not there answers `undefined`; a command on one throws. setAnimation
+    // folds the stack back to track 0, so lay the tracks again after it.
+    //
+    // A command made while nothing ticks repaints on the spot, as an override
+    // does: scrubbing a track with setTrackFrame on a stopped player has to
+    // reach the screen.
+
+    /** Number of tracks, empty ones included; 0 before an animation is set up. */
+    public get trackCount(): number {
+        return this.internalPlayer.trackCount;
+    }
+
+    /** Put an animation on `track` with no fade. On track 0 it becomes {@link currentAnimation} at once. */
+    public setTrackAnimation(track: number, animationName: string): void {
+        this.internalPlayer.setTrackAnimation(track, animationName);
+        this.afterOverride(true);
+    }
+
+    /** Silence a track. Track 0 cannot be emptied: {@link fadeTrack} it to 0 instead. */
+    public clearTrack(track: number): void {
+        this.internalPlayer.clearTrack(track);
+        this.afterOverride(true);
+    }
+
+    /** How much of `track` survives onto the pose below — the strength of a layer. Not clamped. */
+    public setTrackAlpha(track: number, alpha: number): void {
+        this.internalPlayer.setTrackAlpha(track, alpha);
+        this.afterOverride(true);
+    }
+
+    public getTrackAlpha(track: number): number | undefined {
+        return this.internalPlayer.getTrackAlpha(track);
+    }
+
+    /** Mix onto what is below, or add the offset from the setup pose. */
+    public setTrackBlend(track: number, blend: SSTrackBlend): void {
+        this.internalPlayer.setTrackBlend(track, blend);
+        this.afterOverride(true);
+    }
+
+    public getTrackBlend(track: number): SSTrackBlend | undefined {
+        return this.internalPlayer.getTrackBlend(track);
+    }
+
+    /** Where animations laid on `track` from now on start: their head, or track 0's phase. Set it before laying. */
+    public setTrackSync(track: number, sync: SSTrackSync): void {
+        this.internalPlayer.setTrackSync(track, sync);
+    }
+
+    public getTrackSync(track: number): SSTrackSync | undefined {
+        return this.internalPlayer.getTrackSync(track);
+    }
+
+    /** Seek `track`'s animation — how a continuous-control axis is driven, with its speed at 0. */
+    public setTrackFrame(track: number, frame: number): void {
+        this.internalPlayer.setTrackFrame(track, frame);
+        this.afterOverride(true);
+    }
+
+    public getTrackFrame(track: number): number | undefined {
+        return this.internalPlayer.getTrackFrame(track);
+    }
+
+    /** `track`'s playback speed; 0 parks it. On track 0 this is {@link speedScale}. */
+    public setTrackSpeed(track: number, speed: number): void {
+        this.internalPlayer.setTrackSpeed(track, speed);
+    }
+
+    public getTrackSpeed(track: number): number | undefined {
+        return this.internalPlayer.getTrackSpeed(track);
+    }
+
+    /** {@link frameRate} for one track. */
+    public setTrackFrameRate(track: number, fps: number): void {
+        this.internalPlayer.setTrackFrameRate(track, fps);
+    }
+
+    public getTrackFrameRate(track: number): number | undefined {
+        return this.internalPlayer.getTrackFrameRate(track);
+    }
+
+    /** {@link frameSkipEnabled} for one track. */
+    public setTrackFrameSkipEnabled(track: number, skip: boolean): void {
+        this.internalPlayer.setTrackFrameSkipEnabled(track, skip);
+    }
+
+    public getTrackFrameSkipEnabled(track: number): boolean | undefined {
+        return this.internalPlayer.getTrackFrameSkipEnabled(track);
+    }
+
+    /** {@link setPlaybackDirection} for one track. */
+    public setTrackPlaybackDirection(track: number, direction: WebPlaybackDirection, style: WebPlaybackStyle): void {
+        this.internalPlayer.setTrackPlaybackDirection(track, direction, style);
+    }
+
+    public getTrackPlaybackDirection(track: number): WebPlaybackDirection | undefined {
+        return this.internalPlayer.getTrackPlaybackDirection(track);
+    }
+
+    public getTrackPlaybackStyle(track: number): WebPlaybackStyle | undefined {
+        return this.internalPlayer.getTrackPlaybackStyle(track);
+    }
+
+    /**
+     * How many times `track`'s animation plays before it holds its last frame;
+     * `-1` loops forever. Set it after laying: an animation is laid looping
+     * forever. On track 0 this is {@link loopCount}, kept across every switch.
+     */
+    public setTrackLoopCount(track: number, count: number): void {
+        this.internalPlayer.setTrackLoopCount(track, count);
+    }
+
+    public getTrackLoopCount(track: number): number | undefined {
+        return this.internalPlayer.getTrackLoopCount(track);
+    }
+
+    /** Whether `track`'s animation has played its loop count out and holds its last frame. A state. */
+    public isTrackFinished(track: number): boolean {
+        return this.internalPlayer.isTrackFinished(track);
+    }
+
+    /** Whether the last tick wrapped `track`'s animation back to its start. A pulse, as {@link justLooped} is. */
+    public trackJustLooped(track: number): boolean {
+        return this.internalPlayer.trackJustLooped(track);
+    }
+
+    /**
+     * How far into a crossfade on `track` the outgoing animation keeps firing
+     * events: while its share, `1 - progress`, is at least `threshold`. The
+     * default, `Infinity`, silences it the moment the fade begins.
+     */
+    public setTrackOutgoingEventThreshold(track: number, threshold: number): void {
+        this.internalPlayer.setTrackOutgoingEventThreshold(track, threshold);
+    }
+
+    public getTrackOutgoingEventThreshold(track: number): number | undefined {
+        return this.internalPlayer.getTrackOutgoingEventThreshold(track);
+    }
+
+    /**
+     * Fade `track` to another animation over `durationMs`. On track 0 the
+     * incoming animation takes over **from the call on**: it is
+     * {@link currentAnimation}, its state is what {@link isFinished} reports,
+     * its events fire, and it plays with the speed, direction and loop count
+     * set on this player.
+     */
+    public crossfade(track: number, animationName: string, durationMs: number): void {
+        this.internalPlayer.crossfade(track, animationName, durationMs);
+        this.afterOverride(true);
+    }
+
+    /** Drive `track`'s alpha to `targetAlpha` over `durationMs`. Fading track 0 to 0 settles onto the setup pose. */
+    public fadeTrack(track: number, targetAlpha: number, durationMs: number): void {
+        this.internalPlayer.fadeTrack(track, targetAlpha, durationMs);
+    }
+
+    /** How far the fade on `track` has got, 0 to 1; `undefined` when it is not fading. */
+    public getTrackFadeProgress(track: number): number | undefined {
+        return this.internalPlayer.getTrackFadeProgress(track);
+    }
+
+    /** Stop the fade on `track`, leaving alpha and weights where they stand. */
+    public cancelTrackFade(track: number): void {
+        this.internalPlayer.cancelTrackFade(track);
+    }
+
+    /** The source carrying `track`'s animation (mid-crossfade, the incoming one); `undefined` when none. */
+    public getTrackMainSource(track: number): number | undefined {
+        return this.internalPlayer.getTrackMainSource(track);
+    }
+
+    /** Lay another animation on `track` at `weight` and return its handle, valid until the source is released. */
+    public addTrackSource(track: number, animationName: string, weight: number): number {
+        const source = this.internalPlayer.addTrackSource(track, animationName, weight);
+        this.afterOverride(true);
+        return source;
+    }
+
+    /** A source's share within its track; weights are ratios. */
+    public setSourceWeight(source: number, weight: number): void {
+        this.internalPlayer.setSourceWeight(source, weight);
+        this.afterOverride(true);
+    }
+
+    public getSourceWeight(source: number): number | undefined {
+        return this.internalPlayer.getSourceWeight(source);
+    }
+
+    /** Seek one source. */
+    public setSourceFrame(source: number, frame: number): void {
+        this.internalPlayer.setSourceFrame(source, frame);
+        this.afterOverride(true);
+    }
+
+    public getSourceFrame(source: number): number | undefined {
+        return this.internalPlayer.getSourceFrame(source);
+    }
+
+    /** The weight at or above which `source` fires its events; only track 0's main source fires by default. */
+    public setSourceEventThreshold(source: number, threshold: number): void {
+        this.internalPlayer.setSourceEventThreshold(source, threshold);
+    }
+
+    public getSourceEventThreshold(source: number): number | undefined {
+        return this.internalPlayer.getSourceEventThreshold(source);
     }
 
     /**
@@ -988,12 +1221,13 @@ export class SSPlayer extends Container {
     }
 
     /**
-     * Repaint after an override or a texture swap took effect while the ticker is
-     * not advancing. Both change the output without changing the frame number, so
-     * a stopped player would otherwise keep showing its last drawn frame.
+     * Repaint after an override, a texture swap or a track command took effect
+     * while the ticker is not advancing. Each changes the output without
+     * changing the frame number, so a stopped player would otherwise keep
+     * showing its last drawn frame.
      */
     private afterOverride(applied: boolean): boolean {
-        if (applied && !this.internalPlayer.isPlaying) {
+        if (applied && !this.internalPlayer.isTicking) {
             this.renderFrame(this.internalPlayer.getDrawFrame());
         }
         return applied;
@@ -1077,9 +1311,9 @@ export class SSPlayer extends Container {
      * Drain and dispatch the events accumulated by the last runtime update:
      * user-data / signal / audio, plus animation end (edge) and loop (pulse).
      * Called from the ticker right after `internalPlayer.update()`, while the
-     * runtime's passed-event buffer is still valid. Reads event payloads from
-     * the current animation's SSAB events table via the runtime manager's
-     * introspection accessors. Safe with no listeners / no animation.
+     * runtime's passed-event buffer is still valid. Reads each event's payload
+     * from the table of the animation whose source fired it (see
+     * SSRuntimeManager.getPassedEvents). Safe with no listeners / no animation.
      */
     private pollEvents(): void {
         const ctx = this.internalPlayer.runtimeManager.context;
@@ -1096,17 +1330,12 @@ export class SSPlayer extends Container {
         if (count <= 0) return;
         if (this._userDataListeners.size === 0 && this._signalListeners.size === 0 && this._audioListeners.size === 0) return;
 
-        const anim = this.internalPlayer.runtimeManager.getCurrentAnimationData();
-        if (!anim) return;
-
         for (let i = 0; i < count; i++) {
-            // get_passed_event_index returns the index into this animation's
-            // per-frame events table (single-source playback: always primary).
-            const eventIdx = ctx.get_passed_event_index(i);
-            const events = anim.events(eventIdx);
+            const events = this.internalPlayer.runtimeManager.getPassedEvents(i);
             if (!events) continue;
-            if (this._userDataListeners.size > 0) this.dispatchUserData(events);
-            if (this._signalListeners.size > 0) this.dispatchSignals(events);
+            const source = ctx.get_passed_event_source_handle(i);
+            if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
+            if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
 
             // Audio keys are reported whichever way the playhead is walking — the
             // observation channel is not the playback. SpriteStudio has no reverse
@@ -1115,12 +1344,12 @@ export class SSPlayer extends Container {
             // players do. Suppressing the event instead used to hide the key from
             // hosts doing something other than playing a sound with it.
             if (this._audioListeners.size > 0) {
-                this.dispatchAudios(events);
+                this.dispatchAudios(events, source);
             }
         }
     }
 
-    private dispatchUserData(events: ssFormat.EventsPerFrame): void {
+    private dispatchUserData(events: ssFormat.EventsPerFrame, source: number): void {
         const mgr = this.internalPlayer.runtimeManager;
         const n = events.usersLength();
         for (let j = 0; j < n; j++) {
@@ -1128,7 +1357,7 @@ export class SSPlayer extends Container {
             const val = user?.value();
             if (!user || !val) continue;
             const partIndex = user.partIndex();
-            const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex), frameNo: events.frameIndex() };
+            const ev: SSUserDataEvent = { partIndex, partName: mgr.getPartName(partIndex), frameNo: events.frameIndex(), source };
             const intEntry = val.integer();
             if (intEntry) ev.integer = intEntry.value();
             const str = val.str();
@@ -1141,7 +1370,7 @@ export class SSPlayer extends Container {
         }
     }
 
-    private dispatchSignals(events: ssFormat.EventsPerFrame): void {
+    private dispatchSignals(events: ssFormat.EventsPerFrame, source: number): void {
         const mgr = this.internalPlayer.runtimeManager;
         const n = events.signalsLength();
         for (let j = 0; j < n; j++) {
@@ -1186,12 +1415,13 @@ export class SSPlayer extends Container {
                 active: true,
                 commandId: val.commandId(),
                 params,
+                source,
             };
             this._signalListeners.emit(ev);
         }
     }
 
-    private dispatchAudios(events: ssFormat.EventsPerFrame): void {
+    private dispatchAudios(events: ssFormat.EventsPerFrame, source: number): void {
         const mgr = this.internalPlayer.runtimeManager;
         const n = events.audiosLength();
         for (let j = 0; j < n; j++) {
@@ -1207,13 +1437,16 @@ export class SSPlayer extends Container {
                 soundNameHash: val.soundNameHash(),
                 soundName: val.soundName(),
                 loopNum: val.loopNum(),
+                source,
             };
             this._audioListeners.emit(ev);
         }
     }
 
     private update(ticker: Ticker) {
-        if (!this.internalPlayer.isPlaying) {
+        // isTicking rather than isPlaying: track 0 running out does not stop the
+        // character's clock while another track or a fade still has to run.
+        if (!this.internalPlayer.isTicking) {
             // Stopped, nothing advances, so the last drawing stands unless what it
             // was drawn from has changed: a seek, another animation, a flip or an
             // offset, masking switched, or the renderer the masks need arriving.
@@ -1235,7 +1468,7 @@ export class SSPlayer extends Container {
             // audio + animation end/loop) right away, while the runtime's
             // passed-event buffer is still valid. Must run on the same tick that
             // advanced — including the tick a non-looping animation finishes on,
-            // since the next tick early-returns on !isPlaying. Skipped while paused
+            // since the next tick may early-return on !isTicking. Skipped while paused
             // (the timeline did not move, so no events were passed).
             this.pollEvents();
         }
