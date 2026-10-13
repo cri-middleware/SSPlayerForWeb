@@ -38,19 +38,49 @@ the `autoplay` attribute or a host script issued rather than your own code. A
 
 `onAnimationFinished` is the **edge** — it fires once, on the tick playback completed.
 If what you want is the standing state, read `player.isFinished`: it latches on
-completion and stays true until the next `play()` / `setAnimation()`, so a caller
-that was not subscribed when the edge went by can still ask whether the run is
-over. Neither is raised by `stop()`, which is what separates them from
-`!isPlaying`.
+completion and stays true until the next `play()` / `setAnimation()` (or a
+`crossfade` on track 0), so a caller that was not subscribed when the edge went by
+can still ask whether the run is over. Neither is raised by `stop()`, which is what
+separates them from `!isPlaying`.
 
 Each of those three carries `partIndex`, `partName` and **`frameNo`** — the frame
 its key is *authored* on, which is not necessarily the frame it was noticed on.
 One tick can step across several frames and fires every key in between, so the
-player's current frame is not where the key sits.
+player's current frame is not where the key sits. They also carry **`source`**,
+the handle of the animation that fired it — see below.
 
 There is one more hook, `onFrame`, which fires on every advanced frame rather than
 on an authored event — it is the point at which a part's transform is final for
 that frame. See [Part tracking](/customize/part-following).
+
+## With several animations playing
+
+With [motion blending](/customize/motion-blending) one player can run more than one
+animation at once, and by default **only track 0's main animation fires events**.
+An overlay on another track, or a second animation mixed into a track, fires only
+once you lower its threshold to its weight or below:
+
+```ts
+const run = player.addTrackSource(0, 'run', 0.3);
+player.setSourceEventThreshold(run, 0.3); // fires while its weight is at least 0.3
+```
+
+A `crossfade` on track 0 hands the events over **when it begins**: the incoming
+animation fires from the first frame of the fade, and the outgoing one stops. To
+keep the outgoing side firing for part of the fade, set the track's own threshold —
+the outgoing side fires while its share of the track, `1 - progress`, is at least
+that much:
+
+```ts
+player.setTrackOutgoingEventThreshold(0, 0.5); // the outgoing side fires for the first half
+```
+
+Every user-data, signal and sound event carries **`source`**, the handle of the
+animation that fired it. Compare it with `getTrackMainSource(track)` or with what
+`addTrackSource` returned to tell track 0's animation from an overlay or from the
+outgoing side of a crossfade. The payload is read from the table of the animation
+that fired it, so an event fired after a crossfade is the incoming animation's
+event.
 
 ## Sound playback is the host's job
 

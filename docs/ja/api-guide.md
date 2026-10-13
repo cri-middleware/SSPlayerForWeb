@@ -65,6 +65,8 @@ SSPlayer / SSPlayer          ← 呼び出すファサード（再生・イベ�
 PixiJS ではさらに
 [`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/type-aliases/SSPartAttachment.md)。
 
+**モーションブレンド** — [モーションブレンド](/ja/customize/motion-blending)を参照。`setTrackBlend` と `setTrackSync` が取る [`SSTrackBlend`](/api/@spritestudio/ssplayer-core/enumerations/SSTrackBlend.md) と [`SSTrackSync`](/api/@spritestudio/ssplayer-core/enumerations/SSTrackSync.md)。ソースのハンドルはただの `number` です。
+
 **再生系の enum。**
 `setPlaybackDirection` の 2 引数が
 [`WebPlaybackDirection`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackDirection.md) と

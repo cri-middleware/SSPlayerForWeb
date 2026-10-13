@@ -4,7 +4,7 @@ This file lists unfinished work that is specific to the TyranoScript plugin; wor
 
 ## Playback & rendering
 
-- [ ] **Crossfade tag** — A `[ss_play]` option or an `[ss_crossfade]` tag, the counterpart of the Spine plugin's `[spine_mix_anim]`, with the track state carried through save and restore. Blocked on: the root roadmap's Animation blending / crossfade item, since no package exposes the runtime's track calls yet.
+- [ ] **Crossfade tag** — A `[ss_play]` option or an `[ss_crossfade]` tag, the counterpart of the Spine plugin's `[spine_mix_anim]`, with the track state carried through save and restore. The track calls are on `ssplayer-webgl`'s `SSPlayer` (`crossfade`, `setTrackAnimation`, …); what is missing is the tag and the save / restore of the track state.
 
 ## Distribution & verification
 
