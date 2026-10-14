@@ -1,7 +1,7 @@
 import { SSSurface, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 import { UIManager, showToast } from './ui/UIManager.js';
 import { ViewControls } from './view/ViewControls.js';
-import { collectDroppedFiles, fileToDataUrl, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
+import { collectDroppedFiles, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
 
 // Bundled sample ssabs served from public/. The deploy nests each project under
 // public/<project>/ (ssconverter --stem-dir): the `overall` test project in
@@ -148,11 +148,16 @@ async function main() {
     }
     if (missingPacks.length > 0) notify(`Missing instance pack(s): ${[...new Set(missingPacks)].join(', ')} — include them in the dropped folder.`, 'warning');
 
-    // Resolve every involved ssab's textures to a dropped file (data URL → <img> src),
-    // each relative to ITS own ssab's directory. Textures embedded in the ssab
-    // (converter `--embedded` mode) are skipped here — the player decodes them
-    // from the ssab's own bytes in loadTextures, so no sibling file is needed.
-    const textures = new Map<number, string>();
+    // Resolve every involved ssab's textures to a dropped file, each relative to
+    // ITS own ssab's directory. Textures embedded in the ssab (converter
+    // `--embedded` mode) are skipped here — the player decodes them from the
+    // ssab's own bytes in loadTextures, so no sibling file is needed.
+    //
+    // Handed over as bytes, not as a data: URL. Bytes become a texture this
+    // player owns and frees when the next pack loads; a URL goes into the
+    // surface's shared cache, which keys on it and never evicts, so every drop
+    // left its atlases on the GPU for the life of the page.
+    const textures = new Map<number, ArrayBuffer>();
     const missingTex: string[] = [];
     for (const { buf, baseDir } of involved) {
       const embedded = new Set(SSRuntimeManager.extractEmbeddedTextures(buf).map((e) => e.hash >>> 0));
@@ -162,7 +167,7 @@ async function main() {
         const expected = resolveRelativePath(baseDir, path);
         const texFile = droppedFiles.find((f) => f.path === expected);
         if (!texFile) { missingTex.push(expected); continue; }
-        textures.set(hash, await fileToDataUrl(texFile.file));
+        textures.set(hash, await texFile.file.arrayBuffer());
       }
     }
     if (missingTex.length > 0) notify(`Missing texture(s): ${[...new Set(missingTex)].join(', ')}`, 'error');
