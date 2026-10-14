@@ -470,6 +470,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._catchUpPending = true;
         this.prepareResources()
             .then(() => {
+                // Only the instances: the effects play the pack's own effect
+                // data, which was there from the bind, and rebuilding them would
+                // restart every effect already running.
                 if (this._animationName) this.setupInstanceChildren();
             })
             .catch(e => {
@@ -495,7 +498,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
     }
 
-    private setupInstanceChildren() {
+    private destroyInstanceChildren() {
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
             // child.slot is an InstanceSlotHandle (destroy() frees the WASM
@@ -505,7 +508,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
-        this.destroyEffectChildren();
+    }
+
+    // Leaves the effects alone. setAnimation rebuilds them itself, and a
+    // catch-up re-runs this alone, once the instance packs are in.
+    private setupInstanceChildren() {
+        this.destroyInstanceChildren();
 
         const refs = this.runtimeManager.getInstanceParts();
         for (const ref of refs) {
@@ -1889,11 +1897,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // only the owner may sweep it.
         if (!this._isChildPlayer) this._audioManager?.stopAll?.();
 
-        this._instanceChildren.forEach(child => {
-            try { child.player.destroy(); } catch { /* ignore */ }
-            try { child.slot.destroy(); } catch { /* ignore */ }
-        });
-        this._instanceChildren.clear();
+        this.destroyInstanceChildren();
         this.destroyEffectChildren();
 
         // Free child instance contexts first (they reference the pack resources).
