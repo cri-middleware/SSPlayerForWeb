@@ -66,9 +66,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _soundsPreloadedFor: IAudioManager | null = null;
     private _soundsPromise: Promise<void> | null = null;
     private _catchUpPending: boolean = false;
-    // Counts binds. A load awaits, and the pack can be rebound meanwhile; after
-    // each await the load checks this, so the work of a pack no longer bound
-    // never marks the new one ready or adds packs to its registry.
+    // Counts binds, and the destroy. A load awaits, and the pack can be rebound
+    // or the player destroyed meanwhile; after each await the load checks
+    // this, so the work of a pack no longer bound never marks the new one
+    // ready or adds packs to its registry.
     private _bindGeneration: number = 0;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
@@ -333,8 +334,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             if (generation !== this._bindGeneration) return;
             await this.loadInstancePacks();
             if (generation !== this._bindGeneration) {
-                // The bind released what the map held then; what is in it now
-                // arrived after, for a pack nothing plays any more.
+                // The bind or the destroy released what the map held then; what
+                // is in it now arrived after, for a pack nothing plays any more.
                 packs.forEach(res => res.destroy());
                 packs.clear();
                 return;
@@ -1925,6 +1926,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // Hosts/frameworks commonly call destroy() defensively more than once.
         if (this._destroyed) return;
         this._destroyed = true;
+        // A load still running stops at its next check, as it does for a bind.
+        // It would otherwise set instances up on the runtime freed below, and
+        // keep the instance packs it resolves after the map below is emptied.
+        this._bindGeneration++;
 
         this.stop();
 
