@@ -1,12 +1,9 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import * as nodePath from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect, vi } from 'vitest';
-import { convertProject, init as initConverter } from '@spritestudio/ssconverter-core';
 import { initializeWasm, getWasmMemory, SSABResource, SSRuntimeEffectSlot } from '../src/SSRuntimeManager.js';
 import { DirectInternalPlayer } from '../src/DirectInternalPlayer.js';
 import { DrawBatchKind } from '../src/ss/runtime/draw-batch-kind.js';
-import type { IResourceManager } from '../src/IResourceManager.js';
+import { CONVERTER_WASM, RUNTIME_WASM, convert, sdkProject, textures } from './real-runtime.js';
 
 // An effect step runs in update(), before the frame it is drawn in is
 // evaluated, so it cannot know whether the frame draws its part. It takes the
@@ -20,36 +17,7 @@ import type { IResourceManager } from '../src/IResourceManager.js';
 // own Effect fixture, converted here, and is skipped without the converter
 // WASM, the runtime WASM or the SDK submodule.
 
-const here = nodePath.dirname(fileURLToPath(import.meta.url));
-const repoRoot = nodePath.resolve(here, '../../..');
-const RUNTIME_WASM = nodePath.join(repoRoot, 'packages/ssplayer-core/wasm/ssruntime_bg.wasm');
-const CONVERTER_WASM = nodePath.join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');
-const PROJECT = nodePath.join(repoRoot, 'SpriteStudio-SDK/tests/overall');
-
-function projectFiles(dir: string, prefix: string, into: Map<string, Uint8Array>): Map<string, Uint8Array> {
-    for (const name of readdirSync(dir)) {
-        const full = nodePath.join(dir, name);
-        if (statSync(full).isDirectory()) projectFiles(full, `${prefix}/${name}`, into);
-        else into.set(`${prefix}/${name}`, new Uint8Array(readFileSync(full)));
-    }
-    return into;
-}
-
-async function effectPack(): Promise<Uint8Array> {
-    await initConverter(readFileSync(CONVERTER_WASM));
-    const result = convertProject(projectFiles(PROJECT, 'overall', new Map()));
-    try {
-        return (result.output as Map<string, Uint8Array>).get('Effect.ssab')!;
-    } finally {
-        result.free();
-    }
-}
-
-const textures: IResourceManager = {
-    loadTexture: async () => {},
-    getTexture: () => null,
-    destroy: () => {},
-};
+const OVERALL = sdkProject('overall');
 
 /** FNV-1a of a byte range, so frames compare as short strings. */
 function digest(bytes: Uint8Array): string {
@@ -58,12 +26,12 @@ function digest(bytes: Uint8Array): string {
     return h.toString(16);
 }
 
-describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !existsSync(PROJECT))(
+describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !existsSync(OVERALL))(
     'an effect part the frame does not draw',
     () => {
         it.each([false, true])('draws what a step that always draws gives (hidden for a stretch: %s)', async (hide) => {
             await initializeWasm(readFileSync(RUNTIME_WASM));
-            const pack = await effectPack();
+            const pack = (await convert(OVERALL)).get('Effect.ssab')!;
 
             const player = new DirectInternalPlayer(textures);
             player.bindResource(pack);
@@ -156,7 +124,7 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
         it('hands out a frame readable over the memory a build grew', async () => {
             await initializeWasm(readFileSync(RUNTIME_WASM));
             const player = new DirectInternalPlayer(textures);
-            player.bindResource(await effectPack());
+            player.bindResource((await convert(OVERALL)).get('Effect.ssab')!);
             player.setAnimation('anime_1');
             const manager = player.runtimeManager;
             const expected = Array.from(manager.getFrameData(0)!.drawOrderArray()!);
