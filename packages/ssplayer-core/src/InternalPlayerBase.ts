@@ -167,14 +167,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *   rather than fetched.
      */
     public bindResource(buffer: Uint8Array, ssabUrl?: string) {
-        if (ssabUrl !== undefined) {
-            // Recorded on this path too, not just in load(): a host that fetches
-            // the bytes itself (ssplayer-rmmz does, for a better error message)
-            // would otherwise leave `ssabUrl` empty for a pack that plainly has
-            // one, and only the asset base would survive.
-            this._ssabUrl = ssabUrl;
-            this._assetBaseUrl = ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
-        }
+        // Recorded on this path too, not just in load(): a host that fetches
+        // the bytes itself (ssplayer-rmmz does, for a better error message)
+        // would otherwise leave `ssabUrl` empty for a pack that plainly has
+        // one, and only the asset base would survive. Bytes bound without a URL
+        // clear both, or their textures, instance packs and sounds would be
+        // fetched from the previous pack's directory.
+        this._ssabUrl = ssabUrl ?? '';
+        this._assetBaseUrl = ssabUrl !== undefined ? ssabUrl.substring(0, ssabUrl.lastIndexOf('/')) : '';
         // Looked up before the bound pack is released, so rebinding the file this
         // player already holds keeps that pack rather than building it again.
         const shared = ssabUrl !== undefined ? retainSharedPack(ssabUrl, buffer) : null;

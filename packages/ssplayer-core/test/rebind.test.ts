@@ -14,8 +14,9 @@ import type { IResourceManager } from '../src/IResourceManager.js';
 // with the old animation's index still cached it reached the runtime, which
 // logged "Animation not found" for it.
 //
-// A load still running for the old pack neither stands in for the new pack's
-// load nor adds to the new pack's instance packs.
+// Bytes bound without a URL forget the old pack's directory, and a load still
+// running for the old pack neither stands in for the new pack's load nor adds
+// to the new pack's instance packs.
 //
 // Boots the real runtime, since what a bind leaves set up is the runtime's to
 // say. Plays the SDK's Ringo, converted here, which gives two packs, and the
@@ -63,6 +64,15 @@ const textures: IResourceManager = {
     destroy: () => {},
 };
 
+/** A resource manager that records the URL of every texture it is asked for. */
+function recording(urls: string[]): IResourceManager {
+    return {
+        loadTexture: async (url: string) => { urls.push(url); },
+        getTexture: () => null,
+        destroy: () => {},
+    };
+}
+
 /** Lets every promise settled so far run its handlers. */
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -99,6 +109,26 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
                 error.mockRestore();
                 player.destroy();
             }
+        }, 120_000);
+
+        it('forgets the old URL when bytes are bound without one', async () => {
+            await initializeWasm(readFileSync(RUNTIME_WASM));
+            const ringo = (await packsOf(RINGO)).get('Ringo.ssab')!;
+            const urls: string[] = [];
+            const player = new DirectInternalPlayer(recording(urls));
+            player.bindResource(ringo, 'old/Ringo.ssab');
+            await player.prepareResources();
+            expect(urls.length).toBeGreaterThan(0);
+            expect(urls.every(url => url.startsWith('old/'))).toBe(true);
+
+            urls.length = 0;
+            player.bindResource(ringo);
+            expect(player.ssabUrl).toBe('');
+            await player.prepareResources();
+            // Asked for again, and not from the directory of a pack no longer bound.
+            expect(urls.length).toBeGreaterThan(0);
+            expect(urls.filter(url => url.startsWith('old/'))).toEqual([]);
+            player.destroy();
         }, 120_000);
 
         it('does not let a load still running for the old pack stand in for the new one', async () => {
