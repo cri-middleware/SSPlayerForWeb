@@ -7,6 +7,7 @@ import {
     extractTexturePaths,
     isSsab
 } from '../utils/ssabExtractor.js';
+import { LoadSequence } from './LoadSequence.js';
 
 export function resolveRelativePath(baseDir: string, relativePath: string): string {
     const parts = baseDir ? baseDir.split('/') : [];
@@ -45,19 +46,21 @@ export async function getFilesFromDirHandle(dirHandle: any, currentPath = '', cu
 export class DropLoader {
     private player: SSPlayer;
     private ui: UIManager;
+    private loads: LoadSequence;
     private loadedFiles: {file: File, path: string}[] = [];
     private ssabFiles: {file: File, path: string}[] = [];
 
-    constructor(player: SSPlayer, ui: UIManager) {
+    constructor(player: SSPlayer, ui: UIManager, loads: LoadSequence) {
         this.player = player;
         this.ui = ui;
+        this.loads = loads;
         this.setupDragAndDrop();
         
         this.ui.ssabSelect.addEventListener('change', async (e) => {
             const selectedPath = (e.target as HTMLSelectElement).value;
             const fileObj = this.ssabFiles.find(f => f.path === selectedPath);
             if (fileObj) {
-                await this.loadSsabFile(fileObj);
+                await this.loadSsabFile(fileObj, this.loads.begin());
             }
         });
     }
@@ -122,10 +125,9 @@ export class DropLoader {
                 }
             }
 
-            this.loadedFiles = allFiles;
-            this.ssabFiles = allFiles.filter(f => f.path.endsWith('.ssab'));
-            
-            this.ssabFiles.sort((a, b) => {
+            const ssabFiles = allFiles.filter(f => f.path.endsWith('.ssab'));
+
+            ssabFiles.sort((a, b) => {
                 const partsA = a.path.split('/');
                 const partsB = b.path.split('/');
                 const len = Math.min(partsA.length, partsB.length);
@@ -137,35 +139,48 @@ export class DropLoader {
                 return partsA.length - partsB.length;
             });
 
-            if (this.ssabFiles.length === 0) {
+            if (ssabFiles.length === 0) {
                 showToast('Validation Error: No .ssab file found in dropped items.', 'error');
                 return;
             }
+            // From here this drop replaces whatever is still loading — but not
+            // before: a drop with nothing to play leaves the current load alone.
+            const seq = this.loads.begin();
 
-            let primary = this.ssabFiles[0];
-            if (this.ssabFiles.length > 1) {
+            let primary = ssabFiles[0];
+            if (ssabFiles.length > 1) {
                 try {
                     const referenced = new Set<number>();
                     const infos: { f: { file: File, path: string }, hash: number }[] = [];
-                    for (const f of this.ssabFiles) {
+                    for (const f of ssabFiles) {
                         const b = await f.file.arrayBuffer();
                         infos.push({ f, hash: extractPackInfo(b).hash });
                         for (const r of extractInstancePackRefs(b)) referenced.add(r.hash);
                     }
                     primary = (infos.find(i => i.hash && !referenced.has(i.hash)) ?? infos[0]).f;
                 } catch { /* fall back */ }
-                showToast(`Found ${this.ssabFiles.length} SSAB files. Playing "${primary.path}". Use the dropdown to switch.`, 'warning');
+            }
+            if (!this.loads.isCurrent(seq)) return;
+            if (ssabFiles.length > 1) {
+                showToast(`Found ${ssabFiles.length} SSAB files. Playing "${primary.path}". Use the dropdown to switch.`, 'warning');
             }
 
-            this.ui.updateSsabSelect(this.ssabFiles.map(f => f.path), primary.path);
-            await this.loadSsabFile(primary);
+            this.loadedFiles = allFiles;
+            this.ssabFiles = ssabFiles;
+            this.ui.updateSsabSelect(ssabFiles.map(f => f.path), primary.path);
+            await this.loadSsabFile(primary, seq);
         });
     }
 
-    public async loadSsabFile(ssabObj: {file: File, path: string}) {
+    public async loadSsabFile(ssabObj: {file: File, path: string}, seq: number) {
+        // The drop this file came from. A newer drop replaces the fields, and this
+        // load, now stale, must not go looking for its textures in that one.
+        const loadedFiles = this.loadedFiles;
+        const ssabFiles = this.ssabFiles;
         try {
             showToast(`Loading SSAB: ${ssabObj.file.name}`, 'info');
             const buffer = await ssabObj.file.arrayBuffer();
+            if (!this.loads.isCurrent(seq)) return;
 
             if (!isSsab(buffer)) {
                 showToast(`Invalid format: ${ssabObj.file.name} does not have the SSAB identifier.`, 'error');
@@ -179,7 +194,7 @@ export class DropLoader {
             if (mainRefs.length > 0) {
                 const packByHash = new Map<number, { buffer: ArrayBuffer, baseDir: string }>();
                 const packByName = new Map<string, { buffer: ArrayBuffer, baseDir: string }>();
-                for (const sf of this.ssabFiles) {
+                for (const sf of ssabFiles) {
                     try {
                         const b = (sf === ssabObj) ? buffer : await sf.file.arrayBuffer();
                         const info = extractPackInfo(b);
@@ -188,6 +203,7 @@ export class DropLoader {
                         if (info.name) packByName.set(info.name, entry);
                     } catch { /* skip unreadable */ }
                 }
+                if (!this.loads.isCurrent(seq)) return;
 
                 const visited = new Set<number>([extractPackInfo(buffer).hash]);
                 const missingPacks: string[] = [];
@@ -219,7 +235,7 @@ export class DropLoader {
                 extractTexturePaths(b).map(({ hash, path }) => ({ hash, expectedPath: resolveRelativePath(baseDir, path) }))
             );
             const missingTextures = [...new Set(
-                texRefs.filter(t => !this.loadedFiles.find(f => f.path === t.expectedPath)).map(t => t.expectedPath)
+                texRefs.filter(t => !loadedFiles.find(f => f.path === t.expectedPath)).map(t => t.expectedPath)
             )];
             if (missingTextures.length > 0) {
                 showToast(`Validation Failed: Missing required textures:<br>${missingTextures.join('<br>')}`, 'error');
@@ -229,11 +245,13 @@ export class DropLoader {
             const textures = new Map<number, Uint8Array>();
             for (const { hash, expectedPath } of texRefs) {
                 if (textures.has(hash)) continue;
-                const texFileObj = this.loadedFiles.find(f => f.path === expectedPath)!;
+                const texFileObj = loadedFiles.find(f => f.path === expectedPath)!;
                 textures.set(hash, new Uint8Array(await texFileObj.file.arrayBuffer()));
             }
+            if (!this.loads.isCurrent(seq)) return;
 
-            await this.player.loadBuffer(buffer, textures);
+            await this.loads.inTurn(seq, () => this.player.loadBuffer(buffer, textures));
+            if (!this.loads.isCurrent(seq)) return;
 
             const anims = extractAnimationNames(buffer);
             this.ui.updateAnimationSelect(anims);
