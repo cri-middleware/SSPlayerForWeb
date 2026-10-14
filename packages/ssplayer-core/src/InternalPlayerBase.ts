@@ -66,6 +66,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _soundsPreloadedFor: IAudioManager | null = null;
     private _soundsPromise: Promise<void> | null = null;
     private _catchUpPending: boolean = false;
+    // Counts binds. A load awaits, and the pack can be rebound meanwhile; after
+    // each await the load checks this, so the work of a pack no longer bound
+    // never marks the new one ready or adds packs to its registry.
+    private _bindGeneration: number = 0;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
     private readonly _partState = new PartState();
@@ -178,9 +182,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this._ssabResource.destroy();
         }
         this._instancePackResources.forEach(res => res.destroy());
+        // Emptied, so what a load still running for the old pack adds to it is
+        // all it holds, and replaced, so that load cannot add to the new pack's.
         this._instancePackResources.clear();
+        this._instancePackResources = new Map();
         this._ssabResource = shared ? shared.resource : new SSABResource(buffer);
         this.runtimeManager.bindResource(this._ssabResource);
+        this._bindGeneration++;
         // Nothing is set up on the new pack, whatever was set up on the old one.
         // Without this, `setAnimation` would take a name that merely *matches*
         // the previous pack's selection for "already selected" and skip the
@@ -191,6 +199,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._resourceManager?.reset?.();
         this._prepared = null;
         this._resourcesReady = false;
+        // A catch-up still running is the old pack's; the new one needs its own.
+        this._catchUpPending = false;
         this._soundsPreloadedFor = null;
         this._soundsPromise = null;
         if (shared) {
@@ -304,9 +314,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public prepareResources(): Promise<void> {
         if (this._prepared) return this._prepared;
 
+        const generation = this._bindGeneration;
+        const packs = this._instancePackResources;
         const run = (async () => {
             await this.loadTextures();
+            // Rebound while the textures loaded: the pack bound now has a load of
+            // its own, and this one would resolve that pack's instance packs and
+            // mark it ready before its textures are in.
+            if (generation !== this._bindGeneration) return;
             await this.loadInstancePacks();
+            if (generation !== this._bindGeneration) {
+                // The bind released what the map held then; what is in it now
+                // arrived after, for a pack nothing plays any more.
+                packs.forEach(res => res.destroy());
+                packs.clear();
+                return;
+            }
             this._resourcesReady = true;
             // Sounds are equally pack-scoped; preload them here too when a
             // manager is already attached, so `load()` covers audio as well.
@@ -468,18 +491,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private catchUpResources(): void {
         if (this._catchUpPending) return;
         this._catchUpPending = true;
+        const generation = this._bindGeneration;
+        const animationName = this._animationName;
         this.prepareResources()
             .then(() => {
                 // Only the instances: the effects play the pack's own effect
                 // data, which was there from the bind, and rebuilding them would
                 // restart every effect already running.
-                if (this._animationName) this.setupInstanceChildren();
+                if (generation === this._bindGeneration && this._animationName) this.setupInstanceChildren();
             })
             .catch(e => {
-                console.error(`[SSPlayer] Failed to load the assets for "${this._animationName}"`, e);
+                console.error(`[SSPlayer] Failed to load the assets for "${animationName}"`, e);
             })
             .finally(() => {
-                this._catchUpPending = false;
+                // A bind since has reset the flag, and the catch-up running now
+                // may be the new pack's.
+                if (generation === this._bindGeneration) this._catchUpPending = false;
             });
     }
 

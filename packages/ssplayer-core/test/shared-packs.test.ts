@@ -79,6 +79,7 @@ function makePlayer() {
     player._instancePackResources = new Map();
     player._instanceChildren = new Map();
     player._effectChildren = new Map();
+    player._bindGeneration = 0;
     player._isChildPlayer = false;
     player._audioManager = null;
     player._destroyed = false;
