@@ -1,7 +1,7 @@
 import { SSSurface, SSRuntimeManager } from '@spritestudio/ssplayer-webgl';
 import { UIManager, showToast } from './ui/UIManager.js';
 import { ViewControls } from './view/ViewControls.js';
-import { collectDroppedFiles, fileToDataUrl, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
+import { collectDroppedFiles, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
 
 // Bundled sample ssabs served from public/. The deploy nests each project under
 // public/<project>/ (ssconverter --stem-dir): the `overall` test project in
@@ -80,6 +80,22 @@ async function main() {
   let droppedSsabs = new Map<string, DroppedFile>();
   let droppedFiles: DroppedFile[] = [];
 
+  // Every drop and every ssab pick is a new load, and the newest one wins: one
+  // that is still reading files when the next begins stops at its next await,
+  // before it touches the player. Left to run on, the two bind each other's
+  // packs, and the older one goes on to pick its own animation on the newer
+  // pack.
+  let loadSeq = 0;
+  // ...and the player calls themselves run one at a time, each only if its load
+  // is still the newest. load() binds once its fetch is back, so one still
+  // fetching could otherwise bind over a newer pack that got there first.
+  let playerLoad: Promise<unknown> = Promise.resolve();
+  const loadInTurn = (seq: number, load: () => Promise<void>): Promise<void> => {
+    const run = playerLoad.then(() => (seq === loadSeq ? load() : undefined));
+    playerLoad = run.catch(() => {});
+    return run;
+  };
+
   const playAnimation = async (name: string) => {
     if (!name) return;
     player.setAnimation(name);
@@ -88,10 +104,11 @@ async function main() {
   };
 
   // --- Bundled ssab (loaded by URL; textures fetched from public/) ---
-  const loadBundled = async (url: string) => {
+  const loadBundled = async (url: string, seq: number) => {
     notify(`Loading ${url}...`);
-    await player.load(url);
+    await loadInTurn(seq, () => player.load(url));
     const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    if (seq !== loadSeq) return;
     const anims = SSRuntimeManager.extractAnimationNames(buf);
     ui.updateAnimationSelect(anims);
     if (anims.length > 0) await playAnimation(anims[0]);
@@ -101,7 +118,7 @@ async function main() {
   const dirOf = (p: string) => p.split('/').slice(0, -1).join('/');
 
   // --- Dropped ssab (loaded from the dropped buffer + sibling texture files) ---
-  const loadDropped = async (ssabObj: DroppedFile) => {
+  const loadDropped = async (ssabObj: DroppedFile, seq: number) => {
     notify(`Loading ${ssabObj.path}...`);
     const ssabBuffer = await ssabObj.file.arrayBuffer();
     const rootBuf = new Uint8Array(ssabBuffer);
@@ -112,6 +129,7 @@ async function main() {
       const b = new Uint8Array(await sf.file.arrayBuffer());
       return { sf, buf: b, info: SSRuntimeManager.extractPackInfo(b) };
     }));
+    if (seq !== loadSeq) return;
     const byHash = new Map<number, typeof entries[number]>();
     const byName = new Map<string, typeof entries[number]>();
     for (const e of entries) {
@@ -148,11 +166,16 @@ async function main() {
     }
     if (missingPacks.length > 0) notify(`Missing instance pack(s): ${[...new Set(missingPacks)].join(', ')} — include them in the dropped folder.`, 'warning');
 
-    // Resolve every involved ssab's textures to a dropped file (data URL → <img> src),
-    // each relative to ITS own ssab's directory. Textures embedded in the ssab
-    // (converter `--embedded` mode) are skipped here — the player decodes them
-    // from the ssab's own bytes in loadTextures, so no sibling file is needed.
-    const textures = new Map<number, string>();
+    // Resolve every involved ssab's textures to a dropped file, each relative to
+    // ITS own ssab's directory. Textures embedded in the ssab (converter
+    // `--embedded` mode) are skipped here — the player decodes them from the
+    // ssab's own bytes in loadTextures, so no sibling file is needed.
+    //
+    // Handed over as bytes, not as a data: URL. Bytes become a texture this
+    // player owns and frees when the next pack loads; a URL goes into the
+    // surface's shared cache, which keys on it and never evicts, so every drop
+    // left its atlases on the GPU for the life of the page.
+    const textures = new Map<number, ArrayBuffer>();
     const missingTex: string[] = [];
     for (const { buf, baseDir } of involved) {
       const embedded = new Set(SSRuntimeManager.extractEmbeddedTextures(buf).map((e) => e.hash >>> 0));
@@ -162,12 +185,14 @@ async function main() {
         const expected = resolveRelativePath(baseDir, path);
         const texFile = droppedFiles.find((f) => f.path === expected);
         if (!texFile) { missingTex.push(expected); continue; }
-        textures.set(hash, await fileToDataUrl(texFile.file));
+        textures.set(hash, await texFile.file.arrayBuffer());
       }
     }
+    if (seq !== loadSeq) return;
     if (missingTex.length > 0) notify(`Missing texture(s): ${[...new Set(missingTex)].join(', ')}`, 'error');
 
-    await player.loadBuffer(ssabBuffer, textures);
+    await loadInTurn(seq, () => player.loadBuffer(ssabBuffer, textures));
+    if (seq !== loadSeq) return;
     const anims = SSRuntimeManager.extractAnimationNames(rootBuf);
     ui.updateAnimationSelect(anims);
     if (anims.length > 0) await playAnimation(anims[0]);
@@ -178,7 +203,8 @@ async function main() {
   ui.ssabSelect.addEventListener('change', () => {
     const value = ui.ssabSelect.value;
     const dropped = droppedSsabs.get(value);
-    (dropped ? loadDropped(dropped) : loadBundled(value)).catch((e) => notify(`Error: ${e?.message ?? e}`, 'error'));
+    const seq = ++loadSeq;
+    (dropped ? loadDropped(dropped, seq) : loadBundled(value, seq)).catch((e) => notify(`Error: ${e?.message ?? e}`, 'error'));
   });
 
   // animation dropdown
@@ -188,15 +214,21 @@ async function main() {
 
   // --- Drag & drop a folder (or files) of ssab + textures ---
   window.addEventListener('dragover', (e) => { e.preventDefault(); ui.dropZone?.classList.add('active'); });
-  window.addEventListener('dragleave', (e) => { if (e.target === ui.dropZone) ui.dropZone?.classList.remove('active'); });
+  // The drop zone is `pointer-events: none`, so it is never a drag event's target.
+  // relatedTarget is where the drag went; null once it has left the page or been
+  // cancelled — without this the dark overlay stayed up until the next drop.
+  window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) ui.dropZone?.classList.remove('active'); });
   window.addEventListener('drop', async (e) => {
     e.preventDefault();
     ui.dropZone?.classList.remove('active');
     if (!e.dataTransfer) return;
     try {
-      droppedFiles = await collectDroppedFiles(e.dataTransfer);
-      const ssabs = sortByPath(droppedFiles.filter((f) => f.path.toLowerCase().endsWith('.ssab')));
+      const files = await collectDroppedFiles(e.dataTransfer);
+      const ssabs = sortByPath(files.filter((f) => f.path.toLowerCase().endsWith('.ssab')));
       if (ssabs.length === 0) { notify('No .ssab file found in the dropped items.', 'error'); return; }
+      // From here this drop replaces whatever is still loading — but not before:
+      // a drop with nothing to play leaves the current load alone.
+      const seq = ++loadSeq;
 
       // Pick a primary ssab: prefer one not referenced as an instance pack by another.
       let primary = ssabs[0];
@@ -211,10 +243,13 @@ async function main() {
         primary = (infos.find((i) => i.hash && !referenced.has(i.hash)) ?? infos[0]).f;
       }
 
+      if (seq !== loadSeq) return;
+
       // Repopulate the ssab dropdown with the dropped ssab paths.
+      droppedFiles = files;
       droppedSsabs = new Map(ssabs.map((f) => [f.path, f]));
       ui.updateSsabSelect(ssabs.map((f) => f.path), primary.path);
-      await loadDropped(primary);
+      await loadDropped(primary, seq);
     } catch (err) {
       notify(`Error loading dropped files: ${(err as Error)?.message ?? err}`, 'error');
       console.error(err);
@@ -222,7 +257,7 @@ async function main() {
   });
 
   // Initial bundled load.
-  await loadBundled(ui.ssabSelect.value);
+  await loadBundled(ui.ssabSelect.value, ++loadSeq);
 }
 
 main().catch(console.error);

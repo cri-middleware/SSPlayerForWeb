@@ -3,6 +3,7 @@ import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 import { UIManager, showToast } from './ui/UIManager.js';
 import { ViewControls } from './view/ViewControls.js';
 import { DropLoader } from './loader/DropLoader.js';
+import { LoadSequence } from './loader/LoadSequence.js';
 import { extractAnimationNames } from './utils/ssabExtractor.js';
 
 // The deploy nests each SS project's output under public/<project>/ (ssconverter
@@ -91,6 +92,8 @@ async function main() {
 
     // 3. Initialize UI Manager
     const uiManager = new UIManager(player, view);
+    // Shared with the DropLoader: a sample pick and a drop replace each other.
+    const loads = new LoadSequence();
 
     // 4. Populate the SSAB dropdown with the bundled sample assets so any of them
     //    (BlendMode, PartsColor, Effect, Mask, …) can be loaded straight from the
@@ -117,9 +120,11 @@ async function main() {
     // Textures and any external instance packs resolve by URL relative to root,
     // matching how the bundled assets are laid out.
     const loadSample = async (name: string) => {
+        const seq = loads.begin();
         try {
-            await player.load(ssabUrl(name));
+            await loads.inTurn(seq, () => player.load(ssabUrl(name)));
             const buffer = await (await fetch(ssabUrl(name))).arrayBuffer();
+            if (!loads.isCurrent(seq)) return;
             const anims = extractAnimationNames(buffer);
             uiManager.updateAnimationSelect(anims, anims[0]);
             if (anims.length > 0) player.setAnimation(anims[0]);
@@ -141,19 +146,21 @@ async function main() {
         if (SAMPLE_SSABS.includes(name)) void loadSample(name);
     });
 
-    // Default animation list for the initially-loaded Ringo.
+    // Default animation list for the initially-loaded Ringo, unless a sample
+    // picked while this fetch was out has already put up its own.
+    const initial = loads.begin();
     try {
         const response = await fetch(ssabUrl('Ringo.ssab'));
         const buffer = await response.arrayBuffer();
         const anims = extractAnimationNames(buffer);
-        uiManager.updateAnimationSelect(anims, "run");
+        if (loads.isCurrent(initial)) uiManager.updateAnimationSelect(anims, "run");
     } catch (e) {
         console.warn("Failed to fetch default Ringo.ssab animations", e);
     }
 
     // 5. Initialize Drag and Drop Loader (dropping files repopulates the dropdown
     //    with the dropped paths; its change handler ignores the bundled samples).
-    new DropLoader(player, uiManager);
+    new DropLoader(player, uiManager, loads);
 }
 
 main().catch(console.error);

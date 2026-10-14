@@ -1,6 +1,6 @@
 // Drag-and-drop file helpers for the WebGL example, mirroring examples/pixi-example's
-// DropLoader (getFilesFromDirHandle / resolveRelativePath / fileToDataUrl). Kept
-// engine-agnostic; the WebGL-specific loading lives in main.ts (via loadBuffer).
+// DropLoader (getFilesFromDirHandle / resolveRelativePath). Kept engine-agnostic;
+// the WebGL-specific loading lives in main.ts (via loadBuffer).
 
 export interface DroppedFile {
   file: File;
@@ -16,16 +16,6 @@ export function resolveRelativePath(baseDir: string, relativePath: string): stri
     else if (p !== '.' && p !== '') parts.push(p);
   }
   return parts.join('/');
-}
-
-/** Read a File as a data: URL (used as an <img> src for dropped textures). */
-export function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 /** Recursively enumerate a dropped directory (File System Access handle). */
