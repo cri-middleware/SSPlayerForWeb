@@ -1,12 +1,9 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import * as nodePath from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { convertProject, init as initConverter } from '@spritestudio/ssconverter-core';
 import { initializeWasm } from '../src/SSRuntimeManager.js';
 import { DirectInternalPlayer } from '../src/DirectInternalPlayer.js';
-import type { IResourceManager } from '../src/IResourceManager.js';
 import { SSOverridePriority } from '../src/PartOverride.js';
+import { CONVERTER_WASM, RUNTIME_WASM, convert, sdkProject, textures } from './real-runtime.js';
 
 // isPartHidden reads the part's `hide` from the frame last evaluated, the one
 // the renderer draws, and the runtime writes a visibility override and its
@@ -21,34 +18,8 @@ import { SSOverridePriority } from '../src/PartOverride.js';
 // at frame 0. Skipped without the converter WASM, the runtime WASM or the SDK
 // submodule.
 
-const here = nodePath.dirname(fileURLToPath(import.meta.url));
-const repoRoot = nodePath.resolve(here, '../../..');
-const RUNTIME_WASM = nodePath.join(repoRoot, 'packages/ssplayer-core/wasm/ssruntime_bg.wasm');
-const CONVERTER_WASM = nodePath.join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');
-const PROJECT = nodePath.join(repoRoot, 'SpriteStudio-SDK/tests/Doll');
-const RINGO = nodePath.join(repoRoot, 'SpriteStudio-SDK/tests/Ringo');
-
-async function convert(project: string): Promise<Map<string, Uint8Array>> {
-    await initConverter(readFileSync(CONVERTER_WASM));
-    const dir = nodePath.basename(project);
-    const files = new Map<string, Uint8Array>();
-    for (const name of readdirSync(project)) {
-        const full = nodePath.join(project, name);
-        if (statSync(full).isFile()) files.set(`${dir}/${name}`, new Uint8Array(readFileSync(full)));
-    }
-    const result = convertProject(files);
-    try {
-        return new Map(result.output as Map<string, Uint8Array>);
-    } finally {
-        result.free();
-    }
-}
-
-const textures: IResourceManager = {
-    loadTexture: async () => {},
-    getTexture: () => null,
-    destroy: () => {},
-};
+const PROJECT = sdkProject('Doll');
+const RINGO = sdkProject('Ringo');
 
 describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !existsSync(PROJECT) || !existsSync(RINGO))(
     'isPartHidden',

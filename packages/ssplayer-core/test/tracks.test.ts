@@ -1,12 +1,9 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import * as nodePath from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { convertProject, init as initConverter } from '@spritestudio/ssconverter-core';
 import { initializeWasm } from '../src/SSRuntimeManager.js';
 import { DirectInternalPlayer } from '../src/DirectInternalPlayer.js';
-import type { IResourceManager } from '../src/IResourceManager.js';
 import { SSTrackBlend, SSTrackSync } from '../src/Tracks.js';
+import { CONVERTER_WASM, RUNTIME_WASM, convert, sdkProject, textures } from './real-runtime.js';
 
 // The player layer over the runtime's track stack. What the runtime does with a
 // track is the runtime's, and its own suite holds it; this one holds what the
@@ -25,38 +22,8 @@ import { SSTrackBlend, SSTrackSync } from '../src/Tracks.js';
 // `dead` has a wider canvas. Skipped without the converter WASM, the runtime
 // WASM or the SDK submodule.
 
-const here = nodePath.dirname(fileURLToPath(import.meta.url));
-const repoRoot = nodePath.resolve(here, '../../..');
-const RUNTIME_WASM = nodePath.join(repoRoot, 'packages/ssplayer-core/wasm/ssruntime_bg.wasm');
-const CONVERTER_WASM = nodePath.join(repoRoot, 'packages/ssconverter-core/wasm/ssconverter_bg.wasm');
-const RINGO = nodePath.join(repoRoot, 'SpriteStudio-SDK/tests/Ringo');
-const OVERALL = nodePath.join(repoRoot, 'SpriteStudio-SDK/tests/overall');
-
-async function convert(project: string): Promise<Map<string, Uint8Array>> {
-    await initConverter(readFileSync(CONVERTER_WASM));
-    const files = new Map<string, Uint8Array>();
-    // Recursive: overall keeps its fonts in a folder of their own.
-    const walk = (dir: string, prefix: string) => {
-        for (const name of readdirSync(dir)) {
-            const full = nodePath.join(dir, name);
-            if (statSync(full).isDirectory()) walk(full, `${prefix}/${name}`);
-            else files.set(`${prefix}/${name}`, new Uint8Array(readFileSync(full)));
-        }
-    };
-    walk(project, nodePath.basename(project));
-    const result = convertProject(files);
-    try {
-        return new Map(result.output as Map<string, Uint8Array>);
-    } finally {
-        result.free();
-    }
-}
-
-const textures: IResourceManager = {
-    loadTexture: async () => {},
-    getTexture: () => null,
-    destroy: () => {},
-};
+const RINGO = sdkProject('Ringo');
+const OVERALL = sdkProject('overall');
 
 const TICK = 1000 / 60;
 
