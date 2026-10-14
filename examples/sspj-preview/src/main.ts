@@ -254,7 +254,11 @@ async function main(): Promise<void> {
     dropZone.classList.add('active');
   });
   window.addEventListener('dragleave', (event) => {
-    if (event.target === dropZone) dropZone.classList.remove('active');
+    // The drop zone is `pointer-events: none`, so it is never a drag event's
+    // target. relatedTarget is where the drag went; null once it has left the
+    // page or been cancelled — without this the overlay stayed up until the
+    // next drop.
+    if (!event.relatedTarget) dropZone.classList.remove('active');
   });
   window.addEventListener('drop', (event) => {
     event.preventDefault();

@@ -188,7 +188,10 @@ async function main() {
 
   // --- Drag & drop a folder (or files) of ssab + textures ---
   window.addEventListener('dragover', (e) => { e.preventDefault(); ui.dropZone?.classList.add('active'); });
-  window.addEventListener('dragleave', (e) => { if (e.target === ui.dropZone) ui.dropZone?.classList.remove('active'); });
+  // The drop zone is `pointer-events: none`, so it is never a drag event's target.
+  // relatedTarget is where the drag went; null once it has left the page or been
+  // cancelled — without this the dark overlay stayed up until the next drop.
+  window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) ui.dropZone?.classList.remove('active'); });
   window.addEventListener('drop', async (e) => {
     e.preventDefault();
     ui.dropZone?.classList.remove('active');

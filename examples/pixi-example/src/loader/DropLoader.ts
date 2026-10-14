@@ -70,7 +70,11 @@ export class DropLoader {
 
         window.addEventListener('dragleave', (e) => {
             e.preventDefault();
-            if (e.target === this.ui.dropZone) {
+            // The drop zone is `pointer-events: none`, so it is never a drag
+            // event's target. relatedTarget is where the drag went; null once it
+            // has left the page or been cancelled — without this the dark
+            // overlay stayed up until the next drop.
+            if (!e.relatedTarget) {
                 this.ui.dropZone?.classList.remove('active');
             }
         });
