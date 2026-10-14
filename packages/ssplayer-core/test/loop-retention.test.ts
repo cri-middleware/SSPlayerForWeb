@@ -45,6 +45,7 @@ function makePlayer() {
     player._soundsPreloadedFor = null;
     player._soundsPromise = null;
     player._catchUpPending = false;
+    player._bindGeneration = 0;
     player._isChildPlayer = false;
     player._audioManager = null;
     // Object.create skips the constructor, so the field initializers with it.

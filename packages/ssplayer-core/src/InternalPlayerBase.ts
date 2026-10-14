@@ -66,6 +66,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _soundsPreloadedFor: IAudioManager | null = null;
     private _soundsPromise: Promise<void> | null = null;
     private _catchUpPending: boolean = false;
+    // Counts binds. A load awaits, and the pack can be rebound meanwhile; after
+    // each await the load checks this, so the work of a pack no longer bound
+    // never marks the new one ready or adds packs to its registry.
+    private _bindGeneration: number = 0;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
     private readonly _partState = new PartState();
@@ -163,24 +167,37 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *   rather than fetched.
      */
     public bindResource(buffer: Uint8Array, ssabUrl?: string) {
-        if (ssabUrl !== undefined) {
-            // Recorded on this path too, not just in load(): a host that fetches
-            // the bytes itself (ssplayer-rmmz does, for a better error message)
-            // would otherwise leave `ssabUrl` empty for a pack that plainly has
-            // one, and only the asset base would survive.
-            this._ssabUrl = ssabUrl;
-            this._assetBaseUrl = ssabUrl.substring(0, ssabUrl.lastIndexOf('/'));
-        }
         // Looked up before the bound pack is released, so rebinding the file this
         // player already holds keeps that pack rather than building it again.
         const shared = ssabUrl !== undefined ? retainSharedPack(ssabUrl, buffer) : null;
+        // Made before anything is released, because making it is what refuses
+        // bytes that are not a pack: a refused bind leaves the bound pack, and
+        // the instances and effects set up on it, as they were.
+        const resource = shared ? shared.resource : new SSABResource(buffer);
+        // Recorded on this path too, not just in load(): a host that fetches
+        // the bytes itself (ssplayer-rmmz does, for a better error message)
+        // would otherwise leave `ssabUrl` empty for a pack that plainly has
+        // one, and only the asset base would survive. Bytes bound without a URL
+        // clear both, or their textures, instance packs and sounds would be
+        // fetched from the previous pack's directory.
+        this._ssabUrl = ssabUrl ?? '';
+        this._assetBaseUrl = ssabUrl !== undefined ? ssabUrl.substring(0, ssabUrl.lastIndexOf('/')) : '';
+        // The children play the old pack. Left in place, getInstanceChild()
+        // would hand them out until the next setAnimation, and a play() before
+        // it would reset them.
+        this.destroyInstanceChildren();
+        this.destroyEffectChildren();
         if (this._ssabResource) {
             this._ssabResource.destroy();
         }
         this._instancePackResources.forEach(res => res.destroy());
+        // Emptied, so what a load still running for the old pack adds to it is
+        // all it holds, and replaced, so that load cannot add to the new pack's.
         this._instancePackResources.clear();
-        this._ssabResource = shared ? shared.resource : new SSABResource(buffer);
+        this._instancePackResources = new Map();
+        this._ssabResource = resource;
         this.runtimeManager.bindResource(this._ssabResource);
+        this._bindGeneration++;
         // Nothing is set up on the new pack, whatever was set up on the old one.
         // Without this, `setAnimation` would take a name that merely *matches*
         // the previous pack's selection for "already selected" and skip the
@@ -191,6 +208,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._resourceManager?.reset?.();
         this._prepared = null;
         this._resourcesReady = false;
+        // A catch-up still running is the old pack's; the new one needs its own.
+        this._catchUpPending = false;
         this._soundsPreloadedFor = null;
         this._soundsPromise = null;
         if (shared) {
@@ -304,9 +323,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public prepareResources(): Promise<void> {
         if (this._prepared) return this._prepared;
 
+        const generation = this._bindGeneration;
+        const packs = this._instancePackResources;
         const run = (async () => {
             await this.loadTextures();
+            // Rebound while the textures loaded: the pack bound now has a load of
+            // its own, and this one would resolve that pack's instance packs and
+            // mark it ready before its textures are in.
+            if (generation !== this._bindGeneration) return;
             await this.loadInstancePacks();
+            if (generation !== this._bindGeneration) {
+                // The bind released what the map held then; what is in it now
+                // arrived after, for a pack nothing plays any more.
+                packs.forEach(res => res.destroy());
+                packs.clear();
+                return;
+            }
             this._resourcesReady = true;
             // Sounds are equally pack-scoped; preload them here too when a
             // manager is already attached, so `load()` covers audio as well.
@@ -468,15 +500,22 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private catchUpResources(): void {
         if (this._catchUpPending) return;
         this._catchUpPending = true;
+        const generation = this._bindGeneration;
+        const animationName = this._animationName;
         this.prepareResources()
             .then(() => {
-                if (this._animationName) this.setupInstanceChildren();
+                // Only the instances: the effects play the pack's own effect
+                // data, which was there from the bind, and rebuilding them would
+                // restart every effect already running.
+                if (generation === this._bindGeneration && this._animationName) this.setupInstanceChildren();
             })
             .catch(e => {
-                console.error(`[SSPlayer] Failed to load the assets for "${this._animationName}"`, e);
+                console.error(`[SSPlayer] Failed to load the assets for "${animationName}"`, e);
             })
             .finally(() => {
-                this._catchUpPending = false;
+                // A bind since has reset the flag, and the catch-up running now
+                // may be the new pack's.
+                if (generation === this._bindGeneration) this._catchUpPending = false;
             });
     }
 
@@ -495,7 +534,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
     }
 
-    private setupInstanceChildren() {
+    private destroyInstanceChildren() {
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
             // child.slot is an InstanceSlotHandle (destroy() frees the WASM
@@ -505,7 +544,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
-        this.destroyEffectChildren();
+    }
+
+    // Leaves the effects alone. setAnimation rebuilds them itself, and a
+    // catch-up re-runs this alone, once the instance packs are in.
+    private setupInstanceChildren() {
+        this.destroyInstanceChildren();
 
         const refs = this.runtimeManager.getInstanceParts();
         for (const ref of refs) {
@@ -1889,11 +1933,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // only the owner may sweep it.
         if (!this._isChildPlayer) this._audioManager?.stopAll?.();
 
-        this._instanceChildren.forEach(child => {
-            try { child.player.destroy(); } catch { /* ignore */ }
-            try { child.slot.destroy(); } catch { /* ignore */ }
-        });
-        this._instanceChildren.clear();
+        this.destroyInstanceChildren();
         this.destroyEffectChildren();
 
         // Free child instance contexts first (they reference the pack resources).
