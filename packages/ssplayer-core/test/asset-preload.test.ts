@@ -37,7 +37,7 @@ function makePlayer(rm: unknown) {
     player._resourcesReady = false;
     player._soundsPreloadedFor = null;
     player._soundsPromise = null;
-    player._catchUpPending = false;
+    player._catchUpFor = -1;
     player._bindGeneration = 0;
     player._isChildPlayer = false;
     player._audioManager = null;

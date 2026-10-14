@@ -65,7 +65,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // attached late still gets its preload, and exactly once.
     private _soundsPreloadedFor: IAudioManager | null = null;
     private _soundsPromise: Promise<void> | null = null;
-    private _catchUpPending: boolean = false;
+    // The _bindGeneration a catch-up is running for, or -1. One running for an
+    // earlier bind is the old pack's, and does not stop the new pack's.
+    private _catchUpFor: number = -1;
     // Counts binds, and the destroy. A load awaits, and the pack can be rebound
     // or the player destroyed meanwhile; after each await the load checks
     // this, so the work of a pack no longer bound never marks the new one
@@ -209,8 +211,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._resourceManager?.reset?.();
         this._prepared = null;
         this._resourcesReady = false;
-        // A catch-up still running is the old pack's; the new one needs its own.
-        this._catchUpPending = false;
         this._soundsPreloadedFor = null;
         this._soundsPromise = null;
         if (shared) {
@@ -332,7 +332,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             // its own, and this one would resolve that pack's instance packs and
             // mark it ready before its textures are in.
             if (generation !== this._bindGeneration) return;
-            await this.loadInstancePacks();
+            await this.loadInstancePacks(packs);
             if (generation !== this._bindGeneration) {
                 // The bind or the destroy released what the map held then; what
                 // is in it now arrived after, for a pack nothing plays any more.
@@ -499,9 +499,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * `setupInstanceChildren`, so it is re-run once the packs are in.
      */
     private catchUpResources(): void {
-        if (this._catchUpPending) return;
-        this._catchUpPending = true;
         const generation = this._bindGeneration;
+        if (this._catchUpFor === generation) return;
+        this._catchUpFor = generation;
         const animationName = this._animationName;
         this.prepareResources()
             .then(() => {
@@ -519,9 +519,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
                 }
             })
             .finally(() => {
-                // A bind since has reset the flag, and the catch-up running now
-                // may be the new pack's.
-                if (generation === this._bindGeneration) this._catchUpPending = false;
+                if (this._catchUpFor === generation) this._catchUpFor = -1;
             });
     }
 
@@ -628,11 +626,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * Resolve and load every animation pack referenced by `PartType::Instance`
-     * parts, transitively, into the shared `_instancePackResources` registry
-     * (delegated to the engine-agnostic `resolveInstancePacks`). The runtime
-     * manager then creates the child contexts on `setupAnimation`.
+     * parts, transitively, into `into`: the `_instancePackResources` registry of
+     * the pack bound when the load began (delegated to the engine-agnostic
+     * `resolveInstancePacks`). The runtime manager then creates the child
+     * contexts on `setupAnimation`.
      */
-    private async loadInstancePacks(): Promise<void> {
+    private async loadInstancePacks(into: Map<number, SSABResource>): Promise<void> {
         const buf = this.getSsabBuffer();
         if (!buf) return;
 
@@ -641,7 +640,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             assetBaseUrl: this._assetBaseUrl,
             provider: this._instancePackProvider,
             resourceManager: this._resourceManager,
-            into: this._instancePackResources,
+            into,
         });
     }
 
