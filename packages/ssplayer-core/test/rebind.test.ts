@@ -16,7 +16,8 @@ import { CONVERTER_WASM, RUNTIME_WASM, convert, effectQuads, sdkProject, texture
 // was its own. Bytes that are not a pack leave the bound pack as it was. Bytes
 // bound without a URL forget the old pack's directory. The instances set up on
 // the old pack are torn down, and a load still running for it neither stands
-// in for the new pack's load nor adds to the new pack's instance packs.
+// in for the new pack's load nor adds to the new pack's instance packs, nor
+// reports its failure as the new pack's.
 //
 // Boots the real runtime, since what a bind leaves set up is the runtime's to
 // say. Plays the SDK's Ringo, converted here, which gives two packs, and the
@@ -213,6 +214,33 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
                 for (const resource of destroy.mock.contexts) expect((resource as SSABResource).raw).toBeNull();
             } finally {
                 destroy.mockRestore();
+                player.destroy();
+            }
+        }, 120_000);
+
+        it('keeps quiet about a load it has left behind failing', async () => {
+            await initializeWasm(readFileSync(RUNTIME_WASM));
+            const ringo = (await convert(RINGO)).get('Ringo.ssab')!;
+            const pending: ((e: Error) => void)[] = [];
+            const player = new DirectInternalPlayer({
+                loadTexture: () => new Promise<void>((_, reject) => pending.push(reject)),
+                getTexture: () => null,
+                destroy: () => {},
+            });
+            player.bindResource(ringo, 'a/Ringo.ssab');
+            player.setAnimation('walk'); // loads the assets in the background
+            const oldLoads = pending.splice(0);
+            expect(oldLoads.length).toBeGreaterThan(0);
+
+            player.bindResource(ringo, 'b/Ringo.ssab');
+            const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+            try {
+                // Say, a 404 from the directory of the pack no longer bound.
+                for (const reject of oldLoads) reject(new Error('Not Found'));
+                await settle();
+                expect(error).not.toHaveBeenCalled();
+            } finally {
+                error.mockRestore();
                 player.destroy();
             }
         }, 120_000);

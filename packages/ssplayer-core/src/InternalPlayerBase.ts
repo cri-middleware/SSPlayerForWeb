@@ -511,7 +511,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
                 if (generation === this._bindGeneration && this._animationName) this.setupInstanceChildren();
             })
             .catch(e => {
-                console.error(`[SSPlayer] Failed to load the assets for "${animationName}"`, e);
+                // Only for the pack still bound. A load the player has left
+                // behind, for another pack or for its destroy, failed for
+                // nothing it shows.
+                if (generation === this._bindGeneration) {
+                    console.error(`[SSPlayer] Failed to load the assets for "${animationName}"`, e);
+                }
             })
             .finally(() => {
                 // A bind since has reset the flag, and the catch-up running now
