@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { convertProject, init as initConverter } from '@spritestudio/ssconverter-core';
 import { initializeWasm, SSABResource } from '../src/SSRuntimeManager.js';
 import { DirectInternalPlayer } from '../src/DirectInternalPlayer.js';
+import { DrawBatchKind } from '../src/ss/runtime/draw-batch-kind.js';
 import type { IResourceManager } from '../src/IResourceManager.js';
 
 // Binding another pack leaves nothing set up until the next setAnimation: the
@@ -14,14 +15,16 @@ import type { IResourceManager } from '../src/IResourceManager.js';
 // with the old animation's index still cached it reached the runtime, which
 // logged "Animation not found" for it.
 //
-// Bytes bound without a URL forget the old pack's directory, and a load still
-// running for the old pack neither stands in for the new pack's load nor adds
-// to the new pack's instance packs.
+// A bind is also all or nothing, and the old pack goes with everything that
+// was its own. Bytes that are not a pack leave the bound pack as it was. Bytes
+// bound without a URL forget the old pack's directory. The instances set up on
+// the old pack are torn down, and a load still running for it neither stands
+// in for the new pack's load nor adds to the new pack's instance packs.
 //
 // Boots the real runtime, since what a bind leaves set up is the runtime's to
 // say. Plays the SDK's Ringo, converted here, which gives two packs, and the
-// SDK's overall for its instances. Skipped without the converter WASM, the
-// runtime WASM or the SDK submodule.
+// SDK's overall for its effects and instances. Skipped without the converter
+// WASM, the runtime WASM or the SDK submodule.
 
 const here = nodePath.dirname(fileURLToPath(import.meta.url));
 const repoRoot = nodePath.resolve(here, '../../..');
@@ -73,6 +76,33 @@ function recording(urls: string[]): IResourceManager {
     };
 }
 
+/** The particles a renderer would draw this tick: the quads of every effect plan in the frame. */
+function effectQuads(player: DirectInternalPlayer): number {
+    const frameData = player.runtimeManager.getFrameData(player.getDrawFrame());
+    if (!frameData) return 0;
+    const order = frameData.drawOrderArray()!;
+    let quads = 0;
+    for (let b = 0; b < frameData.drawBatchesLength(); b++) {
+        const batch = frameData.drawBatches(b)!;
+        if (batch.kind() !== DrawBatchKind.Effect) continue;
+        for (let c = 0; c < batch.count(); c++) {
+            const plan = player.getEffectDrawPlan(order[batch.startRank() + c]);
+            for (let k = 0; plan && k < plan.commandsLength(); k++) quads += plan.commands(k)!.quadCount();
+        }
+    }
+    return quads;
+}
+
+/** Ticks `player` for `ticks` frames and returns the most particles any of them drew. */
+function playFor(player: DirectInternalPlayer, ticks: number): number {
+    let most = 0;
+    for (let i = 0; i < ticks; i++) {
+        player.update(1000 / player.getFrameRate());
+        most = Math.max(most, effectQuads(player));
+    }
+    return most;
+}
+
 /** Lets every promise settled so far run its handlers. */
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -111,6 +141,33 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
             }
         }, 120_000);
 
+        it('refuses bytes that are not a pack, and leaves the pack it has playing', async () => {
+            await initializeWasm(readFileSync(RUNTIME_WASM));
+            const packs = await packsOf(OVERALL);
+            const player = new DirectInternalPlayer(textures);
+            player.bindResource(packs.get('Effect.ssab')!, 'packs/Effect.ssab');
+            await player.prepareResources();
+            player.setAnimation('anime_1');
+            player.play();
+            expect(playFor(player, 120)).toBeGreaterThan(0);
+
+            const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+            try {
+                // A truncated download, or the wrong file dropped on the page.
+                expect(() => player.bindResource(new Uint8Array(64), 'packs/broken.ssab')).toThrow('Not a .ssab');
+                expect(player.ssabUrl).toBe('packs/Effect.ssab');
+                expect(player.currentAnimation).toBe('anime_1');
+
+                // A replay rebuilds the effects from the pack still bound.
+                player.play();
+                expect(playFor(player, 120)).toBeGreaterThan(0);
+                expect(error).not.toHaveBeenCalled();
+            } finally {
+                error.mockRestore();
+                player.destroy();
+            }
+        }, 120_000);
+
         it('forgets the old URL when bytes are bound without one', async () => {
             await initializeWasm(readFileSync(RUNTIME_WASM));
             const ringo = (await packsOf(RINGO)).get('Ringo.ssab')!;
@@ -128,6 +185,23 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
             // Asked for again, and not from the directory of a pack no longer bound.
             expect(urls.length).toBeGreaterThan(0);
             expect(urls.filter(url => url.startsWith('old/'))).toEqual([]);
+            player.destroy();
+        }, 120_000);
+
+        it('tears down the instances the old pack set up', async () => {
+            await initializeWasm(readFileSync(RUNTIME_WASM));
+            const packs = await packsOf(OVERALL);
+            const player = new DirectInternalPlayer(textures);
+            player.setInstancePackProvider(name => packs.get(`${name}.ssab`));
+            player.bindResource(packs.get('Instance.ssab')!);
+            await player.prepareResources();
+            player.setAnimation(player.animationNames[0]);
+            const parts = player.runtimeManager.getInstanceParts();
+            expect(parts.length).toBeGreaterThan(0);
+            for (const part of parts) expect(player.getInstanceChild(part.partIndex)).toBeDefined();
+
+            player.bindResource((await packsOf(RINGO)).get('Ringo.ssab')!);
+            for (const part of parts) expect(player.getInstanceChild(part.partIndex)).toBeUndefined();
             player.destroy();
         }, 120_000);
 

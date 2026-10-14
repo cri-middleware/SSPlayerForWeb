@@ -167,6 +167,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *   rather than fetched.
      */
     public bindResource(buffer: Uint8Array, ssabUrl?: string) {
+        // Looked up before the bound pack is released, so rebinding the file this
+        // player already holds keeps that pack rather than building it again.
+        const shared = ssabUrl !== undefined ? retainSharedPack(ssabUrl, buffer) : null;
+        // Made before anything is released, because making it is what refuses
+        // bytes that are not a pack: a refused bind leaves the bound pack, and
+        // the instances and effects set up on it, as they were.
+        const resource = shared ? shared.resource : new SSABResource(buffer);
         // Recorded on this path too, not just in load(): a host that fetches
         // the bytes itself (ssplayer-rmmz does, for a better error message)
         // would otherwise leave `ssabUrl` empty for a pack that plainly has
@@ -175,9 +182,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // fetched from the previous pack's directory.
         this._ssabUrl = ssabUrl ?? '';
         this._assetBaseUrl = ssabUrl !== undefined ? ssabUrl.substring(0, ssabUrl.lastIndexOf('/')) : '';
-        // Looked up before the bound pack is released, so rebinding the file this
-        // player already holds keeps that pack rather than building it again.
-        const shared = ssabUrl !== undefined ? retainSharedPack(ssabUrl, buffer) : null;
+        // The children play the old pack. Left in place, getInstanceChild()
+        // would hand them out until the next setAnimation, and a play() before
+        // it would reset them.
+        this.destroyInstanceChildren();
+        this.destroyEffectChildren();
         if (this._ssabResource) {
             this._ssabResource.destroy();
         }
@@ -186,7 +195,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // all it holds, and replaced, so that load cannot add to the new pack's.
         this._instancePackResources.clear();
         this._instancePackResources = new Map();
-        this._ssabResource = shared ? shared.resource : new SSABResource(buffer);
+        this._ssabResource = resource;
         this.runtimeManager.bindResource(this._ssabResource);
         this._bindGeneration++;
         // Nothing is set up on the new pack, whatever was set up on the old one.
