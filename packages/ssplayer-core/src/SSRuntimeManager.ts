@@ -234,6 +234,10 @@ export class SSRuntimeManager {
     public bindResource(resource: SSABResource) {
         this.resource = resource;
         this.context.bind_resource(resource.raw);
+        // The runtime has nothing set up on the new pack. Left in place, the old
+        // pack's animation index let a frame drawn before the next setupAnimation
+        // through to the runtime, which refused it with "Animation not found".
+        this.dropAnimationCaches();
     }
 
     public setupAnimation(animationName: string) {
@@ -250,11 +254,7 @@ export class SSRuntimeManager {
         // below (no resource) or on a throw (caught at the bottom), leftovers from
         // the PREVIOUS animation would be read against the new animation's part
         // indices — wrong mask polarity, and effect slots bound to the wrong parts.
-        this.currentAnimationIndex = -1;
-        this.partNames = null;
-        this.partMaskFlags = null;
-        this.partSkinnedFlags = null;
-        this.effectPartRefs = [];
+        this.dropAnimationCaches();
 
         if (!this.resource) return;
 
@@ -364,6 +364,15 @@ export class SSRuntimeManager {
     public setTrackAnimation(track: number, animationName: string): void {
         this.context.set_track_animation(track, animationName);
         if (track === 0) this.followTrackZero();
+    }
+
+    /** Forget the animation set up last, and everything read out of it per part. */
+    private dropAnimationCaches(): void {
+        this.currentAnimationIndex = -1;
+        this.partNames = null;
+        this.partMaskFlags = null;
+        this.partSkinnedFlags = null;
+        this.effectPartRefs = [];
     }
 
     private followTrackZero(): void {
