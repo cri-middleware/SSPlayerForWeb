@@ -20,13 +20,13 @@
 
 **置き場所とフォルダ名は変えられません。** `[plugin name="x"]` は TyranoScript で `[call storage="../others/plugin/x/init.ks"]` を表す省略形なので、プラグインはちょうど `data/others/plugin/ssplayer/` に置く必要があります。フォルダ名を変えたり別の場所へ移したりすると、`[plugin name="ssplayer"]` は何も見つけられません。`init.ks` の中のパスも、この場所を前提に書いてあります。
 
-フォルダには 3 ファイルが入ります: `init.ks`（ローダ）、`main.js`（プラグイン本体）、
-`ssruntime_bg.wasm`（アニメーションランタイム）。`.ssab` アニメファイルは
+フォルダには 4 ファイルが入ります: `init.ks`（ローダ）、`main.js`（プラグイン本体）、
+`ssruntime_bg.wasm`（アニメーションランタイム）、`readme.txt`（バージョンと簡単な使い方）。`.ssab` アニメファイルは
 `data/others/ssdata/` に置きます。
 
 > **この ZIP は TyranoScript 用です。** ティラノビルダーで制作する場合は
 > [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) の
-> `ssplayer.tbp` だけを入れてください。`.tbp` はこの 3 ファイルをそのまま内包した上で、エディタ側を追加したものです。**どちらか一方だけを入れてください。** 展開先はどちらも同じ
+> `ssplayer.tbp` だけを入れてください。`.tbp` は `init.ks`・`main.js`・`ssruntime_bg.wasm` をそのまま内包した上で、エディタ側を追加したものです。**どちらか一方だけを入れてください。** 展開先はどちらも同じ
 > `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
 
 ## アニメを変換する（.sspj → .ssab）
@@ -234,7 +234,7 @@
 > [!WARNING]
 > **`scale` / `rotate` はアニメに効きません。** これらはキャラの*要素*に CSS 変形を掛けますが、レイヤー上の SS キャラは要素の中ではなくレイヤー共有の canvas 1 枚に描かれます。そのため
 > CSS 変形は「キャラが座る位置と大きさ」を動かすだけで、描かれている絵は拡縮も回転もしません。拡縮には `[ss_pos]` / `[ss_move]` を使ってください（アニメ自体を、そのアンカーを軸に拡縮します）。
-> `[anim]` の `scale`/`rotate` は元々画面中心が軸だったため、この用途には正確ではありませんでした。
+> `[anim]` の `scale`/`rotate` はそもそも画面中心が軸なので、この用途には向きません。
 
 **使い分け:**
 
@@ -281,7 +281,7 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 本パッケージは TyranoScript 向けの薄いアダプタです。描画は
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSPlayer`
 （WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）が担います。このパッケージは **GPU 処理を持たず**、レイヤーへのキャラクター用 `<div>` の追加（描画はレイヤー共有の canvas）・座標マッピング・再生制御といった
-**TyranoScript 固有のグルー**に徹します。実装済み範囲は実 TyranoScript で確認済みで、残タスクは [`ROADMAP.md`](./ROADMAP.md) にあります。
+**TyranoScript 固有のグルー**に徹します。残タスクは [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ### しくみ
 
@@ -316,7 +316,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip
 ```
 
-`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。パッケージの
+`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}` を zip 化します。パッケージの
 **GitHub Release** に添付されるのはこのアーカイブで、利用者は `ssplayer/` を `data/others/plugin/` に展開します。配布テンプレは [`plugin/`](./plugin/README.md) にあります。
 
 ディスク上のプラグイン配置:

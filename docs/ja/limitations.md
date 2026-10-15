@@ -35,7 +35,7 @@ description: Web 版 Player がまだ対応していないこと、ブラウザ�
 ## ブラウザ要件
 
 ::: warning WebAssembly SIMD が必須
-ランタイムは WebAssembly SIMD 命令を使用してビルドされており、**SIMD 非対応のブラウザでは動作しません**。フレームワーク連携を含む本リポジトリのすべてのパッケージが対象です。配信先のブラウザ要件として扱ってください。
+ランタイムは WebAssembly SIMD 命令を使用してビルドされており、**SIMD 非対応のブラウザでは動作しません**。本リポジトリのすべてのパッケージが対象です（RPG Maker MZ プラグインは、MZ の NW.js 向けに SIMD なしのビルドを同梱しているため対象外です）。配信先のブラウザ要件として扱ってください。
 :::
 
 ブラウザ版コンバーター `ssconverter-web` はさらに、フォルダー選択に **File System Access API**
@@ -60,7 +60,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 
 ## RPG ツクール MZ（beta）
 
-`@spritestudio/ssplayer-rmmz` は **beta** です。タグ体系と挙動は `7.0.0` までに変更される可能性があります。
+`@spritestudio/ssplayer-rmmz` は **beta** です。プラグインコマンドと挙動は `7.0.0` までに変更される可能性があります。
 [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
 
 ::: warning

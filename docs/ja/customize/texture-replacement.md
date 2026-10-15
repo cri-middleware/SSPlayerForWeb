@@ -94,4 +94,4 @@ player.getReplaceableTextureNames(); // → ["Clothes", "common", "common.png", 
 
 ## Web Component からの使い方
 
-`<ss-player>` 要素は再生系のメソッドだけを持つため、差し替えは `el.player`（下層の `SSPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。テクスチャ差し替えには、プラグインコマンドや TyranoScript タグのオーサリング面はまだありません。現時点ではコードから使う機能です。
+`<ss-player>` 要素は再生系のメソッドだけを持つため、差し替えは `el.player`（下層の `SSPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。テクスチャ差し替えには、プラグインコマンドや TyranoScript タグのオーサリング面はありません。コードから使う機能です。

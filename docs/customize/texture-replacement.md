@@ -94,4 +94,4 @@ Like a part override, a texture swap changes the output **without changing the f
 
 ## Using it from a Web Component
 
-The `<ss-player>` element carries only the playback verbs, so reach the swap through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl). There is no plugin-command or TyranoScript surface for texture replacement yet — it is a code-only feature for now.
+The `<ss-player>` element carries only the playback verbs, so reach the swap through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl). There is no plugin-command or TyranoScript surface for texture replacement — it is available from code only.

@@ -128,7 +128,7 @@ Hosts whose authors don't write code get an authoring surface in their own idiom
 - **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so overrides are reached through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
 - **RPG Maker MZ** — drive it from an event's **plugin commands** (Set SS Part Color / Visibility / Cell, Clear SS Part Overrides). The settings are stored on the picture, so they **survive save/load**. See [RPG Maker MZ](/usage/rmmz).
 - **TyranoScript** — write `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` in a scenario. The settings are part of the save and are restored by `[ss_restore]`. See [TyranoScript](/usage/tyrano).
-- **TyranoBuilder** — the same four tags, written with the editor's own TyranoScript-code component; they have no palette entry yet. See [TyranoBuilder](/usage/tyranobuilder).
+- **TyranoBuilder** — the palette's **SpriteStudio: part colour / hide part / part image** and **SpriteStudio: reset parts** components write the same four tags. See [TyranoBuilder](/usage/tyranobuilder).
 
 ## What this feature is not for
 
@@ -137,6 +137,6 @@ These are easy to confuse with overrides, but belong elsewhere.
 | What you want | Where it belongs |
 |---|---|
 | Replacing a whole texture / cell map | [Runtime texture replacement](/customize/texture-replacement) — swaps the texture a whole cell map binds. Overrides work on **one part** at a time |
-| Flipping | Express it with the player's own transform (a negative scale) |
+| Flipping | The player's `flipX` / `flipY` — see [Basic playback](/usage/basic#flip-and-offset) |
 | Whole-object colour / opacity / draw order | Properties on the player (`SSPlayer` / its container) — not a per-part concern |
-| Swapping an instance part's animation | Planned, pending the SDK's Instance Lifecycle API |
+| Swapping an instance part's animation | Planned, pending the SDK's Instance Lifecycle API — see the [ROADMAP](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) |

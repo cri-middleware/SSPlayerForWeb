@@ -218,7 +218,7 @@ MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it 
   can shift the animation out of place). MZ's own flash/tint overlays are unaffected.
 
 The technical reasons and planned fixes are in
-[For contributors → How it works](#how-it-works).
+[For contributors → How it works](#how-it-works) and [ROADMAP.md](./ROADMAP.md).
 
 ---
 
@@ -263,7 +263,8 @@ sit in correct Z-order with characters and pictures.
 - **Stencil masks** need a stencil buffer on MZ's canvas (present by default).
 
 Wiring MZ's tint into the world tint `SSWebGLRenderer` already takes for opacity, and
-injecting a projection matrix for the projection limitation, are planned follow-ups.
+injecting a projection matrix for the projection limitation, are planned follow-ups — see
+[ROADMAP.md](./ROADMAP.md).
 
 ## Build & try it
 

@@ -34,7 +34,7 @@ import** してください。コアの型を使いたいだけの理由で、�
 スタックトレースや補完候補で見慣れないところに出たときの手がかりです。
 
 ```
-SSPlayer / SSPlayer          ← 呼び出すファサード（再生・イベント・オーバーライド）
+SSPlayer (webgl) / SSPlayer (pixi) ← 呼び出すファサード（再生・イベント・オーバーライド）
   └─ DirectInternalPlayer          ← InternalPlayerBase を継承。ロードと描画プランを保持
        └─ SSRuntimeManager         ← WASM 境界。フレームデータを zero-copy な型付き配列ビューで公開
             └─ SSRuntimeContext    ← wasm-bindgen のハンドル（生成物。直接触る必要はありません）

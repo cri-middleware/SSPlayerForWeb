@@ -36,14 +36,14 @@ plugin has to sit at exactly `data/others/plugin/ssplayer/`; renaming the folder
 or moving it elsewhere means `[plugin name="ssplayer"]` finds nothing. The paths
 inside `init.ks` are written against that location too.
 
-The folder holds three files: `init.ks` (the loader), `main.js` (the plugin
-itself), and `ssruntime_bg.wasm` (the animation runtime). Your `.ssab` animation
-files go under `data/others/ssdata/`.
+The folder holds four files: `init.ks` (the loader), `main.js` (the plugin
+itself), `ssruntime_bg.wasm` (the animation runtime) and `readme.txt` (the version
+and a quick start). Your `.ssab` animation files go under `data/others/ssdata/`.
 
 > **This ZIP is for TyranoScript.** Building in TyranoBuilder instead? Install
 > `ssplayer.tbp` from
 > [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md) and
-> nothing else — it already contains these three files, plus the editor half.
+> nothing else — it already contains `init.ks`, `main.js` and `ssruntime_bg.wasm`, plus the editor half.
 > **Install one or the other, never both:** they unpack to the same
 > `data/others/plugin/ssplayer/`, so stacking them leaves the editor and runtime
 > halves on different versions.
@@ -302,7 +302,7 @@ just like any character:
 > rather than inside its own element — so a CSS transform moves and resizes where the
 > character sits without scaling or rotating what is drawn there. Use `[ss_pos]` /
 > `[ss_move]`, which scale the animation about its own anchor. `[anim]`'s `scale` /
-> `rotate` pivoted on the screen centre, so they were never accurate for this anyway.
+> `rotate` pivot on the screen centre, so they would not fit this use in any case.
 
 **When to use which:**
 
@@ -428,7 +428,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<ver>.zip
 ```
 
-`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}`, the archive the package's
+`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}`, the archive the package's
 **GitHub Release** carries; users extract `ssplayer/` into `data/others/plugin/`. The distribution
 template lives in [`plugin/`](./plugin/README.md).
 

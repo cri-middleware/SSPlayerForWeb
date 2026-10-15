@@ -190,7 +190,7 @@ The `examples/part-follow` demo does exactly this: the Ringo character's skinned
 
 - **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so reach the pull API through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
 - **RPG Maker MZ** — there are no plugin commands for part tracking. Get the `SSPlayer` instance from a script and call `attachToPart()`. See [RPG Maker MZ](/usage/rmmz).
-- **TyranoScript / TyranoBuilder** — no tags are provided at this time.
+- **TyranoScript / TyranoBuilder** — no tags are provided.
 
 ## What this feature is not for
 
@@ -199,5 +199,5 @@ These are easy to confuse with part tracking, but belong elsewhere.
 | What you want | Where it belongs |
 |---|---|
 | Changing a part's own colour / cell / visibility | The override API in [Part control (visibility / cell / color)](/customize/part-overrides) |
-| Following a part in screen coordinates | Compose the player's display transform yourself for now (no API returns the screen transform yet) |
+| Following a part in screen coordinates | Compose the player's display transform yourself (no API returns the screen transform) |
 | Following a part inside an Instance part | Its child animation runs as its own player — get the child player and target the part there |

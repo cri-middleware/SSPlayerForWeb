@@ -58,7 +58,7 @@ automatic restore does not run and you must write `[ss_restore]` into `data/scen
 
 ::: tip Which download do I need?
 The plugin ZIP described here is **for TyranoScript**. If you author in **TyranoBuilder**,
-install `ssplayer.tbp` instead — it already contains this ZIP's three files plus the editor
+install `ssplayer.tbp` instead — it already contains this ZIP's three runtime files plus the editor
 half (components and auto-conversion), so it is the only download you need.
 **Install one or the other, never both:** they unpack to the same
 `data/others/plugin/ssplayer/`, so stacking them leaves the editor and runtime halves on
@@ -342,7 +342,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
-`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` — the archive the GitHub
+`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}` — the archive the GitHub
 Release carries; extract `ssplayer/` into `data/others/plugin/`.
 
 To try it in the bundled example:

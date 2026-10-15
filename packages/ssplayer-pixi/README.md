@@ -85,10 +85,11 @@ binary.** The runtime is a separate `.wasm` file, and outside a bundler (a class
 `<script>`, or any CDN context) the automatic path resolution bundlers rely on
 isn't available — so pass its URL to `SSPlayer.initialize(wasmUrl)`.
 
-> **Pin the WASM to the same version as the player you load.** The `.wasm` and its
-> JS glue share an ABI, so a floating `@latest` on one and a pinned version on the
-> other can desync. Use an exact version (e.g. `@7.0.0-beta.1`) on **both** the
-> `ssplayer-pixi` bundle and the `ssplayer-core` `.wasm`.
+> **Copy the URL pair from a snippet below; don't assemble it by hand.** The `.wasm`
+> and its JS glue share an ABI, so **both** the `ssplayer-pixi` bundle and the
+> `ssplayer-core` `.wasm` need an exact version — a floating `@latest` on one can
+> desync it from the other. The two versions need not be identical, since the
+> packages are released independently; the pair as printed is one that works together.
 
 ### Classic `<script>` — global `SSPixiPlayer`
 
@@ -155,13 +156,13 @@ player.play(startFrame?);  player.pause();  player.resume();  player.stop();
 player.frameNo;                       // get/set the current frame
 player.speedScale = 1.5;            // playback speed multiplier
 player.loopCount;                   // configured loop count (-1 = infinite)
-player.totalFrames; player.startFrame; player.endFrame; player.fps;
+player.totalFrames; player.startFrame; player.endFrame; player.frameRate;
 player.isPlaying; player.isPausing;
 
 player.setAnimationSection(start, end);
 player.setPlaybackDirection(direction, style);
 player.getPartNames();
-player.getPartIndexFromName('body');
+player.findPartIndex('body');
 ```
 
 ## Events

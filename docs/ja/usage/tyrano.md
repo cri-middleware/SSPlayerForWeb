@@ -45,7 +45,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 ## 1. インストール
 
 ::: tip どちらをダウンロードすればよい？
-ここで説明するプラグイン ZIP は **TyranoScript 用**です。**ティラノビルダー**で制作する場合は代わりに `ssplayer.tbp` を入れてください。`.tbp` はこの ZIP の 3 ファイルをそのまま内包した上で、エディタ側（コンポーネントと自動変換）を追加したものなので、ダウンロードはそれ 1 つで足ります。**どちらか一方だけを入れてください。** 展開先はどちらも同じ `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
+ここで説明するプラグイン ZIP は **TyranoScript 用**です。**ティラノビルダー**で制作する場合は代わりに `ssplayer.tbp` を入れてください。`.tbp` はこの ZIP のランタイム 3 ファイルをそのまま内包した上で、エディタ側（コンポーネントと自動変換）を追加したものなので、ダウンロードはそれ 1 つで足ります。**どちらか一方だけを入れてください。** 展開先はどちらも同じ `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
 :::
 
 1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍すると `ssplayer/` フォルダが入っています（`init.ks`＝ローダ、`main.js`＝プラグイン本体、
@@ -259,7 +259,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
-`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` を zip 化します。GitHub Release に添付されているのと同じアーカイブで、`ssplayer/` を `data/others/plugin/` に展開して使います。
+`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}` を zip 化します。GitHub Release に添付されているのと同じアーカイブで、`ssplayer/` を `data/others/plugin/` に展開して使います。
 
 同梱のサンプルで試す場合は次のとおりです。
 

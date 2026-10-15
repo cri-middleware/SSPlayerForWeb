@@ -5,8 +5,8 @@
 
 > **TyranoScript 本体はこのリポジトリに含まれません。**
 > ライセンス上、本体の再配布は控えています（フリー・商用可のエンジンですが、プラグインとして自作物を配る方針）。本体は**開発時に各自で配置**します。このサンプルがコミットしているのは *authored* な部分だけです:
-> `data/scenario/first.ks` / `data/others/plugin/ssplayer/init.ks` /
-> `data/others/ssdata/*.ssab`。
+> `data/scenario/first.ks` / `data/scenario/make.ks` と、`scripts/` の補助スクリプト。プラグイン（`init.ks` を含む）は `sync:plugin`、
+> `data/others/ssdata/` のアセットは `deploy-examples` が配置します。
 
 ## このサンプルに含まれるもの
 
@@ -14,12 +14,13 @@
 examples/tyranoscript-example/
   data/
     scenario/first.ks                     # [plugin]/[ss_new]/[ss_play] を使うシナリオ
+    scenario/make.ks                      # ロード時に TyranoScript が call するファイル
     others/
-      plugin/ssplayer/init.ks             # [loadjs] でプラグイン main.js を読む
+      plugin/ssplayer/init.ks             # ← sync:plugin がプラグインのテンプレートからコピー
       plugin/ssplayer/main.js             # ← 生成物 (sync:plugin, .gitignore)
       plugin/ssplayer/ssruntime_bg.wasm   # ← 生成物 (sync:plugin, .gitignore)
-      ssdata/Ringo_embedded.ssab          # 埋め込み ssab (テクスチャ同梱＝パス解決不要)
-      ssdata/Basic_embedded.ssab
+      ssdata/Ringo/…                      # ← 生成アセット (deploy-examples, .gitignore)
+  scripts/fetch-tyrano.mjs                # TyranoScript 本体を取得 (fetch:engine)
   scripts/sync-plugin.mjs                 # ビルド成果物を plugin/ へコピー
   scripts/serve.mjs                       # 依存ゼロの静的サーバ (wasm MIME 対応)
 ```
@@ -151,7 +152,7 @@ projectID = ssplayer_tyrano_example;
 `[ss_new]` 等は各プレイヤーの復元情報を `stat.f.__ssplayers`（セーブ対象）へ随時ミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝TyranoScript が **`data/scenario/make.ks`** を call するのと同じ隙間）でプラグインが自動的に再構築します。**`make.ks` への記述は不要**です。
 
 動作確認: 起動 → Ringo 表示中にメニューからセーブ → タイトルへ戻る → ロード。
-Ringo が復元されれば成功です（frame ではなくアニメ先頭から再生を復元）。
+Ringo がセーブした時点のフレームから再開すれば成功です。
 
 > ⚠️ **表示テキスト内に `[ss_xxx]` のような角括弧のタグ記法を書かないこと**。
 > TyranoScript はテキスト内の `[...]` もタグとして実行してしまいます（`ss_play` のように角括弧なしで書く）。

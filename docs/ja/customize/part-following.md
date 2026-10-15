@@ -192,7 +192,7 @@ for (const name of player.getPartNames()) {
 
 - **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、`el.player`（下層の `SSPlayer`）経由でプル API を呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
 - **RPG ツクール MZ** — パーツトラッキングに対応するプラグインコマンドはありません。スクリプトから `SSPlayer` のインスタンスを取得して `attachToPart()` を呼んでください。詳しくは [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
-- **TyranoScript / TyranoBuilder** — 現時点ではタグを用意していません。
+- **TyranoScript / TyranoBuilder** — タグは用意していません。
 
 ## この機能で扱わないもの
 
@@ -201,5 +201,5 @@ for (const name of player.getPartNames()) {
 | やりたいこと | 正しい方法 |
 |---|---|
 | パーツ自体の色 / セル / 表示を変える | [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) のオーバーライド API を使います |
-| パーツをスクリーン座標で追従させる | 現時点ではプレイヤー側の表示変換を自前で合成してください（スクリーン変換まで返す API は未提供です） |
+| パーツをスクリーン座標で追従させる | プレイヤー側の表示変換を自前で合成してください（スクリーン変換まで返す API はありません） |
 | インスタンスパーツ配下のパーツに追従させる | 子アニメーションは別のプレイヤーとして動作します。子プレイヤーを取得して、そちらに対して指定してください |

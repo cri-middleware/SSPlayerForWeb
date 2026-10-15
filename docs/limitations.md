@@ -54,8 +54,8 @@ draw through `ssplayer-webgl`, so what is said of it applies to them.
 
 ::: warning WebAssembly SIMD is required
 The runtime is built with WebAssembly SIMD instructions and **will not run on browsers without
-SIMD support**. This applies to every package here, including the framework integrations. Treat
-SIMD support as a browser requirement for your distribution.
+SIMD support**. This applies to every package here except the RPG Maker MZ plugin, which bundles a
+no-SIMD build for MZ's NW.js. Treat SIMD support as a browser requirement for your distribution.
 :::
 
 The browser converter `ssconverter-web` additionally needs the **File System Access API**
@@ -81,7 +81,7 @@ host framework's plugin system, so they are **not installable from npm**.
 
 ## RPG Maker MZ (beta)
 
-`@spritestudio/ssplayer-rmmz` is **beta**: the tag set and behavior may still change before
+`@spritestudio/ssplayer-rmmz` is **beta**: the plugin commands and behavior may still change before
 `7.0.0`. See [Using RPG Maker MZ](/usage/rmmz).
 
 ::: warning
