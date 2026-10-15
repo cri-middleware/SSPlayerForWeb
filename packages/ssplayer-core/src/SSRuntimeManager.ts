@@ -49,8 +49,9 @@ export async function initializeWasm(
             '[ssplayer-core] No WebAssembly URL given and the runtime cannot locate itself in this build ' +
             '(a classic <script> / IIFE bundle has no import.meta.url). Pass the URL of ' +
             "`ssruntime_bg.wasm` explicitly, e.g. initialize('https://cdn.jsdelivr.net/npm/" +
-            "@spritestudio/ssplayer-core@<version>/wasm/ssruntime_bg.wasm'), pinning the SAME version " +
-            'as the player bundle, since the two share a wasm ABI.'
+            "@spritestudio/ssplayer-core@<version>/wasm/ssruntime_bg.wasm'). The .wasm and the player " +
+            "bundle share an ABI, so take <version> from the CDN snippet in the player package's README: " +
+            "the core version that pairs with a bundle is not always the player's own."
         );
     }
     if (!initPromise) {
