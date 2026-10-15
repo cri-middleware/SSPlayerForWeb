@@ -69,7 +69,8 @@ different versions.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true): open the Release named
    `@spritestudio/ssplayer-tyranoscript <version>` and take the file under **Assets**, not
    the *Source code* archives. Unzip it — it contains an `ssplayer/` folder holding
-   `init.ks` (the loader), `main.js` (the plugin), and `ssruntime_bg.wasm` (the runtime).
+   `init.ks` (the loader), `main.js` (the plugin), `ssruntime_bg.wasm` (the runtime), and
+   `readme.txt` (the version and a quick start).
 2. Copy that `ssplayer/` folder into your Tyrano project at `data/others/plugin/`.
 3. Load it from your scenario with `[plugin name="ssplayer"]`.
 
