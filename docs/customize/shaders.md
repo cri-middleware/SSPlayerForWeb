@@ -64,7 +64,7 @@ the whole path — so shader-free animations pay nothing for this feature being 
 
 ::: warning A masked part loses its shader
 When a part is both a mask target and carries an `ss-*` shader, it draws through the masking path
-with the plain program and the shader is dropped. This is the current behavior in both renderers.
+with the plain program and the shader is dropped. Both renderers behave this way.
 If a part needs both, split it into two parts at authoring time.
 :::
 

@@ -125,7 +125,7 @@ name.
 
 A pass runs **when the project is opened**, and after that only when you ask for one. Nothing
 polls in the background: a pass costs one `stat` per source file, each a synchronous hop across
-Electron's contextBridge on the thread that draws the editor, and it bought nothing — you are
+Electron's contextBridge on the thread that draws the editor, and polling would buy nothing — you are
 in SpriteStudio when the save happens, not looking at the toast. This is the same shape as
 [SpriteStudio Player for Ren'Py](https://github.com/cri-middleware/SSPlayerForRenPy) (which
 converts at startup and needs `Shift + R`) and
@@ -159,12 +159,10 @@ something. The other dialog is for a project that has never imported anything an
 :::
 
 ::: tip The editor keeps drawing while it converts
-The converter is WebAssembly and its call is synchronous, so it used to freeze the editor for
-as long as a pass took — on a folder of 20 sample projects, 1.2 s, with a single project
-accounting for 0.64 s of it. It now runs in a Worker, which brings the longest pause on that
-same folder under 50 ms. Reading and writing the files still happens on the editor's thread,
-because the filesystem reaches a plugin through a renderer-only bridge; that is the part that
-remains.
+The converter is WebAssembly and its call is synchronous, so it runs in a Worker: on a folder
+of 20 sample projects, the longest pause is under 50 ms. Reading and writing the files happens
+on the editor's thread, because the filesystem reaches a plugin through a renderer-only bridge;
+that is where the pause comes from.
 :::
 
 ### What counts as a change
@@ -258,7 +256,7 @@ sessions (it is started over once it passes 256 KB):
 
 The `converter:` line says where the wasm ran. `worker` is the normal answer; `inline` means
 the editor could not start a Worker, the reason is printed on the same line, and conversions
-block the UI as they used to.
+block the UI while they run.
 
 It also records the host environment it found at startup, which is the first thing to look at
 if the plugin does not seem to be doing anything.
@@ -268,9 +266,9 @@ if the plugin does not seem to be doing anything.
 - **Reading and writing the files still happens on the editor's thread.** The conversion itself
   does not — it runs in a Worker — but a plugin reaches the filesystem only through a
   renderer-only bridge, so the I/O around each project cannot move. On a folder of 20 sample
-  projects that leaves pauses under 50 ms rather than the 1.2 s the whole pass used to take.
+  projects that leaves pauses under 50 ms.
 - **The folders are fixed.** `SpriteStudio_Source/` and `data/others/ssdata/` are not
-  configurable yet (Ren'Py's importer takes an override; this one does not).
+  configurable (Ren'Py's importer takes an override; this one does not).
 - **Textures are copied, not embedded.** Each pack ships its images as sibling files next to
   the `.ssab`. Keep them together if you move a pack by hand.
 - **Only `.sspj` files are picked up.** Anything else in `SpriteStudio_Source/` is ignored

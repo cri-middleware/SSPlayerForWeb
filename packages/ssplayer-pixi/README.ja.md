@@ -72,9 +72,8 @@ player.play();
 CDN 経由）ではバンドラが行う自動パス解決が効きません。そのため URL を
 `SSPlayer.initialize(wasmUrl)` に渡してください。
 
-> **WASM は読み込むプレイヤーと同じバージョンに固定してください。** `.wasm` と JS グルーは ABI を共有するため、片方だけ `@latest` にすると不整合が起こり得ます。`ssplayer-pixi`
-> のバンドルと `ssplayer-core` の `.wasm` の **両方** で正確なバージョン（例:
-> `@7.0.0-beta.1`）を指定してください。
+> **URL の組は下記スニペットからそのままコピーし、手で組み立てないでください。** `.wasm` と JS グルーは ABI を共有するため、`ssplayer-pixi`
+> のバンドルと `ssplayer-core` の `.wasm` の **両方** で正確なバージョンを指定する必要があります（片方だけ `@latest` にすると不整合が起こり得ます）。2 つのバージョンは一致するとは限りません（パッケージは独立してリリースされます）。記載の組は、組み合わせて動作するものです。
 
 ### クラシック `<script>` — グローバル `SSPixiPlayer`
 
@@ -141,13 +140,13 @@ player.play(startFrame?);  player.pause();  player.resume();  player.stop();
 player.frameNo;                       // get/set the current frame
 player.speedScale = 1.5;            // playback speed multiplier
 player.loopCount;                   // 設定したループ回数（-1 = 無限）
-player.totalFrames; player.startFrame; player.endFrame; player.fps;
+player.totalFrames; player.startFrame; player.endFrame; player.frameRate;
 player.isPlaying; player.isPausing;
 
 player.setAnimationSection(start, end);
 player.setPlaybackDirection(direction, style);
 player.getPartNames();
-player.getPartIndexFromName('body');
+player.findPartIndex('body');
 ```
 
 ## イベント

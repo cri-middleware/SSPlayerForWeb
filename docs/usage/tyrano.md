@@ -58,7 +58,7 @@ automatic restore does not run and you must write `[ss_restore]` into `data/scen
 
 ::: tip Which download do I need?
 The plugin ZIP described here is **for TyranoScript**. If you author in **TyranoBuilder**,
-install `ssplayer.tbp` instead — it already contains this ZIP's three files plus the editor
+install `ssplayer.tbp` instead — it already contains this ZIP's three runtime files plus the editor
 half (components and auto-conversion), so it is the only download you need.
 **Install one or the other, never both:** they unpack to the same
 `data/others/plugin/ssplayer/`, so stacking them leaves the editor and runtime halves on
@@ -69,7 +69,8 @@ different versions.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true): open the Release named
    `@spritestudio/ssplayer-tyranoscript <version>` and take the file under **Assets**, not
    the *Source code* archives. Unzip it — it contains an `ssplayer/` folder holding
-   `init.ks` (the loader), `main.js` (the plugin), and `ssruntime_bg.wasm` (the runtime).
+   `init.ks` (the loader), `main.js` (the plugin), `ssruntime_bg.wasm` (the runtime), and
+   `readme.txt` (the version and a quick start).
 2. Copy that `ssplayer/` folder into your Tyrano project at `data/others/plugin/`.
 3. Load it from your scenario with `[plugin name="ssplayer"]`.
 
@@ -342,7 +343,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/mai
 pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
 ```
 
-`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm}` — the archive the GitHub
+`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}` — the archive the GitHub
 Release carries; extract `ssplayer/` into `data/others/plugin/`.
 
 To try it in the bundled example:

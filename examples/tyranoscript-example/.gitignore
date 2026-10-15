@@ -1,7 +1,6 @@
 # --- TyranoScript engine (fetched at dev-time; NOT redistributed — see README) ---
 # The engine ships its own index.html + tyrano/ + a starter data/ tree. We keep
-# only the files this example authors (scenario/first.ks, the ssplayer plugin,
-# and the sample ssdata) and ignore everything the engine provides.
+# only the files this example authors and ignore everything the engine provides.
 /index.html
 /tyrano/
 /package_electron/

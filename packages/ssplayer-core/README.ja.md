@@ -58,9 +58,6 @@
 
 [`@spritestudio/ssplayer-pixi`](../ssplayer-pixi) がリファレンス実装です。
 
-> ドローバッチを直接発行するのではなく、既存のシーングラフ / `Sprite` ツリーへ描画したいエンジン向けの `SceneGraphInternalPlayer` ファサードは**対応予定**です。当面は
-> `DirectInternalPlayer` の上に構築してください。
-
 ## メモリモデル
 
 - **ゼロコピー:** トランスフォーム行列とジオメトリは、`getWasmMemory().buffer` に直接マップされた `Float32Array` ビューを通じて読み取られます。フレームごとのコピーはありません。

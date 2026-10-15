@@ -38,7 +38,7 @@ a renderer just to reach a core type.
 Useful when a stack trace or an autocomplete list drops you somewhere unfamiliar:
 
 ```
-SSPlayer / SSPlayer          ← the facade you call (playback, events, overrides)
+SSPlayer (webgl) / SSPlayer (pixi) ← the facade you call (playback, events, overrides)
   └─ DirectInternalPlayer          ← extends InternalPlayerBase; owns loading + the draw plan
        └─ SSRuntimeManager         ← the WASM boundary; frame data as zero-copy typed-array views
             └─ SSRuntimeContext    ← wasm-bindgen handle (generated; you should not need it)

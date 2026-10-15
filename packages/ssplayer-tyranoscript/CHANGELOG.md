@@ -10,5 +10,5 @@ All notable changes to `@spritestudio/ssplayer-tyranoscript` are documented here
 - **First release (beta).** Shows and plays SpriteStudio animations in a TyranoScript scenario
   through `[ss_*]` tags.
 - **Per-part overrides** through the `[ss_part_*]` tags.
-- **One WebGL surface per layer** rather than per character, so a scene's characters share a
-  context and stay under the browser's limit on live WebGL contexts.
+- **One WebGL surface per layer**: a scene's characters share a context and stay under the
+  browser's limit on live WebGL contexts.

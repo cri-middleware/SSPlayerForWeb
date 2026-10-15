@@ -98,12 +98,12 @@ You get these without doing anything:
   with few draw calls.
 - **Zero-Copy**: transforms and geometry are passed as `Float32Array` views that
   reference WASM memory directly, avoiding a per-frame copy.
-- **Texture sharing (PixiJS)**: atlases are cached by URL in Pixi's global `Assets`
-  cache, so many players of the same character share one GPU texture.
+- **Texture sharing**: atlases are cached by URL — in Pixi's global `Assets` cache on PixiJS, and
+  per `SSSurface` on WebGL — so many players of the same character share one GPU texture.
 
-What is **not** shared is the parsed `.ssab`: each `load()` allocates its own WASM-side copy, and on
-WebGL each player uploads its own textures because each one owns a separate GL context. So a crowd
-of the same character is much cheaper as one PixiJS scene than as many players. See
+What is **not** shared is the parsed `.ssab`: each `load()` allocates its own WASM-side copy. On
+WebGL the GL context belongs to the `SSSurface`, so only players on the same surface share
+textures: put a crowd of the same character on one surface. See
 [Resources & lifecycle](/customize/resources).
 
 ## Measurement tips
