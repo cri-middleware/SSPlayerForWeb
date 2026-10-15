@@ -58,7 +58,7 @@ examples/tyranoscript-example/
   data/
     system/ …       ← 取得＋自動パッチ（コミットしない）
     scenario/first.ks, make.ks  ← 本サンプル
-    others/plugin/ssplayer/…    ← init.ks は本サンプル / main.js・wasm は生成物
+    others/plugin/ssplayer/…    ← 生成物（sync:plugin、コミットしない）
     others/ssdata/Ringo/…       ← 生成アセット（deploy-examples、コミットしない）
 ```
 
