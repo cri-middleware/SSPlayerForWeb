@@ -27,7 +27,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-webgl@7.0.0-beta.1/dist/browser/ssplayer-webgl.browser.min.js"></script>
   <script>
     // ---- Config ------------------------------------------------------------
-    // Keep the WASM version pinned to the SAME version as the player bundle above.
+    // The runtime that pairs with the bundle above; keep the pair as printed. The
+    // core version is not always the player's own.
     const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
     // The .ssab to play. Override with ?ssab=<url>. Use an *embedded* ssab so it is
     // fully self-contained (textures inlined — no sibling PNG fetches needed).
