@@ -12,7 +12,6 @@ This file lists unfinished work that is specific to the RPG Maker MZ plugin; wor
 ## Distribution & verification
 
 - [ ] **Check blend modes, PartsColor, mask parts and the SS shaders in a real MZ** — The renderer is `ssplayer-webgl`'s, and the MZ-side GL state around it has not been checked for these. A manual check; the blend-mode mappings themselves are in the [root ROADMAP](../../ROADMAP.md).
-- [ ] **Windows check for test-play conversion** — The conversion that runs before the title has been checked on macOS only. Blocked on: a Windows machine with MZ.
 
 ## Backlog
 

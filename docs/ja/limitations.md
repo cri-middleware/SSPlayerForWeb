@@ -60,7 +60,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 
 ## RPG ツクール MZ（beta）
 
-`@spritestudio/ssplayer-rmmz` は **beta** です。プラグインコマンドと挙動は `7.0.0` までに変更される可能性があります。
+`@spritestudio/ssplayer-rmmz` は **beta** です。
 [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
 
 ::: warning
@@ -74,7 +74,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 
 ## TyranoScript / ティラノビルダー {#tyranoscript-tyranobuilder}
 
-どちらも **beta** です。オーサリング用のタグ体系は揃っていますが、`7.0.0` までに名称や挙動が変更される可能性があります。[TyranoScript で使う](/ja/usage/tyrano) および
+どちらも **beta** です。[TyranoScript で使う](/ja/usage/tyrano) および
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
 ::: warning ティラノビルダー

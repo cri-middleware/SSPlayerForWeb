@@ -2,10 +2,6 @@
 
 This file lists unfinished work that is specific to the TyranoBuilder plugin; work for the Web Player as a whole is in the [root ROADMAP](../../ROADMAP.md), and the runtime tags are in the [ssplayer-tyranoscript roadmap](../ssplayer-tyranoscript/ROADMAP.md). Technical constraints are under [Current limits](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder#current-limits).
 
-## Distribution & verification
-
-- [ ] **Windows** — The plugin has not been tried in the Windows builder (the importer is shared with `ssplayer-rmmz`, which has been checked on macOS only). Blocked on: a Windows TyranoBuilder install to test on.
-
 ## Backlog
 
 - [ ] **File I/O off the editor thread** — A plugin reaches the filesystem only through `window.studio_api`, so the reads and writes around each conversion run on the editor's thread. Overlapping the next project's reads with the current conversion would hide most of it, at the cost of a pipeline in `importPass`; not obviously worth it at the current pause size.

@@ -81,8 +81,7 @@ host framework's plugin system, so they are **not installable from npm**.
 
 ## RPG Maker MZ (beta)
 
-`@spritestudio/ssplayer-rmmz` is **beta**: the plugin commands and behavior may still change before
-`7.0.0`. See [Using RPG Maker MZ](/usage/rmmz).
+`@spritestudio/ssplayer-rmmz` is **beta**. See [Using RPG Maker MZ](/usage/rmmz).
 
 ::: warning
 - **A picture's tint and blend mode do not affect the animation.** *Opacity*, *move* and *scale* do apply.
@@ -100,8 +99,7 @@ host framework's plugin system, so they are **not installable from npm**.
 
 ## TyranoScript / TyranoBuilder
 
-Both integrations are **beta**: the authoring surface is complete, but names and behavior may
-still change before `7.0.0`. See [Using TyranoScript](/usage/tyrano) and
+Both integrations are **beta**. See [Using TyranoScript](/usage/tyrano) and
 [Using TyranoBuilder](/usage/tyranobuilder).
 
 ::: warning TyranoBuilder
