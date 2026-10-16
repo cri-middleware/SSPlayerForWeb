@@ -170,6 +170,30 @@ export class SSABResource {
 
 
 
+/** The context calls that change nothing a frame evaluates to. */
+const CONTEXT_READS = /^(get_|is_)|^(find_part_index|just_looped|track_just_looped|prepare_frame_data|free|constructor)$/;
+
+/**
+ * Make every call on `ctx` that may change what a frame evaluates to run
+ * `written` first. Matched by name, so a call the runtime adds later counts as a
+ * write until it is listed as a read. Each wrapper takes fixed parameters, so a
+ * call allocates nothing; a call with more parameters than that is refused here,
+ * or its extra arguments would be dropped without a word.
+ */
+function onContextWrite(ctx: SSRuntimeContext, written: () => void): void {
+    const proto = Object.getPrototypeOf(ctx);
+    for (const name of Object.getOwnPropertyNames(proto)) {
+        if (CONTEXT_READS.test(name)) continue;
+        const call = Object.getOwnPropertyDescriptor(proto, name)?.value;
+        if (typeof call !== 'function') continue;
+        if (call.length > 6) throw new Error(`[ssplayer-core] SSRuntimeContext.${name} takes ${call.length} parameters; onContextWrite passes 6`);
+        (ctx as any)[name] = function (a: unknown, b: unknown, c: unknown, d: unknown, e: unknown, f: unknown) {
+            written();
+            return call.call(ctx, a, b, c, d, e, f);
+        };
+    }
+}
+
 export class SSRuntimeManager {
     public context: SSRuntimeContext;
     private effectPartRefs: { partIndex: number, hash: number, seed: number }[] = [];
@@ -224,9 +248,18 @@ export class SSRuntimeManager {
     private _lastFrameBytes: Uint8Array | null = null;
     private _lastFrameBuffer: flatbuffers.ByteBuffer | null = null;
 
+    /**
+     * The frame the runtime last evaluated, while nothing has written to it since
+     * (see onContextWrite); NaN otherwise. Asked for that frame again, the runtime
+     * would build the same bytes, so a stopped or paused player draws its frame
+     * every tick without evaluating it every tick.
+     */
+    private _evaluatedFrame = NaN;
+
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
         this.context = new SSRuntimeContext();
+        onContextWrite(this.context, () => { this._evaluatedFrame = NaN; });
         // 3rd arg is the unregister token (see SSABResource) — required so
         // destroy()'s unregister(this) actually cancels the GC finalizer.
         finalizationRegistry.register(this, this.context, this);
@@ -956,6 +989,7 @@ export class SSRuntimeManager {
      */
     public prepareFrame(frame: number): number {
         if (this.currentAnimationIndex < 0) return 0;
+        if (frame === this._evaluatedFrame) return this.context.get_frame_data_len();
         try {
             // Subframe playback advances the playhead continuously, so at the
             // end/loop boundary get_frame_no() briefly returns a value in
@@ -970,11 +1004,23 @@ export class SSRuntimeManager {
             // get_frame_data, so this path cost the Brain twice every frame;
             // prepare_frame_data builds it and returns the length, and the
             // pointer is then a pure read of what was just built.
-            return this.context.prepare_frame_data(clamped);
+            const len = this.context.prepare_frame_data(clamped);
+            this._evaluatedFrame = len > 0 ? frame : NaN;
+            return len;
         } catch (e) {
             console.error(`WASM get_frame_data error at frame ${frame}:`, e);
+            this._evaluatedFrame = NaN;
             return 0;
         }
+    }
+
+    /**
+     * Have the next {@link prepareFrame} evaluate even the frame it evaluated
+     * last. For a change made to the runtime other than through {@link context},
+     * which notes its own writes.
+     */
+    public invalidateFrame(): void {
+        this._evaluatedFrame = NaN;
     }
 
     /**
@@ -990,6 +1036,7 @@ export class SSRuntimeManager {
      * call: don't retain it, and don't hold two at once.
      */
     public getFrameData(frame: number): FrameData | null {
+        const evaluated = frame !== this._evaluatedFrame;
         const len = this.prepareFrame(frame);
         if (len === 0) return null;
         const ptr = this.context.get_frame_data_buf();
@@ -998,6 +1045,9 @@ export class SSRuntimeManager {
         const memory = getWasmMemory();
         const buf = new Uint8Array(memory.buffer, ptr, len);
         const frameData = FrameData.getRootAsFrameData(new flatbuffers.ByteBuffer(buf), this._scratchFrameData);
+        // A frame handed out before, with nothing changed since, already has the
+        // effect plans it draws.
+        if (!evaluated) return frameData;
         // A plan onFrameData builds can grow WASM memory, which detaches `buf`. The
         // frame data stays where it is, so the view is minted again over the new
         // buffer and the caller never holds a detached one.

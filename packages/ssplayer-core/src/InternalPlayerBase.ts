@@ -1925,6 +1925,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const parentFrame = this.runtimeManager.context.get_frame_no();
         for (const [partIndex, childState] of this._instanceChildren.entries()) {
             const ev = this.runtimeManager.context.get_active_event_instance(partIndex);
+            // The step writes the child's context from inside the runtime, which
+            // the child's manager does not see. It moves only the child's frame,
+            // and a frame not evaluated yet is evaluated anyway; a transition
+            // goes on below through calls the manager does see.
             const visible = childState.slot.raw.step(ev, childState.player.runtimeManager.context, parentFrame, deltaSeconds, parentLooped);
 
             const childDeltaSeconds = ev ? deltaSeconds * Math.abs(ev.speed) : deltaSeconds;
