@@ -65,14 +65,17 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # the version commit, the tags and the Releases
-  id-token: write # trusted publishing on npm
+  contents: read
 
 jobs:
   release:
     # Refuse to release from anywhere but main, even if dispatched on another ref.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write # the version commit, the tags and the Releases
+      id-token: write # trusted publishing on npm
     steps:
       - name: Checkout (with SpriteStudio-SDK submodule)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
