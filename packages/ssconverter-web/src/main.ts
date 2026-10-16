@@ -7,7 +7,6 @@ import {
   ssabSchemaVersion,
 } from '@spritestudio/ssconverter-core';
 import * as fflate from 'fflate';
-import pkg from '../package.json';
 import './style.css';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
@@ -71,9 +70,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   </div>
 
   <div style="text-align: center; margin-top: 2rem; color: var(--text-muted); font-size: 0.85rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
-    <span id="appVersionDisplay">App Version: Loading...</span>
     <span id="versionDisplay">Converter Version: Loading...</span>
-    <button class="btn" id="btnCopyVersion" style="margin-top: 0.25rem; padding: 0.1rem 0.4rem; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); display: none;" title="Copy Versions">Copy Versions</button>
+    <button class="btn" id="btnCopyVersion" style="margin-top: 0.25rem; padding: 0.1rem 0.4rem; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); display: none;" title="Copy Version">Copy Version</button>
   </div>
 `;
 
@@ -90,8 +88,6 @@ const wasmStatus = document.getElementById('wasmStatus')!;
 const convertStatus = document.getElementById('convertStatus')!;
 const logArea = document.getElementById('logArea')!;
 const versionDisplay = document.getElementById('versionDisplay')!;
-const appVersionDisplay = document.getElementById('appVersionDisplay')!;
-appVersionDisplay.textContent = `${pkg.name} Version: ${pkg.version}`;
 
 const chkEmbedded = document.getElementById('chkEmbedded') as HTMLInputElement;
 
@@ -192,7 +188,7 @@ async function initWasm() {
         btnCopyVersion.style.display = 'inline-flex';
         btnCopyVersion.onclick = async () => {
             try {
-                const textToCopy = `${pkg.name} Version: ${pkg.version}\nConverter Version: ${ver} (ssab v${ssabSchemaVer})`;
+                const textToCopy = `Converter Version: ${ver} (ssab v${ssabSchemaVer})`;
                 await navigator.clipboard.writeText(textToCopy);
                 const orig = btnCopyVersion.textContent;
                 btnCopyVersion.textContent = 'Copied!';
