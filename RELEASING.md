@@ -118,7 +118,7 @@ done
 npm stage approve <stage-id>                      # once per staged version, in the order above
 ```
 
-A package the run did not stage — every one in a run with `publish_npm=false`, and any after a failed **Stage on npm** — is published by hand instead, from the very tarball on its draft. The loop goes in dependency order and stops at the first failure, and it takes the dist-tag from the version: the prerelease's word (`beta`), or `latest` for a full release.
+A package the run did not stage — every one in a run with `publish_npm=false`, and any after a failed **Stage on npm** — is published by hand instead, from the very tarball on its draft. The loop goes in dependency order and stops at the first failure, and `scripts/npm-dist-tag.sh` picks each dist-tag: `latest` for a full release, and for a prerelease while the package's `latest` is not yet a full release; the prerelease's word (`beta`, `rc`) after that.
 
 ```bash
 dir=$(mktemp -d)
@@ -127,7 +127,7 @@ for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # d
   tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
   [ -n "$tag" ] || continue
   version=${tag#"$pkg-v"}
-  case "$version" in *-*) dist=${version#*-}; dist=${dist%%.*} ;; *) dist=latest ;; esac
+  dist=$(scripts/npm-dist-tag.sh "@spritestudio/$pkg" "$version") || break
   gh release download "$tag" -p '*.tgz' -D "$dir/$tag"
   npm publish "$dir/$tag"/*.tgz --tag "$dist" --access public || break
   npm view "@spritestudio/$pkg" dist-tags
@@ -320,7 +320,7 @@ done
 npm stage approve <stage-id>                      # stage されたバージョンごとに 1 回。上の順に
 ```
 
-run が stage しなかったパッケージは、下書きに添付された tarball そのものを手作業で publish します。`publish_npm=false` で実行した run のパッケージすべてと、**Stage on npm** が失敗した後のパッケージがこれにあたります。ループは依存の順に進んで最初の失敗で止まり、dist-tag をバージョンから決めます。プレリリースならその語（`beta`）、正式版なら `latest` です。
+run が stage しなかったパッケージは、下書きに添付された tarball そのものを手作業で publish します。`publish_npm=false` で実行した run のパッケージすべてと、**Stage on npm** が失敗した後のパッケージがこれにあたります。ループは依存の順に進んで最初の失敗で止まり、dist-tag は `scripts/npm-dist-tag.sh` が決めます。正式版は `latest` です。プレリリースも、パッケージの `latest` がまだ正式版でなければ `latest`、正式版になった後はその語（`beta`・`rc`）です。
 
 ```bash
 dir=$(mktemp -d)
@@ -329,7 +329,7 @@ for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # �
   tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
   [ -n "$tag" ] || continue
   version=${tag#"$pkg-v"}
-  case "$version" in *-*) dist=${version#*-}; dist=${dist%%.*} ;; *) dist=latest ;; esac
+  dist=$(scripts/npm-dist-tag.sh "@spritestudio/$pkg" "$version") || break
   gh release download "$tag" -p '*.tgz' -D "$dir/$tag"
   npm publish "$dir/$tag"/*.tgz --tag "$dist" --access public || break
   npm view "@spritestudio/$pkg" dist-tags
