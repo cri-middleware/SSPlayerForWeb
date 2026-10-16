@@ -23,7 +23,7 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 | [`ssconverter-web`](#ssconverter-web-browser-tool) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>） |
 | [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
-| [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core@beta` |
+| [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core` |
 
 全体の流れは [トップページの概要図](/ja/#overview-from-sspj-to-rendering) を参照してください。
 
@@ -134,7 +134,7 @@ TypeScript API を被せたもので、これ単体は npm で公開していま
 は、このライブラリとプレイヤー（`ssplayer-webgl`、または WebGPU / WebGL 上の `ssplayer-pixi` をメニューで選択）を 1 ページに載せたものです。ソース（[`examples/sspj-preview`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/examples/sspj-preview)）は以下の内容が実際に動く形になっています。ブラウザでフォルダを読み、変換し、サーバもビルドも介さずそのままプレイヤーに渡す、という一連の流れです。
 
 ```bash
-npm i @spritestudio/ssconverter-core@beta
+npm i @spritestudio/ssconverter-core
 ```
 
 ```ts

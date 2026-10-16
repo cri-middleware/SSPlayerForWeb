@@ -20,8 +20,7 @@
 //   node scripts/sync-doc-versions.mjs --check    report only, exit 1 if stale
 //
 // NOT rewritten: dist-tag references like `@spritestudio/ssplayer-webgl@beta`
-// (the install instruction during the prerelease line) and bare, unversioned
-// mentions — only a literal semver after the `@` is a pin.
+// and bare, unversioned mentions — only a literal semver after the `@` is a pin.
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';

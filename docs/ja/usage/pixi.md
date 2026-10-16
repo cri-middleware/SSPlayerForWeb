@@ -18,7 +18,7 @@ PixiJS v8 アプリで複数のアニメを再生する例です。`.ssab` を�
 ## インストール
 
 ```bash
-pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
+pnpm add @spritestudio/ssplayer-pixi pixi.js
 ```
 
 `pixi.js@^8.19` は peer dependency です。

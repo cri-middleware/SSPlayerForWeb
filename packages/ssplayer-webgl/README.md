@@ -7,10 +7,8 @@ Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio** play
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline.
 
 > **Who this is for:** web developers with no framework — drop a SpriteStudio player into any page, either as a single `<ss-player>` HTML tag or via the `SSPlayer` JS API, with zero runtime dependencies.
-> **Install:** `npm install @spritestudio/ssplayer-webgl@beta`
+> **Install:** `npm install @spritestudio/ssplayer-webgl`
 > **Not what you need?** → [package table](../../README.md#-which-package-should-i-use) — already on PixiJS or RPG Maker MZ? there's a dedicated renderer for that.
-
-> **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
 the `<ss-player>` element running in your browser; drop your own `.ssab` file onto the

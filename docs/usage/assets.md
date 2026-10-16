@@ -30,7 +30,7 @@ if you want effects. The downloaded project feeds any of the tools below as-is.
 | [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> |
 | [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
-| [`@spritestudio/ssconverter-core@beta`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core@beta` |
+| [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core` |
 
 For the overall flow, see the [overview diagram on the home page](/#overview-from-sspj-to-rendering).
 
@@ -159,7 +159,7 @@ is a working version of everything below: a folder read in the browser, converte
 and handed straight to a player without a server or a build step.
 
 ```bash
-npm i @spritestudio/ssconverter-core@beta
+npm i @spritestudio/ssconverter-core
 ```
 
 ```ts

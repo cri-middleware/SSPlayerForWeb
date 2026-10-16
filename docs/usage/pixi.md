@@ -21,7 +21,7 @@ the same renderer swapping a part's colour, cell and visibility at runtime (see
 ## Install
 
 ```bash
-pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
+pnpm add @spritestudio/ssplayer-pixi pixi.js
 ```
 
 `pixi.js@^8.19` is a peer dependency.

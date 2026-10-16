@@ -4,10 +4,8 @@
 
 SpriteStudio のプロジェクト（`.sspj`）をランタイムバイナリ（`.ssab` / `.ssqb`）へ変換する、エンジン非依存な WebAssembly コアです。
 
-> **対象読者:** 自作のアプリ・サービス・Worker・ビルドパイプラインに `.sspj → .ssab` 変換を組み込みたい開発者 — bytes-in / bytes-out のエンジンで、ファイルシステムや DOM を前提としません。**インストール:** `npm install @spritestudio/ssconverter-core@beta`
+> **対象読者:** 自作のアプリ・サービス・Worker・ビルドパイプラインに `.sspj → .ssab` 変換を組み込みたい開発者 — bytes-in / bytes-out のエンジンで、ファイルシステムや DOM を前提としません。**インストール:** `npm install @spritestudio/ssconverter-core`
 > **目的が違う場合:** → [ssconverter-web](../ssconverter-web/README.ja.md) — ファイルを変換したいだけなら、ブラウザツール + CLI をそのまま使ってください。
-
-> **beta ライン。** 7.0.0 が prerelease の間は `beta` dist-tag にのみ publish されるため、上記の `@beta` は必須です。7.0.0 が `latest` に出れば不要になります。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** —
 [`ssconverter-web`] はこのコアをブラウザ上で動かしたものです。`.sspj` を投げ込むと、このコアが何を出力するかを確認できます。
@@ -28,7 +26,7 @@ SpriteStudio のプロジェクト（`.sspj`）をランタイムバイナリ（
 ## インストール
 
 ```sh
-npm install @spritestudio/ssconverter-core@beta
+npm install @spritestudio/ssconverter-core
 ```
 
 ## 使い方

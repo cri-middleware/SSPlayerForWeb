@@ -32,18 +32,18 @@ description: レンダラーパッケージの選び方、インストール、�
 
 ```bash [pnpm]
 # 依存なしの単体レンダラー
-pnpm add @spritestudio/ssplayer-webgl@beta
+pnpm add @spritestudio/ssplayer-webgl
 
 # PixiJS v8 アプリに組み込む場合（pixi.js は peer dependency）
-pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
+pnpm add @spritestudio/ssplayer-pixi pixi.js
 ```
 
 ```bash [npm]
 # 依存なしの単体レンダラー
-npm install @spritestudio/ssplayer-webgl@beta
+npm install @spritestudio/ssplayer-webgl
 
 # PixiJS v8 アプリに組み込む場合（pixi.js は peer dependency）
-npm install @spritestudio/ssplayer-pixi@beta pixi.js
+npm install @spritestudio/ssplayer-pixi pixi.js
 ```
 
 :::
