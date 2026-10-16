@@ -6,7 +6,7 @@ description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto impo
 
 ::: warning Beta
 `@spritestudio/ssplayer-tyranobuilder` is in **beta**. Verified on **TyranoBuilder Ver 3.00**
-(Electron 24.8.8) on macOS; Windows is untested.
+(Electron 24.8.8).
 :::
 
 Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
