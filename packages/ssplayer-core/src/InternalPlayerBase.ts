@@ -743,18 +743,31 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * per-tick work on, rather than {@link isPlaying}.
      *
      * Wider than `isPlaying` in one case: track 0 running out does not stop the
-     * character's clock. The tracks above it and any fade carry on, and only
-     * track 0 reports the end, so a character whose track 0 has finished still
-     * ticks while it has another track or a fade to run. {@link stop} stops all
-     * of it.
+     * character's clock. The tracks above it, the sources added to any track and
+     * any fade carry on, and only track 0 reports the end, so a character whose
+     * track 0 has finished still ticks while {@link isStackInMotion}.
+     * {@link stop} stops all of it.
      */
     public get isTicking(): boolean {
         if (this.isPlaying) return true;
-        const ctx = this.runtimeManager.context;
         // The clock, not track 0: a stop raises neither `isPlaying` nor
         // `isFinished`, and a stop after the end leaves `isFinished` latched.
-        if (!ctx.is_clock_playing() || !this.isFinished) return false;
-        return ctx.get_track_count() > 1 || ctx.get_track_fade_progress(0) !== undefined;
+        const ctx = this.runtimeManager.context;
+        return ctx.is_clock_playing() && ctx.is_stack_in_motion();
+    }
+
+    /**
+     * Whether the track stack moves the pose apart from track 0's frame: a fade
+     * is running, or an audible track plays a source other than track 0's main
+     * one at a speed and weight above 0. The runtime answers, since it releases
+     * tracks and sources on its own as fades complete.
+     *
+     * It does not read the clock, so a pause or a stop leaves it true. Read it
+     * **before** {@link update}: the tick a fade or a track ends on still moves
+     * the pose, and reads false afterwards.
+     */
+    public get isStackInMotion(): boolean {
+        return this.runtimeManager.context.is_stack_in_motion();
     }
 
     /**
@@ -784,21 +797,41 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public update(deltaMs: number) {
         this._ran = false;
+        this._childrenMoved = false;
         if (!this.isTicking) return;
         const deltaSeconds = deltaMs / 1000.0;
 
         if (this.isHeld) {
             // Paused: keep independent slots advancing; do not touch the timeline.
-            this.stepEffectSlots(deltaSeconds, false);
-            this.stepInstanceSlots(deltaSeconds, false);
+            const effects = this.stepEffectSlots(deltaSeconds, false);
+            const instances = this.stepInstanceSlots(deltaSeconds, false);
+            this._childrenMoved = effects || instances;
             return;
         }
 
         // Delegate to the manager so animation playback advances
+        const ctx = this.runtimeManager.context;
+        const before = ctx.get_frame_no();
         this.runtimeManager.update(deltaMs);
         this._ran = true;
-        this.stepEffectSlots(deltaSeconds, this.runtimeManager.context.just_looped());
-        this.stepInstanceSlots(deltaSeconds, this.runtimeManager.context.just_looped());
+        const effects = this.stepEffectSlots(deltaSeconds, ctx.just_looped());
+        const instances = this.stepInstanceSlots(deltaSeconds, ctx.just_looped());
+        // A synced slot follows the playhead, which moves between the frames a
+        // renderer draws whenever subFrameEnabled is off.
+        this._childrenMoved = effects || instances
+            || ((this._effectChildren.size > 0 || this._instanceChildren.size > 0) && ctx.get_frame_no() !== before);
+    }
+
+    private _childrenMoved = false;
+
+    /**
+     * Whether the last {@link update} moved an effect or instance child — one
+     * playing on its own clock, or one synced to a playhead that moved — so a
+     * renderer that skips a frame it has already drawn knows that frame changed.
+     * Held players move only their independent children.
+     */
+    public get childrenMoved(): boolean {
+        return this._childrenMoved;
     }
 
     /**
@@ -1811,9 +1844,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
     }
 
-        private stepEffectSlots(deltaSeconds: number, parentLooped: boolean) {
-        if (this._effectChildren.size === 0) return;
+    /** Returns whether a slot playing on its own clock was stepped by a nonzero delta. */
+    private stepEffectSlots(deltaSeconds: number, parentLooped: boolean): boolean {
+        if (this._effectChildren.size === 0) return false;
 
+        let independentMoved = false;
         const frame = this.runtimeManager.context.get_frame_no();
         for (const [partIndex, item] of this._effectChildren.entries()) {
             // Every slot steps every tick, drawn or not, or an effect playing on its
@@ -1825,6 +1860,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             const ev = this.runtimeManager.context.get_active_effect_event(partIndex);
             // y_flip = true for PixiJS (y-down), vert_stride = 2 (x,y)
             item.visible = item.slot.raw.step(ev, frame, deltaSeconds, this.getFrameRate(), parentLooped, true, 2, item.drawn);
+            if (deltaSeconds !== 0 && item.slot.raw.is_independent()) independentMoved = true;
             item.ev?.free();
             if (item.drawn) {
                 ev.free();
@@ -1834,6 +1870,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
                 item.frame = frame;
             }
         }
+        return independentMoved;
     }
 
     /**
@@ -1880,9 +1917,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._effectChildren.clear();
     }
 
-    private stepInstanceSlots(deltaSeconds: number, parentLooped: boolean) {
-        if (this._instanceChildren.size === 0) return;
+    /** Returns whether a slot playing on its own clock, at any depth, was stepped by a nonzero delta. */
+    private stepInstanceSlots(deltaSeconds: number, parentLooped: boolean): boolean {
+        if (this._instanceChildren.size === 0) return false;
 
+        let independentMoved = false;
         const parentFrame = this.runtimeManager.context.get_frame_no();
         for (const [partIndex, childState] of this._instanceChildren.entries()) {
             const ev = this.runtimeManager.context.get_active_event_instance(partIndex);
@@ -1906,11 +1945,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
                 }
             }
 
+            if (deltaSeconds !== 0 && childState.slot.raw.independent()) independentMoved = true;
+
             // Advance the child's own effects
-            childState.player.stepEffectSlots(childDeltaSeconds, childState.slot.raw.child_looped());
+            if (childState.player.stepEffectSlots(childDeltaSeconds, childState.slot.raw.child_looped())) independentMoved = true;
             // Advance the child's own instance children recursively
-            childState.player.stepInstanceSlots(childDeltaSeconds, childState.slot.raw.child_looped());
+            if (childState.player.stepInstanceSlots(childDeltaSeconds, childState.slot.raw.child_looped())) independentMoved = true;
         }
+        return independentMoved;
     }
 
     public getInstanceChild(partIndex: number): InstanceChildState<T> | undefined {
