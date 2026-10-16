@@ -7,7 +7,7 @@
 // fires onAnimationFinished, so waiting on one would block the event forever -- note
 // that loopCount 0 is a synonym for infinite, not "play once".
 
-import { getLiveStatus } from './liveRegistry.js';
+import { getLivePlayer, getLiveStatus } from './liveRegistry.js';
 import { isWasmOk } from './boot.js';
 
 /** Install the Game_Interpreter.updateWaitMode alias. Idempotent. */
@@ -33,6 +33,18 @@ export function installInterpreterWait(): void {
       this._ssWaitPictureId = null;
       return false;
     }
+    if (this._waitMode === 'ssplayerTrackFade') {
+      // A fade runs on the live player's clock only; once the player is gone,
+      // its clock stopped or paused, or the fade done, nothing is left to wait
+      // for — a paused picture would otherwise hold the event for good.
+      const player = getLivePlayer(this._ssWaitPictureId);
+      const ip = player?.internalPlayer;
+      if (ip && ip.isTicking && !ip.isHeld && player!.getTrackFadeProgress(this._ssWaitTrack) !== undefined) return true;
+      this._waitMode = '';
+      this._ssWaitPictureId = null;
+      this._ssWaitTrack = null;
+      return false;
+    }
     return _updateWaitMode.call(this);
   };
 }
@@ -41,4 +53,11 @@ export function installInterpreterWait(): void {
 export function beginSSWait(interpreter: any, pictureId: number): void {
   interpreter._ssWaitPictureId = pictureId;
   interpreter.setWaitMode('ssplayer');
+}
+
+/** Hold `interpreter` until the fade on `track` of `pictureId` completes. */
+export function beginSSTrackFadeWait(interpreter: any, pictureId: number, track: number): void {
+  interpreter._ssWaitPictureId = pictureId;
+  interpreter._ssWaitTrack = track;
+  interpreter.setWaitMode('ssplayerTrackFade');
 }

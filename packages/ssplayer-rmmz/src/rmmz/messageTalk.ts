@@ -14,14 +14,17 @@
 // the live SSPlayer, exactly like playSSOnce — the picture's _ssData base loop
 // is left untouched, so a save/load mid-message resumes the base animation.
 
-import { applyPartOverrides } from '@spritestudio/ssplayer-webgl';
+import { applyPartOverrides, applySavedTracks } from '@spritestudio/ssplayer-webgl';
 import { getLivePlayer } from './liveRegistry.js';
+import { playAnimation } from './playAnimation.js';
 
 interface TalkBinding {
   /** Speaker name to match against $gameMessage.speakerName(). "" = unnamed messages. */
   name: string;
   talk: string;
   idle: string;
+  /** Crossfade between talk and idle over this many ms; 0 cuts. */
+  transition: number;
 }
 
 const bindings = new Map<number, TalkBinding>();
@@ -29,10 +32,10 @@ const bindings = new Map<number, TalkBinding>();
 /**
  * Bind a picture as a talking portrait for speaker `name` (the message name box;
  * "" matches unnamed messages). Plays `talk` while that speaker's message prints,
- * `idle` otherwise.
+ * `idle` otherwise, crossfading between them over `transition` ms (0 cuts).
  */
-export function setSSTalk(pictureId: number, name: string, talk: string, idle: string): void {
-  bindings.set(pictureId, { name, talk, idle });
+export function setSSTalk(pictureId: number, name: string, talk: string, idle: string, transition = 0): void {
+  bindings.set(pictureId, { name, talk, idle, transition });
 }
 
 /** Remove a picture's talk binding (leaves whatever animation is playing). */
@@ -60,19 +63,21 @@ function apply(printing: boolean): void {
     if (!player || player.getAnimationNames().length === 0) continue; // not loaded yet → retry
     const desired = printing && b.name === speaker ? b.talk : b.idle;
     if (player.currentAnimation === desired) continue; // already playing it — don't restart
-    // Setting up an animation makes the runtime drop every override but the
-    // Permanent ones. Here the author never asked for an animation change — the
-    // swap is a transient decoration over whatever the scenario last set — so
-    // the picture's persisted overrides go straight back on, or a tinted
-    // portrait would lose its tint on its very first line. (playSSOnce and
-    // changeSSAnimation deliberately do NOT do this: there the author asked,
-    // and the saved copy is pruned to match what the runtime discarded.)
-    const overrides = g.$gameScreen?.picture(pid)?.ssData?.()?.overrides;
+    // A cut sets the animation up, which makes the runtime drop every override
+    // but the Permanent ones. Here the author never asked for an animation
+    // change — the swap is a transient decoration over whatever the scenario
+    // last set — so the picture's persisted overrides go straight back on, or
+    // a tinted portrait would lose its tint on its very first line. (playSSOnce
+    // and changeSSAnimation deliberately do NOT do this: there the author
+    // asked, and the saved copy is pruned to match what the runtime discarded.)
+    // The same goes for the tracks setSSTrack laid, which a cut folds away. A
+    // crossfade keeps both, so there is nothing to put back.
+    const ss = g.$gameScreen?.picture(pid)?.ssData?.();
     try {
-      player.setAnimation(desired);
-      player.loopCount = -1;
-      applyPartOverrides(player, overrides);
-      player.play();
+      if (playAnimation(player, desired, -1, b.transition)) {
+        applyPartOverrides(player, ss?.overrides);
+        applySavedTracks(player, ss?.tracks);
+      }
     } catch (e: unknown) {
       console.error('[ssplayer-rmmz] setSSTalk: failed to switch:', e);
     }

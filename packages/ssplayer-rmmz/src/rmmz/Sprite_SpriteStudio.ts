@@ -12,6 +12,7 @@
 
 import { SSPlayer, type Unsubscribe } from '../SSPlayer.js';
 import { RMMZAudioManager } from './RMMZAudioManager.js';
+import { playAnimation } from './playAnimation.js';
 import type { GL } from '../rmmzGlobals.js';
 
 // One logical MZ frame ≈ 1/60 s. SSPlayer.update converts ms → SS frames via the
@@ -28,7 +29,7 @@ export interface SSViewSpec {
 export interface ISpriteSpriteStudio {
   readonly player: SSPlayer;
   loadAnimation(spec: SSViewSpec): Promise<void>;
-  switchAnimation(animation: string, loop?: number): void;
+  switchAnimation(animation: string, loop?: number, transitionMs?: number): void;
   update(): void;
   destroy(options?: unknown): void;
 }
@@ -69,15 +70,14 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
      * already loaded). Synchronous — the pack's assets came in with
      * loadAnimation, so this is only a runtime reset and playback stays
      * subframe-smooth. Use loadAnimation when the .ssab itself changes.
+     * `transitionMs` above 0 crossfades instead of cutting (playAnimation).
      */
-    public switchAnimation(animation: string, loop = -1): void {
+    public switchAnimation(animation: string, loop = -1, transitionMs = 0): void {
       if (this._spec) this._spec = { ...this._spec, animation, loop };
       // Nothing awaits below, so no load can slip in between: bump the token so a
       // load still in flight does not overwrite this switch when it lands.
       this._loadToken += 1;
-      this.player.setAnimation(animation);
-      this.player.loopCount = loop;
-      this.player.play();
+      playAnimation(this.player, animation, loop, transitionMs);
     }
 
     public get spec(): SSViewSpec | null {

@@ -14,7 +14,7 @@ import type { ISpriteSpriteStudio } from './Sprite_SpriteStudio.js';
 import { setLivePlayer, clearLivePlayer, markLivePlayerEnded } from './liveRegistry.js';
 import { isWasmOk } from './boot.js';
 import { SSLoadError } from './loadError.js';
-import { applyPartOverrides, type SSPartOverride } from '@spritestudio/ssplayer-webgl';
+import { applyPartOverrides, applySavedTracks, type SSPartOverride, type SSSavedTrack } from '@spritestudio/ssplayer-webgl';
 
 let _warnedNoWasm = false;
 
@@ -27,6 +27,14 @@ export interface SSPictureData {
   /** Optional playback speed multiplier (1 = normal). Persisted for save/load. */
   speed?: number;
   /**
+   * Optional: how the view takes the next change of `animation`, in ms. Above
+   * 0 it crossfades from what is on screen; 0 or absent cuts. The switch stays
+   * decided by this data rather than by a command crossfading the player
+   * directly, since the view re-syncs to the data every frame and would cut
+   * back to a name the data still held.
+   */
+  transition?: number;
+  /**
    * Optional per-part overrides (colour / cell / visibility). Persisted for
    * save/load and re-applied when a player mounts — the runtime's own table
    * lives on the WASM context, which does not survive a rebuild. The list's
@@ -34,6 +42,13 @@ export interface SSPictureData {
    * the TyranoScript adapter.
    */
   overrides?: SSPartOverride[];
+  /**
+   * Optional: the tracks laid above track 0 by setSSTrack, in track order.
+   * Persisted for save/load and laid again when a player mounts. A cut to
+   * another animation folds the runtime's stack back to track 0, so the
+   * command that cuts empties this too; a crossfade keeps it.
+   */
+  tracks?: SSSavedTrack[];
 }
 
 interface GamePictureLike {
@@ -115,10 +130,10 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       if (typeof this._pictureId === 'number') setLivePlayer(this._pictureId, this._ssChild.player);
       // No override re-application here: the context survives an in-place
       // switch, so the runtime already kept the Permanent ones and dropped the
-      // rest itself (the persisted copy is pruned to match by the command that
-      // changed the animation).
+      // rest itself, or kept them all on a crossfade (the persisted copy is
+      // pruned to match by the command that changed the animation).
       try {
-        this._ssChild.switchAnimation(ss.animation, ss.loop);
+        this._ssChild.switchAnimation(ss.animation, ss.loop, ss.transition);
       } catch (e: unknown) {
         console.error('[ssplayer-rmmz] failed to switch SS animation:', e);
       }
@@ -154,7 +169,12 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       // This is a fresh WASM context, so its override table starts empty. Restore
       // the picture's persisted overrides once the animation is set up (before
       // that, part names cannot resolve).
-      .then(() => applyPartOverrides(child.player, ss.overrides))
+      .then(() => {
+        applyPartOverrides(child.player, ss.overrides);
+        // Read now, not at mount: a setSSTrack made while this loaded saved its
+        // track and left laying it to us.
+        applySavedTracks(child.player, (this.picture() as GamePictureLike | null)?.ssData()?.tracks);
+      })
       .catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to load SS animation:', e);
         // Erased or given another .ssab while loading: nobody is waiting on it.

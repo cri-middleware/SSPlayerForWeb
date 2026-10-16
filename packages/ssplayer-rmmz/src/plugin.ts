@@ -14,8 +14,9 @@ import { installWasmBootGate } from './rmmz/boot.js';
 import { defineSpriteSpriteStudio } from './rmmz/Sprite_SpriteStudio.js';
 import { installGamePictureBridge } from './rmmz/gamePictureBridge.js';
 import { armLiveChain, clearLiveChain, getLivePlayer } from './rmmz/liveRegistry.js';
-import { installInterpreterWait, beginSSWait } from './rmmz/interpreterWait.js';
+import { installInterpreterWait, beginSSWait, beginSSTrackFadeWait } from './rmmz/interpreterWait.js';
 import { installMessageTalk, setSSTalk, clearSSTalk } from './rmmz/messageTalk.js';
+import { playAnimation } from './rmmz/playAnimation.js';
 import type { SSPictureData } from './rmmz/gamePictureBridge.js';
 import {
   parsePartOverrideColor,
@@ -24,6 +25,11 @@ import {
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
+  applySavedTrack,
+  withSavedTrack,
+  withoutSavedTrack,
+  type SSSavedTrack,
+  type SSTrackBlend,
 } from '@spritestudio/ssplayer-webgl';
 
 const PLUGIN_NAME = 'ssplayer-rpgmakermz';
@@ -31,6 +37,11 @@ const PLUGIN_NAME = 'ssplayer-rpgmakermz';
 function num(v: unknown, dflt = 0): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : dflt;
+}
+
+/** A command's `transition` in ms: 0 (a cut) when blank or not above 0. */
+function transitionMs(v: unknown): number {
+  return Math.max(0, num(v, 0));
 }
 
 function boot(): void {
@@ -86,6 +97,26 @@ function boot(): void {
       },
       player: () => getLivePlayer(pictureId) ?? null,
     });
+
+  /**
+   * After a cut on the live player (playSSOnce, playSSSequence): the runtime
+   * dropped every non-Permanent override and folded its stack back to track 0,
+   * so the saved copy follows suit and a load cannot bring either back.
+   */
+  const afterCut = (pictureId: number): void => {
+    overridesOf(pictureId).pruneForNewAnimation();
+    const pic = g.$gameScreen.picture(pictureId);
+    const cur = pic && pic.ssData ? pic.ssData() : null;
+    if (cur?.tracks) pic.setSSData({ ...cur, tracks: undefined });
+  };
+
+  /** The track number a track command was given, or null (warned) for track 0 and below. */
+  const trackArg = (args: Record<string, string>, label: string): number | null => {
+    const track = Math.floor(num(args.track, 1));
+    if (track >= 1) return track;
+    console.warn(`[ssplayer-rmmz] ${label}: トラック 0 はピクチャのアニメです。「SSアニメ切替」を使ってください。`);
+    return null;
+  };
 
   /** Set one override, after checking the picture actually carries an SS. */
   const setPartOverride = (pictureId: number, label: string, entry: SSPartOverride): void => {
@@ -154,12 +185,19 @@ function boot(): void {
       console.warn(`[ssplayer-rmmz] changeSSAnimation: ピクチャ ${pictureId} に SS がありません。`);
       return;
     }
+    const transition = transitionMs(args.transition);
+    const animation = String(args.animation || cur.animation);
+    // Only a cut to another animation sets one up: the runtime clears all but
+    // the Permanent overrides and folds its stack back to track 0. A crossfade,
+    // or a change of loop alone, keeps both.
+    const cut = animation !== cur.animation && transition <= 0;
     pic.setSSData({
       ...cur,
-      animation: String(args.animation || cur.animation),
+      animation,
       loop: args.loop !== undefined ? num(args.loop, cur.loop) : cur.loop,
-      // The runtime clears all but the Permanent overrides on the new setup.
-      overrides: prunePartOverridesForNewAnimation(cur.overrides),
+      transition,
+      overrides: cut ? prunePartOverridesForNewAnimation(cur.overrides) : cur.overrides,
+      tracks: cut ? undefined : cur.tracks,
     });
   });
 
@@ -186,6 +224,7 @@ function boot(): void {
     // Play count for the one-shot: >=1 finite (0 is coerced to 1; -1 would never
     // end and never revert, so it's clamped to 1 too).
     const count = Math.max(1, num(args.loop, 1));
+    const transition = transitionMs(args.transition);
     const player = getLivePlayer(pictureId);
     const pic = g.$gameScreen.picture(pictureId);
     const cur = pic && pic.ssData ? pic.ssData() : null;
@@ -193,16 +232,15 @@ function boot(): void {
       console.warn(`[ssplayer-rmmz] playSSOnce: ピクチャ ${pictureId} に SS がありません。`);
       return;
     }
-    // Both the one-shot and the return-to-base set up an animation, so the
-    // runtime drops every non-Permanent override; keep the saved copy in step.
-    overridesOf(pictureId).pruneForNewAnimation();
+    // Both the one-shot and the return-to-base switch animation.
+    const play = (name: string, loop: number): void => {
+      if (playAnimation(player, name, loop, transition)) afterCut(pictureId);
+    };
     const base = cur.animation;
     const baseLoop = cur.loop;
     const revert = () => {
       try {
-        player.setAnimation(base);
-        player.loopCount = baseLoop;
-        player.play();
+        play(base, baseLoop);
       } catch (e: unknown) {
         console.error('[ssplayer-rmmz] playSSOnce: failed to return to base loop:', e);
       }
@@ -218,9 +256,7 @@ function boot(): void {
       }),
     );
     try {
-      player.setAnimation(oneShot);
-      player.loopCount = count;
-      player.play();
+      play(oneShot, count);
     } catch (e: unknown) {
       clearLiveChain(pictureId);
       console.error('[ssplayer-rmmz] playSSOnce: failed to play one-shot:', e);
@@ -240,14 +276,12 @@ function boot(): void {
       .map((s) => s.trim())
       .filter(Boolean);
     const lastLoop = num(args.loop, -1);
+    const transition = transitionMs(args.transition);
     const player = getLivePlayer(pictureId);
     if (!player || seq.length === 0) {
       console.warn(`[ssplayer-rmmz] playSSSequence: ピクチャ ${pictureId} に SS が無い、または列が空です。`);
       return;
     }
-    // Every entry sets up an animation, so the runtime drops each non-Permanent
-    // override; keep the saved copy in step.
-    overridesOf(pictureId).pruneForNewAnimation();
     let i = 0;
     const step = () => {
       const name = seq[i];
@@ -267,9 +301,7 @@ function boot(): void {
         );
       }
       try {
-        player.setAnimation(name);
-        player.loopCount = loop;
-        player.play();
+        if (playAnimation(player, name, loop, transition)) afterCut(pictureId);
       } catch (e: unknown) {
         clearLiveChain(pictureId);
         console.error('[ssplayer-rmmz] playSSSequence: failed to play:', e);
@@ -278,10 +310,99 @@ function boot(): void {
     step();
   });
 
+  // --- Tracks above track 0 ---
+  //
+  // Each command applies its change to the live player at once, when there is
+  // one set up, and records it on the picture, so save/load and a scene change
+  // lay the tracks again (SSPictureData.tracks). Track 0 is the picture's own
+  // animation, so these refuse it. A player that has no animation set up yet
+  // (trackCount 0, still loading) is left to the mount, which lays the saved
+  // list.
+
+  // Lay an animation on a track, mixed over (or added to) what is below.
+  reg(PLUGIN_NAME, 'setSSTrack', (args: Record<string, string>) => {
+    const pictureId = num(args.pictureId, 1);
+    const found = ssPicture(pictureId, 'setSSTrack');
+    const track = trackArg(args, 'setSSTrack');
+    if (!found || track === null) return;
+    const entry: SSSavedTrack = {
+      track,
+      animation: String(args.animation || ''),
+      alpha: num(args.alpha, 1),
+      blend: num(args.blend, 0) as SSTrackBlend,
+      loop: num(args.loop, -1),
+    };
+    if (!entry.animation) {
+      console.warn('[ssplayer-rmmz] setSSTrack: アニメーション名が空です。');
+      return;
+    }
+    const player = getLivePlayer(pictureId);
+    if (player && player.trackCount > 0) {
+      try {
+        if (!applySavedTrack(player, entry, transitionMs(args.transition))) return;
+      } catch (e: unknown) {
+        console.error('[ssplayer-rmmz] setSSTrack: failed to lay the track:', e);
+        return;
+      }
+    }
+    found.pic.setSSData({ ...found.cur, tracks: withSavedTrack(found.cur.tracks, entry) });
+  });
+
+  // Fade a track's alpha to a target over a time; the save keeps the target.
+  reg(PLUGIN_NAME, 'fadeSSTrack', function (this: any, args: Record<string, string>) {
+    const pictureId = num(args.pictureId, 1);
+    const found = ssPicture(pictureId, 'fadeSSTrack');
+    const track = trackArg(args, 'fadeSSTrack');
+    if (!found || track === null) return;
+    const entry = found.cur.tracks?.find((e) => e.track === track);
+    if (!entry) {
+      console.warn(`[ssplayer-rmmz] fadeSSTrack: ピクチャ ${pictureId} のトラック ${track} には何も置かれていません。`);
+      return;
+    }
+    const alpha = num(args.alpha, 0);
+    const duration = Math.max(0, num(args.duration, 500));
+    const player = getLivePlayer(pictureId);
+    const live = !!player && player.trackCount > 0;
+    if (live) {
+      try {
+        if (duration > 0) player!.fadeTrack(track, alpha, duration);
+        else player!.setTrackAlpha(track, alpha);
+      } catch (e: unknown) {
+        console.error('[ssplayer-rmmz] fadeSSTrack: failed to fade:', e);
+        return;
+      }
+    }
+    found.pic.setSSData({ ...found.cur, tracks: withSavedTrack(found.cur.tracks, { ...entry, alpha }) });
+    if (args.wait === 'true' && live && duration > 0) beginSSTrackFadeWait(this as any, pictureId, track);
+  });
+
+  // Empty a track.
+  reg(PLUGIN_NAME, 'clearSSTrack', (args: Record<string, string>) => {
+    const pictureId = num(args.pictureId, 1);
+    const found = ssPicture(pictureId, 'clearSSTrack');
+    const track = trackArg(args, 'clearSSTrack');
+    if (!found || track === null) return;
+    const player = getLivePlayer(pictureId);
+    if (player && track < player.trackCount) {
+      try {
+        player.clearTrack(track);
+      } catch (e: unknown) {
+        console.error('[ssplayer-rmmz] clearSSTrack: failed to clear:', e);
+      }
+    }
+    found.pic.setSSData({ ...found.cur, tracks: withoutSavedTrack(found.cur.tracks, track) });
+  });
+
   // Lip-sync: bind this picture as a talking portrait — plays `talk` while a
   // message is printing text and `idle` when it finishes (see messageTalk.ts).
   reg(PLUGIN_NAME, 'setSSTalk', (args: Record<string, string>) => {
-    setSSTalk(num(args.pictureId, 1), String(args.name || ''), String(args.talk || ''), String(args.idle || ''));
+    setSSTalk(
+      num(args.pictureId, 1),
+      String(args.name || ''),
+      String(args.talk || ''),
+      String(args.idle || ''),
+      transitionMs(args.transition),
+    );
   });
   reg(PLUGIN_NAME, 'clearSSTalk', (args: Record<string, string>) => {
     clearSSTalk(num(args.pictureId, 1));

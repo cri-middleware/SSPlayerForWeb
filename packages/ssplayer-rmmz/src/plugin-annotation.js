@@ -192,6 +192,12 @@
  * @type number
  * @min -1
  * @default -1
+ * @arg transition
+ * @text Transition (ms)
+ * @desc Crossfade from the current animation over this many ms. 0 = switch at once.
+ * @type number
+ * @min 0
+ * @default 0
  *
  * @command setSSSpeed
  * @text Set SS Speed
@@ -229,6 +235,12 @@
  * @type number
  * @min 1
  * @default 1
+ * @arg transition
+ * @text Transition (ms)
+ * @desc Crossfade into the one-shot, and back to the loop, over this many ms. 0 = switch at once.
+ * @type number
+ * @min 0
+ * @default 0
  *
  * @command playSSSequence
  * @text Play SS Sequence
@@ -250,6 +262,106 @@
  * @type number
  * @min -1
  * @default -1
+ * @arg transition
+ * @text Transition (ms)
+ * @desc Crossfade from each animation into the next over this many ms. 0 = switch at once.
+ * @type number
+ * @min 0
+ * @default 0
+ *
+ * @command setSSTrack
+ * @text Set SS Track
+ * @desc Lay an animation on a track above the picture's own (track 0), mixed over or added to it. Saved with the picture. Changing the animation without a crossfade empties the tracks.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg track
+ * @text Track
+ * @desc 1 or above. Higher tracks are applied over lower ones; track 0 is the picture's own animation.
+ * @type number
+ * @min 1
+ * @default 1
+ * @arg animation
+ * @text Animation Name
+ * @type string
+ * @default
+ * @arg alpha
+ * @text Alpha
+ * @desc How strongly the track applies (0 to 1).
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @default 1
+ * @arg blend
+ * @text Blend
+ * @desc Mix: blend toward this animation. Additive: add its offset from the setup pose (for gestures over a walk, for instance).
+ * @type select
+ * @option Mix
+ * @value 0
+ * @option Additive
+ * @value 1
+ * @default 0
+ * @arg loop
+ * @text Loop Count
+ * @desc -1 = infinite. A finished track holds its last frame until faded or cleared.
+ * @type number
+ * @min -1
+ * @default -1
+ * @arg transition
+ * @text Transition (ms)
+ * @desc Crossfade from what the track was playing over this many ms. 0 = switch at once.
+ * @type number
+ * @min 0
+ * @default 0
+ *
+ * @command fadeSSTrack
+ * @text Fade SS Track
+ * @desc Fade a track's alpha to a target over a time. A save taken mid-fade restores the faded state.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg track
+ * @text Track
+ * @type number
+ * @min 1
+ * @default 1
+ * @arg alpha
+ * @text Target Alpha
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @default 0
+ * @arg duration
+ * @text Duration (ms)
+ * @desc 0 = set at once.
+ * @type number
+ * @min 0
+ * @default 500
+ * @arg wait
+ * @text Wait for Completion
+ * @type boolean
+ * @default false
+ *
+ * @command clearSSTrack
+ * @text Clear SS Track
+ * @desc Empty a track. To take it off gradually, fade it to 0 first.
+ * @arg pictureId
+ * @text Picture Id
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg track
+ * @text Track
+ * @type number
+ * @min 1
+ * @default 1
  *
  * @command setSSTalk
  * @text Set SS Talk (lip-sync)
@@ -275,6 +387,12 @@
  * @desc Animation to loop when the message finishes.
  * @type string
  * @default
+ * @arg transition
+ * @text Transition (ms)
+ * @desc Crossfade between talk and idle over this many ms. 0 = switch at once.
+ * @type number
+ * @min 0
+ * @default 0
  *
  * @command clearSSTalk
  * @text Clear SS Talk
@@ -629,6 +747,12 @@
  * @type number
  * @min -1
  * @default -1
+ * @arg transition
+ * @text クロスフェード時間（ミリ秒）
+ * @desc 今のアニメからこのミリ秒をかけてクロスフェードします。0 = すぐに切り替え。
+ * @type number
+ * @min 0
+ * @default 0
  *
  * @command setSSSpeed
  * @text SS再生速度
@@ -666,6 +790,12 @@
  * @type number
  * @min 1
  * @default 1
+ * @arg transition
+ * @text クロスフェード時間（ミリ秒）
+ * @desc ワンショットへ入るときと、ループへ戻るときに、このミリ秒をかけてクロスフェードします。0 = すぐに切り替え。
+ * @type number
+ * @min 0
+ * @default 0
  *
  * @command playSSSequence
  * @text SS連続再生
@@ -687,6 +817,106 @@
  * @type number
  * @min -1
  * @default -1
+ * @arg transition
+ * @text クロスフェード時間（ミリ秒）
+ * @desc 各アニメから次のアニメへ、このミリ秒をかけてクロスフェードします。0 = すぐに切り替え。
+ * @type number
+ * @min 0
+ * @default 0
+ *
+ * @command setSSTrack
+ * @text SSトラック設定
+ * @desc ピクチャのアニメ（トラック 0）の上のトラックにアニメを重ねます。ミックスまたは加算で合成します。設定はセーブされます。クロスフェードせずにアニメを切り替えると、トラックは空になります。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg track
+ * @text トラック番号
+ * @desc 1 以上。番号の大きいトラックほど上に重なります。トラック 0 はピクチャ自身のアニメです。
+ * @type number
+ * @min 1
+ * @default 1
+ * @arg animation
+ * @text アニメーション名
+ * @type string
+ * @default
+ * @arg alpha
+ * @text 強さ（α）
+ * @desc トラックをどれだけ効かせるか（0〜1）。
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @default 1
+ * @arg blend
+ * @text 合成方法
+ * @desc ミックス: このアニメへ寄せます。加算: セットアップポーズからの差分を足します（歩きに手振りを足す場合など）。
+ * @type select
+ * @option ミックス
+ * @value 0
+ * @option 加算
+ * @value 1
+ * @default 0
+ * @arg loop
+ * @text ループ回数
+ * @desc -1 = 無限。再生し終えたトラックは、フェードか解除をするまで最後のフレームのまま残ります。
+ * @type number
+ * @min -1
+ * @default -1
+ * @arg transition
+ * @text クロスフェード時間（ミリ秒）
+ * @desc そのトラックで再生中のアニメから、このミリ秒をかけてクロスフェードします。0 = すぐに切り替え。
+ * @type number
+ * @min 0
+ * @default 0
+ *
+ * @command fadeSSTrack
+ * @text SSトラックフェード
+ * @desc トラックの強さ（α）を、指定の時間をかけて目標値まで変えます。フェード中にセーブした場合は、フェード後の状態で復元します。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg track
+ * @text トラック番号
+ * @type number
+ * @min 1
+ * @default 1
+ * @arg alpha
+ * @text 目標の強さ（α）
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @default 0
+ * @arg duration
+ * @text 時間（ミリ秒）
+ * @desc 0 = すぐに変えます。
+ * @type number
+ * @min 0
+ * @default 500
+ * @arg wait
+ * @text 完了までウェイト
+ * @type boolean
+ * @default false
+ *
+ * @command clearSSTrack
+ * @text SSトラック解除
+ * @desc トラックを空にします。徐々に消したい場合は、先に強さ 0 へフェードしてください。
+ * @arg pictureId
+ * @text ピクチャ番号
+ * @type number
+ * @min 1
+ * @max 100
+ * @default 1
+ * @arg track
+ * @text トラック番号
+ * @type number
+ * @min 1
+ * @default 1
  *
  * @command setSSTalk
  * @text SSリップシンク設定
@@ -712,6 +942,12 @@
  * @desc 文章が終わったらループ再生するアニメ。
  * @type string
  * @default
+ * @arg transition
+ * @text クロスフェード時間（ミリ秒）
+ * @desc 発話と待機の間を、このミリ秒をかけてクロスフェードします。0 = すぐに切り替え。
+ * @type number
+ * @min 0
+ * @default 0
  *
  * @command clearSSTalk
  * @text SSリップシンク解除
