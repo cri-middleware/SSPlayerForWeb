@@ -14,7 +14,7 @@ An agent can run every block. A person sorts the scan's matches in step 3, decid
 
 ### 1. Decide the versions
 
-Look at what each package gained since its previous tag. A package that depends on another through `workspace:^` needs a release of its own only when it needs what the other added. One dependency is stricter than that: `ssplayer-webgl` and `ssplayer-pixi` build `ssplayer-core`'s wasm glue into their CDN bundles, while the CDN snippets load the runtime itself from `ssplayer-core`'s version, and the two work only as a pair. So once `scripts/SDK_VERSION.txt` names another SDK than it did at `ssplayer-core`'s tag, releasing either player means releasing `ssplayer-core` too, and `scripts/build-release.sh` stops the run otherwise. A version with a prerelease part (`7.0.0-beta.2`) goes to npm under that word's dist-tag (`beta`), and only a full release moves `latest`.
+Look at what each package gained since its previous tag. A package that depends on another through `workspace:^` needs a release of its own only when it needs what the other added. One dependency is stricter than that: `ssplayer-webgl` and `ssplayer-pixi` build `ssplayer-core`'s wasm glue into their CDN bundles, while the CDN snippets load the runtime itself from `ssplayer-core`'s version, and the two work only as a pair. So once `scripts/SDK_VERSION.txt` names another SDK than it did at `ssplayer-core`'s tag, releasing either player means releasing `ssplayer-core` too, and `scripts/build-release.sh` stops the run otherwise. A version with a prerelease part (`7.0.0-beta.2`) goes to npm under `latest` until the package has a full release there, and under its word (`beta`) after that (`scripts/npm-dist-tag.sh`).
 
 ```bash
 git fetch origin --tags
@@ -216,7 +216,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 ### 1. バージョンを決める
 
-各パッケージが前回のタグから何を得たかを見ます。`workspace:^` で別のパッケージに依存するパッケージは、相手が足したものを必要とするときだけ自分もリリースします。ただし 1 か所だけ、これより厳しい依存があります。`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を組み込み、CDN スニペットはランタイム本体を `ssplayer-core` の版から読み込みます。この 2 つは対でしか動きません。そのため `scripts/SDK_VERSION.txt` の SDK が `ssplayer-core` のタグの時点と変わっていれば、どちらかのプレイヤーをリリースするときは `ssplayer-core` もリリースします。そうしないと `scripts/build-release.sh` が実行を止めます。プレリリース部分のあるバージョン（`7.0.0-beta.2`）は、その語の dist-tag（`beta`）で npm に出ます。`latest` を動かすのは正式版だけです。
+各パッケージが前回のタグから何を得たかを見ます。`workspace:^` で別のパッケージに依存するパッケージは、相手が足したものを必要とするときだけ自分もリリースします。ただし 1 か所だけ、これより厳しい依存があります。`ssplayer-webgl` と `ssplayer-pixi` は CDN 用のバンドルに `ssplayer-core` の wasm glue を組み込み、CDN スニペットはランタイム本体を `ssplayer-core` の版から読み込みます。この 2 つは対でしか動きません。そのため `scripts/SDK_VERSION.txt` の SDK が `ssplayer-core` のタグの時点と変わっていれば、どちらかのプレイヤーをリリースするときは `ssplayer-core` もリリースします。そうしないと `scripts/build-release.sh` が実行を止めます。プレリリース部分のあるバージョン（`7.0.0-beta.2`）は、パッケージに正式版が出るまでは `latest`、出た後はその語（`beta`）の dist-tag で npm に出ます（`scripts/npm-dist-tag.sh`）。
 
 ```bash
 git fetch origin --tags
