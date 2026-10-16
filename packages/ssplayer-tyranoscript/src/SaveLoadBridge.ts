@@ -1,4 +1,4 @@
-import type { SSPartOverride } from '@spritestudio/ssplayer-webgl';
+import type { SSPartOverride, SSSavedTrack } from '@spritestudio/ssplayer-webgl';
 import type {
   PlayerRegistry,
   SSCharaBinding,
@@ -78,6 +78,8 @@ export interface SavedPlayer {
   speed?: number;
   playback?: SSPlayback;
   section?: SSSection;
+  /** `[ss_track]`'s tracks, re-laid on restore. A fade in flight is saved where it ends. */
+  tracks?: SSSavedTrack[];
 }
 
 function saveSlot(kag: TyranoKag): Record<string, SavedPlayer> {
@@ -128,6 +130,7 @@ export function persistPlayers(kag: TyranoKag, registry: PlayerRegistry): void {
       speed: meta.speed,
       playback: meta.playback,
       section: meta.section,
+      tracks: meta.tracks,
     };
   }
   const stat = kag.stat as { f?: Record<string, unknown> };

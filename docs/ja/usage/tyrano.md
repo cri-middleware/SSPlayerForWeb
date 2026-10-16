@@ -96,11 +96,14 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 | --- | --- | --- |
 | `[ss_init]` | **音声設定**。ランタイムは `[plugin name="ssplayer"]` が起動済みなので、このタグは音声設定を変える用途だけです | `audio=`, `sounddir=`, `soundext=`, `sevolume=`（`wasm=` はプラグインが指定） |
 | `[ss_new]` | プレイヤー生成 → ssab ロード → レイヤーへ挿入 → 再生 | `name=`(必須) `storage=`(必須) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
-| `[ss_play]` | 再生 / アニメ切替（続けて再生するアニメも指定可） | `name=`(必須) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
-| `[ss_show]` | プレイヤーを表示（位置指定・登場アニメ・フェード） | `name=`(必須) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
+| `[ss_play]` | 再生 / アニメ切替（続けて再生するアニメも指定可） | `name=`(必須) `anime=` `transition=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
+| `[ss_show]` | プレイヤーを表示（位置指定・登場アニメ・フェード） | `name=`(必須) `x=` `y=` `scale=` `zindex=` `anime=` `transition=` `loop=` `next=` `time=` `wait=` |
 | `[ss_hide]` | 破棄せずに非表示にする（ロード状態は維持） | `name=`(必須) `time=` `wait=` |
 | `[ss_fadein]` / `[ss_fadeout]` | 全プレイヤーを一括フェード（シーン切替向け） | `time=` `wait=` |
-| `[ss_chara]` | 話者と連動し、発話中はトークアニメを再生 | `name=`(必須) `jname=` `talk=` `idle=` |
+| `[ss_chara]` | 話者と連動し、発話中はトークアニメを再生 | `name=`(必須) `jname=` `talk=` `idle=` `transition=` |
+| `[ss_track]` | キャラ自身のアニメ（トラック 0）より上のトラックにアニメを重ねる | `name=`(必須) `track=`(必須) `anime=`(必須) `alpha=` `blend=` `loop=` `transition=` |
+| `[ss_track_fade]` | トラックの効き具合をフェード | `name=`(必須) `track=`(必須) `alpha=` `time=` `wait=` |
+| `[ss_track_clear]` | トラックを空にする | `name=`(必須) `track=`(必須) |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | 個別プレイヤーの停止 / 一時停止 / 再開 | `name=`(必須) |
 | `[ss_stop_audio]` | プレイヤーが鳴らした音をすぐ止める | `name=`(必須) |
 | `[ss_speed]` | 再生速度（`1` = 等速） | `name=`(必須) `speed=`(必須) |
@@ -147,6 +150,31 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 
 `next=` を指定して `loop=` を省略すると 1 回再生になります（無限ループには終わりが来ないため）。
 `nextloop=` は連鎖先のループ回数です。予約された連鎖は次の `[ss_play]` で取り消されます。
+
+### クロスフェードとトラック
+
+`[ss_play]` / `[ss_show]` に `transition=`（ms）を指定すると、`anime=` への切り替えを即座に行う代わりに、いま表示中の絵からその時間をかけてクロスフェードします。`0` または省略時はこれまでどおり即座に切り替えます。`[ss_show]` の `time=` は従来どおり画面に現れるときのフェードです。`[ss_chara]` に指定すると、トークアニメと待機アニメの間をクロスフェードします。`next=` の続きは即座に切り替わります。
+
+```
+[ss_play name="akane" anime="smile" transition="300"]   ; 0.3 秒かけて smile へ
+```
+
+クロスフェードではパーツ上書きもトラックも残ります。別のアニメへ即座に切り替えると `permanent` 以外のパーツ上書きが解除され、トラックも空になります。再生中と同じアニメへの切り替えでは何も変わりません。
+
+トラックは、キャラ自身のアニメ（`[ss_play]` が設定するトラック 0）の**上に**別のアニメを重ねます。歩きの上に手振り、ポーズの上に表情、といった使い方です:
+
+```
+[ss_track name="akane" track="1" anime="wave" blend="add" loop="false"]  ; 歩きの上に手振り
+[ss_track_fade name="akane" track="1" alpha="0" time="500"]               ; フェードアウト
+[ss_track_clear name="akane" track="1"]                                   ; トラックを空に
+```
+
+- `track=` は `1` 以上です。トラック 0 はエラーになります。
+- `alpha=` はトラックの効き具合（既定 `1`）。`blend=` は `mix`（既定。このアニメへ寄せる）か `add`（セットアップポーズからの差分を加算）です。
+- `loop=` はほかのタグと同じ書き方です。再生し終えたトラックは、フェードかクリアするまで最終フレームを保ちます。`transition=` は、そのトラックで再生していたアニメからクロスフェードします。
+- `[ss_track_fade]` は `alpha=`（既定 `0`）まで `time=` ms（既定 `500`、`0` で即時）かけてフェードします。`wait="true"`（既定）ならフェードが終わるまでシナリオを止めますが、一時停止中・停止中のプレイヤーでは待ちません。`[ss_track]` で何も重ねていないトラックを指定するとエラーになります。
+- `[ss_track_clear]` はトラックを即座に空にします。徐々に消すには、先に `0` までフェードしてください。
+- トラックはセーブに含まれます。`[ss_track_fade]` の途中でセーブした場合は、フェードし終えた状態で復元されます。
 
 ### 速度・シーク・区間
 
@@ -204,7 +232,7 @@ SpriteStudio のアニメ単位で行うものです:
 - `priority=` は `keyframe`（次のキーフレームに譲る）/ `anime`（既定・アニメが変わるまで保持）/
   `permanent`（アニメ変更をまたいで維持）、数値 `0`〜`2` でも可
 - `cellmap=` に `.ssce` 拡張子は付けません
-- **アニメを切り替えると `permanent` 以外の上書きは解除されます。** セーブ内容も同時に整理されるため、ロード時に復活することはありません。表示（`[ss_part_visible]`）に優先度はなく、アニメ切替で必ず解除されます
+- **アニメを切り替えると `permanent` 以外の上書きは解除されます。** セーブ内容も同時に整理されるため、ロード時に復活することはありません。表示（`[ss_part_visible]`）に優先度はなく、アニメ切替で必ず解除されます。`transition=` によるクロスフェードでは、どれも解除されません
 
 ## 5. 移動・エフェクトは `[anim]` / `[kanim]` で
 
@@ -237,9 +265,9 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 ## 6. セーブ / ロードとライフサイクル
 
 - **通常のテキスト待ち（`[l]` / `[p]`）中も再生は継続します** — これが期待挙動です。メニューやセーブ画面で止めたい場合は `[ss_pause_all]` / `[ss_resume_all]` を使います。画面外・タブ非表示では自動的に一時停止します。
-- **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。セーブした時点のフレームから、速度・方向・区間もそのままで再開します。
+- **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。セーブした時点のフレームから、速度・方向・区間・トラックもそのままで再開します。
 - **シーン切替**: レイヤーをクリアすると（`[freeimage]` など、原因を問わず）そのレイヤー上のプレイヤーは自動的に解放されます。`[ss_free]` / `[ss_free_all]` は、レイヤーに触れずに個別に解放したい場合に使います。
-- **スキップ**: `data/system/Config.tjs` の `skipEffectIgnore = true`（既定）のままスキップしている間は、`[chara_show]` と同じく SS の演出も短縮されます。`[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` / `[ss_move]` の `time=` はエンジンのスキップ時の長さになり、`[ss_wait]` は待ちません。アニメ自体は再生を続けます。`[ss_wait_signal]` は、続く処理がシグナルで分岐しうるため、スキップ中も待ちます。
+- **スキップ**: `data/system/Config.tjs` の `skipEffectIgnore = true`（既定）のままスキップしている間は、`[chara_show]` と同じく SS の演出も短縮されます。`[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` / `[ss_move]` / `[ss_track_fade]` の `time=` と、`[ss_play]` / `[ss_show]` / `[ss_track]` / `[ss_chara]` の `transition=` はエンジンのスキップ時の長さになり、`[ss_wait]` は待ちません。アニメ自体は再生を続けます。`[ss_wait_signal]` は、続く処理がシグナルで分岐しうるため、スキップ中も待ちます。
 
 ## 7. 音声
 

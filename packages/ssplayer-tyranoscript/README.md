@@ -126,11 +126,14 @@ A single `.ssab` can hold several animations (idle / smile / jump …); switch b
 | --- | --- | --- |
 | `[ss_init]` | **Sound settings.** The runtime is already started by `[plugin name="ssplayer"]`, so this is only for changing audio routing | `audio=`, `sounddir=`, `soundext=`, `sevolume=` (`wasm=` is set by the plugin) |
 | `[ss_new]` | Create player → load ssab → insert on the layer → play | `name=`(req) `storage=`(req) `anime=` `layer=` `page=` `x=` `y=` `scale=` `loop=` `visible=` `zindex=` |
-| `[ss_play]` | Play / switch animation, optionally queueing a follow-up | `name=`(req) `anime=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
-| `[ss_show]` | Put a player on screen (reposition / entrance animation / fade) | `name=`(req) `x=` `y=` `scale=` `zindex=` `anime=` `loop=` `next=` `time=` `wait=` |
+| `[ss_play]` | Play / switch animation, optionally queueing a follow-up | `name=`(req) `anime=` `transition=` `loop=` `start=` `next=` `nextloop=` `atframe=` |
+| `[ss_show]` | Put a player on screen (reposition / entrance animation / fade) | `name=`(req) `x=` `y=` `scale=` `zindex=` `anime=` `transition=` `loop=` `next=` `time=` `wait=` |
 | `[ss_hide]` | Take a player off screen, keeping it loaded | `name=`(req) `time=` `wait=` |
 | `[ss_fadein]` / `[ss_fadeout]` | Fade every player at once (scene changes) | `time=` `wait=` |
-| `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` |
+| `[ss_chara]` | Link a player to a speaker: talk animation while they speak | `name=`(req) `jname=` `talk=` `idle=` `transition=` |
+| `[ss_track]` | Lay an animation on a track above the character's own (track 0) | `name=`(req) `track=`(req) `anime=`(req) `alpha=` `blend=` `loop=` `transition=` |
+| `[ss_track_fade]` | Fade how strongly a track applies | `name=`(req) `track=`(req) `alpha=` `time=` `wait=` |
+| `[ss_track_clear]` | Empty a track | `name=`(req) `track=`(req) |
 | `[ss_stop]` / `[ss_pause]` / `[ss_resume]` | Per-player stop / pause / resume | `name=`(req) |
 | `[ss_stop_audio]` | Stop the sounds a player started, now | `name=`(req) |
 | `[ss_speed]` | Playback speed (`1` = as authored) | `name=`(req) `speed=`(req) |
@@ -167,9 +170,10 @@ the contributor section.
 - `[ss_play]`'s `start`: start frame (default `-1` = from the current frame).
 - `visible`: `false` loads the player **without showing it** (preload); reveal it later with `[ss_show]`.
 - `zindex`: stacking order *within one layer*. Without it, players on the same layer stack in creation order.
-- `time`: fade duration in ms (`[ss_show]` / `[ss_hide]` default `0` = instant; `[ss_fadein]` / `[ss_fadeout]` default `1000`).
+- `time`: fade duration in ms (`[ss_show]` / `[ss_hide]` default `0` = instant; `[ss_fadein]` / `[ss_fadeout]` default `1000`; `[ss_track_fade]` default `500`).
 - `wait`: `true` = hold the scenario until the effect finishes. Default `true` for the fades, `false` for `[ss_move]`.
 - `next` / `nextloop` / `atframe`: see [Chaining animations](#chaining-animations-without-stopping-the-scenario).
+- `transition`: crossfade time in ms (default `0` = cut); see [Crossfades and tracks](#crossfades-and-tracks).
 - `command` / `var`: see [Waiting for a signal](#waiting-for-a-signal).
 - `[ss_speed]` / `[ss_seek]` / `[ss_section]` / `[ss_direction]`: see [Speed, seeking and sections](#speed-seeking-and-sections).
 
@@ -214,6 +218,45 @@ player itself, so the scenario never stops:
   overlap the tail of one animation with the start of the next. An animation that
   ends before reaching the frame switches at its end.
 - The queued follow-up is cancelled by the next `[ss_play]` / `[ss_show anime=]`.
+
+## Crossfades and tracks
+
+`transition=` (ms) on `[ss_play]` / `[ss_show]` crossfades from what is on screen to the
+new `anime=` instead of cutting; `0` or omitted cuts, as before. On `[ss_chara]` it
+crossfades between the talk and idle animations.
+
+```
+[ss_play name="akane" anime="smile" transition="300"]   ; blend into smile over 0.3 s
+```
+
+- A crossfade keeps the part overrides and the tracks. A cut to another animation clears
+  the part overrides that are not `permanent`, and empties the tracks; cutting to the
+  animation already playing changes nothing.
+- On `[ss_show]`, `transition=` is for the entrance `anime=`; `time=` is still the fade
+  onto the screen.
+- A `next=` follow-up still cuts.
+
+Tracks lay more animations **above** the character's own one (track 0, the one `[ss_play]`
+sets) — a gesture over a walk, an expression over a pose:
+
+```
+[ss_track name="akane" track="1" anime="wave" blend="add" loop="false"]  ; wave over the walk
+[ss_track_fade name="akane" track="1" alpha="0" time="500"]               ; fade it out
+[ss_track_clear name="akane" track="1"]                                   ; then empty the track
+```
+
+- `track=` is `1` or above; track 0 is refused.
+- `alpha=` is how strongly the track applies (default `1`). `blend=` is `mix` (default —
+  blend toward this animation) or `add` (add its offset from the setup pose).
+- `loop=` works as everywhere else; a finished track holds its last frame until it is
+  faded or cleared.
+- `transition=` crossfades from what the track was playing.
+- `[ss_track_fade]` fades to `alpha=` (default `0`) over `time=` ms (default `500`, `0` = at
+  once). `wait="true"` (the default) holds the scenario until the fade ends, but not on a
+  paused or stopped player. It fails on a track `[ss_track]` has not laid anything on.
+- `[ss_track_clear]` empties a track at once; fade it to `0` first to take it off gradually.
+- Tracks are saved. A save taken during a `[ss_track_fade]` restores the track where the
+  fade ends.
 
 ## Speed, seeking and sections
 
@@ -323,11 +366,12 @@ just like any character:
 - **Skip**: while the game is skipping with `skipEffectIgnore = true` in
   `data/system/Config.tjs` (the default), SS effects are cut the way `[chara_show]`'s
   are. `time=` on `[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` /
-  `[ss_move]` becomes the engine's skip duration, and `[ss_wait]` does not wait. The
+  `[ss_move]` / `[ss_track_fade]` and `transition=` on `[ss_play]` / `[ss_show]` /
+  `[ss_track]` / `[ss_chara]` become the engine's skip duration, and `[ss_wait]` does not wait. The
   animations themselves keep playing. `[ss_wait_signal]` still waits, since what follows
   may branch on the signal.
-- Visibility, stacking order, a queued `next=` follow-up, `[ss_chara]` bindings, and
-  the speed, direction and section all survive a save/load, so `[ss_restore]` puts the
+- Visibility, stacking order, a queued `next=` follow-up, `[ss_chara]` bindings, the
+  tracks, and the speed, direction and section all survive a save/load, so `[ss_restore]` puts the
   scene back as it was.
 
 ## Audio

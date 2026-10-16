@@ -2,10 +2,6 @@
 
 This file lists unfinished work that is specific to the TyranoScript plugin; work for the Web Player as a whole is in the [root ROADMAP](../../ROADMAP.md), and the editor side is in the [ssplayer-tyranobuilder roadmap](../ssplayer-tyranobuilder/ROADMAP.md). Technical constraints live in [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations), and work in the underlying Rust / WebAssembly engine lives in the [SDK ROADMAP](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/ROADMAP.md).
 
-## Playback & rendering
-
-- [ ] **Crossfade tag** — A `[ss_play]` option or an `[ss_crossfade]` tag, the counterpart of the Spine plugin's `[spine_mix_anim]`, with the track state carried through save and restore. The track calls are on `ssplayer-webgl`'s `SSPlayer` (`crossfade`, `setTrackAnimation`, …); what is missing is the tag and the save / restore of the track state.
-
 ## Distribution & verification
 
 - [ ] **Submit to the Tyrano plugin library** — `plugin/README.md` is laid out for the plugin.tyrano.jp listing; the submission itself is not made.
