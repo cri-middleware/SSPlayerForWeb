@@ -12,12 +12,13 @@ minimumReleaseAgeExclude:
   - pixi.js@8.22.0
   - '@types/node@26.6.4'
   - typedoc-plugin-markdown@4.13.1
-  - '@vitest/mocker@5.0.4'
-  - '@vitest/spy@5.0.4'
-  - vitest@5.0.4
+  - '@vitest/mocker@5.0.5'
+  - '@vitest/spy@5.0.5'
+  - vitest@5.0.5
   - '@mermaid-js/parser@2.0.1'
   - mermaid@12.2.0
   - data-urls@8.0.0
   - tr46@7.0.0
   - whatwg-url@17.2.0
   - '@asamuzakjp/dom-selector@10.0.3'
+  - cytoscape@3.34.4
