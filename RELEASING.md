@@ -27,6 +27,8 @@ prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refna
 [ -z "$prev" ] || git diff --stat "$prev" origin/main -- scripts/SDK_VERSION.txt   # any output: a player release takes ssplayer-core along
 ```
 
+The release ships the SDK release `scripts/SDK_VERSION.txt` names, while CI builds and tests the `SpriteStudio-SDK` submodule, so point the submodule at that release first, in an ordinary pull request into `main`; the release stops on a submodule that is elsewhere.
+
 A run releases every package whose current version has no Release yet, named or not. So the first release names every package at the version it already has, or leaves the plugins out with `-f release_plugins=false`:
 
 ```text
@@ -228,6 +230,8 @@ done
 prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refname | head -n 1)
 [ -z "$prev" ] || git diff --stat "$prev" origin/main -- scripts/SDK_VERSION.txt   # 何か出たら、プレイヤーのリリースに ssplayer-core も含める
 ```
+
+リリースは `scripts/SDK_VERSION.txt` が指す SDK のリリースを同梱し、CI は `SpriteStudio-SDK` submodule をビルドして試します。そこで先に、通常のプルリクエストで `main` の submodule をそのリリースに合わせておきます。submodule が別のコミットにあると、リリースは止まります。
 
 run は、指定したかどうかに関わらず、現在のバージョンにまだ Release が無いパッケージをすべて出します。そのため初回のリリースでは、全パッケージをいま持っているバージョンのまま指定するか、`-f release_plugins=false` でプラグインを外します。
 

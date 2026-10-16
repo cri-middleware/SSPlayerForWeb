@@ -370,6 +370,29 @@ try {
     # scripts/SDK_VERSION.txt -- what release.yml does; sdk=build compiles it
     # from the submodule in release mode, which is the way through when that SDK
     # release does not exist yet.
+    #
+    # sdk=download ships that release while CI builds and tests the submodule,
+    # and packages/ssplayer-core/src/ss/ is generated from it: the two have to be
+    # the same commit, or what ships is not what was tested.
+    if ($opts.sdk -eq "download") {
+        $sdkPin = (Get-Content (Join-Path $ROOT_DIR "scripts/SDK_VERSION.txt") -Raw).Trim()
+        $sdkUrl = "$(& git -C $ROOT_DIR config -f .gitmodules submodule.SpriteStudio-SDK.url)".Trim()
+        $sdkHave = "$(& git -C $ROOT_DIR rev-parse HEAD:SpriteStudio-SDK)".Trim()
+        $sdkWant = ""
+        $sdkRefs = @(& git ls-remote $sdkUrl "refs/tags/$sdkPin" "refs/tags/$sdkPin^{}")
+        if ($LASTEXITCODE -ne 0) { Fail "could not list the tags of $sdkUrl" }
+        foreach ($line in $sdkRefs) {
+            $sha, $ref = $line -split "`t"
+            if ($ref -eq "refs/tags/$sdkPin^{}") { $sdkWant = $sha; break }
+            if ($ref -eq "refs/tags/$sdkPin") { $sdkWant = $sha }
+        }
+        if ($sdkHave -ne $sdkWant) {
+            $wantText = if ($sdkWant) { $sdkWant } else { "no such tag" }
+            [Console]::Error.WriteLine("${APP}: the SpriteStudio-SDK submodule is at $sdkHave, not at $sdkPin ($wantText), which scripts/SDK_VERSION.txt names")
+            Fail "CI tests the submodule and sdk=download ships $sdkPin -- point the submodule at that release, or pass sdk=build"
+        }
+        Write-Host "   SpriteStudio-SDK submodule => $sdkPin"
+    }
     $wasmWhat = switch ($opts.sdk) {
         "download" { "download the SDK wasm (runtime, no-SIMD runtime, converter)" }
         "build"    { "build the SDK wasm from source (release mode)" }
