@@ -6,7 +6,8 @@
 # Strategy: rebuild-all. The artifact-based Pages deploy replaces the whole site
 # on every run, so keeping past versions means rebuilding all of them each time.
 # Each version's converter wasm is not tracked in git, so it is fetched on demand
-# from the SpriteStudio-SDK Releases for that version's sdk tag in versions.json.
+# from the SpriteStudio-SDK Releases for that version's sdk tag in versions.json,
+# or scripts/SDK_VERSION.txt's for the entry that names none.
 #
 # App source per version:
 #   - No "ref" field  -> built from the current working tree (the common case;
@@ -149,7 +150,7 @@ LATEST="$(jq -r '.latest' "$MANIFEST")"
 # aborts the whole script if any single version fails to build.
 while read -r row; do
   SCHEMA="$(jq -r '.schema' <<<"$row")"
-  SDK="$(jq -r '.sdk' <<<"$row")"
+  SDK="$(jq -r --arg local "$LOCAL_SDK" '.sdk // $local' <<<"$row")"
   REF="$(jq -r '.ref // empty' <<<"$row")"
 
   if [ -n "$REF" ]; then

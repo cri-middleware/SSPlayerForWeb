@@ -47,16 +47,16 @@ description: Web 版 Player がまだ対応していないこと、ブラウザ�
 レンダラーは npm パッケージですが、フレームワーク連携はホスト側のプラグイン機構が読み込む
 IIFE バンドルとして提供されるため、**npm からはインストールできません**。
 
-| パッケージ | 入手方法 | ステータス |
-|---|---|---|
-| `@spritestudio/ssplayer-core` | npm | beta |
-| `@spritestudio/ssplayer-webgl` | npm | beta |
-| `@spritestudio/ssplayer-pixi` | npm | beta |
-| `@spritestudio/ssconverter-core` | npm | beta |
-| `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#building-from-source) | beta |
-| `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#building-from-source) | beta |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#building-from-source) | beta |
-| `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI | beta |
+| パッケージ | 入手方法 |
+|---|---|
+| `@spritestudio/ssplayer-core` | npm |
+| `@spritestudio/ssplayer-webgl` | npm |
+| `@spritestudio/ssplayer-pixi` | npm |
+| `@spritestudio/ssconverter-core` | npm |
+| `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](/ja/usage/rmmz#building-from-source) |
+| `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#building-from-source) |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#building-from-source) |
+| `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI |
 
 ## RPG ツクール MZ（beta）
 

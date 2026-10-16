@@ -8,7 +8,8 @@
 # Strategy: rebuild-all. The artifact-based Pages deploy replaces the whole site
 # on every run, so keeping past versions means rebuilding all of them each time.
 # Each version's converter wasm is not tracked in git, so it is fetched on demand
-# from the SpriteStudio-SDK Releases for that version's sdk tag in versions.json.
+# from the SpriteStudio-SDK Releases for that version's sdk tag in versions.json,
+# or scripts/SDK_VERSION.txt's for the entry that names none.
 #
 # App source per version:
 #   - No "ref" field  -> built from the current working tree (the common case;
@@ -195,6 +196,7 @@ try {
     foreach ($version in $manifestData.versions) {
         $schema = $version.schema
         $sdk = $version.sdk
+        if (-not $sdk) { $sdk = $LOCAL_SDK }
         $ref = $version.ref
 
         if ($ref) {
