@@ -5,7 +5,7 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 # ティラノビルダーで使う
 
 ::: warning ベータ版
-`@spritestudio/ssplayer-tyranobuilder` は **ベータ版**です。コンポーネント構成やフォルダ構成は `7.0.0` までに変わる可能性があります。動作確認は **TyranoBuilder Ver 3.00**
+`@spritestudio/ssplayer-tyranobuilder` は **ベータ版**です。動作確認は **TyranoBuilder Ver 3.00**
 （Electron 24.8.8）の macOS で行っています。Windows は未検証です。
 :::
 

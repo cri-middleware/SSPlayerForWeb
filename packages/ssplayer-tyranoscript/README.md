@@ -14,8 +14,7 @@ writing `[ss_*]` tags in your scenario — no coding required.
 > **Status:** beta.
 > **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) — the standalone renderer this plugin is built on.
 
-> ⚠️ **Beta.** The scenario-authoring tags are complete, but names and behavior may
-> still change before `7.0.0`. Open work lives in the repo
+> ⚠️ **Beta.** Open work lives in the repo
 > ([`ROADMAP.md`](./ROADMAP.md)).
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —

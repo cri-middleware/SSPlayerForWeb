@@ -7,7 +7,7 @@
 > **対象読者:** TyranoScript を使うシナリオ作者 — SpriteStudio アニメ用の `[ss_*]` タグを追加するドロップイン・プラグインです。
 > **TyranoBuilder** をお使いの場合は [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) を導入してください。本パッケージのランタイムを内包した上で、コンポーネントパレットからの配置と `.sspj` の自動変換に対応します。**ステータス:** beta。**目的が違う場合:** → [ssplayer-webgl](../ssplayer-webgl/README.ja.md) — このプラグインの土台になっている単体レンダラです。
 
-> ⚠️ **beta。** シナリオ作成用のタグは揃っていますが、`7.0.0` までに名前や挙動が変わる可能性はあります。未完了の作業はリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
+> ⚠️ **beta。** 未完了の作業はリポジトリの [`ROADMAP.md`](./ROADMAP.md) にあります。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 同梱の TyranoScript サンプルをブラウザで動かせます。

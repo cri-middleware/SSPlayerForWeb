@@ -5,8 +5,7 @@ description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto impo
 # TyranoBuilder
 
 ::: warning Beta
-`@spritestudio/ssplayer-tyranobuilder` is in **beta**. The component set and
-the folder layout may still change before `7.0.0`. Verified on **TyranoBuilder Ver 3.00**
+`@spritestudio/ssplayer-tyranobuilder` is in **beta**. Verified on **TyranoBuilder Ver 3.00**
 (Electron 24.8.8) on macOS; Windows is untested.
 :::
 
