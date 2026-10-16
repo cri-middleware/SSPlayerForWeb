@@ -17,7 +17,7 @@ description: エンジンに依存しない単体の WebGL レンダラー。ss-
 npm で公開されています。
 
 ```bash
-pnpm add @spritestudio/ssplayer-webgl@beta
+pnpm add @spritestudio/ssplayer-webgl
 ```
 
 ## ポイント

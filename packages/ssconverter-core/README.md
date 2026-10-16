@@ -5,10 +5,8 @@
 Engine-agnostic WebAssembly core that converts SpriteStudio projects (`.sspj`) to runtime binaries (`.ssab` / `.ssqb`).
 
 > **Who this is for:** developers embedding `.sspj → .ssab` conversion into their own app, service, worker, or build pipeline — a bytes-in/bytes-out engine, no filesystem or DOM required.
-> **Install:** `npm install @spritestudio/ssconverter-core@beta`
+> **Install:** `npm install @spritestudio/ssconverter-core`
 > **Not what you need?** → [ssconverter-web](../ssconverter-web) — just want to convert a file? Use the browser tool + CLI instead.
-
-> **Beta line.** While 7.0.0 is in prerelease the packages publish under the `beta` dist-tag only, so the `@beta` above is required; it becomes optional once 7.0.0 ships to `latest`.
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** —
 [`ssconverter-web`] is this core running in the browser; drop a `.sspj` in to see what
@@ -39,7 +37,7 @@ I/O around it.
 ## Install
 
 ```sh
-npm install @spritestudio/ssconverter-core@beta
+npm install @spritestudio/ssconverter-core
 ```
 
 ## Usage

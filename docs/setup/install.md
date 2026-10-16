@@ -35,18 +35,18 @@ What each one does not cover yet is in [Limitations & Scope](/limitations).
 
 ```bash [pnpm]
 # Standalone renderer with no dependencies
-pnpm add @spritestudio/ssplayer-webgl@beta
+pnpm add @spritestudio/ssplayer-webgl
 
 # For apps built on PixiJS v8 (pixi.js is a peer dependency)
-pnpm add @spritestudio/ssplayer-pixi@beta pixi.js
+pnpm add @spritestudio/ssplayer-pixi pixi.js
 ```
 
 ```bash [npm]
 # Standalone renderer with no dependencies
-npm install @spritestudio/ssplayer-webgl@beta
+npm install @spritestudio/ssplayer-webgl
 
 # For apps built on PixiJS v8 (pixi.js is a peer dependency)
-npm install @spritestudio/ssplayer-pixi@beta pixi.js
+npm install @spritestudio/ssplayer-pixi pixi.js
 ```
 
 :::
