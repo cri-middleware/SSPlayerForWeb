@@ -6,7 +6,7 @@ SpriteStudio のプロジェクトファイル（`.sspj`）を、プレイヤー
 
 > **対象読者:** SpriteStudio のプロジェクト（`.sspj`）を持っていて、ランタイム用の
 > `.ssab` が必要な方 — ドラッグ＆ドロップのブラウザツール、またはスクリプト可能な
-> CLI で変換できます。**ステータス:** beta。npm パッケージではありません — ブラウザツールは GitHub Pages でホストし、CLI は monorepo に同梱しています（下記[ツールの入手](#ツールの入手)を参照）。**目的が違う場合:** → [ssconverter-core](../ssconverter-core) — 自作アプリに組み込むための、環境非依存の変換エンジンです。
+> CLI で変換できます。npm パッケージではありません — ブラウザツールは GitHub Pages でホストし、CLI は monorepo に同梱しています（下記[ツールの入手](#ツールの入手)を参照）。**目的が違う場合:** → [ssconverter-core](../ssconverter-core) — 自作アプリに組み込むための、環境非依存の変換エンジンです。
 
 [SSPlayerForWeb](../../README.ja.md) monorepo の一部です。
 

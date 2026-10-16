@@ -7,7 +7,7 @@ Convert SpriteStudio project files (`.sspj`) into the runtime binary format
 
 > **Who this is for:** you have a SpriteStudio project (`.sspj`) and need the
 > runtime `.ssab` — convert it via a drag-and-drop browser tool or a scriptable CLI.
-> **Status:** beta. Not an npm package — the browser tool is hosted on GitHub Pages
+> Not an npm package — the browser tool is hosted on GitHub Pages
 > and the CLI ships with the monorepo (see [Get the tool](#get-the-tool) below).
 > **Not what you need?** → [ssconverter-core](../ssconverter-core) — the
 > environment-agnostic converter engine to embed in your own app.

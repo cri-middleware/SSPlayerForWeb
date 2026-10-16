@@ -68,16 +68,16 @@ The browser converter `ssconverter-web` additionally needs the **File System Acc
 The renderers are npm packages; the framework integrations are IIFE plugin bundles loaded by the
 host framework's plugin system, so they are **not installable from npm**.
 
-| Package | How you get it | Status |
-|---|---|---|
-| `@spritestudio/ssplayer-core` | npm | beta |
-| `@spritestudio/ssplayer-webgl` | npm | beta |
-| `@spritestudio/ssplayer-pixi` | npm | beta |
-| `@spritestudio/ssconverter-core` | npm | beta |
-| `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) | beta |
-| `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](/usage/tyrano#building-from-source) | beta |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](/usage/tyranobuilder#building-from-source) | beta |
-| `@spritestudio/ssconverter-web` | hosted on GitHub Pages at `/ssconverter/`, plus a Node CLI in the repo | beta |
+| Package | How you get it |
+|---|---|
+| `@spritestudio/ssplayer-core` | npm |
+| `@spritestudio/ssplayer-webgl` | npm |
+| `@spritestudio/ssplayer-pixi` | npm |
+| `@spritestudio/ssconverter-core` | npm |
+| `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](/usage/rmmz#building-from-source) |
+| `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](/usage/tyrano#building-from-source) |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](/usage/tyranobuilder#building-from-source) |
+| `@spritestudio/ssconverter-web` | hosted on GitHub Pages at `/ssconverter/`, plus a Node CLI in the repo |
 
 ## RPG Maker MZ (beta)
 
