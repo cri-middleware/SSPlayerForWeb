@@ -329,6 +329,9 @@ export class SSPlayer extends Container {
     private _drawnAffineActive = false;
     private _drawnMaskEnabled = true;
     private _drawnWithRenderer = false;
+    // A change that leaves the frame number alone (an override, a track command,
+    // a new attachment) waiting for the next tick to draw it.
+    private _redrawPending = false;
     
     /**
      * Optional AudioManager. If set, setAnimation will automatically preload sounds
@@ -720,6 +723,9 @@ export class SSPlayer extends Container {
 
     public setAnimation(animationName: string): void {
         this.internalPlayer.setAnimation(animationName);
+        // Folding the stack back to track 0 changes the pose, even onto the
+        // same animation and frame.
+        this._redrawPending = true;
     }
 
     public get currentAnimation(): string {
@@ -1221,13 +1227,17 @@ export class SSPlayer extends Container {
     }
 
     /**
-     * Repaint after an override, a texture swap or a track command took effect
-     * while the ticker is not advancing. Each changes the output without
-     * changing the frame number, so a stopped player would otherwise keep
-     * showing its last drawn frame.
+     * Repaint after an override, a texture swap or a track command took effect.
+     * Each changes the output without changing the frame number, so neither a
+     * stopped player nor a ticking one, which draws only a frame that changed,
+     * would otherwise show it: a stopped player repaints on the spot, a ticking
+     * one on its next tick.
      */
     private afterOverride(applied: boolean): boolean {
-        if (applied && !this.internalPlayer.isTicking) {
+        if (!applied) return applied;
+        if (this.internalPlayer.isTicking) {
+            this._redrawPending = true;
+        } else {
             this.renderFrame(this.internalPlayer.getDrawFrame());
         }
         return applied;
@@ -1299,6 +1309,8 @@ export class SSPlayer extends Container {
      * attachment. Returns a handle whose `detach()` stops the following.
      */
     public attachToPart(part: number | string, target: Container, options: SSPartFollowOptions = {}): SSPartAttachment {
+        // A target is placed when the frame is drawn.
+        this._redrawPending = true;
         return this._follower.attach(part, target, options);
     }
 
@@ -1451,16 +1463,19 @@ export class SSPlayer extends Container {
             // was drawn from has changed: a seek, another animation, a flip or an
             // offset, masking switched, or the renderer the masks need arriving.
             // Overrides and texture swaps repaint on the spot (afterOverride).
-            if (this.drawnFromChanged()) this.renderFrame(this.internalPlayer.getDrawFrame());
+            if (this._redrawPending || this.drawnFromChanged()) this.renderFrame(this.internalPlayer.getDrawFrame());
             return;
         }
 
         const deltaMs = ticker.deltaMS;
+        // Read before the update: the tick a fade or a track ends on still moves
+        // the pose, and the stack reads still afterwards.
+        const stackInMotion = this.internalPlayer.isStackInMotion;
 
         // Advance every tick. While playing this steps the timeline; while paused
         // internalPlayer.update() still advances `independent` effect / instance
         // slots on their own clock (see InternalPlayerBase.update), so paused
-        // particles / sub-animations keep running and we re-render below.
+        // particles / sub-animations keep running and are redrawn below.
         const pausing = this.internalPlayer.isHeld;
         this.internalPlayer.update(deltaMs);
         if (!pausing) {
@@ -1482,7 +1497,13 @@ export class SSPlayer extends Container {
             this.debugText.text = `Frame: ${frameNo} (dt: ${deltaMs.toFixed(2)}ms)`;
         }
 
-        this.renderFrame(this.internalPlayer.getDrawFrame());
+        // A tick that leaves the drawn frame as it was keeps the drawing: a pause,
+        // or several ticks per frame while subFrameEnabled is off. Rebuilding it
+        // re-uploads every mesh for nothing.
+        if (this._redrawPending || this.drawnFromChanged() || this.internalPlayer.childrenMoved
+            || (stackInMotion && !pausing)) {
+            this.renderFrame(this.internalPlayer.getDrawFrame());
+        }
 
         // After the frame is placed (meshes + attachments), notify per-frame
         // listeners — the point at which getPartTransform is valid for frameNo.
@@ -1506,6 +1527,7 @@ export class SSPlayer extends Container {
 
     private renderFrame(frameNo: number) {
         const ip = this.internalPlayer;
+        this._redrawPending = false;
         this._drawnFrame = frameNo;
         this._drawnAnimation = ip.currentAnimation;
         const affine = ip.getRootAffine();

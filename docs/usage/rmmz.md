@@ -140,6 +140,24 @@ the internal command ID.
 - **Set SS Speed** (`setSSSpeed`) — a playback-speed multiplier (subframe-interpolated,
   smooth even when slow).
 
+*Change SS Animation*, *Play SS Once*, *Play SS Sequence* and *Set SS Talk* take a
+`transition` in ms: above 0 the switch crossfades from what is on screen over that time,
+and 0 (the default) cuts.
+
+**Tracks (layering animations)**
+
+Lay more animations over the picture's own one (track 0), on tracks numbered 1 and up.
+Tracks are saved with the picture. A change of the picture's animation **without** a
+crossfade empties them, as it does in the player itself; a crossfade keeps them.
+
+- **Set SS Track** (`setSSTrack`) — lay an animation on a track, with its `alpha` (how
+  strongly it applies), `blend` (*Mix*, or *Additive* to add its offset from the setup
+  pose), `loop` and `transition`.
+- **Fade SS Track** (`fadeSSTrack`) — fade a track's `alpha` to a target over a time;
+  `wait` holds the event until it completes.
+- **Clear SS Track** (`clearSSTrack`) — empty a track. Fade it to 0 first to take it off
+  gradually.
+
 **Part overrides (colour / cell / visibility)**
 
 Replace how one part looks at run time, **winning over the animation's keyframes**. The
@@ -160,7 +178,8 @@ settings are stored on the picture, so they **survive save/load**.
 animation changes* (default) / *permanent*. Changing the animation clears everything but
 the **permanent** ones — the saved copy is pruned at the same time, so nothing the runtime
 discarded comes back on load. Visibility has no priority mode and is always cleared by an
-animation change.
+animation change. A crossfade (`transition` above 0) is the exception: it keeps every
+override.
 
 **Part tracking (script only)**
 

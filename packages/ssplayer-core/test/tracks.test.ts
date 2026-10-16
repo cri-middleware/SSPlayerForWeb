@@ -304,6 +304,45 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
                 player.destroy();
             });
 
+            it('keeps a source added to track 0 running after track 0 finishes', async () => {
+                const player = await ringoPlayer('attack1');
+                player.setLoopCount(1);
+                player.play();
+                const source = player.addTrackSource(0, 'walk', 1);
+                run(player, 1000);
+                expect(player.isFinished).toBe(true);
+                expect(player.trackCount).toBe(1);
+                expect(player.isTicking).toBe(true);
+
+                const before = player.getSourceFrame(source)!;
+                run(player, 200);
+                expect(player.getSourceFrame(source)!).not.toBe(before);
+                player.destroy();
+            });
+
+            it('stops ticking after track 0 finishes when the overlays move nothing', async () => {
+                const cleared = await ringoPlayer('attack1');
+                cleared.setLoopCount(1);
+                cleared.play();
+                cleared.setTrackAnimation(1, 'walk');
+                cleared.clearTrack(1);
+                run(cleared, 1000);
+                expect(cleared.isFinished).toBe(true);
+                expect(cleared.trackCount).toBe(2);
+                expect(cleared.isTicking).toBe(false);
+                cleared.destroy();
+
+                const silenced = await ringoPlayer('attack1');
+                silenced.setLoopCount(1);
+                silenced.play();
+                silenced.setTrackAnimation(1, 'walk');
+                silenced.setTrackAlpha(1, 0);
+                run(silenced, 1000);
+                expect(silenced.isFinished).toBe(true);
+                expect(silenced.isTicking).toBe(false);
+                silenced.destroy();
+            });
+
             it('stops ticking once track 0 finishes with nothing else to run', async () => {
                 const player = await ringoPlayer('attack1');
                 player.setLoopCount(1);

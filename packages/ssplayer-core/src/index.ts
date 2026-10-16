@@ -19,6 +19,7 @@ export * from './MaskPlanner.js';
 export * from './MaskComposition.js';
 export * from './PartOverride.js';
 export * from './Tracks.js';
+export * from './SavedTracks.js';
 export * from './PartTransform.js';
 export * from './FrameDataMaskSource.js';
 export * from './InternalPlayerBase.js';

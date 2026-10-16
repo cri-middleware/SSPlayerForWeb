@@ -2,6 +2,7 @@ import type {
   SSPlayer,
   SSOverlay,
   SSPartOverride,
+  SSSavedTrack,
   WebPlaybackDirection,
   WebPlaybackStyle,
 } from '@spritestudio/ssplayer-webgl';
@@ -49,6 +50,8 @@ export interface SSCharaBinding {
   talk: string;
   /** Animation to return to afterwards; empty → whatever the scenario last set. */
   idle: string;
+  /** Crossfade between talk and idle over this many ms; absent or 0 cuts. */
+  transition?: number;
 }
 
 /**
@@ -129,6 +132,13 @@ export interface SSPlayerEntry {
      * so every path that switches animations drops it here as well.
      */
     section?: SSSection;
+    /**
+     * The tracks `[ss_track]` laid above track 0, in track order, re-laid by
+     * `[ss_restore]`. A cut to another animation folds the runtime's stack
+     * back to track 0, so every path that cuts empties this too; a crossfade
+     * keeps it.
+     */
+    tracks?: SSSavedTrack[];
   };
 }
 

@@ -15,6 +15,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
   // the REAL implementation is pulled straight from core's source — the adapter
   // must be tested against it, not against a second copy of the same rules.
   const store = await import('../../ssplayer-core/src/PartOverride.js');
+  // The saved-track list is the same kind of shared policy.
+  const savedTracks = await import('../../ssplayer-core/src/SavedTracks.js');
 
   class FakePlayer {
     _playing = false;
@@ -70,6 +72,36 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     clearPartCellOverride = vi.fn(() => true);
     clearPartVisibilityOverride = vi.fn(() => true);
     clearAllPartOverrides = vi.fn(() => true);
+    // The track stack, kept as plain state so the adapter's bookkeeping is what
+    // the track tests read back. A fade completes when the test says so.
+    _tracks = new Map<number, { animation: string; alpha: number; blend: number; loop: number }>();
+    _fading = new Set<number>();
+    _clockPlaying = true;
+    get trackCount() { return Math.max(1, ...[...this._tracks.keys()].map((t) => t + 1)); }
+    setTrackAnimation = vi.fn((track: number, animation: string) => {
+      this._tracks.set(track, { animation, alpha: 1, blend: 0, loop: -1 });
+    });
+    crossfade = vi.fn((track: number, animation: string, _ms: number) => {
+      if (track > 0) this._tracks.set(track, { ...(this._tracks.get(track) ?? { alpha: 1, blend: 0, loop: -1 }), animation });
+    });
+    setTrackLoopCount = vi.fn((track: number, loop: number) => { this._tracks.get(track)!.loop = loop; });
+    setTrackBlend = vi.fn((track: number, blend: number) => { this._tracks.get(track)!.blend = blend; });
+    setTrackAlpha = vi.fn((track: number, alpha: number) => { this._tracks.get(track)!.alpha = alpha; });
+    fadeTrack = vi.fn((track: number, alpha: number, _ms: number) => {
+      this._tracks.get(track)!.alpha = alpha;
+      this._fading.add(track);
+    });
+    clearTrack = vi.fn((track: number) => { this._tracks.delete(track); });
+    getTrackFadeProgress(track: number) { return this._fading.has(track) ? 0.5 : undefined; }
+    _finishFade(track: number) { this._fading.delete(track); }
+    get internalPlayer() {
+      const self = this;
+      return {
+        get isTicking() { return self._playing; },
+        get isHeld() { return self._pausing; },
+        runtimeManager: { context: { is_clock_playing: () => self._clockPlaying && self._playing } },
+      };
+    }
     get isPlaying() { return this._playing; }
     get isPausing() { return this._pausing; }
     get isPlayingForward() { return this._playingForward; }
@@ -146,6 +178,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
 
   return {
     ...store,
+    ...savedTracks,
     SSOverlay: FakeSSOverlay,
     SSSurface: { initialize: vi.fn().mockResolvedValue(undefined) },
   };
@@ -376,6 +409,9 @@ describe('registerSSTags', () => {
       'ss_speed',
       'ss_stop',
       'ss_stop_audio',
+      'ss_track',
+      'ss_track_clear',
+      'ss_track_fade',
       'ss_wait',
       'ss_wait_signal',
     ]);
@@ -1744,5 +1780,98 @@ describe('registerSSTags', () => {
     expect(restored).toBeDefined();
     expect(restored.setPartColorOverride).toHaveBeenCalledWith('apple', 0x0033ffff, 0, 2);
     expect(restored.setPartVisibilityOverride).toHaveBeenCalledWith('heta', true, false);
+  });
+
+  // --- crossfades and tracks ----------------------------------------------
+
+  describe('tracks and crossfades', () => {
+    const live = () => FakeSSPlayer.instances[0] as unknown as {
+      _tracks: Map<number, { animation: string; alpha: number; blend: number; loop: number }>;
+      _finishFade(track: number): void;
+      crossfade: ReturnType<typeof vi.fn>;
+      setAnimation: ReturnType<typeof vi.fn>;
+      clearTrack: ReturnType<typeof vi.fn>;
+      play: ReturnType<typeof vi.fn>;
+      resume: ReturnType<typeof vi.fn>;
+    };
+
+    it('ss_track lays a track and saves it', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '1', anime: 'Anime_2', alpha: '0.5', blend: 'add', loop: '2' }, h.nextOrder);
+      expect(live()._tracks.get(1)).toEqual({ animation: 'Anime_2', alpha: 0.5, blend: 1, loop: 2 });
+      expect(savedSlot(h).chr.tracks).toEqual([{ track: 1, animation: 'Anime_2', alpha: 0.5, blend: 1, loop: 2 }]);
+    });
+
+    it('ss_track refuses track 0, which [ss_play] owns', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '0', anime: 'Anime_2' }, h.nextOrder);
+      expect(h.error).toHaveBeenCalledWith(expect.stringContaining('track="0"'));
+      expect(savedSlot(h).chr.tracks).toBeUndefined();
+    });
+
+    it('ss_play transition= crossfades, keeping the tracks, and does not restart the clock', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '1', anime: 'Anime_2' }, h.nextOrder);
+      const plays = live().play.mock.calls.length;
+      await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2', transition: '300' }, h.nextOrder);
+      expect(live().crossfade).toHaveBeenCalledWith(0, 'Anime_2', 300);
+      expect(live().setAnimation).not.toHaveBeenCalledWith('Anime_2');
+      expect(live().play.mock.calls.length).toBe(plays);
+      expect(live().resume).toHaveBeenCalled();
+      expect(savedSlot(h).chr.anime).toBe('Anime_2');
+      expect(savedSlot(h).chr.tracks).toHaveLength(1);
+    });
+
+    it('a cut to another animation empties the tracks; one to the same keeps them', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '1', anime: 'Anime_2' }, h.nextOrder);
+      await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_1' }, h.nextOrder);
+      expect(savedSlot(h).chr.tracks).toHaveLength(1);
+      await runTag(h.tags.ss_play, { name: 'chr', anime: 'Anime_2' }, h.nextOrder);
+      expect(savedSlot(h).chr.tracks).toBeUndefined();
+    });
+
+    it('ss_track_fade saves where the fade ends and holds the scenario until it does', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '1', anime: 'Anime_2', alpha: '0' }, h.nextOrder);
+      const before = h.nextOrder.mock.calls.length;
+      h.tags.ss_track_fade.start({ ...h.tags.ss_track_fade.pm, name: 'chr', track: '1', alpha: '1', time: '400' });
+      expect(savedSlot(h).chr.tracks?.[0].alpha).toBe(1);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(h.nextOrder.mock.calls.length).toBe(before);
+      live()._finishFade(1);
+      await vi.waitFor(() => expect(h.nextOrder.mock.calls.length).toBe(before + 1));
+    });
+
+    it('ss_track_fade does not hold the scenario on a paused player', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '1', anime: 'Anime_2' }, h.nextOrder);
+      await runTag(h.tags.ss_pause, { name: 'chr' }, h.nextOrder);
+      await runTag(h.tags.ss_track_fade, { name: 'chr', track: '1', alpha: '0', time: '400' }, h.nextOrder);
+    });
+
+    it('ss_track_clear empties the track and the save', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '1', anime: 'Anime_2' }, h.nextOrder);
+      await runTag(h.tags.ss_track_clear, { name: 'chr', track: '1' }, h.nextOrder);
+      expect(live().clearTrack).toHaveBeenCalledWith(1);
+      expect(savedSlot(h).chr.tracks).toBeUndefined();
+    });
+
+    it('ss_restore lays the saved tracks again', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_track, { name: 'chr', track: '2', anime: 'Anime_2', alpha: '0.25', loop: '1' }, h.nextOrder);
+      FakeSSPlayer.instances.length = 0;
+      await runTag(h.tags.ss_restore, {}, h.nextOrder);
+      expect(live()._tracks.get(2)).toEqual({ animation: 'Anime_2', alpha: 0.25, blend: 0, loop: 1 });
+    });
+
+    it('ss_chara transition= crossfades into talk', async () => {
+      const h = await withPlayer();
+      await runTag(h.tags.ss_chara, { name: 'chr', talk: 'Talk', idle: 'Idle', transition: '200' }, h.nextOrder);
+      h.speak('chr');
+      expect(live().crossfade).toHaveBeenCalledWith(0, 'Talk', 200);
+      expect(savedSlot(h).chr.chara).toMatchObject({ transition: 200 });
+    });
   });
 });

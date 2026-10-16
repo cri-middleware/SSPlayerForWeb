@@ -133,6 +133,21 @@ Use event → **Plugin Command** → `ssplayer-rpgmakermz`. An SS animation ride
 | Play SS Sequence | `playSSSequence` | A comma-separated list where each entry plays once except the **last, which loops** (e.g. `attack1,attack2,wait1`). |
 | Set SS Speed | `setSSSpeed` | Playback-speed multiplier (subframe-interpolated, smooth even when slow). |
 
+*Change SS Animation*, *Play SS Once*, *Play SS Sequence* and *Set SS Talk* take a `transition` in ms:
+above 0 the switch crossfades from what is on screen over that time, and 0 (the default) cuts.
+
+### Tracks (layering animations)
+
+Lay more animations over the picture's own one (track 0), on tracks numbered 1 and up — a gesture over
+a walk, an expression over a pose. Tracks are saved with the picture. A change of the picture's
+animation **without** a crossfade empties them, as it does in the player itself; a crossfade keeps them.
+
+| Command | Internal name | Description |
+|---|---|---|
+| Set SS Track | `setSSTrack` | Lay an animation on a track: `track` (1 and up), `animation`, `alpha` (how strongly it applies), `blend` (*Mix*, or *Additive* to add its offset from the setup pose), `loop`, `transition`. |
+| Fade SS Track | `fadeSSTrack` | Fade a track's `alpha` to a target over `duration` ms; `wait` holds the event until it completes. |
+| Clear SS Track | `clearSSTrack` | Empty a track. Fade it to 0 first to take it off gradually. |
+
 ### Part overrides (colour / cell / visibility)
 
 Replace how one part looks at run time, **winning over the animation's keyframes**. The settings are
@@ -149,7 +164,8 @@ as it does for every other picture state).
 > **Priority** (colour / cell only): *yield to the next keyframe* / *hold until the animation changes*
 > (default) / *permanent*. Changing the animation clears everything but the **permanent** ones — the
 > saved copy is pruned at the same time, to match what the runtime itself discards. Visibility has no
-> priority mode and is always cleared by an animation change.
+> priority mode and is always cleared by an animation change. A crossfade (`transition` above 0) is
+> the exception: it keeps every override.
 
 ### Playback / lifecycle
 

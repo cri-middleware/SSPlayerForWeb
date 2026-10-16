@@ -33,6 +33,12 @@ export default defineConfig(({ command }) => {
         },
       },
       rollupOptions: {
+        // Multi-page: without this Vite builds index.html only, so blend.html
+        // works in `vite dev` and then vanishes from the built output.
+        input: {
+          index: path.resolve(import.meta.dirname, 'index.html'),
+          blend: path.resolve(import.meta.dirname, 'blend.html'),
+        },
         external: ['pixi.js'],
       }
     },

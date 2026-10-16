@@ -1,5 +1,9 @@
 import {
   applyPartOverrides,
+  applySavedTrack,
+  applySavedTracks,
+  withSavedTrack,
+  withoutSavedTrack,
   parsePartOverrideColor,
   SSPartOverrideStore,
   SSOverlay,
@@ -8,6 +12,8 @@ import {
   type SSBlendOp,
   type SSOverridePriority,
   type SSPartOverride,
+  type SSSavedTrack,
+  type SSTrackBlend,
   type WebPlaybackDirection,
   type WebPlaybackStyle,
 } from '@spritestudio/ssplayer-webgl';
@@ -196,6 +202,27 @@ function oneOf(words: Map<string, number>, attr: string, value: unknown): number
   throw new Error(`${attr}="${value}" must be ${[...words.keys()].join(' or ')}.`);
 }
 
+// `[ss_track blend=]`: mix onto what is below, or add the offset from the setup pose.
+const TRACK_BLENDS = new Map<string, number>([['mix', 0], ['add', 1]]);
+
+/** `track=` of a track tag: 1 or above, since track 0 is what `[ss_play]` sets. */
+function trackNumber(value: unknown): number {
+  const track = num(value, NaN);
+  if (Number.isInteger(track) && track >= 1) return track;
+  throw new Error(`track="${value ?? ''}" must be 1 or above (track 0 is the animation [ss_play] sets).`);
+}
+
+/**
+ * Leave `player` playing after a crossfade. The incoming animation plays from
+ * the moment it is laid, but only while the character's clock runs, and
+ * play() would also restart the effects and instances: so it starts a stopped
+ * clock and nothing else, and lifts a pause.
+ */
+function keepPlaying(player: SSPlayer): void {
+  if (player.internalPlayer.runtimeManager.context.is_clock_playing()) player.resume();
+  else player.play();
+}
+
 /** Read a numeric attribute the author must give, or throw naming it. */
 function requireNumber(attr: string, value: unknown): number {
   const n = num(value, NaN);
@@ -326,6 +353,8 @@ interface CreateOpts {
   speed?: number;
   playback?: SSPlayback;
   section?: SSSection;
+  /** `[ss_track]`'s tracks to lay again (restore path). */
+  tracks?: SSSavedTrack[];
 }
 
 /**
@@ -392,6 +421,8 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     if (opts.section) applySection(player, opts.section);
     if (opts.speed !== undefined) player.speedScale = opts.speed;
     if (opts.playback) player.setPlaybackDirection(opts.playback.direction, opts.playback.style);
+    // The stack lives on the WASM context too, so a restore lays it again.
+    applySavedTracks(player, opts.tracks);
   } catch (err) {
     // Not registered yet, so nothing else will ever free these: the element
     // would stay on the layer answering `[anim name=]`, and the player would
@@ -426,6 +457,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
       speed: opts.speed,
       playback: opts.playback,
       section: opts.section,
+      tracks: opts.tracks,
     },
   };
   registry.set(entry);
@@ -463,10 +495,15 @@ function armChain(entry: SSPlayerEntry, persist: () => void): void {
     meta.loop = next.loop;
     meta.section = undefined; // the runtime drops it with the animation
     try {
+      const switches = next.anime !== player.currentAnimation;
       player.setAnimation(next.anime);
       // The author DID ask for this animation change (they wrote `next=`), so
-      // drop the overrides a new setup discards, exactly like [ss_play].
-      overridesOf(entry, persist).pruneForNewAnimation();
+      // drop the overrides a new setup discards, exactly like [ss_play], and
+      // the tracks it folds away. The same name sets nothing up.
+      if (switches) {
+        overridesOf(entry, persist).pruneForNewAnimation();
+        meta.tracks = undefined;
+      }
       player.loopCount = next.loop;
       player.play();
       persist();
@@ -589,6 +626,24 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   const effectTime = (ms: number): number =>
     skippingEffects() ? Math.min(ms, num(kag.cutTimeWithSkip?.(ms), 0)) : ms;
 
+  /**
+   * Settles once the fade on `track` is over. Also once nothing will move it:
+   * the player was freed, or its clock is stopped or held — a fade runs on the
+   * character's clock, so waiting on a held one would block the scenario until
+   * something else resumed it, as [ss_wait] avoids too.
+   */
+  const trackFadeDone = (entry: SSPlayerEntry, track: number): Promise<void> =>
+    new Promise((resolve) => {
+      const poll = (): void => {
+        const ip = entry.player.internalPlayer;
+        const over = registry.get(entry.meta.name) !== entry || !ip.isTicking || ip.isHeld
+          || entry.player.getTrackFadeProgress(track) === undefined;
+        if (over) resolve();
+        else requestAnimationFrame(poll);
+      };
+      poll();
+    });
+
   /** Throw unless `name` is a variable {@link writeVariable} can write. */
   const requireVariable = (name: string): void => {
     if (!VARIABLE_NAME.test(name)) {
@@ -629,6 +684,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   /** Attributes shared by `[ss_play]` and `[ss_show]`'s optional entrance animation. */
   interface PlaybackAttrs {
     anime?: unknown;
+    /** Crossfade to `anime` over this many ms instead of cutting. */
+    transition?: unknown;
     loop?: unknown;
     start?: unknown;
     next?: unknown;
@@ -652,14 +709,26 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     // Whatever follow-up the previous [ss_play] armed is superseded by this one.
     clearChain(entry);
 
+    // Cut like the engine's own effects while skipping.
+    const fadeMs = pm.anime ? effectTime(Math.max(0, num(pm.transition, 0))) : 0;
     if (pm.anime) {
       meta.anime = String(pm.anime);
       meta.section = undefined; // the runtime drops it with the animation
-      player.setAnimation(meta.anime);
-      // Setting up an animation makes the runtime drop every override but the
-      // Permanent ones; keep the saved mirror in step so a later [ss_restore]
-      // cannot resurrect what the runtime discarded.
-      overridesOf(entry, persist).pruneForNewAnimation();
+      if (fadeMs > 0) {
+        // A crossfade sets nothing up: the overrides and the tracks stay.
+        player.crossfade(0, meta.anime, fadeMs);
+      } else {
+        const switches = meta.anime !== player.currentAnimation;
+        player.setAnimation(meta.anime);
+        // Setting up another animation makes the runtime drop every override
+        // but the Permanent ones, and fold its stack back to track 0; keep the
+        // saved mirror in step so a later [ss_restore] cannot resurrect what
+        // the runtime discarded. The same name sets nothing up.
+        if (switches) {
+          overridesOf(entry, persist).pruneForNewAnimation();
+          meta.tracks = undefined;
+        }
+      }
     }
     if (pm.loop !== undefined && pm.loop !== '') {
       meta.loop = loopCount(pm.loop);
@@ -684,7 +753,10 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       : undefined;
 
     player.loopCount = meta.loop;
-    player.play(num(pm.start, -1));
+    const start = num(pm.start, -1);
+    // `start=` asks for a head-out, which only play() gives.
+    if (fadeMs > 0 && start < 0) keepPlaying(player);
+    else player.play(start);
     armChain(entry, persist);
   };
 
@@ -697,12 +769,26 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   const switchAnimation = (entry: SSPlayerEntry, anime: string, loop: number): void => {
     if (!anime) return;
     const { player, meta } = entry;
+    // Cut while skipping, as every other effect time is.
+    const fadeMs = effectTime(meta.chara?.transition ?? 0);
     try {
+      if (fadeMs > 0) {
+        // A crossfade keeps the overrides and the tracks; only the section
+        // goes with the animation it was set on.
+        player.crossfade(0, anime, fadeMs);
+        if (anime === meta.anime && meta.section) applySection(player, meta.section);
+        player.loopCount = loop;
+        keepPlaying(player);
+        return;
+      }
+      const switches = anime !== player.currentAnimation;
       player.setAnimation(anime);
-      // setAnimation drops the non-Permanent overrides and the section; the
-      // author never asked for that here, so put them straight back — the
-      // section only on the scenario's own animation, the one it was set for.
+      // setAnimation drops the non-Permanent overrides, the section and the
+      // tracks; the author never asked for that here, so put them straight
+      // back — the section only on the scenario's own animation, the one it
+      // was set for.
       overridesOf(entry, persist).reapply();
+      if (switches) applySavedTracks(player, meta.tracks);
       if (anime === meta.anime && meta.section) applySection(player, meta.section);
       player.loopCount = loop;
       player.play();
@@ -817,15 +903,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
-  // [ss_play name= anime= loop= start= next= nextloop= atframe=] — (re)play,
-  // optionally switching animation. `next=` queues a follow-up animation that
+  // [ss_play name= anime= transition= loop= start= next= nextloop= atframe=] —
+  // (re)play, optionally switching animation: cutting to it, or crossfading
+  // over `transition=` ms. `next=` queues a follow-up animation that
   // starts when this one ends (or at `atframe=`) WITHOUT blocking the scenario
   // — the Spine plugin's `next_motion` / `in_frame_next_motion`. Use it for
   // "entrance, then idle loop" while the text keeps flowing; use [ss_wait] when
   // you do want the scenario to hold.
   ftag.master_tag['ss_play'] = {
     vital: ['name'],
-    pm: { anime: '', loop: '', start: '', next: '', nextloop: '', atframe: '' },
+    pm: { anime: '', transition: '', loop: '', start: '', next: '', nextloop: '', atframe: '' },
     start(pm) {
       runSync('ss_play', () => {
         applyPlayback(lookup(String(pm.name)), pm);
@@ -841,7 +928,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   ftag.master_tag['ss_show'] = {
     vital: ['name'],
     pm: {
-      x: '', y: '', scale: '', zindex: '', anime: '', loop: '', start: '',
+      x: '', y: '', scale: '', zindex: '', anime: '', transition: '', loop: '', start: '',
       next: '', nextloop: '', atframe: '', time: 0, wait: 'true',
     },
     start(pm) {
@@ -910,15 +997,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
-  // [ss_chara name= jname= talk= idle=] — link a player to a speaker so it
-  // plays `talk` while that character's text is being typed out and returns to
-  // `idle` when the line ends. The Live2D plugin's `jname` + `lip="text"`,
+  // [ss_chara name= jname= talk= idle= transition=] — link a player to a
+  // speaker so it plays `talk` while that character's text is being typed out
+  // and returns to `idle` when the line ends, crossfading over `transition=` ms
+  // when given. The Live2D plugin's `jname` + `lip="text"`,
   // expressed the way SpriteStudio works: a whole animation, not a mouth
   // parameter. `jname` accepts either the `#name` display name or the Tyrano
   // chara id, and defaults to the player's own name. `talk=""` unbinds.
   ftag.master_tag['ss_chara'] = {
     vital: ['name'],
-    pm: { jname: '', talk: '', idle: '' },
+    pm: { jname: '', talk: '', idle: '', transition: '' },
     start(pm) {
       runSync('ss_chara', () => {
         const entry = lookup(String(pm.name));
@@ -932,8 +1020,85 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const idle = String(pm.idle ?? '');
         requireAnimation(entry.player, entry.meta.storage, 'talk', talk);
         if (idle) requireAnimation(entry.player, entry.meta.storage, 'idle', idle);
-        entry.meta.chara = { jname: String(pm.jname || entry.meta.name), talk, idle };
+        const transition = Math.max(0, num(pm.transition, 0));
+        entry.meta.chara = {
+          jname: String(pm.jname || entry.meta.name),
+          talk,
+          idle,
+          ...(transition > 0 ? { transition } : {}),
+        };
         ensureTalkHooks();
+        persist();
+      });
+    },
+  };
+
+  // --- Tracks above track 0 ------------------------------------------------
+  //
+  // Each tag applies its change to the live player and mirrors it into
+  // `meta.tracks`, which [ss_restore] lays again. Track 0 is what [ss_play]
+  // sets, so these refuse it.
+
+  // [ss_track name= track= anime= alpha= blend= loop= transition=] — lay an
+  // animation on a track above the character's own: a gesture over a walk, an
+  // expression over a pose. `blend="add"` adds its offset from the setup pose
+  // rather than mixing toward it.
+  ftag.master_tag['ss_track'] = {
+    vital: ['name', 'track', 'anime'],
+    pm: { alpha: '', blend: '', loop: '', transition: '' },
+    start(pm) {
+      runSync('ss_track', () => {
+        const entry = lookup(String(pm.name));
+        const { player, meta } = entry;
+        const t: SSSavedTrack = {
+          track: trackNumber(pm.track),
+          animation: String(pm.anime),
+          alpha: num(pm.alpha, 1),
+          blend: (pm.blend ? oneOf(TRACK_BLENDS, 'blend', pm.blend) : 0) as SSTrackBlend,
+          loop: loopCount(pm.loop),
+        };
+        requireAnimation(player, meta.storage, 'anime', t.animation);
+        applySavedTrack(player, t, effectTime(Math.max(0, num(pm.transition, 0))));
+        meta.tracks = withSavedTrack(meta.tracks, t);
+        persist();
+      });
+    },
+  };
+
+  // [ss_track_fade name= track= alpha= time= wait=] — fade a track's alpha to
+  // `alpha` over `time` ms ([ss_fadein]'s convention: `wait="true"` holds the
+  // scenario until it is done). A save taken mid-fade restores where it ends.
+  ftag.master_tag['ss_track_fade'] = {
+    vital: ['name', 'track'],
+    pm: { alpha: '', time: 500, wait: 'true' },
+    start(pm) {
+      runThenAdvanceOrNot('ss_track_fade', bool(pm.wait, true), () => {
+        const entry = lookup(String(pm.name));
+        const { player, meta } = entry;
+        const track = trackNumber(pm.track);
+        const saved = meta.tracks?.find((e) => e.track === track);
+        if (!saved) throw new Error(`track ${track} of "${meta.name}" has nothing on it (lay it with [ss_track] first).`);
+        const alpha = num(pm.alpha, 0);
+        const time = effectTime(Math.max(0, num(pm.time, 500)));
+        if (time > 0) player.fadeTrack(track, alpha, time);
+        else player.setTrackAlpha(track, alpha);
+        meta.tracks = withSavedTrack(meta.tracks, { ...saved, alpha });
+        persist();
+        return time > 0 ? trackFadeDone(entry, track) : Promise.resolve();
+      });
+    },
+  };
+
+  // [ss_track_clear name= track=] — empty a track. Fade it to 0 first with
+  // [ss_track_fade] to take it off gradually.
+  ftag.master_tag['ss_track_clear'] = {
+    vital: ['name', 'track'],
+    start(pm) {
+      runSync('ss_track_clear', () => {
+        const entry = lookup(String(pm.name));
+        const track = trackNumber(pm.track);
+        if (track < entry.player.trackCount) entry.player.clearTrack(track);
+        entry.meta.tracks = withoutSavedTrack(entry.meta.tracks, track);
         persist();
       });
     },
@@ -1480,6 +1645,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
           speed: s.speed,
           playback: s.playback,
           section: s.section,
+          tracks: s.tracks,
         });
       } catch (err) {
         logFailure(`restoring "${s.name}"`, err);
