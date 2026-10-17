@@ -75,6 +75,7 @@ await SSSurface.initialize();
 // 2. Create a player on a canvas, load a .ssab, and pick an animation.
 const canvas = document.querySelector('canvas')!;
 const surface = new SSSurface(canvas, {
+  autoStart: true,           // run the frame loop; without it nothing advances or draws
   maxDPR: 2,                 // cap devicePixelRatio for fill-rate control
   powerPreference: 'low-power',
   pauseWhenHidden: true,     // pause when the tab/element is not visible
@@ -86,7 +87,7 @@ await player.load('/Ringo.ssab');   // textures load from the .ssab's own direct
 player.setAnimation('run');
 player.setPlacement({});   // fit the animation's canvas into the surface
 
-player.play();                       // drives itself via requestAnimationFrame
+player.play();                       // advances on the surface's frame loop
 ```
 
 `SSPlayer` accepts either an `HTMLCanvasElement` or an existing `WebGL(2)RenderingContext` as its target, so it can share a context with your own renderer.
@@ -160,6 +161,7 @@ No peer dependencies to load first. The player class is `SSWebGLPlayer.SSSurface
     await SSSurface.initialize(WASM_URL);
 
     const surface = new SSSurface(document.getElementById('stage'), {
+      autoStart: true,
       backgroundColor: 0x1a1a2e,
     });
     const player = surface.createPlayer();
@@ -183,7 +185,7 @@ Same rule: pass the WASM URL explicitly.
 
   await SSSurface.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
 
-  const surface = new SSSurface(document.getElementById('stage'), { backgroundColor: 0x1a1a2e });
+  const surface = new SSSurface(document.getElementById('stage'), { autoStart: true, backgroundColor: 0x1a1a2e });
   const player = surface.createPlayer();
   await player.load('./Ringo.ssab');
   player.setAnimation('run');
