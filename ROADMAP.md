@@ -23,7 +23,7 @@ The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration p
 ## Needs SDK
 
 - [ ] **Dynamic Instance Animation Swap** — Replace the animation mounted on an Instance part at runtime (`changeInstanceAnime`). Once the SDK ships it, the binding goes into `ssplayer-core` and the drawing into each renderer (`ssplayer-pixi`, `ssplayer-webgl` and `ssplayer-rmmz`). Waits for: Instance Lifecycle API — Dynamic instance swap (Phase 3).
-- [ ] **Stretch a `Nines` part to the element's box** — Once drawn, a Nines part still cannot follow the box CSS gives it: the runtime evaluates its size from its keyframes, and the Override Layer covers colour / cell / visibility only, so the host cannot resize it. Waits for: Per-part size override (Phase 3).
+- [ ] **Stretch a `Nines` part to the element's box** — Once drawn, a Nines part still cannot follow the box CSS gives it: the runtime evaluates its size from its keyframes, and the Override Layer covers colour / cell / visibility only, so the host cannot resize it. Waits for: Per-part size override.
 
 ## Backlog
 
