@@ -139,12 +139,12 @@ done
 **A person publishes the Releases**: a published Release is permanent. Nothing on a draft needs writing, and each is already marked by `scripts/release-channel.sh`: a pre-release when its package already has a full release, ready to become Latest otherwise. Publishing starts `pages.yml`, which deploys the [documentation site](https://cri-middleware.github.io/SSPlayerForWeb/) and the examples, unless the Release is a pre-release, which leaves the site as it is.
 
 ```bash
-for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
+for tag in $(gh release list --json tagName,isDraft,isPrerelease -q '[.[] | select(.isDraft)] | sort_by(.isPrerelease | not) | .[].tagName'); do
   gh release edit "$tag" --draft=false
 done
 ```
 
-Then watch the deploy. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the one for the Release published last. The block finds that Release itself, and waits up to a minute for its run, which appears a few seconds after it.
+Then watch the deploy. Every Release published starts a run of its own; they queue, and a newer one replaces one still waiting, which then shows as cancelled, so the run to watch is the one for the Release published last. The block above publishes the pre-releases first, so that the last one published deploys if any of them does. The next block finds that Release itself, and waits up to a minute for its run, which appears a few seconds after it.
 
 ```bash
 tag=$(gh release list --json tagName,publishedAt,isDraft -q '[.[] | select(.isDraft | not)] | sort_by(.publishedAt) | last | .tagName')
@@ -372,12 +372,12 @@ done
 **Release の公開は人が行います。** 公開した Release は取り消せないためです。下書きに書き足すものはありません。印は `scripts/release-channel.sh` が付けてあります。パッケージに正式版があれば pre-release、なければ Latest になります。公開すると `pages.yml` が動き、[ドキュメントサイト](https://cri-middleware.github.io/SSPlayerForWeb/) とサンプルをデプロイします。pre-release の公開ではサイトはそのままです。
 
 ```bash
-for tag in $(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'); do
+for tag in $(gh release list --json tagName,isDraft,isPrerelease -q '[.[] | select(.isDraft)] | sort_by(.isPrerelease | not) | .[].tagName'); do
   gh release edit "$tag" --draft=false
 done
 ```
 
-続けてデプロイを見届けます。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。ブロックはその Release を自分で探し、run が一覧に出るまで最大 1 分待ちます。run は Release の公開から数秒遅れて出るためです。
+続けてデプロイを見届けます。Release を 1 つ公開するごとに run が 1 つ始まります。run は順に並び、待っている run は新しい run に置き換えられて cancelled と表示されるので、見届けるのは最後に公開した Release の run です。上のブロックは pre-release を先に公開するので、どれかがデプロイするなら、最後に公開した Release もデプロイします。次のブロックはその Release を自分で探し、run が一覧に出るまで最大 1 分待ちます。run は Release の公開から数秒遅れて出るためです。
 
 ```bash
 tag=$(gh release list --json tagName,publishedAt,isDraft -q '[.[] | select(.isDraft | not)] | sort_by(.publishedAt) | last | .tagName')
