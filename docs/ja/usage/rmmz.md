@@ -7,12 +7,7 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
 
-::: warning ベータ版
-`@spritestudio/ssplayer-rmmz` は **ベータ版**です。描画は [`ssplayer-webgl`](/ja/usage/webgl) の
-`SSWebGLRenderer` を土台にしています。
-:::
-
-このプラグインを使うと、**RPG ツクール MZ** のゲームで **SpriteStudio**（`.ssab`）のアニメーションを再生できます。アニメーションは MZ の PixiJS v5 レンダラーへ直接描画されるため、キャラクターやピクチャと正しい Z 順で重なります。
+このプラグインを使うと、**RPG ツクール MZ** のゲームで **SpriteStudio**（`.ssab`）のアニメーションを再生できます。アニメーションは MZ の PixiJS v5 レンダラーへ直接描画されるため、キャラクターやピクチャと正しい Z 順で重なります。描画は [`ssplayer-webgl`](/ja/usage/webgl) の `SSWebGLRenderer` を土台にしています。
 
 ▶️ **<a href="../../examples/rmmz/" target="_blank" rel="noreferrer">ライブデモ</a>** —
 同梱のサンプル MZ プロジェクトをブラウザーで実行できます。
