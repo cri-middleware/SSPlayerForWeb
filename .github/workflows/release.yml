@@ -1,6 +1,7 @@
 name: Release
 
-# One release, dispatched by hand from main. A maintainer names the versions;
+# One release, dispatched by hand from main, or from a maint/ branch to
+# patch an earlier line (RELEASING.md). A maintainer names the versions;
 # everything after that is this workflow's, and the same ref with the same inputs
 # always produces the same result:
 #
@@ -67,8 +68,9 @@ permissions:
 
 jobs:
   release:
-    # Refuse to release from anywhere but main, even if dispatched on another ref.
-    if: github.ref == 'refs/heads/main'
+    # Release from main, or from a maint/ branch for a patch to an earlier line
+    # (RELEASING.md). Refuse anything else, even if dispatched on it.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/maint/')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -144,11 +146,11 @@ jobs:
             | [.dir, .version] | @tsv' release-dist/manifest.json)
           exit "$status"
 
-      # A main that moved during the run rejects this push, and the run stops
+      # A branch that moved during the run rejects this push, and the run stops
       # before anything is published.
       - name: Push the version commit
         if: inputs.versions != ''
-        run: git push origin HEAD:main
+        run: git push origin "HEAD:${GITHUB_REF}"
 
       - name: Tag and draft the Releases
         env:
