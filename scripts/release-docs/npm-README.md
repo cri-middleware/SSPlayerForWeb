@@ -2,7 +2,7 @@
 
 This folder is the documentation of SpriteStudio Player for Web, as Markdown, from the release the package it sits in came from, so it describes the API that version provides. The online documentation is built from the latest release and can be ahead of this copy.
 
-`@spritestudio/ssplayer-webgl`, `@spritestudio/ssplayer-pixi`, `@spritestudio/ssplayer-core` and `@spritestudio/ssconverter-core` each carry these same pages.
+Every npm package of SpriteStudio Player for Web carries these same pages.
 
 ## Where to look
 

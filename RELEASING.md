@@ -6,7 +6,7 @@ Maintainers only. Contributors do not run any of this — see [CONTRIBUTING.md](
 
 Anyone with the Write role on this repository can cut a release: it is one run of the **Release** workflow on `main`, so nothing depends on whose machine starts it. You need `git`, `gh` 2.87 or later (run `gh auth login` once) and `jq`, and for step 6, `npm` signed in to an account that can publish to the `@spritestudio` scope. The repository needs GitHub Pages enabled with GitHub Actions as its source, and a `*-v*` tag rule on its `github-pages` environment, or publishing a Release deploys nothing; both are settings a repository admin makes. Each public package on npm needs a trusted publisher for this repository's `release.yml`, allowed to stage. npm sets one up only for a package it already has, so a package's first version goes out by hand (step 6). The commands are bash: in zsh, run `setopt interactive_comments` first, so that the `#` comments are not taken as arguments; on Windows, use Git Bash.
 
-Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the four public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
+Packages are versioned independently, and a release names the versions it sets, as `<package>@<version>` pairs where `<package>` is the directory under `packages/`. A release can carry the public packages, which go to npm, and the private plugins listed in `PLUGIN_ROWS` in `scripts/build-release.sh`, whose Release is their only channel. What each version gained is written in its package's `CHANGELOG.md` and nowhere else: a Release carries the package's file and a link to that changelog. A contributor's pull request carries no version and no changelog entry — both are written here. There is no release branch: what `main` holds is what goes out, so `main` holds only what can ship.
 
 Every block runs as written in a new shell: it works out what it needs from git and GitHub. One value is set by hand, written as a placeholder to fill in: `<versions>`, the pairs from step 1 in quotes, in step 4 and its retry under [Undoing a release](#undoing-a-release). A block that acts on a draft or a staged version takes it as `<tag>` or `<stage-id>` the same way. Left as it is, a placeholder stops its line with a syntax error, and a list left unquoted leaves `VERSIONS` unset, which the dispatch refuses: an empty `versions` is the retry of whatever is not yet released.
 
@@ -112,7 +112,7 @@ ls -R "$dir"                                      # one file each: a .tgz for np
 
 ```bash
 npm login                                         # once
-for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do
+for pkg in $(node scripts/npm-packages.mjs); do
   npm stage list "@spritestudio/$pkg"             # each staged version, with its stage id
 done
 npm stage approve <stage-id>                      # once per staged version, in the order above
@@ -123,7 +123,7 @@ A package the run did not stage — every one in a run with `publish_npm=false`,
 ```bash
 dir=$(mktemp -d)
 drafts=$(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName')
-for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # dependencies first; leave out any the run staged
+for pkg in $(node scripts/npm-packages.mjs); do   # dependencies first; leave out any the run staged
   tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
   [ -n "$tag" ] || continue
   version=${tag#"$pkg-v"}
@@ -208,7 +208,7 @@ Both channels are reproducible run to run. The pack scripts write the plugin arc
 
 このリポジトリの Write ロールを持つ人なら誰でもリリースできます。リリースは `main` での **Release** ワークフローの実行 1 回なので、誰の手元から始めても結果は変わりません。必要なのは `git`、`gh` 2.87 以降（最初に一度 `gh auth login`）、`jq`、それに手順 6 のための `npm` で、`@spritestudio` scope に publish できるアカウントでログインしておきます。リポジトリ側では、GitHub Pages を有効にしてソースを GitHub Actions にし、`github-pages` environment に `*-v*` のタグのルールを足しておく必要があります。どちらかが欠けると、Release を公開しても何もデプロイされません。どちらもリポジトリの admin が行う設定です。npm 側では、公開パッケージごとに、このリポジトリの `release.yml` を trusted publisher として登録し、stage を許可しておきます。npm はすでにあるパッケージにしか trusted publisher を設定できないので、パッケージの最初のバージョンは手作業で出します（手順 6）。コマンドは bash です。zsh では、`#` のコメントが引数として渡されないよう、先に `setopt interactive_comments` を実行します。Windows では Git Bash を使います。
 
-パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す 4 つの公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
+パッケージは独立にバージョンを持ち、リリースは設定するバージョンを `<package>@<version>` の組で指定します。`<package>` は `packages/` の下のディレクトリ名です。リリースで出せるのは、npm に出す公開パッケージと、`scripts/build-release.sh` の `PLUGIN_ROWS` にある private なプラグインです。プラグインは Release が唯一の配布経路です。各バージョンで何が変わったかは、そのパッケージの `CHANGELOG.md` にだけ書きます。Release が持つのはパッケージのファイルと、その changelog へのリンクだけです。コントリビューターのプルリクエストはバージョンも changelog の項目も持ちません。どちらもここで書きます。release ブランチはありません。`main` にあるものがそのまま出るので、`main` には出せるものだけを置きます。
 
 どのブロックも、新しいシェルで書かれたとおりに実行できます。必要なものは git と GitHub から求めます。手で設定する値は 1 つで、埋めるプレースホルダとして書いてあります。手順 4 と「リリースの取り消し」にあるその再実行の `<versions>` で、手順 1 で決めた組を引用符で囲んで入れます。下書きや stage したバージョンに対して操作するブロックも、それを `<tag>` や `<stage-id>` で受け取ります。埋めずに実行すると、その行は構文エラーで止まります。組を引用符で囲み忘れると `VERSIONS` は設定されず、dispatch はそれを拒否します。空の `versions` は、まだリリースしていないものすべての再実行になるためです。
 
@@ -314,7 +314,7 @@ npm の tarball の中身は `tar -tzf <file>.tgz`、プラグインのアーカ
 
 ```bash
 npm login                                         # 最初に一度
-for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do
+for pkg in $(node scripts/npm-packages.mjs); do
   npm stage list "@spritestudio/$pkg"             # stage されたバージョンと、その stage id
 done
 npm stage approve <stage-id>                      # stage されたバージョンごとに 1 回。上の順に
@@ -325,7 +325,7 @@ run が stage しなかったパッケージは、下書きに添付された ta
 ```bash
 dir=$(mktemp -d)
 drafts=$(gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName')
-for pkg in ssplayer-core ssconverter-core ssplayer-webgl ssplayer-pixi; do   # 依存先から。run が stage したものは外す
+for pkg in $(node scripts/npm-packages.mjs); do   # 依存先から。run が stage したものは外す
   tag=$(printf '%s\n' "$drafts" | grep "^$pkg-v" || true)
   [ -n "$tag" ] || continue
   version=${tag#"$pkg-v"}
