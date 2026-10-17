@@ -7,10 +7,6 @@ description: What the Web players do not do yet, the browser requirements, how e
 Constraints to be aware of when shipping with the current SpriteStudio Player for Web. For what
 *is* supported, see [Basic playback](/usage/basic) and the usage guides.
 
-::: info This is a living document
-Items are added as they are confirmed; wording and coverage may change as the packages evolve.
-:::
-
 This repository is a monorepo, so a constraint applies at one of three levels. Each section below
 says which.
 

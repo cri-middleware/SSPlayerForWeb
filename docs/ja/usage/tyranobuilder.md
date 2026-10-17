@@ -4,12 +4,7 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 
 # ティラノビルダーで使う
 
-::: warning ベータ版
-`@spritestudio/ssplayer-tyranobuilder` は **ベータ版**です。動作確認は **TyranoBuilder Ver 3.00**
-（Electron 24.8.8）で行っています。
-:::
-
-**SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。
+**SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。動作確認は **TyranoBuilder Ver 3.00**（Electron 24.8.8）で行っています。
 
 シナリオを手書きする場合は [TyranoScript で使う](/ja/usage/tyrano) を参照してください。同じアニメを
 `[ss_*]` タグで扱えます。

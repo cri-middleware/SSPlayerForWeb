@@ -4,15 +4,11 @@ description: "The ssplayer-tyranoscript plugin for TyranoScript: the scenario ta
 
 # TyranoScript
 
-::: warning Beta
-`@spritestudio/ssplayer-tyranoscript` is in **beta**. Rendering is built on
-[`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
-:::
-
 Show and play **SpriteStudio** (`.ssab`) animations inside a **TyranoScript** visual novel by
 writing `[ss_*]` tags in your scenario — no coding required. Each animation is a
 `<div>` on a Tyrano layer (drawn on that layer's shared canvas), so it sits in the normal
 layer stack alongside characters, backgrounds, and messages.
+Rendering is built on [`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->

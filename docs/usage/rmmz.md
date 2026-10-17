@@ -7,14 +7,10 @@ description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, plugi
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
 
-::: warning Beta
-`@spritestudio/ssplayer-rmmz` is in **beta**. Its rendering is built on
-[`ssplayer-webgl`](/usage/webgl)'s `SSWebGLRenderer`.
-:::
-
 This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**. Because
 the animation is drawn straight into MZ's PixiJS v5 renderer, it sits in the correct
 Z-order with your characters and pictures.
+Its rendering is built on [`ssplayer-webgl`](/usage/webgl)'s `SSWebGLRenderer`.
 
 ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">Live demo</a>** — run
 the bundled sample MZ project in your browser.

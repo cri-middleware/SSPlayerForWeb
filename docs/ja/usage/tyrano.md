@@ -4,13 +4,8 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 # TyranoScript で使う
 
-::: warning ベータ版
-`@spritestudio/ssplayer-tyranoscript` は **ベータ版**です。描画は
-[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
-:::
-
 **TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**
-（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤー上の `<div>`（描画はレイヤー共有の canvas が行います）なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。
+（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤー上の `<div>`（描画はレイヤー共有の canvas が行います）なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。描画は [`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->

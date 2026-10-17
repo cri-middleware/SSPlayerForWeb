@@ -4,14 +4,10 @@ description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto impo
 
 # TyranoBuilder
 
-::: warning Beta
-`@spritestudio/ssplayer-tyranobuilder` is in **beta**. Verified on **TyranoBuilder Ver 3.00**
-(Electron 24.8.8).
-:::
-
 Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
 code to write. Drop a SpriteStudio project into a folder in your game and the editor converts
 it for you — when the project opens, and again whenever you ask.
+Verified on **TyranoBuilder Ver 3.00** (Electron 24.8.8).
 
 Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
 animations as `[ss_*]` tags.
