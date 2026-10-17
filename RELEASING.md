@@ -59,8 +59,8 @@ gh pr merge release-notes --merge --delete-branch
 `pages.yml` builds the site only once a Release is published, from its tag, and a re-run builds that same tag: a fault in the docs or the examples found then can only be fixed in `main` and deployed from there. So build the site now, from the `main` the release will be cut from. `scripts/build-pages.sh` is the script `pages.yml` runs, and it needs the SpriteStudio-SDK submodule and network access. A failure is fixed by a pull request into `main` before step 4.
 
 ```bash
-git switch main && git pull --ff-only && git submodule update --init
-scripts/build-pages.sh                            # -> _site/, the site pages.yml would deploy
+git switch main && git pull --ff-only && git submodule update --init &&
+  scripts/build-pages.sh                            # -> _site/, the site pages.yml would deploy
 ```
 
 Then scan `main` for code copied from others. `scripts/scan-snippets.sh` matches the files tracked at `HEAD` against public open-source code with SCANOSS, sending their fingerprints rather than the code; it writes its report to `qa/scanoss-<commit>.json` and prints the matches. It runs on this machine, and needs Python 3: SCANOSS's free service limits calls per address, and GitHub's runners share addresses it has often limited already. `provenance.yml` runs ScanCode, which finds copyright and license notices, and keeps its report and a summary on the run (`provenance`); the block downloads them into `qa/<run ID>` and prints the summary. **A person sorts the matches.** A match with the earlier SpriteStudio Players and SDK is our own code. A match with a library this repository bundles must be listed in `THIRD_PARTY_NOTICES.md`. Anything else is rewritten, unless its license, read at its source, is compatible with BSD-3-Clause and the code keeps the notice that license asks for. Fix a match by a pull request into `main` before step 4, and run the block again.
@@ -261,8 +261,8 @@ gh pr merge release-notes --merge --delete-branch
 `pages.yml` がサイトをビルドするのは Release を公開したときだけで、そのタグから作ります。再実行しても同じタグをビルドするだけなので、そこで docs やサンプルの不具合が見つかると、`main` で直してそこからデプロイするしかありません。そこで、リリースを切る `main` から、先にサイトをビルドしておきます。`scripts/build-pages.sh` は `pages.yml` が実行するスクリプトそのもので、SpriteStudio-SDK の submodule とネットワーク接続が要ります。失敗したら、手順 4 の前にプルリクエストで `main` を直します。
 
 ```bash
-git switch main && git pull --ff-only && git submodule update --init
-scripts/build-pages.sh                            # -> _site/。pages.yml がデプロイするサイト
+git switch main && git pull --ff-only && git submodule update --init &&
+  scripts/build-pages.sh                            # -> _site/。pages.yml がデプロイするサイト
 ```
 
 続けて、他者のコードを写した箇所が無いかを、`main` で照合します。`scripts/scan-snippets.sh` は、`HEAD` で追跡しているファイルを、SCANOSS で公開されているオープンソースのコードと照合します。送るのはコードではなく指紋です。報告を `qa/scanoss-<commit>.json` に書き、一致を表示します。このスクリプトは手元で実行し、Python 3 が要ります。SCANOSS の無料のサービスはアドレスごとに回数を制限していて、GitHub のランナーはすでに制限されたアドレスを共有していることが多いためです。`provenance.yml` は ScanCode で著作権表示とライセンスの記述を見つけ、報告と一覧を run に残します（`provenance`）。ブロックはそれを `qa/<run ID>` にダウンロードし、一覧を表示します。**一致は人が仕分けます。** 以前の SpriteStudio の Player・SDK との一致は、自社のコードです。このリポジトリが同梱するライブラリとの一致は、`THIRD_PARTY_NOTICES.md` に載っていなければなりません。それ以外は書き直します。残せるのは、出所で確かめたライセンスが BSD-3-Clause と両立し、そのライセンスが求める表示をコードに残すときだけです。一致を直すときは、手順 4 の前にプルリクエストで `main` を直し、このブロックをもう一度実行します。
