@@ -1,0 +1,54 @@
+name: Docs
+
+# Builds the site the way pages.yml publishes it, so a broken page surfaces
+# before a release publishes it.
+#
+# A pull request that touches the site's sources runs this on its own, and
+# builds the docs alone: the packages, the examples and ssconverter-web wait
+# for ci.yml, which calls this for the weekly run and a dispatch. ci.yml cannot
+# carry the pull-request half itself, because it ignores a change to Markdown
+# alone, and the docs are almost nothing else.
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'scripts/prepare-docs.*'
+      - 'scripts/build-docs.*'
+      - 'scripts/build-pages.*'
+      - '.github/workflows/docs.yml'
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 📚 Pages site
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout (with SpriteStudio-SDK submodule)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Build site
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          SKIP: ${{ github.event_name == 'pull_request' && 'packages,assets,rmmz,tyranoscript,examples,ssconverter' || '' }}
+        run: ./scripts/build-pages.sh base="/$REPO_NAME/" out=_site ${SKIP:+"skip=$SKIP"}
