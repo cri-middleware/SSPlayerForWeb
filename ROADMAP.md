@@ -20,6 +20,10 @@ The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration p
 - [ ] **`Text` parts** — The Brain emits a geometry-less `Text` batch per text part and leaves glyphs to the Player, so a UI label authored in SpriteStudio draws nothing here. Draw it, and allow substituting the string at runtime — a UI label that cannot be localized is not a UI label.
 - [ ] **Draw `Nines` parts** — The runtime builds the 9-slice grid into its `get_nines_*` buffers, but no renderer reads them, so a Nines part draws as nothing (see [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)).
 
+## Distribution & verification
+
+- [ ] **A Google Ads HTML5 bundle through review** — `examples/html5-ad` builds a ZIP that passes Google's HTML5 Validator, but none has been submitted, so ad review, and whether the serving frame's Content-Security-Policy lets WebAssembly compile, are unconfirmed. Blocked on: a Google Ads account allowed to upload HTML5.
+
 ## Needs SDK
 
 - [ ] **Dynamic Instance Animation Swap** — Replace the animation mounted on an Instance part at runtime (`changeInstanceAnime`). Once the SDK ships it, the binding goes into `ssplayer-core` and the drawing into each renderer (`ssplayer-pixi`, `ssplayer-webgl` and `ssplayer-rmmz`). Waits for: Instance Lifecycle API — Dynamic instance swap (Phase 3).
