@@ -46,7 +46,7 @@ pnpm --filter tyranoscript-example run fetch:engine
 > `configSave = file`（`require('fs')` 依存）で動くため、**ブラウザで開くと起動時にクラッシュ**します（`init_game` が `_system_config_bgm_volume` を null から読む）。公式リポジトリはブラウザ版で、本スクリプトが `webstorage` を強制するので確実です。
 
 > 必要ツール: `curl` と `tar`（macOS/Linux・Windows 10+ に同梱）。手動配置したい場合は上記 3 つを `examples/tyranoscript-example/` 直下に置き、Config.tjs に
-> `configSave = webstorage;` と一意の `projectID` を設定してください。
+> `;configSave = webstorage;` と一意の `projectID` を設定してください（Config.tjs は行頭が `;` の行だけを設定として読みます）。
 
 配置後のイメージ（`index.html` / `tyrano/` / `data/system/` は .gitignore 済み）:
 
@@ -121,7 +121,7 @@ TyranoScript 本体の `init_game` が、localStorage の `<projectID>_sf`（シ
 2. `data/system/Config.tjs` に**一意の `projectID`** を設定（`ssplayer_tyrano_example`）。
 
 ```tjs
-projectID = ssplayer_tyrano_example;
+;projectID = ssplayer_tyrano_example;
 ```
 
 > それでも直らない場合（過去に同一 origin で起動して localStorage が汚れている等）は、**シークレット/プライベートウィンドウで開く**のが確実（localStorage・SW・キャッシュ・拡張が全てクリーン）。または DevTools ▸ Application ▸ **Clear site data** → リロード。

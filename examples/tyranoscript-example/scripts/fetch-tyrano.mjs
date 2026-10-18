@@ -55,10 +55,11 @@ function need(cmd) {
 
 /**
  * Force this example's required settings into a freshly-downloaded Config.tjs:
- * remove any existing projectID / configSave *setting* lines (commented or not;
- * `//` doc lines are left intact) and append our overrides, so precedence is
- * unambiguous. `configSave = webstorage` is mandatory for a browser (the `file`
- * mode is desktop-only); `projectID` isolates our localStorage per origin.
+ * remove any existing projectID / configSave setting lines and append ours, so
+ * precedence is unambiguous. The engine reads only lines that start with `;` as
+ * settings (`//` starts a comment), so ours start with one too.
+ * `configSave = webstorage` is mandatory for a browser (the `file` mode is
+ * desktop-only); `projectID` isolates our localStorage per origin.
  */
 function patchConfig(systemDir) {
   const cfgPath = join(systemDir, 'Config.tjs');
@@ -71,8 +72,8 @@ function patchConfig(systemDir) {
     .filter((line) => !/^[;\s]*(projectID|configSave)\s*=/.test(line));
   kept.push('');
   kept.push('; --- ssplayer-tyranoscript example overrides (added by fetch-tyrano.mjs) ---');
-  kept.push(`projectID = ${PROJECT_ID};`);
-  kept.push('configSave = webstorage;');
+  kept.push(`;projectID = ${PROJECT_ID};`);
+  kept.push(';configSave = webstorage;');
   kept.push('');
   writeFileSync(cfgPath, kept.join('\n'));
   console.log('[fetch-tyrano] Config.tjs: set projectID + configSave=webstorage (browser-safe).');
