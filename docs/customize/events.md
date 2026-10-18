@@ -82,14 +82,19 @@ outgoing side of a crossfade. The payload is read from the table of the animatio
 that fired it, so an event fired after a crossfade is the incoming animation's
 event.
 
-## Sound playback is the host's job
+## Sound playback
 
-The runtime **does not play audio**. `onAudio` only hands you a reference to the
-sound. Implement `IAudioManager`, assign it to `player.audioManager`, and play the
-sound from your app.
+The runtime **does not play audio**; `onAudio` hands you a reference to the sound. The players
+do, by default: when a loaded `.ssab` has sounds and no `player.audioManager` is set, `load()`
+attaches a `SSWebAudioManager` that plays them through Web Audio. `onAudio` fires either way.
+`ssplayer-webgl` fetches that adapter as a separate chunk, only for a pack with sound.
+
+To play the sounds through your own audio engine, implement `IAudioManager` and assign it
+**before** `load()` — the default is attached only when none is set. On `ssplayer-webgl`,
+`surface.createPlayer({ autoAudio: false })` turns the default off altogether.
 
 ```ts
-player.audioManager = myAudioManager; // IAudioManager implementation
+player.audioManager = myAudioManager; // IAudioManager implementation, before load()
 ```
 
 A sound that has started **outlives the playback that triggered it**. `pause()`,
