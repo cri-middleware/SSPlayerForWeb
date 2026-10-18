@@ -5,10 +5,6 @@
 Use **SpriteStudio** animations in **TyranoBuilder** — placed from the
 component palette, with no scenario code to write.
 
-Drop a SpriteStudio project into a folder and the editor converts it for you
-whenever the project is opened. The animation then appears in the palette's
-dropdowns alongside your other assets.
-
 > **Who this is for:** TyranoBuilder authors.
 > Writing scenarios by hand instead? Use
 > [`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.md),
@@ -19,137 +15,55 @@ dropdowns alongside your other assets.
 the editor plugin itself can't run in a browser, but this is the same runtime it
 embeds, driven by a TyranoScript sample.
 
-## Install
+## Quick start
 
-Download `ssplayer.tbp` from
-[GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) — open the Release named
-`@spritestudio/ssplayer-tyranobuilder <version>` and take the file under **Assets**, not
-the *Source code* archives — then in TyranoBuilder: **plugin settings → add → pick that
-file**.
+**Building a game?** Read on — install, add, place, with no scenario code to write.
+Everything after that (picking up an edit, every component, troubleshooting) is the same
+path further in, in the [TyranoBuilder guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder).
+**Working on the plugin?** [For contributors](#for-contributors) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-**Do not rename the file.** TyranoBuilder takes the plugin's name from it, so
-`ssplayer.tbp` has to stay `ssplayer.tbp`.
+You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
 
-Nothing else to set up — no plugin tag to write, no runtime to initialise.
+1. **Install**: Download `ssplayer.tbp` from
+   [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true):
+   open the Release named `@spritestudio/ssplayer-tyranobuilder <version>` and take the
+   file under **Assets**, not the *Source code* archives. In TyranoBuilder, open
+   **plugin settings → add** and pick that file. Keep the name `ssplayer.tbp` —
+   TyranoBuilder takes the plugin's name from it. It is the only download you need; do not
+   also install the TyranoScript plugin ZIP.
+2. **Add an animation**: Copy your SpriteStudio project — the whole folder, not the `.sspj`
+   alone — into `SpriteStudio_Source/` in your game's folder (the plugin creates it the
+   first time the project opens), then open or reopen the project. It is converted as the
+   project opens, and a message says so.
 
-**This file is all you need.** The `.tbp` already contains the runtime half — the
-`[ss_*]` tags from
-[`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.md) — so do
-**not** also install that package's plugin ZIP. That ZIP is for TyranoScript; it
-unpacks to the same `data/others/plugin/ssplayer/` this file installs to, and
-stacking the two leaves the editor and runtime halves on different versions.
+   ```
+   mygame/
+   ├── SpriteStudio_Source/
+   │   └── Ringo/            ← your project folder, copied whole
+   │       ├── Ringo.sspj
+   │       ├── Ringo.png
+   │       └── …
+   └── data/others/ssdata/
+       └── Ringo/            ← converted when the project opens
+           ├── Ringo.ssab
+           └── Ringo.png
+   ```
 
-> TyranoBuilder's free version loads at most two plugins, and this counts as one.
+3. **Place it**: From **Plugin** in the component palette, place **SpriteStudio: show** and
+   pick your animation from its dropdowns.
 
-## Add an animation
+After editing in SpriteStudio, press **Reconvert now** on that component — nothing
+converts in the background while the editor is open. TyranoBuilder's free version loads
+at most two plugins, and this counts as one.
 
-1. Put your SpriteStudio project — the `.sspj` **and its folder**, since an
-   animation is several files — into `SpriteStudio_Source/` in your project
-   folder. Subfolders are fine; the whole tree is searched.
-2. Open the project in TyranoBuilder. Conversion runs by itself, and a message
-   tells you when it has.
-3. Place a **SpriteStudio: show** component and pick your animation from the
-   dropdowns.
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with.
 
-## After editing in SpriteStudio
+**Read next:** [TyranoBuilder guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder) ·
+[The components](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder#the-components) ·
+[Troubleshooting](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder#troubleshooting) ·
+[Limitations](https://cri-middleware.github.io/SSPlayerForWeb/limitations#tyranoscript-tyranobuilder)
 
-Conversion happens **once, when the project is opened** — nothing runs in the
-background while you work. So after saving in SpriteStudio, press **Reconvert
-now** on the **SpriteStudio: show** component that plays the animation you
-edited. It rebuilds that one pack and reports what it did.
-
-**Added a *new* `.sspj` while the builder was open?** Reconvert lives on a
-component, and a component can only point at a pack that already exists — so
-there is nowhere to press for a project that has never been converted. Open the
-plugin manager instead (the editor's **Plugin** menu), select **SpriteStudio**,
-and press **Import now**. It converts anything added or edited since the project
-was opened, exactly as opening the project does.
-
-That panel also has **Open the source folder** and **Open the import log**, and
-shows which converter build is installed — the line to quote if you report a
-problem.
-
-**Removed an animation from the project?** Its `.ssab` goes when the pack is
-next converted, so it leaves the dropdowns and stops being copied into your
-exported game. Only files this plugin created are ever removed; anything you
-put in the folder yourself stays.
-
-**Two projects cannot have the same file name.** `chara/hero.sspj` and
-`enemy/hero.sspj` both convert into `data/others/ssdata/hero/`, so only the
-first one found is converted and the plugin tells you which two clashed.
-Rename one of them.
-
-## The components
-
-Under **Plugin** in the palette:
-
-| | |
-| --- | --- |
-| **SpriteStudio: show** | Load an animation and put it on a layer |
-| **SpriteStudio: fade in / fade out** | Show or hide one |
-| **SpriteStudio: change animation** | Switch to another animation |
-| **SpriteStudio: stop / pause / resume** | Playback control |
-| **SpriteStudio: stop sound** | Cut the sounds an animation started |
-| **SpriteStudio: wait** | Hold the story until the animation finishes |
-| **SpriteStudio: wait for signal** | Hold the story until the animation fires a signal, such as the moment an attack lands |
-| **SpriteStudio: speed / jump to frame** | Change the playback speed, or move to a frame |
-| **SpriteStudio: play a section / direction** | Loop a range of frames; play forwards, backwards or back and forth |
-| **SpriteStudio: talk animation** | Play a talk animation while a character's lines are shown |
-| **SpriteStudio: part colour / hide part / part image** | Change one part: tint it, hide it, or swap the cell it draws |
-| **SpriteStudio: reset parts** | Undo those part changes |
-| **SpriteStudio: place / move** | Place it, or slide it over time |
-| **SpriteStudio: remove / remove all** | Unload one, or all of them |
-| **SpriteStudio: fade out all / fade in all** | All of them at once, for a scene change |
-| **SpriteStudio: pause all / resume all** | All of them at once, for a menu screen |
-| **SpriteStudio: sound settings** | Only if you want something other than the defaults |
-
-The names follow TyranoBuilder's own language, which it takes from
-`<TyranoBuilder>/lang/lang.txt` — a Japanese editor shows 「SpriteStudio 表示」
-and so on.
-
-A few things the fields do that are worth knowing:
-
-- **Player name** is how the other components find the animation. Choose one on
-  *show*; everywhere else it is a dropdown of the names already in the scene.
-- **Animation pack** lists every `.ssab` in your project — the converted ones
-  first, but a pack you put somewhere else yourself is offered too.
-- **Animation** lists what is actually inside the selected pack.
-- **Then play** hands over to another animation when this one ends, which needs
-  *loop forever* off — an animation that loops forever never ends.
-- **Part**, **Cell map** and **Cell** list what is in that player's pack, and
-  **Part** offers only the parts the change applies to: a colour takes normal
-  parts, an image normal and mask parts.
-
-## Where things go
-
-| | |
-| --- | --- |
-| `SpriteStudio_Source/` | your `.sspj` projects — **not** included in an exported game |
-| `data/others/ssdata/` | the converted animations your game plays |
-| `ss_import_log.txt` | what was converted, and any errors |
-
-You can keep a converted `.ssab` anywhere under `data/` if you prefer; the
-dropdown finds it either way, and **Reconvert now** rebuilds it where it is
-rather than back in `data/others/ssdata/`.
-
-## If something goes wrong
-
-A conversion that fails says why on screen, and the same reason is written to
-`ss_import_log.txt` in your project folder, together with every conversion that
-worked. The plugin manager panel opens that file for you.
-
-While you preview, a component that cannot do its job — a name no *show* created,
-an animation the pack no longer has — says why in a dialog naming the scene file
-and line. An exported game never shows it: the export turns the engine's debug
-switch off.
-
-- **The animation does not appear in the dropdown** — check the `.sspj` is inside
-  `SpriteStudio_Source/`, together with the rest of its folder.
-- **The palette has no SpriteStudio components** — the plugin did not load.
-  Re-add the `.tbp`, and check you are not over the free version's two-plugin
-  limit.
-- **It converted, but nothing shows in the game** — make sure *show* comes before
-  the components that refer to it, and that the layer is one your game uses.
+---
 
 ## For contributors
 
@@ -177,7 +91,9 @@ window, so `<project>/ss_import_log.txt` is where to look — it records the hos
 environment and every conversion, and appends across sessions.
 
 [`examples/tyranobuilderexample`](../../examples/tyranobuilderexample) is a
-project to open straight away: one scene that uses the components on Ringo.
+project to open straight away: one scene that uses the components on Ringo. Create a new
+project in the builder for its template, then run
+`pnpm --filter tyranobuilderexample run setup <that project>`; its README has the details.
 
 How the editor hosts the plugin, including the parts the vendor does not document, is in the
 source comments, chiefly `src/plugin.builder.ts`, `src/builderTypes.d.ts` and `src/buttonParam.ts`.

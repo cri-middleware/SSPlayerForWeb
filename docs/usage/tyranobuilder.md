@@ -333,26 +333,3 @@ never shows it: the export turns the engine's debug switch off.
   project that has no component yet; if neither takes, delete `.ss_import_state.json` and reopen
   the project.
 
-## Building from source
-
-```sh
-pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # the runtime half
-pnpm --filter @spritestudio/ssplayer-tyranobuilder run build
-pnpm --filter @spritestudio/ssplayer-tyranobuilder run pack    # → dist/pack/ssplayer.tbp
-```
-
-Going through the install dialog on every build gets old, so install straight into a project
-instead:
-
-```sh
-node packages/ssplayer-tyranobuilder/scripts/install.mjs mygame --sample
-```
-
-Name a project under `~/TyranoBuilder/myproject`, or give a path to one anywhere. With no name
-it takes the only project there, or lists them. `--sample` seeds `SpriteStudio_Source/Ringo/`
-from the SDK submodule so the first run has something to convert. Then open (or reopen) the
-project.
-
-`examples/tyranobuilderexample` is a project to open straight away: one scene that uses the
-components on Ringo. Create a new project in the builder for its template, then run
-`pnpm --filter tyranobuilderexample run setup <that project>`; its README has the details.

@@ -232,7 +232,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 各コンポーネントは対応する `[ss_*]` タグをそのまま書き出すので、動作は
 [タグ一覧](/ja/usage/tyrano#_4-tags) の説明どおりです。
 
-## うまくいかないとき
+## うまくいかないとき {#troubleshooting}
 
 変換に失敗した場合は、その理由が画面に表示されます。同じ内容は、成功した変換の記録とともにプロジェクト直下の `ss_import_log.txt` に残ります。このファイルはプラグイン管理パネルから開けます。
 
@@ -246,21 +246,3 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 - **SpriteStudio での変更が反映されない** — プロジェクトを開いたあとは自動では走りません。コンポーネントの **今すぐ再変換** を使ってください。まだコンポーネントが無いプロジェクトはプラグイン管理の **今すぐ取り込む** です。どちらでも反映されない場合は
   `.ss_import_state.json` を削除してプロジェクトを開き直してください。
 
-## ソースからビルドする {#building-from-source}
-
-```sh
-pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # ランタイム側
-pnpm --filter @spritestudio/ssplayer-tyranobuilder run build
-pnpm --filter @spritestudio/ssplayer-tyranobuilder run pack    # → dist/pack/ssplayer.tbp
-```
-
-ビルドのたびにインストールダイアログを通すのは手間なので、プロジェクトへ直接インストールできます。
-
-```sh
-node packages/ssplayer-tyranobuilder/scripts/install.mjs mygame --sample
-```
-
-`~/TyranoBuilder/myproject` 以下のプロジェクト名を指定するか、任意の場所のパスを渡します。名前を省略すると、プロジェクトが 1 つならそれを使い、複数あれば一覧を表示します。`--sample` は SDK
-サブモジュールから `SpriteStudio_Source/Ringo/` を用意するので、初回から変換対象があります。あとはプロジェクトを開く（または開き直す）だけです。
-
-`examples/tyranobuilderexample` は、すぐに開けるサンプルプロジェクトです。Ringo にコンポーネントを使うシーンが 1 つ入っています。ビルダーで雛形用の新規プロジェクトを作り、`pnpm --filter tyranobuilderexample run setup <そのプロジェクト>` を実行します。詳しくはその README を参照してください。
