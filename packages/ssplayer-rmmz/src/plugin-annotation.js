@@ -105,7 +105,7 @@
  *
  * @arg loop
  * @text Loop Count
- * @desc -1 = infinite, 0/1 = play once.
+ * @desc -1 or 0 = infinite, 1 = play once, n = n times.
  * @type number
  * @min -1
  * @default -1
@@ -118,7 +118,7 @@
  *
  * @arg wait
  * @text Wait for Completion
- * @desc Hold the event until the animation finishes. Use with a finite loop count (0/1), not an infinite loop.
+ * @desc Hold the event until the animation finishes. Use a loop count of 1 or more: with -1 or 0 the animation never finishes, and the event waits forever.
  * @type boolean
  * @default false
  *
@@ -146,7 +146,7 @@
  *
  * @arg loop
  * @text Loop Count
- * @desc -1 = infinite, 0/1 = play once.
+ * @desc -1 or 0 = infinite, 1 = play once, n = n times.
  * @type number
  * @min -1
  * @default -1
@@ -159,7 +159,7 @@
  *
  * @arg wait
  * @text Wait for Completion
- * @desc Hold the event until the animation finishes. Use with a finite loop count (0/1), not an infinite loop.
+ * @desc Hold the event until the animation finishes. Use a loop count of 1 or more: with -1 or 0 the animation never finishes, and the event waits forever.
  * @type boolean
  * @default false
  *
@@ -188,7 +188,7 @@
  * @default
  * @arg loop
  * @text Loop Count
- * @desc -1 = infinite, 0/1 = play once. Leave blank to keep the current value.
+ * @desc -1 or 0 = infinite, 1 = play once, n = n times. Leave blank to keep the current value.
  * @type number
  * @min -1
  * @default -1
@@ -660,7 +660,7 @@
  *
  * @arg loop
  * @text ループ回数
- * @desc -1 = 無限、0/1 = 1回再生。
+ * @desc -1 または 0 = 無限、1 = 1回再生、n = n回。
  * @type number
  * @min -1
  * @default -1
@@ -673,7 +673,7 @@
  *
  * @arg wait
  * @text 完了までウェイト
- * @desc アニメ終了までイベントを待機します。無限ループではなく有限ループ(0/1)で使用してください。
+ * @desc アニメ終了までイベントを待機します。ループ回数は 1 以上にしてください。-1 や 0 ではアニメが終わらず、待ち続けます。
  * @type boolean
  * @default false
  *
@@ -701,7 +701,7 @@
  *
  * @arg loop
  * @text ループ回数
- * @desc -1 = 無限、0/1 = 1回再生。
+ * @desc -1 または 0 = 無限、1 = 1回再生、n = n回。
  * @type number
  * @min -1
  * @default -1
@@ -714,7 +714,7 @@
  *
  * @arg wait
  * @text 完了までウェイト
- * @desc アニメ終了までイベントを待機します。無限ループではなく有限ループ(0/1)で使用してください。
+ * @desc アニメ終了までイベントを待機します。ループ回数は 1 以上にしてください。-1 や 0 ではアニメが終わらず、待ち続けます。
  * @type boolean
  * @default false
  *
@@ -743,7 +743,7 @@
  * @default
  * @arg loop
  * @text ループ回数
- * @desc -1 = 無限、0/1 = 1回再生。空欄なら現在値を維持。
+ * @desc -1 または 0 = 無限、1 = 1回再生、n = n回。空欄なら現在値を維持。
  * @type number
  * @min -1
  * @default -1
