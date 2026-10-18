@@ -22,150 +22,38 @@
 - **タイムラインからゲームへのフック。** アーティストが置いたイベントがコールバック（`onUserData` / `onSignal` / `onAudio`）で届き、そのままゲームロジックにつなげられます。
 - **どのリフレッシュレートでも滑らか。** **サブフレーム補間**（既定で有効）が各フレームを正確な表示時刻で描画するので、120 Hz 以上のディスプレイでもスローモーションでも動きが滑らかです。
 
-## インストール
-
-```bash
-npm install @spritestudio/ssplayer-pixi pixi.js
-```
-
-`pixi.js`（v8）は **peer 依存**です。アプリがまだ依存していない場合は、プレイヤーと一緒にインストールしてください。
-
 ## クイックスタート
 
-WASM を一度読み込み、`SSPlayer` を生成してステージに追加し、`play()` を呼び出します。
+**アプリで使う場合**はこのまま下へ。入れる → 変換する → 再生する、の順です。その先（イベント、パーツ単位の上書き、テクスチャ）も同じ道の続きで、[PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi)にあります。
+**レンダラー自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
-```ts
-import { Application } from 'pixi.js';
-import { SSPlayer } from '@spritestudio/ssplayer-pixi';
+1. **導入**: `npm install @spritestudio/ssplayer-pixi pixi.js`。`pixi.js` v8 は peer dependency です。バンドラーを使わない場合は、どちらも CDN から読み込めます（[スニペット](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi#without-a-bundler-cdn)）。
+2. **変換**: `.sspj`（SpriteStudio 7.5 以上）をブラウザ上の [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) で `.ssab` にし、テクスチャを隣に置いて配信します。`--embedded` で変換すればテクスチャは `.ssab` の中に入ります（[アセットの準備](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/assets)）。
+3. **再生**: `SSPlayer` は `Ticker.shared` で自分を動かす Pixi の `Container` です。
 
-// 1. Load the WASM runtime once for the whole app.
-await SSPlayer.initialize();
+   ```ts
+   import { Application } from 'pixi.js';
+   import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 
-const app = new Application();
-await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
-document.body.appendChild(app.canvas);
+   await SSPlayer.initialize();   // アプリ全体で一度
 
-// 2. Create a player, load a .ssab, and pick an animation.
-const player = new SSPlayer();
-player.attachRenderer(app.renderer); // 任意 — 下のマスクの注意を参照
-await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-player.setAnimation('run');
+   const app = new Application();
+   await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+   document.body.appendChild(app.canvas);
 
-player.position.set(640, 730);   // Ringo の原点は足元
-app.stage.addChild(player);
+   const player = new SSPlayer();
+   player.attachRenderer(app.renderer);   // 任意: 1 フレーム目からマスクを正しく
+   await player.load('/Ringo.ssab');      // テクスチャは .ssab と同じディレクトリから読み込まれる
+   player.setAnimation('run');
+   player.position.set(640, 730);         // Ringo の原点は足元
+   app.stage.addChild(player);
+   player.play();
+   ```
 
-player.play();
-```
+SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。
 
-> **`attachRenderer` とマスクについて。** マスク／クリッピングパーツはオフスクリーンのカバレッジパスを経由して描画されるため renderer が必要ですが、プレイヤーが renderer を受け取るのは最初に描画された時です。`attachRenderer` を呼ばない場合、マスクの対象となるパーツは最初の1フレームだけ描画を保留し（マスク無しで描かれることはありません）、
-> 2フレーム目から正しく表示されます。あらかじめ renderer を渡しておけば1フレーム目から正しくなります。マスクを含まないアニメーションの表示はどちらでも同一なので、マスクを使う場合にのみ意味があります。
-
-> **参照（ssab）と埋め込み(embedded) ssab のどちらも動作します。** `load()` はいずれの形式も扱います。外部テクスチャファイルを参照する ssab（兄弟階層の PNG としてフェッチされる）でも、`--embedded` で変換され、テクスチャがインライン化されバイナリから直接デコードされる ssab でも構いません。後者では兄弟ファイルのフェッチが発生しないため、アニメーション全体が自己完結の単一リクエストとして読み込まれます。いずれも
-> `examples/pixi-example` で検証済みです。
-
-## CDN から使う（ビルド不要）
-
-バンドラを使いたくない場合、本パッケージはブラウザ直読み用のビルドも同梱しており、CDN
-からそのまま読み込めます。**手動でやることは1つだけ — WASM バイナリの場所を明示する**ことです。ランタイムは別ファイルの `.wasm` で、バンドラの外（クラシックな `<script>` や
-CDN 経由）ではバンドラが行う自動パス解決が効きません。そのため URL を
-`SSPlayer.initialize(wasmUrl)` に渡してください。
-
-> **URL の組は下記スニペットからそのままコピーし、手で組み立てないでください。** `.wasm` と JS グルーは ABI を共有するため、`ssplayer-pixi`
-> のバンドルと `ssplayer-core` の `.wasm` の **両方** で正確なバージョンを指定する必要があります（片方だけ `@latest` にすると不整合が起こり得ます）。2 つのバージョンは一致するとは限りません（パッケージは独立してリリースされます）。記載の組は、組み合わせて動作するものです。
-
-### クラシック `<script>` — グローバル `SSPixiPlayer`
-
-`pixi.js` はピア依存なので、先に Pixi 本体のグローバルビルドを読み込みます（バンドルは
-`window.PIXI` を参照します）。レンダラークラスは `SSPixiPlayer.SSPlayer` です。
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-pixi@7.0.0-beta.1/dist/browser/ssplayer-pixi.browser.min.js"></script>
-<script>
-  const { SSPlayer } = SSPixiPlayer;
-  const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
-
-  (async () => {
-    // WASM の URL を明示的に渡す（バンドラが無いので自動解決されない）。
-    await SSPlayer.initialize(WASM_URL);
-
-    const app = new PIXI.Application();
-    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
-    document.body.appendChild(app.canvas);
-
-    const player = new SSPlayer();
-    await player.load('./Ringo.ssab');   // file:// ではなく http(s) で配信すること
-    player.setAnimation('run');
-    player.position.set(640, 730);   // Ringo の原点は足元
-    app.stage.addChild(player);
-    player.play();
-  })();
-</script>
-```
-
-### ESM を CDN から — `<script type="module">`
-
-ビルド無しでネイティブモジュールを使いたい場合は ESM CDN（下記は esm.sh）から import
-します。ルールは同じで、WASM の URL を明示的に渡します。
-
-```html
-<script type="module">
-  import { Application } from 'https://esm.sh/pixi.js@8';
-  import { SSPlayer } from 'https://esm.sh/@spritestudio/ssplayer-pixi@7.0.0-beta.1';
-
-  await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
-
-  const app = new Application();
-  await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
-  document.body.appendChild(app.canvas);
-
-  const player = new SSPlayer();
-  await player.load('./Ringo.ssab');
-  player.setAnimation('run');
-  player.position.set(640, 730);   // Ringo の原点は足元
-  app.stage.addChild(player);
-  player.play();
-</script>
-```
-
-クラシック `<script>` 版の実行可能なサンプルが [`examples/cdn`](../../examples/cdn/) にあります（`pixi.html`）。
-
-## 再生 API（抜粋）
-
-```ts
-player.play(startFrame?);  player.pause();  player.resume();  player.stop();
-
-player.frameNo;                       // get/set the current frame
-player.speedScale = 1.5;            // playback speed multiplier
-player.loopCount;                   // 設定したループ回数（-1 = 無限）
-player.totalFrames; player.startFrame; player.endFrame; player.frameRate;
-player.isPlaying; player.isPausing;
-
-player.setAnimationSection(start, end);
-player.setPlaybackDirection(direction, style);
-player.getPartNames();
-player.findPartIndex('body');
-```
-
-## イベント
-
-タイムラインイベントは、ランタイムがフレームごとに発火します。すべての購読は、購読解除用の関数を返します。
-
-```ts
-const off = player.onUserData((e) => console.log('userData', e.partName));
-player.onSignal((e) => console.log('signal', e.commandId));
-player.onAudio((e) => console.log('audio', e.soundName));  // notification hook — audio also plays by default (see below)
-player.onAnimationFinished(() => {});
-player.onAnimationLooped(() => {});
-
-off(); // stop listening
-```
-
-**音声は既定で再生されます。** 読み込んだ `.ssab` にサウンドが含まれ、かつ
-`player.audioManager` を設定していない場合、`load()` はそれらを再生する既定の
-`SSWebAudioManager` を自動的にアタッチします。利用側のコードは一切不要です。再生をカスタマイズまたは差し替えるには、`load()` の**前に**独自の `IAudioManager` を
-`player.audioManager` へ割り当ててください（既定のものは未設定のときにのみアタッチされます）。
-`onAudio` はいずれの場合でも発火するため、サウンドを完全に自分で駆動することもできます。
+**次に読む:** [PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi) · [基本的な再生](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/basic) ·
+[制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations)
 
 ## ライセンス
 

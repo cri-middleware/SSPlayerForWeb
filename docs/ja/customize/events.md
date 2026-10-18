@@ -53,13 +53,14 @@ player.setTrackOutgoingEventThreshold(0, 0.5); // 出ていく側はフェード
 
 ユーザーデータ・シグナル・サウンドのイベントは、どれも発火したアニメーションのハンドル **`source`** を持ちます。`getTrackMainSource(track)` や `addTrackSource` の戻り値と比べると、トラック 0 のアニメーションか、オーバーレイか、クロスフェードの出ていく側かを区別できます。中身は発火したアニメーションの表から読むので、クロスフェードの後に発火したイベントは入ってくる側のイベントです。
 
-## サウンドはホスト側で再生
+## サウンドの再生
 
-ランタイムは**音を鳴らしません**。`onAudio` はサウンドの参照を渡すだけです。
-`IAudioManager` を実装して `player.audioManager` に割り当て、再生はアプリ側で行います。
+ランタイムは**音を鳴らしません**。`onAudio` はサウンドの参照を渡すだけです。鳴らすのはプレイヤーで、既定で鳴ります。読み込んだ `.ssab` に音があり、`player.audioManager` が設定されていなければ、`load()` が `SSWebAudioManager` を付けて Web Audio で鳴らします。`onAudio` はどちらの場合も発火します。`ssplayer-webgl` は、このアダプターを音のあるパックのときだけ別チャンクとして取得します。
+
+自前のオーディオエンジンで鳴らすには、`IAudioManager` を実装して `load()` より**前に**割り当てます（既定のものは、何も設定されていないときだけ付きます）。`ssplayer-webgl` では、`surface.createPlayer({ autoAudio: false })` で既定のものを付けないようにできます。
 
 ```ts
-player.audioManager = myAudioManager; // IAudioManager 実装
+player.audioManager = myAudioManager; // IAudioManager 実装（load() の前に）
 ```
 
 一度鳴り始めた音は、**それを発火させた再生よりも長く生き残ります**。`pause()` /

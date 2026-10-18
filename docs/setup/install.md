@@ -54,6 +54,9 @@ npm install @spritestudio/ssplayer-pixi pixi.js
 `ssplayer-webgl` requires no extra dependencies. When using `ssplayer-pixi`,
 `pixi.js@^8.19` is a **peer dependency**, so add it to your app.
 
+No bundler? Both load straight from a CDN — see
+[WebGL](/usage/webgl#without-a-bundler-cdn) or [PixiJS](/usage/pixi#without-a-bundler-cdn).
+
 ## Prerequisites
 
 - The browser must support **WebGL** (version 1 or 2 for `ssplayer-webgl`,
