@@ -30,7 +30,7 @@ JavaScript.
 
 <!-- src points to the ssab file, animation names the animation to play -->
 <ss-player
-  src="/Ringo.ssab"
+  src="/Ringo/Ringo.ssab"
   animation="run"
   autoplay
   style="width: 640px; height: 480px;">
@@ -53,7 +53,7 @@ async function main() {
 
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
-  await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
+  await player.load('/Ringo/Ringo.ssab');   // textures load from the .ssab's own directory
   player.setAnimation('run');    // loopCount defaults to -1 (infinite)
   player.setPlacement({});       // fit the animation's canvas into the surface
   player.play();
@@ -82,7 +82,7 @@ async function main() {
 
   // 2. Create the player, load the .ssab, and select an animation
   const player = new SSPlayer();
-  await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
+  await player.load('/Ringo/Ringo.ssab');   // textures load from the .ssab's own directory
   player.setAnimation('run');    // loopCount defaults to -1 (infinite)
 
   player.position.set(640, 730);   // Ringo's origin is at its feet
