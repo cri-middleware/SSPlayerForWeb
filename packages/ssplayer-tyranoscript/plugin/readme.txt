@@ -19,7 +19,8 @@
     [ss_pos] / [ss_move] を使ってください）。
 
 ■ 動作環境
-    ・TyranoScript V6（Ver603b）で動作確認しています。
+    ・TyranoScript V6 の Ver603b と、TyranoStudio 6.03 が
+      新規プロジェクトに使う Ver602c で動作確認しています。
     ・セーブデータからの自動復元には V515 以降が必要です
       （load-beforemaking / snapsave-start イベントを使用します）。
       V514 以前で使う場合は data/scenario/make.ks に [ss_restore] を

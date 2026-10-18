@@ -41,7 +41,7 @@ TyranoBuilder, and TyranoStudio.
 
 | | |
 | --- | --- |
-| TyranoScript | Verified on **V6 (Ver603b)**, the same build as the `master` the example fetches. Only automatic save restore needs **V515 or later** |
+| TyranoScript | Verified on **V6**: **Ver603b**, the same build as the `master` the example fetches, and **Ver602c**, the build TyranoStudio 6.03 creates new projects with. Only automatic save restore needs **V515 or later** |
 | Rendering | **WebGL1** required (auto-upgrades to WebGL2 when available) |
 
 Restoring players from a save uses TyranoScript's `load-beforemaking` and `snapsave-start`
