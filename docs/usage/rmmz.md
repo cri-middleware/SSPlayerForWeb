@@ -27,7 +27,9 @@ correct Z-order with characters and pictures.
   effects, the 13 SS integration shaders, and instance parts are drawn by the same code as in the WebGL player.
 - It bundles the **no-SIMD (scalar)** WASM, so it runs on MZ's bundled NW.js (a Chromium
   without WebAssembly SIMD) with no launch flags. If initialization fails, SS animations
-  are disabled but the game still boots.
+  are disabled but the game still boots, and the console says why.
+- It keeps no timer of its own: playback advances from the picture's sprite `update()`, so
+  SS animations pause exactly with the game (menus, message waits).
 
 ## 1. Install
 
@@ -120,10 +122,13 @@ the internal command ID.
 
 **Show / attach**
 
-- **Show SS** (`showSS`) — create a picture and attach an animation in one step.
+- **Show SS** (`showSS`) — create a picture and attach an animation in one step. Its
+  arguments are `pictureId`, `ssab` (e.g. `spritestudio/Ringo/Ringo.ssab`), `animation`,
+  `x`, `y`, `scale`, `loop`, `signalSwitch` and `wait`.
 - **Set SS As Picture** (`setSSAsPicture`) — attach SS to a picture you have **already**
   shown with the native *Show Picture* command. From there, position and erase it with
-  the standard *Move / Erase Picture* commands.
+  the standard *Move / Erase Picture* commands. Don't drive one picture id with both a
+  raw *Show Picture* and SS.
 
 **Animation control**
 
@@ -132,7 +137,7 @@ the internal command ID.
 - **Play SS Once** (`playSSOnce`) — play an animation a set number of times, then
   **auto-return to the current loop** (idle → expression → idle).
 - **Play SS Sequence** (`playSSSequence`) — a comma-separated list where each entry plays
-  once except the **last, which loops**.
+  once except the **last, which loops** (e.g. `attack1,attack2,wait1`).
 - **Set SS Speed** (`setSSSpeed`) — a playback-speed multiplier (subframe-interpolated,
   smooth even when slow).
 
@@ -142,8 +147,8 @@ and 0 (the default) cuts.
 
 **Tracks (layering animations)**
 
-Lay more animations over the picture's own one (track 0), on tracks numbered 1 and up.
-Tracks are saved with the picture. A change of the picture's animation **without** a
+Lay more animations over the picture's own one (track 0), on tracks numbered 1 and up — a
+gesture over a walk, an expression over a pose. Tracks are saved with the picture. A change of the picture's animation **without** a
 crossfade empties them, as it does in the player itself; a crossfade keeps them.
 
 - **Set SS Track** (`setSSTrack`) — lay an animation on a track, with its `alpha` (how
@@ -157,10 +162,12 @@ crossfade empties them, as it does in the player itself; a crossfade keeps them.
 **Part overrides (colour / cell / visibility)**
 
 Replace how one part looks at run time, **winning over the animation's keyframes**. The
-settings are stored on the picture, so they **survive save/load**.
+settings are stored on the picture, so they **survive save/load** (playback resumes from the
+start of the animation, as it does for every other picture state).
 
 - **Set SS Part Color** (`setSSPartColor`) — tint one part. The colour is hex
-  (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type. **Normal parts only.**
+  (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type; the four blend
+  operations are the authored Parts Color ones. **Normal parts only.**
 - **Set SS Part Visibility** (`setSSPartVisibility`) — force-hide one part. Turn on
   `cascade` to hide its descendants too: an authored hide never cascades, so this is the
   way to hide a whole body part.
@@ -262,27 +269,7 @@ MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it 
 - **Some screen effects behave differently** from a normal picture (a few PIXI filters
   can shift the animation out of place). MZ's own flash / tint overlays are unaffected.
 
-## Building from source
 
-```sh
-pnpm --filter @spritestudio/ssplayer-rmmz build      # dist/browser/ssplayer-rpgmakermz.js
-pnpm --filter @spritestudio/ssplayer-rmmz run pack   # dist/pack/ssplayer-rmmz-plugin-<v>.zip
-```
-
-To try it in the bundled MZ example:
-
-```sh
-pnpm --filter rmmz-example run sync:plugin   # copy the built plugin + no-SIMD wasm into js/plugins/
-pnpm deploy-examples                         # convert the SS-SDK test projects into spritestudio/
-nw examples/rmmz-example/SampleProject       # Test Play (or open the project in the MZ editor)
-```
-
-To try [conversion on test play](#convert-on-test-play) there, copy
-`packages/ssconverter-core/wasm/ssconverter_bg.wasm` into `SampleProject/js/plugins/` and
-put a SpriteStudio project under `SampleProject/SpriteStudio_Source/`; both are
-git-ignored. `sync:plugin` leaves the converter out because the sample is also published
-as the web demo, where nothing converts.
-
-No NW.js? Use the browser harness at `examples/rmmz-harness` (real `SSPlayer` /
-`SSPlayerRenderer` against PixiJS v5). Track progress in
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/ROADMAP.md).
+The technical reasons, and the fixes planned for them, are in the plugin's
+[README](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.md#how-it-works)
+and [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/ROADMAP.md).

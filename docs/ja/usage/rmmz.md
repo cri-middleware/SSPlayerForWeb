@@ -12,7 +12,7 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 ▶️ **<a href="../../examples/rmmz/" target="_blank" rel="noreferrer">ライブデモ</a>** —
 同梱のサンプル MZ プロジェクトをブラウザーで実行できます。
 
-## しくみ
+## しくみ {#how-it-works}
 
 アニメーションは MZ 自身の **PixiJS v5 レンダラーへ直接描画** されます（MZ の Tilemap や同梱の Effekseer と同じ方式です）。オーバーレイ用の Canvas を重ねないため、キャラクターやピクチャと正しい Z 順で表示されます。
 
@@ -21,7 +21,8 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
   `SSWebGLRenderer` を MZ 共有の `gl` に対して再利用します。これにより、マスク・エフェクト・
   13 種の SS 連携シェーダー・インスタンスパーツは WebGL プレイヤーと同じコードで描画されます。
 - **非 SIMD（スカラー）版の WASM** を同梱しているため、MZ 同梱の NW.js（WebAssembly SIMD 非対応の
-  Chromium）でも起動フラグなしで動作します。初期化に失敗した場合は SS アニメーションが無効化されるだけで、ゲーム自体は起動します。
+  Chromium）でも起動フラグなしで動作します。初期化に失敗した場合は SS アニメーションが無効化されるだけで、ゲーム自体は起動します（理由はコンソールに出ます）。
+- 独自のタイマーを持ちません。再生はピクチャのスプライトの `update()` からだけ進むため、メニューやメッセージ待ちではゲームと一緒に止まります。
 
 ## 1. インストール
 
@@ -78,7 +79,7 @@ MyGame/
 
 変換するのはテストプレイのときだけで、デプロイしたゲームでは変換しません。変換するのは変更のあったものだけです（これまでの変換の記録は `SpriteStudio_Source/.ss_import_state.json`）。変換では、前回の変換が書き出して今回は書き出さなかったファイルを消します。フォルダー内のそれ以外のファイルには触れません。音声は変換しません（[5. 音声](#_5-sound) を参照）。デプロイの前にソースを除外してください（[4. デプロイ](#_4-deployment) を参照）。
 
-## 3. プラグインコマンド
+## 3. プラグインコマンド {#_3-plugin-commands}
 
 イベントの **プラグインコマンド** → `ssplayer-rpgmakermz` から実行します。SS アニメーションは
 MZ の **ピクチャ** に載るため、*ピクチャの移動* / 拡大縮小 / Z 順 / セーブ・ロードがそのまま適用されます。
@@ -87,21 +88,21 @@ MZ の **ピクチャ** に載るため、*ピクチャの移動* / 拡大縮小
 
 **表示 / 付与**
 
-- **SS表示**（`showSS`）— ピクチャの作成とアニメーションの付与を一括で行います。
-- **SSをピクチャに割当**（`setSSAsPicture`）— *ピクチャの表示* で既に表示済みのピクチャへ SS を後付けします。以降は標準の *ピクチャの移動 / 消去* で操作します。
+- **SS表示**（`showSS`）— ピクチャの作成とアニメーションの付与を一括で行います。引数は `pictureId`・`ssab`（例: `spritestudio/Ringo/Ringo.ssab`）・`animation`・`x`・`y`・`scale`・`loop`・`signalSwitch`・`wait` です。
+- **SSをピクチャに割当**（`setSSAsPicture`）— *ピクチャの表示* で既に表示済みのピクチャへ SS を後付けします。以降は標準の *ピクチャの移動 / 消去* で操作します。同じピクチャ番号を *ピクチャの表示* と SS の両方で操作しないでください。
 
 **アニメーション制御**
 
 - **SSアニメ切替**（`changeSSAnimation`）— **同一 `.ssab` 内**の別アニメーションへ再ロードなしで切り替えます。
 - **SSワンショット再生**（`playSSOnce`）— 指定回数だけ再生し、**現在のループへ自動的に戻ります**（待機 → 表情 → 待機 など）。
-- **SS連続再生**（`playSSSequence`）— カンマ区切りのリストを再生し、末尾以外は各 1 回、**末尾のみループ**します。
+- **SS連続再生**（`playSSSequence`）— カンマ区切りのリストを再生し、末尾以外は各 1 回、**末尾のみループ**します（例: `attack1,attack2,wait1`）。
 - **SS再生速度**（`setSSSpeed`）— 再生速度の倍率です（サブフレーム補間により低速でも滑らかです）。
 
 **SSアニメ切替**・**SSワンショット再生**・**SS連続再生**・**SSリップシンク設定** は `クロスフェード時間（ミリ秒）` を取ります。0 より大きいと、表示中のアニメからその時間をかけてクロスフェードし、0（既定）ならすぐに切り替えます。
 
 **トラック（アニメの重ね合わせ）**
 
-ピクチャ自身のアニメ（トラック 0）の上に、1 番以上のトラックで別のアニメを重ねられます。トラックはピクチャと一緒にセーブされます。ピクチャのアニメをクロスフェード**せずに**切り替えると、プレイヤー本体と同じくトラックは空になります。クロスフェードなら残ります。
+ピクチャ自身のアニメ（トラック 0）の上に、1 番以上のトラックで別のアニメを重ねられます（歩きに身振りを、ポーズに表情を重ねる、など）。トラックはピクチャと一緒にセーブされます。ピクチャのアニメをクロスフェード**せずに**切り替えると、プレイヤー本体と同じくトラックは空になります。クロスフェードなら残ります。
 
 - **SSトラック設定**（`setSSTrack`）— トラックにアニメを置きます。`強さ（α）`、`合成方法`（ミックス、またはセットアップポーズからの差分を足す加算）、`ループ回数`、`クロスフェード時間` を指定できます。
 - **SSトラックフェード**（`fadeSSTrack`）— トラックの強さを、指定の時間をかけて目標値まで変えます。`完了までウェイト` でフェードが終わるまでイベントを止めます。
@@ -109,10 +110,10 @@ MZ の **ピクチャ** に載るため、*ピクチャの移動* / 拡大縮小
 
 **パーツ上書き（色 / セル / 表示）**
 
-アニメのキーフレームより **優先** して、特定パーツの見た目を実行時に差し替えます。設定はピクチャに保存されるため、**セーブ / ロードをまたいでも復元されます**。
+アニメのキーフレームより **優先** して、特定パーツの見た目を実行時に差し替えます。設定はピクチャに保存されるため、**セーブ / ロードをまたいでも復元されます**（再生は、ほかのピクチャの状態と同じくアニメの先頭から再開します）。
 
 - **SSパーツ色変更**（`setSSPartColor`）— 1 パーツを着色します。色は `#RRGGBB` / `#RRGGBBAA`
-  で指定します（MZ に色の引数型が無いため 16 進文字列です）。**通常パーツのみ**。
+  で指定します（MZ に色の引数型が無いため 16 進文字列です）。4 つの合成方法は、SpriteStudio のパーツカラーと同じものです。**通常パーツのみ**。
 - **SSパーツ表示切替**（`setSSPartVisibility`）— 1 パーツを強制的に非表示にします。
   `子パーツにも波及` を ON にすると子孫ごと隠せます — アニメの非表示は波及しないため、部位ごと隠すにはこちらを使います。
 - **SSパーツセル差替**（`setSSPartCell`）— 1 パーツが描くセルを差し替えます（装備の差し替えなど）。セルマップ名に `.ssce` は付けません。**通常パーツとマスクパーツのみ**。
@@ -171,28 +172,9 @@ img/   audio/   effects/
 
 **デプロイ。** ツクールは `.ssab` の中身を読めないため、「未使用ファイルを含まない」はアニメーションだけが鳴らす音声ファイルを削除します。公式プラグイン MaterialBase.js の「音声素材のリスト」に 1 つずつ登録するか、このオプションを OFF にしてデプロイしてください。MaterialBase.js は、必要な PluginCommonBase.js と一緒に MZ 本体の `dlc/BasicResources/plugins/official/` にあります。
 
-## 既知の制限
+## 既知の制限 {#known-limitations}
 
 - ピクチャの **色調とブレンドモードは SS アニメーションに適用されません**。*不透明度*・*移動*・*拡大縮小* は適用されます。
 - 一部の画面効果は通常のピクチャと挙動が異なります（一部の PIXI フィルターは位置がずれる、など）。MZ 自身のフラッシュ / 色調オーバーレイには影響しません。
 
-## ソースからビルドする {#building-from-source}
-
-```sh
-pnpm --filter @spritestudio/ssplayer-rmmz build      # dist/browser/ssplayer-rpgmakermz.js
-pnpm --filter @spritestudio/ssplayer-rmmz run pack   # dist/pack/ssplayer-rmmz-plugin-<v>.zip
-```
-
-同梱の MZ サンプルで試す場合は次のとおりです。
-
-```sh
-pnpm --filter rmmz-example run sync:plugin   # ビルド済みプラグイン + 非 SIMD wasm を js/plugins/ へコピー
-pnpm deploy-examples                         # SS-SDK のテストプロジェクトを spritestudio/ へ変換
-nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ エディターで開く）
-```
-
-サンプルで [テストプレイでの変換](#convert-on-test-play) を試すには、`packages/ssconverter-core/wasm/ssconverter_bg.wasm` を `SampleProject/js/plugins/` にコピーし、SpriteStudio のプロジェクトを `SampleProject/SpriteStudio_Source/` に置きます。どちらも git の管理対象外です。サンプルは Web デモとしても公開され、そこでは変換が動かないため、`sync:plugin` はコンバーターをコピーしません。
-
-NW.js が無い場合は、`examples/rmmz-harness`（PixiJS v5 上の実際の `SSPlayer` /
-`SSPlayerRenderer`）のブラウザーハーネスを利用できます。進捗は
-[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/ROADMAP.md) を参照してください。
+技術的な理由と今後の対応予定は、プラグインの [README](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.ja.md#しくみ) と [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/ROADMAP.md) にあります。

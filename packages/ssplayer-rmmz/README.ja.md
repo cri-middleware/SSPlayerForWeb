@@ -4,203 +4,66 @@
 
 **SpriteStudio**（`.ssab`）アニメーションを **RPG ツクール MZ** で再生するプラグインです。キャラやピクチャと正しい前後関係（Zオーダー）で表示されます。
 
-> **対象読者:** RPG ツクール MZ でゲームを作る人。プラグインコマンドで SpriteStudio アニメを追加します（コード不要）。プラグイン自体をいじる場合は → [コントリビューター向け](#コントリビューター向け--ソースからビルド)。**ステータス:** beta。
+> **対象読者:** RPG ツクール MZ でゲームを作る人。プラグインコマンドで SpriteStudio アニメを追加します（コード不要）。
+> **ステータス:** beta。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
 同梱のサンプル MZ プロジェクトをブラウザで動かせます。
 
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。この README は2部構成になっています。
-**[プラグインの使い方](#プラグインの使い方)**（RPG ツクール MZ でゲームを作る方向け）と、
-**[コントリビューター向け](#コントリビューター向け--ソースからビルド)**（プラグインや SDK に手を入れる方向け）です。
+## クイックスタート
 
-**どちらを読めばいい？** ゲームを作る → **プラグインの使い方**。プラグイン本体のコードをいじる → **コントリビューター向け**。
+**ゲームを作る場合**はこのまま下へ。入れる → 変換する → 表示する、の順で、コードは書きません。その先（トラック、パーツ上書き、デプロイ、音声）も同じ道の続きで、[RPG ツクール MZ ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz)にあります。
+**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
----
+RPG ツクール MZ と、**SpriteStudio 7.5 以上**で作成したプロジェクトを用意してください。
 
-# プラグインの使い方
+1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中の 3 ファイル（`ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm`）をゲームの `js/plugins/` にフラットに展開し、**ツール → プラグイン管理**で **ssplayer-rpgmakermz** を ON にします。
+2. **変換**: ゲームの直下に `SpriteStudio_Source/` フォルダを作り、SpriteStudio のプロジェクトを `.sspj` だけでなくフォルダごとコピーして、テストプレイを開始します。タイトルが出る前にプロジェクトが `spritestudio/<プロジェクト名>/` へ変換されます。`.ssab` はアニメーションファイル（`.ssae`）1 つにつき 1 つです。
 
-*RPG ツクール MZ でゲームを作る方向けに、導入からアニメの変換、イベントコマンドでの操作までを説明します。*
+   ```
+   MyGame/
+   ├── js/plugins/
+   │   ├── ssplayer-rpgmakermz.js
+   │   ├── ssruntime_bg.wasm
+   │   └── ssconverter_bg.wasm   ← テストプレイで変換する
+   ├── SpriteStudio_Source/
+   │   └── Ringo/             ← プロジェクトのフォルダをそのまま
+   │       ├── Ringo.sspj
+   │       ├── Ringo.png
+   │       └── …
+   └── spritestudio/          ← テストプレイが書き出す
+       └── Ringo/
+           ├── Ringo.ssab
+           └── Ringo.png
+   ```
 
-## 1. 導入
+3. **表示**: イベントに **プラグインコマンド** → `ssplayer-rpgmakermz` → **SS表示** を追加し、**SSABファイル** に `spritestudio/Ringo/Ringo.ssab` を指定して、テストプレイを開始します。**アニメーション名** を空にすると先頭のアニメーションを再生します。名前を間違えると、コンソール（F8）に実際の名前の一覧が出ます。
 
-1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中身は `ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm` の 3 つで、`ssconverter_bg.wasm` はテストプレイで `.sspj` を自動変換したい場合にだけ使います（[後述](#テストプレイで変換する)）。
-2. これらを `js/plugins/` にフラットに展開します（WASM は `.js` と同じ場所に置いてください）。
-3. プラグイン管理で **ssplayer-rpgmakermz** を有効化します。パラメータはありません（WASM はプラグイン `.js` と同じフォルダから自動で読み込まれます）。
+SpriteStudio で保存したら、テストプレイ中に **F5** を押すと変更が変換されます。デプロイの前に [デプロイ](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#_4-deployment) を読んでください。ソースをゲームに含めないために *除外するファイル/フォルダ* へ入力するものが書いてあります。
 
-## 2. アニメを変換する（.sspj → .ssab）
+SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。
 
-`.sspj` は SpriteStudio で編集するプロジェクトファイル、`.ssab` はプラグインが実際に再生する変換済み（プリビルド）のランタイムファイルです。`.sspj` を次のいずれかで変換してください。
-
-- **Web（インストール不要）：** ホスト版コンバータ
-  **<https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/>** を開き、`.sspj`
-  プロジェクトが入ったフォルダ（ディレクトリ）をドロップすると `.ssab`（＋テクスチャ）が
-  zip ファイルでダウンロードできます。
-- **デスクトップ：** [**SSConverterGUI**](https://github.com/cri-middleware/SSConverterGUI/releases) を使います。
-
-変換して出てきた `.ssab` **とテクスチャ** は、ゲームプロジェクト直下の
-`spritestudio/<プロジェクト名>/` フォルダに置きます。`img/` の **中ではなく**、`img/` と並ぶ位置です。デプロイ時に未使用ファイルが削除されるのは `img/` の中だけなので（[デプロイメント](#4-デプロイメント) 参照）、そこから出しておくことが SS 素材を守る鍵です。
-
-```
-MyGame/
-├── img/                     ← 「未使用ファイルを含まない」で削除される
-├── js/plugins/
-│   ├── ssplayer-rpgmakermz.js
-│   └── ssruntime_bg.wasm
-└── spritestudio/            ← 安全
-    └── Ringo/
-        ├── Ringo.ssab
-        └── Ringo.png        ← テクスチャは .ssab と同じ場所
-```
-
-`.ssab` の名前はプロジェクト名ではなく、プロジェクト内のアニメーションファイル（`.ssae`）の名前です。コンバータは `.ssae` 1 つにつき `.ssab` を 1 つ書き出します（`Ringo.ssae` → `Ringo.ssab`）。そのため `SS表示` コマンドの `SSABファイル` に入力するパスは `spritestudio/<プロジェクト名>/<アニメーションファイル名>.ssab`（例: `spritestudio/Ringo/Ringo.ssab`）になります。テクスチャは `.ssab` からの相対で解決されるため、同じフォルダに置いたままにしてください。
-
-### テストプレイで変換する
-
-`js/plugins/` に `ssconverter_bg.wasm` を置くと、テストプレイのときにプラグインが変換します。
-
-1. SpriteStudio のプロジェクトを、プロジェクト直下の `SpriteStudio_Source/` に置きます。アニメは複数のファイルで構成されるので、**`.sspj` だけでなくフォルダごと**置いてください。サブフォルダに入れても構いません。
-2. テストプレイを開始します。タイトルの前に、前回の変換から変更のあったプロジェクトがすべて `spritestudio/<プロジェクト名>/` へ変換されます。フォルダ名は `.sspj` の名前で、中の `.ssab` の名前は上と同じく `.ssae` の名前です。
-3. SpriteStudio で保存したら、テストプレイ中に **F5** を押します。ゲームが再起動し、その途中で変更が変換されます。
-
-```
-MyGame/
-├── js/plugins/
-│   ├── ssplayer-rpgmakermz.js
-│   ├── ssruntime_bg.wasm
-│   └── ssconverter_bg.wasm     ← テストプレイで変換する
-├── SpriteStudio_Source/        ← プロジェクトはここに置く
-│   └── Ringo/
-│       ├── Ringo.sspj
-│       └── …                   （.ssae・.ssce・テクスチャ）
-└── spritestudio/               ← 変換結果はここに書かれる
-    └── Ringo/
-        ├── Ringo.ssab
-        └── Ringo.png
-```
-
-変換に失敗したプロジェクトがあると、起動が MZ のエラー画面で止まり、プロジェクト名と理由が表示されます。SpriteStudio で直して保存し、**Retry** を押してください。同じファイル名のプロジェクトが 2 つある場合も止まります（`chara/hero.sspj` と `enemy/hero.sspj` はどちらも `spritestudio/hero/` に書き出すため）。どちらかの名前を変えてください。詳しい内容はコンソール（F8）に出ます。
-
-変換するのはテストプレイのときだけで、デプロイしたゲームでは変換しません。変換するのは変更のあったものだけです（これまでの変換の記録は `SpriteStudio_Source/.ss_import_state.json`）。変換では、前回の変換が書き出して今回は書き出さなかったファイルを消します。フォルダ内のそれ以外のファイルには触れません。音声は変換しません（[5. 音声](#5-音声) を参照）。デプロイの前にソースを除外してください（[4. デプロイメント](#4-デプロイメント) を参照）。
-
-## 3. プラグインコマンド
-
-イベントの「プラグインコマンド」から `ssplayer-rpgmakermz` を選んで使います。SS アニメは
-MZ の**ピクチャ**に乗るので、**ピクチャの移動**・拡大・Zオーダー・セーブ/ロードがそのまま効きます。
-
-### 表示・割り当て
-
-| コマンド | 内部名 | 説明 |
-|---|---|---|
-| SS表示 | `showSS` | ピクチャを作成し、アニメを割り当てて再生開始まで一括で行います。引数: `ピクチャ番号` / `SSABファイル`（例 `spritestudio/Ringo/Ringo.ssab`） / `アニメーション名`（空欄で先頭） / `X` / `Y` / `拡大率` / `ループ回数` / `シグナル→スイッチ` / `完了までウェイト`。 |
-| SSをピクチャに割当 | `setSSAsPicture` | 標準の「ピクチャの表示」で既に出したピクチャに、SS を後付けします。位置や消去は標準の「ピクチャの移動/消去」で操作してください（1つのピクチャ番号を、素のピクチャ表示と SS で同時に使わないでください）。 |
-
-### アニメーション制御
-
-| コマンド | 内部名 | 説明 |
-|---|---|---|
-| SSアニメ切替 | `changeSSAnimation` | 同じ `.ssab` 内の別のアニメーションへ切り替えます（再ロードなし）。 |
-| SSワンショット再生 | `playSSOnce` | アニメを再生し、終わったら**現在のループへ自動で戻ります**（待機 → 表情 → 待機）。`ループ回数` で再生回数を指定できます。 |
-| SS連続再生 | `playSSSequence` | カンマ区切りのアニメ列を再生します。末尾以外は1回ずつ、末尾だけループします（例 `attack1,attack2,wait1`）。 |
-| SS再生速度 | `setSSSpeed` | 再生速度の倍率を指定します。サブフレーム補間により低速でも滑らかに再生されます。 |
-
-「SSアニメ切替」「SSワンショット再生」「SS連続再生」「SSリップシンク設定」は `クロスフェード時間（ミリ秒）` を取ります。0 より大きいと、表示中のアニメからその時間をかけてクロスフェードし、0（既定）ならすぐに切り替えます。
-
-### トラック（アニメの重ね合わせ）
-
-ピクチャ自身のアニメ（トラック 0）の上に、1 番以上のトラックで別のアニメを重ねられます。歩きに手振りを足す、ポーズに表情を重ねる、といった使い方です。トラックはピクチャと一緒にセーブされます。ピクチャのアニメをクロスフェード**せずに**切り替えると、プレイヤー本体と同じくトラックは空になります。クロスフェードなら残ります。
-
-| コマンド | 内部名 | 説明 |
-|---|---|---|
-| SSトラック設定 | `setSSTrack` | トラックにアニメを置きます。引数: `トラック番号`（1 以上） / `アニメーション名` / `強さ（α）` / `合成方法`（ミックス、またはセットアップポーズからの差分を足す加算） / `ループ回数` / `クロスフェード時間`。 |
-| SSトラックフェード | `fadeSSTrack` | トラックの強さを、`時間（ミリ秒）` をかけて目標値まで変えます。`完了までウェイト` でフェードが終わるまでイベントを止めます。 |
-| SSトラック解除 | `clearSSTrack` | トラックを空にします。徐々に消したい場合は、先に強さ 0 へフェードしてください。 |
-
-### パーツ上書き（色・セル・表示）
-
-アニメのキーフレームより**優先**して、特定パーツの見た目を実行時に差し替えます。設定はピクチャに保存されるため、**セーブ／ロードをまたいでも復元されます**（再生位置は先頭から再開します）。
-
-| コマンド | 内部名 | 説明 |
-|---|---|---|
-| SSパーツ色変更 | `setSSPartColor` | 1 パーツを着色します。色は `#RRGGBB` / `#RRGGBBAA` で指定（MZ に色指定の引数型が無いため 16 進文字列です）。合成方法はパーツカラーと同じ 4 種。**通常パーツのみ**。 |
-| SSパーツ表示切替 | `setSSPartVisibility` | 1 パーツを強制的に非表示にします（解除も可）。`子パーツにも波及` を ON にすると子孫ごと隠せます — アニメの非表示は波及しないため、部位ごと隠すにはこちらを使います。 |
-| SSパーツセル差替 | `setSSPartCell` | 1 パーツが描くセルを差し替えます（装備の差し替えなど）。セルマップ名に `.ssce` は付けません。**通常パーツとマスクパーツのみ**。 |
-| SSパーツ上書き解除 | `clearSSPartOverrides` | 上書きを解除します。`パーツ名` を空欄にするとそのピクチャの全パーツが対象です。 |
-
-> **優先度**（色・セルのみ）: `次のキーフレームに譲る` / `アニメが変わるまで保持`（既定）/
-> `恒久`。アニメを切り替えると、**`恒久` 以外の上書きは解除されます**（ランタイムの仕様に合わせてセーブ内容も同時に整理されます）。表示の上書きに優先度はなく、アニメ切替で必ず解除されます。ただしクロスフェード（`クロスフェード時間` が 0 より大きい切り替え）では、どの上書きも解除されません。
-
-### 再生・ライフサイクル
-
-| コマンド | 内部名 | 説明 |
-|---|---|---|
-| SS再生 / 一時停止 / 停止 / 削除 | — | `ピクチャ番号` で操作します。 |
-| SS完了待ち | — | 指定したループ回数をすべて再生し終えるまでイベントを待機させます（有限ループで使ってください。`0` は無限ループの別名なので待ち続けます）。 |
-
-### リップシンク（喋る立ち絵・応用）
-
-| コマンド | 内部名 | 説明 |
-|---|---|---|
-| SSリップシンク設定 | `setSSTalk` | ピクチャを**話者名**（メッセージの名前欄）に紐づけます。その話者のメッセージ表示中は `発話` アニメを、それ以外は `待機` アニメを再生するので、喋っているキャラだけが口パクします。 |
-| SSリップシンク解除 | `clearSSTalk` | 紐づけを解除します。会話が終わったら呼んでください。 |
-
-> `アニメーション名` を空欄にすると先頭のアニメを自動で採用します。存在しない名前を指定すると、コンソールに警告と**利用可能なアニメ名の一覧**を表示します（MZ エディタは `.ssab` を読めないため、動的なプルダウンは仕様上できません）。
-
-## 4. デプロイメント
-
-**SS 素材を `img/` の外に置けば、「未使用ファイルを含まない」は ON のままで構いません。**
-公式ヘルプの通り、このオプションが削除対象にするのは `img/`・`audio/`・`effects/` の中だけです。`.ssab` とテクスチャは本プラグインが動的に読み込むためツクールからは未使用に見え、
-`img/` の中にあると削除されますが、プロジェクト直下の `spritestudio/` は `js/plugins/` と同じくそもそも対象外です。登録作業も追加設定も要りません。例外は音声ファイルです（[5. 音声](#5-音声) を参照）。
-
-**ソースを除外する。** デプロイメントはプロジェクトフォルダを丸ごと書き出すため、編集用の SpriteStudio プロジェクトが入った `SpriteStudio_Source/` もそのままゲームに含まれます。デプロイメントのオプション **［除外するファイル/フォルダ］** に `SpriteStudio_Source,ssconverter_bg.wasm` を入力してください。どちらもゲームの実行には不要です。
-
-> **移行：** 素材がまだ `img/spritestudio/` にある場合は、フォルダごと 1 階層上の
-> `spritestudio/` へ移動し、各「SS表示」「SSをピクチャに割当」コマンドの `SSABファイル`
-> から先頭の `img/` を外してください。
-
-**トレードオフ — 暗号化。** *画像ファイルの暗号化* も対象は `img/`・`audio/` だけのため、
-`img/` の外に置いたテクスチャは暗号化されません。テクスチャを暗号化したい場合は、`.ssab` とテクスチャを分けるのではなく **`spritestudio/` フォルダごと `img/` の下へ戻して**ください。
-`.ssab` は画像ではないので暗号化されませんが、同じフォルダにあるテクスチャは暗号化され、
-`ImageManager` 経由で読み込むため復号は自動です。ただしその場合は **「未使用ファイルを含まない」を OFF にする**か、デプロイ後に **`img/spritestudio/` を出力先へコピー**する必要があります。
-
-## 5. 音声
-
-サウンドキーは MZ の `AudioManager` を通じて効果音として、ゲームの SE 音量で再生されます。キーのサウンド名（SpriteStudio のサウンドリストでの名前）が、ファイル `audio/se/<名前>.ogg` を指します。元のファイルは、ほかの SE と同じように Ogg Vorbis に変換して置いてください。*音声ファイルの暗号化* もほかの SE と同じく適用されます。
-
-音はキーに指定された回数だけ続けて鳴り、止まります。SpriteStudio の音声に無限ループはありません。ピクチャを消去すると、そのピクチャが鳴らした音だけが止まります。イベントコマンド「SEの停止」は、ほかの SE と一緒にこれらの音も止めます。
-
-**デプロイ。** ツクールは `.ssab` の中身を読めないため、「未使用ファイルを含まない」はアニメーションだけが鳴らす音声ファイルを削除します。公式プラグイン MaterialBase.js の「音声素材のリスト」に 1 つずつ登録するか、このオプションを OFF にしてデプロイしてください。MaterialBase.js は、必要な PluginCommonBase.js と一緒に MZ 本体の `dlc/BasicResources/plugins/official/` にあります。
-
-## 既知の制限
-
-- **ピクチャの色調とブレンドモードは SS アニメに反映されません**。不透明度・移動・拡大は反映されます。
-- **一部の画面効果は通常のピクチャと挙動が異なります**（一部の PIXI フィルタを直接掛けると位置がズレることがあります）。MZ 自身のフラッシュ／色調のオーバーレイには影響しません。
-
-技術的な理由と対応予定は [コントリビューター向け → しくみ](#しくみ) と [ROADMAP.md](./ROADMAP.md) に記載しています。
+**次に読む:** [RPG ツクール MZ ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz) ·
+[プラグインコマンド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#_3-plugin-commands) ·
+[既知の制限](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#known-limitations)
 
 ---
 
-# コントリビューター向け — ソースからビルド
+## コントリビューター向け — ソースからビルド
 
-*利用者はここまで。以下はこのパッケージを開発する人向けです。*
+*プラグインの利用者はここまで。以下はプラグインを開発する人向けです。*
 
-*プラグインや SDK に手を入れる方向けに、アーキテクチャ、ソースからのビルド、同梱ハーネスを説明します。*
+### しくみ
 
-## しくみ
+ゲームを作る人から見える部分はガイドの [しくみ](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#how-it-works) にあります。内部は次のとおりです。
 
-`.ssab` を **MZ 自身の PixiJS v5 レンダラへ直接描画**しています（MZ の Tilemap や同梱の
-Effekseer と同じ方式です）。別 canvas のオーバーレイにならないため、キャラやピクチャと正しい前後関係で表示されます。
-
-- **ランタイム**：**非 SIMD（スカラー）版**の SpriteStudio WASM を同梱しているため、MZ 同梱の
-  NW.js（WebAssembly SIMD 非対応の Chromium）でも起動フラグなしに動作します。初期化に失敗した場合は SS アニメだけが無効化され、ゲーム自体は起動します（理由はコンソールに表示されます）。
 - **Layer 3（レンダラ）**：`SSPlayer` は `PIXI.Container`、`SSPlayerRenderer` は登録済みの
   `PIXI.ObjectRenderer`（`'ssplayer'`）で、[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl)
-  の `SSWebGLRenderer` を MZ の共有 `gl` 上で駆動します。これを再利用することで、**マスク・エフェクト・SS特殊シェーダ13種・インスタンスパーツがそのまま動作**します。生 GL 描画の前後は、
-  MZ の Effekseer スプライトと同一の WebGL ステート退避／復元で挟んでいます。
+  の `SSWebGLRenderer` を MZ の共有 `gl` 上で駆動します。生 GL 描画の前後は、MZ の Effekseer スプライトと同一の WebGL ステート退避／復元で挟んでいます。
 - **Layer 4（プラグイン）**：ドロップイン型の IIFE です。`Scene_Boot.isReady` で WASM の初期化を待ち、Game_Picture ↔ Sprite_Picture ブリッジでアニメをピクチャにアタッチします（MZ の移動・拡大が適用され、セーブ／ロードで状態が復元されます）。テクスチャは `ImageManager`、音声は
   `AudioManager` に委譲します。
-- **独自タイマーを持ちません**：再生は親スプライトの `update()` からのみ進むため、メニューやメッセージ待ちのときにゲームと一緒にピタッと止まります。
 
-**既知の制限（技術的な内訳）。** 平易な要約は上の [既知の制限](#既知の制限) を参照してください。内部的には次のとおりです。
+**既知の制限（技術的な内訳）。** 平易な要約はガイドの [既知の制限](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#known-limitations) を参照してください。内部的には次のとおりです。
 
 - MZ の**色調**は SS の描画へ渡していません。不透明度は渡しています（`SSPlayerRenderer` が Pixi の `worldAlpha` をワールド色調として `SSWebGLRenderer` へ渡す）。移動・拡大も反映されます。
 - SS スプライトに **PIXI フィルタを直接掛ける**と位置がズレることがあります（投影が**フルスクリーン固定**のため）。MZ の画面効果（フラッシュ・色調）は別オーバーレイなので影響ありません。
@@ -208,7 +71,7 @@ Effekseer と同じ方式です）。別 canvas のオーバーレイになら�
 
 ツクールの色調を、不透明度のために `SSWebGLRenderer` が受け取っているワールド色調へ繋ぐことと、投影の制限に対する投影行列の注入は、今後の対応予定です（[ROADMAP.md](./ROADMAP.md) を参照）。
 
-## ビルドして試す
+### ビルドして試す
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-rmmz build      # dist/browser/ssplayer-rpgmakermz.js
@@ -227,7 +90,7 @@ nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ
 `deploy-examples` はテストアセットの変換・配布を一手に担う単一の入口です。NW.js がなければ、
 `examples/rmmz-harness` のブラウザハーネス（実 `SSPlayer` / `SSPlayerRenderer` を PixiJS v5 上で駆動します）を使ってください。
 
-サンプルで [テストプレイでの変換](#テストプレイで変換する) を試すには、`packages/ssconverter-core/wasm/ssconverter_bg.wasm` を `SampleProject/js/plugins/` にコピーし、SpriteStudio のプロジェクトを `SampleProject/SpriteStudio_Source/` に置きます。どちらも git の管理対象外です。サンプルは Web デモとしても公開され、そこでは変換が動かないため、`sync:plugin` はコンバータをコピーしません。
+サンプルでテストプレイでの変換を試すには、`packages/ssconverter-core/wasm/ssconverter_bg.wasm` を `SampleProject/js/plugins/` にコピーし、SpriteStudio のプロジェクトを `SampleProject/SpriteStudio_Source/` に置きます。どちらも git の管理対象外です。サンプルは Web デモとしても公開され、そこでは変換が動かないため、`sync:plugin` はコンバータをコピーしません。
 
 ## ライセンス
 
