@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-pixi",
   "version": "7.0.0-beta.1",
-  "description": "PixiJS renderer for SpriteStudio-SDK player",
+  "description": "SpriteStudio Player for Web on PixiJS v8: plays SpriteStudio animations (.ssab) as a Pixi Container, drawn through Pixi's own batching.",
   "keywords": [
     "spritestudio",
     "spritestudio7",

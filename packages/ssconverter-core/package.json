@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssconverter-core",
   "version": "7.0.0-beta.1",
-  "description": "Environment-agnostic WebAssembly core (wasm build of the Rust libssconverter crate) that converts SpriteStudio projects (.sspj) to binaries (.ssab/.ssqb)",
+  "description": "WebAssembly build of the SpriteStudio converter: turns SpriteStudio projects (.sspj) into the .ssab and .ssqb the players load, bytes in and bytes out, in a browser or in Node.",
   "keywords": [
     "spritestudio",
     "spritestudio7",

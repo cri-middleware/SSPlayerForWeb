@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-core",
   "version": "7.0.0-beta.1",
-  "description": "Engine-agnostic WebAssembly core for SpriteStudio-SDK player",
+  "description": "Engine-agnostic WebAssembly core of SpriteStudio Player for Web: plays SpriteStudio animations (.ssab) and hands each frame to a renderer as draw data, for building your own renderer.",
   "keywords": [
     "spritestudio",
     "spritestudio7",

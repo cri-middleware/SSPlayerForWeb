@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-webgl",
   "version": "7.0.0-beta.1",
-  "description": "Zero-dependency, ad-grade WebGL1/2 renderer for SpriteStudio-SDK player",
+  "description": "SpriteStudio Player for Web on WebGL 1/2: plays SpriteStudio animations (.ssab) on a canvas or as an <ss-player> element, with no dependencies.",
   "keywords": [
     "spritestudio",
     "spritestudio7",
