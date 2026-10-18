@@ -5,7 +5,7 @@
 
 ■ バージョン
     プラグイン          : {{VERSION}}
-    作成時ティラノ版    : TyranoScript V520
+    作成時ティラノ版    : TyranoScript V6（Ver603b）
 
 ■ 概略
     SpriteStudio で作ったアニメーション（.ssab）を、シナリオに
@@ -19,7 +19,7 @@
     [ss_pos] / [ss_move] を使ってください）。
 
 ■ 動作環境
-    ・TyranoScript V520 で動作確認しています。
+    ・TyranoScript V6（Ver603b）で動作確認しています。
     ・セーブデータからの自動復元には V515 以降が必要です
       （load-beforemaking / snapsave-start イベントを使用します）。
       V514 以前で使う場合は data/scenario/make.ks に [ss_restore] を
