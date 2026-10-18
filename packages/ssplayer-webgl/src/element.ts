@@ -86,9 +86,7 @@ export class SSPlayerElement extends HTMLElement {
   private _readyPromise: Promise<void> = Promise.resolve();
 
   // Player-event unsubscribers, torn down on disconnect. The player's on* hooks
-  // are re-dispatched as DOM CustomEvents (see wireEvents). Audio playback itself
-  // is opt-in: attach an SSWebAudioManager to `el.player` to hear `onAudio` sounds
-  // (the 'audio' CustomEvent is still emitted regardless, for host wiring).
+  // are re-dispatched as DOM CustomEvents (see wireEvents).
   private _unsubscribe: Array<() => void> = [];
 
   /**
