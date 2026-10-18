@@ -34,7 +34,9 @@ editor plugins.
 
 | Question | File |
 |---|---|
-| Each package, and the architecture diagram | [README.md](./README.md), the [docs site](./docs/) |
+| Using a package: every tag, command, API and limitation | the [docs site](./docs/) |
+| Install, convert, first frame, where to read next; in a package's README, also working on it | [README.md](./README.md) and each package's, per `SpriteStudio-SDK/MAINTAINING_PLAYERS.md` |
+| The architecture diagram | [README.md](./README.md) |
 | Constraints, setup, build, test, code generation, the docs site | [CONTRIBUTING.md](./CONTRIBUTING.md) |
 | Releases, maintainers only | [RELEASING.md](./RELEASING.md) |
 | Plans and non-goals | [ROADMAP.md](./ROADMAP.md) |
