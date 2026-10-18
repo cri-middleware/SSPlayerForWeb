@@ -7,10 +7,11 @@
     "spritestudio7",
     "animation",
     "2d",
+    "sprite",
+    "skeletal-animation",
+    "gamedev",
     "webassembly",
-    "wasm",
-    "runtime",
-    "player"
+    "wasm"
   ],
   "author": "CRI Middleware Co., Ltd.",
   "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-core#readme",
