@@ -56,9 +56,11 @@ data/others/plugin/ssplayer/
 data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつき 1 つ、同じ名前
 ```
 
+**置き場所とフォルダ名は固定です。** `[plugin name="x"]` は TyranoScript で `[call storage="../others/plugin/x/init.ks"]` の省略形なので、プラグインはちょうど `data/others/plugin/ssplayer/` に置く必要があります。名前を変えたり別の場所へ移したりすると、`[plugin name="ssplayer"]` は何も見つけられません。`init.ks` の中のパスも、この場所を前提に書かれています。
+
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。出力は `data/others/ssdata/` 以下に置き、`[ss_new storage=...]` から指します。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。出力は `data/others/ssdata/` 以下に置き、`[ss_new storage=...]` から指します。プロジェクトごとにフォルダを分けておくと（`data/others/ssdata/Ringo/`）、同じ名前のテクスチャがぶつかりません。その場合は `storage="others/ssdata/Ringo/Ringo.ssab"` で読み込みます。
 
 ## 3. クイックスタート
 
@@ -75,7 +77,7 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 
 ```
 ; scene1.ks
-[ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480" loop="true"]
+[ss_new name="chr" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480" loop="true"]
 [ss_play name="chr"]
 ```
 
@@ -83,7 +85,16 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 - `[ss_new]` は名前付きプレイヤーを生成し、`.ssab` をロードしてレイヤーに置き、再生します。
 - `[ss_play]` は既存プレイヤーで再生／アニメ切替を行います。
 
-動く最小プロジェクトは `examples/tyranoscript-example` にあります。
+1 つの `.ssab` には複数のアニメ（待機・笑顔・ジャンプ …）を入れられます。`anime=` で名前を指定して選び、空にすると先頭のアニメになります:
+
+```
+[ss_play name="chr" anime="smile"]                ; アニメ切替（同じ .ssab、再ロードなし）
+[ss_play name="chr" anime="jump" loop="false"]    ; 1 回再生して…
+[ss_wait name="chr"]                              ; …終わるまでシナリオを止め…
+[ss_play name="chr" anime="wait" loop="true"]     ; …待機ループへ戻す
+```
+
+シナリオを止めずに同じことをするには `next=` を使います（[アニメの連鎖](#chaining-animations) を参照）。動く最小プロジェクトは `examples/tyranoscript-example` にあります。コメント付きの [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) で、登場、`[anim]` によるフェード、複数レイヤー、セーブ / ロードを順に試せます。
 
 ## 4. 提供タグ {#_4-tags}
 
@@ -110,7 +121,7 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 | `[ss_pos]` | 瞬間移動 / スケール / 重なり順（アンカー基準・絶対） | `name=`(必須) `x=` `y=` `scale=` `zindex=` |
 | `[ss_move]` | 補間移動 / スケール（easeOut・既定は非ブロッキング） | `name=`(必須) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | パーツの色をアニメより優先して上書き（通常パーツのみ） | `name=`(必須) `part=`(必須) `color=`(必須) `blend=` `priority=` |
-| `[ss_part_visible]` | パーツを強制的に非表示 / 解除 | `name=`(必須) `part=`(必須) `hide=` `cascade=` |
+| `[ss_part_visible]` | パーツを強制的に非表示 / 解除。`cascade=` で子孫にも波及 | `name=`(必須) `part=`(必須) `hide=` `cascade=` |
 | `[ss_part_cell]` | パーツが描くセルを差し替え（通常 / マスクパーツのみ） | `name=`(必須) `part=`(必須) `cellmap=`(必須) `cell=`(必須) `priority=` |
 | `[ss_part_clear]` | パーツ上書きを解除（`part=` 省略で全パーツ） | `name=`(必須) `part=` |
 | `[ss_free]` | 1 プレイヤーを解放 | `name=`(必須) |
@@ -118,11 +129,24 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 | `[ss_pause_all]` / `[ss_resume_all]` | 全プレイヤー一時停止 / 再開（メニュー等で使用） | — |
 | `[ss_restore]` | セーブから全プレイヤーを再構築。**通常は不要**（ロード時に自動復元されます）。ロード完了まで待たせたい場合や、イベント機構の無い古いエンジンでのみ使います | — |
 
-座標は他の画面要素と同じく、Tyrano の通常の左上原点ピクセル（`config.scWidth × scHeight`）を使います。`loop` は `true`→無限 / `false`→1 回 / 数値→回数です。
+共通の属性は次の値を取ります。
+
+- `x` / `y`: 他の画面要素と同じく、Tyrano の通常の左上原点ピクセル（`config.scWidth × scHeight`、既定 `0,0`）です。アニメの**アンカー**がその位置に来ます。
+- `loop`: `true` = 無限（既定）/ `false` = 1 回 / 数値 = その回数。
+- `layer`: Tyrano のレイヤー番号（**大きいほど手前**、既定 `0`）。`page` は `fore`（既定）/ `back` です。
+- `scale`: 拡大率（既定 `1`）。
+- `anime`: `.ssab` 内のアニメ名。空にすると**先頭**のアニメになります。
+- `[ss_play]` の `start`: 開始フレーム（既定 `-1` = 現在のフレームから）。
+- `visible`: `false` にすると表示せずにロードだけ行います（[先読み・表示・非表示](#preload-show-hide) を参照）。
+- `zindex`: *同じレイヤーの中での*重なり順。指定しない場合、同じレイヤーのプレイヤーは作成順に重なります。
+- `time`: フェードの時間（ms）。既定は `[ss_show]` / `[ss_hide]` が `0`（即時）、`[ss_fadein]` / `[ss_fadeout]` が `1000`、`[ss_track_fade]` が `500` です。
+- `wait`: `true` にすると演出が終わるまでシナリオを止めます。フェードでは既定で `true`、`[ss_move]` では既定で `false` です。
+
+そのほかの属性は、以下でタグごとに説明します。
 
 タグは失敗してもシナリオを止めません。エンジンのデバッグ設定（`data/system/Config.tjs` の `;debugMenu.visible = true`）が有効なら、原因はエンジン自身のエラーダイアログに、シナリオのファイル名と行番号付きで表示されます。たとえば `[ss_play] next="Wiat" is not in others/ssdata/Chara.ssab.` のように表示されます。リリース時はこの設定をオフにしてください。オフのときは、原因はブラウザのコンソールにだけ出力されます。
 
-### 先読み・表示・非表示
+### 先読み・表示・非表示 {#preload-show-hide}
 
 `[ss_new visible="false"]` は**表示せずにロードだけ**行います。サイズの大きい `.ssab` を必要な場面より前に準備しておき、その瞬間に即座に出せます:
 
@@ -134,7 +158,7 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 
 `[ss_hide]` はアニメをロードしたまま（＝ `[ss_show]` が即時）画面外にし、GPU 消費も止めます。実際に解放するのは `[ss_free]` です。`[ss_fadeout]` / `[ss_fadein]` はシーン切替向けに全プレイヤーを一括でフェードし、フェードイン時には**元々表示されていたものだけ**が戻ります。
 
-### アニメの連鎖
+### アニメの連鎖 {#chaining-animations}
 
 `next=` は連鎖をプレイヤー側に予約するので、「登場 → 待機ループ」に `[ss_wait]` は不要で、シナリオも止まりません:
 
@@ -144,7 +168,7 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 ```
 
 `next=` を指定して `loop=` を省略すると 1 回再生になります（無限ループには終わりが来ないため）。
-`nextloop=` は連鎖先のループ回数です。予約された連鎖は次の `[ss_play]` で取り消されます。
+`nextloop=` は連鎖先のループ回数です。`atframe=` のフレームに届く前に終わるアニメは、終わった時点で切り替わります。予約された連鎖は次の `[ss_play]` か `[ss_show anime=]` で取り消されます。
 
 ### クロスフェードとトラック
 
@@ -208,8 +232,7 @@ SpriteStudio のアニメ単位で行うものです:
 はじめまして。[p]
 ```
 
-`jname=` はシナリオの `#名前` でも Tyrano のキャラ ID でも一致します。`idle=` を空にすると
-`[ss_play]` で最後に指定したアニメへ戻ります。トーク／待機の切替はセーブに含まれないため、台詞の途中でセーブしても通常のアニメで復元されます。`talk=""` で解除できます。
+`jname=` はシナリオの `#名前` でも Tyrano のキャラ ID でも一致し、省略するとプレイヤー自身の名前になります。`idle=` を空にすると `[ss_play]` で最後に指定したアニメへ戻るので、表情の切り替えが次の台詞でも残ります。トーク／待機の切替はセーブに含まれないため、台詞の途中でセーブしても通常のアニメで復元されます。`talk=""` で解除できます。スキップや `[nowait]` ではエンジンが台詞を一度に表示するので、トークアニメが一瞬だけ映ることはありません。
 
 ### パーツ上書きについて
 
@@ -260,7 +283,7 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 ## 6. セーブ / ロードとライフサイクル
 
 - **通常のテキスト待ち（`[l]` / `[p]`）中も再生は継続します** — これが期待挙動です。メニューやセーブ画面で止めたい場合は `[ss_pause_all]` / `[ss_resume_all]` を使います。画面外・タブ非表示では自動的に一時停止します。
-- **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。セーブした時点のフレームから、速度・方向・区間・トラックもそのままで再開します。
+- **セーブ / ロード**: プレイヤーはロード時に自動で復元されます（`make.ks` への追記は不要です）。セーブした時点のフレームから、表示状態・重なり順・予約済みの `next=`・`[ss_chara]` の紐づけ・速度・方向・区間・トラックもそのままで再開します。
 - **シーン切替**: レイヤーをクリアすると（`[freeimage]` など、原因を問わず）そのレイヤー上のプレイヤーは自動的に解放されます。`[ss_free]` / `[ss_free_all]` は、レイヤーに触れずに個別に解放したい場合に使います。
 - **スキップ**: `data/system/Config.tjs` の `skipEffectIgnore = true`（既定）のままスキップしている間は、`[chara_show]` と同じく SS の演出も短縮されます。`[ss_show]` / `[ss_hide]` / `[ss_fadein]` / `[ss_fadeout]` / `[ss_move]` / `[ss_track_fade]` の `time=` と、`[ss_play]` / `[ss_show]` / `[ss_track]` / `[ss_chara]` の `transition=` はエンジンのスキップ時の長さになり、`[ss_wait]` は待ちません。アニメ自体は再生を続けます。`[ss_wait_signal]` は、続く処理がシグナルで分岐しうるため、スキップ中も待ちます。
 
@@ -270,27 +293,17 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 音はキーに指定された回数だけ鳴って止まります。SpriteStudio の音声に無限ループはありません。アニメの停止・一時停止・切り替えでは、鳴っている音は止めません。プレイヤーが鳴らした音は `[ss_stop_audio]` ですぐ止まり、`[ss_free]` でもプレイヤーの解放と一緒に止まります。どちらもほかの音には触れません。`[stopse]` はこれらの音には効きません。
 
+## うまくいかないとき {#troubleshooting}
+
+- **何も表示されない / エラーが出る**: `[plugin name="ssplayer"]` が `[ss_new]` より前に実行されているか確認してください。ランタイムを起動するのはこの行です（`call [ss_init] before creating players` のようなメッセージは、まだ起動していないことを示します）。
+- **`.ssab` が読み込めない**: `storage=` は `data/` からの相対パスです（例: `others/ssdata/Ringo/Ringo.ssab`）。テクスチャの PNG は `.ssab` と同じフォルダに置いてください。
+- **WASM が初期化されない**: `ssruntime_bg.wasm` が `data/others/plugin/ssplayer/` の `main.js` の隣にあるか確認してください。`init.ks` はそこから読み込みます。
+- **`[anim]` でほとんど見えなくなる**: `opacity` は **0〜255** で、0〜1 ではありません。
+- **アニメ名が通らない**: 名前は大文字と小文字を区別します。SpriteStudio のアニメ一覧と照らし合わせてください。`anime=` を空にすると先頭のアニメになります。
+- **セーブをロードするとキャラが消える**: TyranoScript V514 以前には自動復元に使うイベント機構がありません。`make.ks` に `[ss_restore]` を書いてください。
+
 ## 既知の制限
 
 ティラノビルダーについては専用プラグイン `@spritestudio/ssplayer-tyranobuilder` があり、`.tbp` として配布され、コンポーネントパレットへの追加に加えて `.sspj` の変換もエディタ内で行います（[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照）。どちらの統合でも未対応の範囲は
 [制約と適用範囲](/ja/limitations#tyranoscript-tyranobuilder) を参照してください。
 
-## ソースからビルドする {#building-from-source}
-
-```sh
-pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
-```
-
-`pack` は `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}` を zip 化します。GitHub Release に添付されているのと同じアーカイブで、`ssplayer/` を `data/others/plugin/` に展開して使います。
-
-同梱のサンプルで試す場合は次のとおりです。
-
-```sh
-pnpm --filter tyranoscript-example run sync:plugin   # ビルド済みプラグイン + wasm をサンプルへコピー
-```
-
-::: tip TyranoScript 本体は同梱していません
-サンプルがコミットしているのは *authored* なシナリオ・プラグインローダ・`.ssab` ファイルだけです。
-TyranoScript 本体は開発時に各自で配置してください。
-:::

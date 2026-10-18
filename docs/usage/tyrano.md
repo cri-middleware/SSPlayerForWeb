@@ -77,11 +77,18 @@ data/others/plugin/ssplayer/
 data/others/ssdata/<ssae name>.ssab   # one per .ssae in your project, named after it
 ```
 
+**The location and the folder name are fixed.** `[plugin name="x"]` is TyranoScript
+shorthand for `[call storage="../others/plugin/x/init.ks"]`, so the plugin has to sit at
+exactly `data/others/plugin/ssplayer/`; renamed or moved, `[plugin name="ssplayer"]` finds
+nothing. The paths inside `init.ks` are written against that location too.
+
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
 plugin actually plays. See [Preparing assets](/usage/assets) for how to convert. Put the
-output under `data/others/ssdata/` and point `[ss_new storage=...]` at it.
+output under `data/others/ssdata/` and point `[ss_new storage=...]` at it. Giving each
+project its own folder (`data/others/ssdata/Ringo/`) keeps textures of the same name from
+colliding; you then load it as `storage="others/ssdata/Ringo/Ringo.ssab"`.
 
 ## 3. Quick start
 
@@ -98,7 +105,7 @@ Then show a character wherever you want one:
 
 ```
 ; scene1.ks
-[ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480" loop="true"]
+[ss_new name="chr" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480" loop="true"]
 [ss_play name="chr"]
 ```
 
@@ -108,7 +115,21 @@ Then show a character wherever you want one:
 - `[ss_new]` creates a named player, loads its `.ssab`, drops it on a layer, and plays.
 - `[ss_play]` plays or switches an animation on an existing player.
 
-A runnable minimal project lives at `examples/tyranoscript-example`.
+One `.ssab` can hold several animations (idle, smile, jump …); `anime=` picks one by name,
+and an empty one picks the first:
+
+```
+[ss_play name="chr" anime="smile"]                ; switch animation (same .ssab, no reload)
+[ss_play name="chr" anime="jump" loop="false"]    ; play once…
+[ss_wait name="chr"]                              ; …hold the scenario until it ends
+[ss_play name="chr" anime="wait" loop="true"]     ; …then back to the idle loop
+```
+
+The same without stopping the scenario is a `next=` — see
+[Chaining animations](#chaining-animations). A runnable minimal project lives at
+`examples/tyranoscript-example`; its commented
+[`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks)
+works through entrances, `[anim]` fades, several layers and save/load.
 
 ## 4. Tags
 
@@ -135,7 +156,7 @@ A runnable minimal project lives at `examples/tyranoscript-example`.
 | `[ss_pos]` | Instant move / scale / reorder (anchor-accurate, absolute) | `name=`(req) `x=` `y=` `scale=` `zindex=` |
 | `[ss_move]` | Tweened move / scale (easeOut, non-blocking by default) | `name=`(req) `x=` `y=` `scale=` `time=` `wait=` |
 | `[ss_part_color]` | Tint a part, winning over the animation (Normal parts only) | `name=`(req) `part=`(req) `color=`(req) `blend=` `priority=` |
-| `[ss_part_visible]` | Force-hide a part (or revert it) | `name=`(req) `part=`(req) `hide=` `cascade=` |
+| `[ss_part_visible]` | Force-hide a part (or revert it); `cascade=` takes its descendants too | `name=`(req) `part=`(req) `hide=` `cascade=` |
 | `[ss_part_cell]` | Make a part draw another cell (Normal / mask parts only) | `name=`(req) `part=`(req) `cellmap=`(req) `cell=`(req) `priority=` |
 | `[ss_part_clear]` | Clear part overrides (every part when `part=` is omitted) | `name=`(req) `part=` |
 | `[ss_free]` | Release one player | `name=`(req) |
@@ -143,9 +164,26 @@ A runnable minimal project lives at `examples/tyranoscript-example`.
 | `[ss_pause_all]` / `[ss_resume_all]` | Pause / resume all (e.g. around a menu) | — |
 | `[ss_restore]` | Rebuild every player from a save. **Not needed** — the plugin does this itself on load; use it only to make the load *wait* for the players, or on an engine with no event system | — |
 
-Coordinates use Tyrano's normal top-left pixels (`config.scWidth × scHeight`), the same
-as any other on-screen element. `loop`: `true` → infinite / `false` → once / a number →
-that many loops.
+What the shared attributes take:
+
+- `x` / `y`: Tyrano's normal top-left pixels (`config.scWidth × scHeight`, default `0,0`),
+  the same as any other on-screen element. The animation's **anchor** lands at that point.
+- `loop`: `true` = infinite (default) / `false` = once / a number = that many loops.
+- `layer`: the Tyrano layer number (**higher = in front**; default `0`). `page` is `fore`
+  (default) / `back`.
+- `scale`: a scale factor (default `1`).
+- `anime`: an animation name inside the `.ssab`; empty picks the **first** animation.
+- `[ss_play]`'s `start`: the start frame (default `-1` = from the current frame).
+- `visible`: `false` loads the player without showing it — see
+  [Preload, show, hide](#preload-show-hide).
+- `zindex`: stacking order *within one layer*. Without it, players on the same layer stack
+  in creation order.
+- `time`: a fade in ms. `[ss_show]` / `[ss_hide]` default to `0` (instant),
+  `[ss_fadein]` / `[ss_fadeout]` to `1000`, `[ss_track_fade]` to `500`.
+- `wait`: `true` holds the scenario until the effect finishes — the default for the fades,
+  not for `[ss_move]`.
+
+The rest are described with their tags below.
 
 A tag that fails never stops the scenario. With the engine's debug switch on
 (`;debugMenu.visible = true` in `data/system/Config.tjs`), the reason appears in the
@@ -180,8 +218,9 @@ exactly the players that were on screen before the fade-out.
 ```
 
 `next=` with no `loop=` plays the current animation once (an infinite loop would never
-reach its end). `nextloop=` sets the follow-up's loop count; the next `[ss_play]`
-cancels a queued follow-up.
+reach its end). `nextloop=` sets the follow-up's loop count. An animation that ends
+before reaching its `atframe=` switches at its end. The next `[ss_play]` or
+`[ss_show anime=]` cancels a queued follow-up.
 
 ### Crossfades and tracks
 
@@ -270,9 +309,12 @@ whole SpriteStudio animations rather than a mouth parameter:
 Nice to meet you.[p]
 ```
 
-`jname=` matches the `#name` in your scenario or the Tyrano chara id. An empty `idle=`
-returns to whatever `[ss_play]` last set. The talk/idle swap is not saved, so a save
-taken mid-line restores the character in their normal animation. `talk=""` unbinds.
+`jname=` matches the `#name` in your scenario or the Tyrano chara id; left out, it is the
+player's own name. An empty `idle=` returns to whatever `[ss_play]` last set, so an
+expression change survives the next line. The talk/idle swap is not saved, so a save
+taken mid-line restores the character in their normal animation. `talk=""` unbinds. In
+skip / `[nowait]` mode the engine prints the whole line at once, and no talk animation
+flickers past.
 
 ### Part overrides
 
@@ -338,7 +380,8 @@ than the anchor, so they were never accurate for this anyway.
   expected behavior. To freeze animations for a menu or save screen, use
   `[ss_pause_all]` / `[ss_resume_all]`. Off-screen / hidden-tab playback auto-pauses.
 - **Save / load**: players are restored on load automatically — there is nothing
-  to add to `make.ks` — and resume on the frame the save was taken on, with their speed,
+  to add to `make.ks` — and resume on the frame the save was taken on, with their
+  visibility, stacking order, queued `next=` follow-up, `[ss_chara]` binding, speed,
   direction, section and tracks.
 - **Scene changes**: clearing a layer (e.g. `[freeimage]`) releases the players on
   it automatically, whatever cleared it. `[ss_free]` / `[ss_free_all]` are for
@@ -364,6 +407,22 @@ loop. Stopping, pausing or switching the animation leaves a sound that is alread
 `[ss_stop_audio]` stops the sounds a player started, and `[ss_free]` stops them as it releases
 the player; neither touches any other sound. `[stopse]` does not reach these sounds.
 
+## Troubleshooting
+
+- **Nothing shows, or an error appears**: make sure `[plugin name="ssplayer"]` runs before
+  `[ss_new]` — it is what starts the runtime (messages like
+  `call [ss_init] before creating players` mean it has not).
+- **The `.ssab` won't load**: `storage=` is relative to `data/`
+  (e.g. `others/ssdata/Ringo/Ringo.ssab`); keep the texture PNGs in the same folder as the
+  `.ssab`.
+- **WASM won't initialize**: check that `ssruntime_bg.wasm` sits next to `main.js` in
+  `data/others/plugin/ssplayer/` — `init.ks` loads it from there.
+- **`[anim]` leaves it barely visible**: `opacity` is **0–255**, not 0–1.
+- **An animation name is rejected**: names are case-sensitive; check them against
+  SpriteStudio's animation list. An empty `anime=` picks the first.
+- **Characters vanish after loading a save**: on TyranoScript V514 or earlier there is no
+  event system for the automatic restore — put `[ss_restore]` in `make.ks`.
+
 ## Known limitations
 
 TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships
@@ -371,23 +430,3 @@ as a `.tbp`, adds SpriteStudio components to the palette, and converts your `.ss
 the editor — see [TyranoBuilder](/usage/tyranobuilder). What neither integration covers yet is
 listed in [Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
 
-## Building from source
-
-```sh
-pnpm --filter @spritestudio/ssplayer-tyranoscript run build   # dist/browser/main.js
-pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplayer-tyranoscript-plugin-<v>.zip
-```
-
-`pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}` — the archive the GitHub
-Release carries; extract `ssplayer/` into `data/others/plugin/`.
-
-To try it in the bundled example:
-
-```sh
-pnpm --filter tyranoscript-example run sync:plugin   # copy the built plugin + wasm into the example
-```
-
-::: tip TyranoScript itself is not bundled
-The example commits only the *authored* scenario, plugin loader, and `.ssab` files — you
-place a TyranoScript runtime yourself during development.
-:::
