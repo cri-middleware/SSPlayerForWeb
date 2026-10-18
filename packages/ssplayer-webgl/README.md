@@ -31,9 +31,19 @@ per-part overrides, textures) is the same path further in, in the
 
 1. **Install** with `npm install @spritestudio/ssplayer-webgl` — or, with no bundler, load it
    from a CDN: [the snippets](https://cri-middleware.github.io/SSPlayerForWeb/usage/webgl#without-a-bundler-cdn).
-2. **Convert** your `.sspj` (SpriteStudio 7.5 or later) to `.ssab` in the browser with
-   [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/), and serve the `.ssab` with its textures beside it, or
-   convert with `--embedded` to carry them inside ([Preparing assets](https://cri-middleware.github.io/SSPlayerForWeb/usage/assets)).
+2. **Convert** your `.sspj` (SpriteStudio 7.5 or later) in the browser with
+   [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/): drop the project folder on it and extract the ZIP it
+   downloads into the folder your app serves as-is — Vite's `public/`, for example. The `.ssab`
+   loads its textures from beside it; check **Embedded Assets** to carry them inside instead
+   ([Preparing assets](https://cri-middleware.github.io/SSPlayerForWeb/usage/assets)).
+
+   ```
+   public/
+   └── Ringo/            ← the folder in the ZIP
+       ├── Ringo.ssab
+       └── Ringo.png
+   ```
+
 3. **Play** it — with the `<ss-player>` element:
 
    ```ts
@@ -42,7 +52,7 @@ per-part overrides, textures) is the same path further in, in the
    ```
 
    ```html
-   <ss-player src="/Ringo.ssab" animation="run" autoplay style="width:640px;height:480px"></ss-player>
+   <ss-player src="/Ringo/Ringo.ssab" animation="run" autoplay style="width:640px;height:480px"></ss-player>
    ```
 
    or from code, on a canvas of your own:
@@ -53,7 +63,7 @@ per-part overrides, textures) is the same path further in, in the
    await SSSurface.initialize();   // once for the whole app
    const surface = new SSSurface(document.querySelector('canvas')!, { autoStart: true });
    const player = surface.createPlayer();
-   await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
+   await player.load('/Ringo/Ringo.ssab');   // textures load from the .ssab's own directory
    player.setAnimation('run');
    player.setPlacement({});   // fit the animation's canvas into the surface
    player.play();

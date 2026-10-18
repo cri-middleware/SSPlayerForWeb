@@ -27,7 +27,7 @@ PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う�
 
 <!-- src に ssab ファイル、animation に再生するアニメーション名を指定 -->
 <ss-player
-  src="/Ringo.ssab"
+  src="/Ringo/Ringo.ssab"
   animation="run"
   autoplay
   style="width: 640px; height: 480px;">
@@ -50,7 +50,7 @@ async function main() {
 
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
-  await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
+  await player.load('/Ringo/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   player.setAnimation('run');    // loopCount の既定値は -1（無限ループ）
   player.setPlacement({});       // アニメーションのキャンバスをサーフェスに収めます
   player.play();
@@ -77,7 +77,7 @@ async function main() {
 
   // 2. プレイヤーを生成し、.ssab を読み込んでアニメーションを選択
   const player = new SSPlayer();
-  await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
+  await player.load('/Ringo/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれます
   player.setAnimation('run');    // loopCount の既定値は -1（無限ループ）
 
   player.position.set(640, 730);   // Ringo の原点は足元

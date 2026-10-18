@@ -35,9 +35,19 @@ per-part overrides, textures) is the same path further in, in the
 1. **Install** with `npm install @spritestudio/ssplayer-pixi pixi.js` — `pixi.js` v8 is a peer
    dependency. With no bundler, load both from a CDN:
    [the snippets](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi#without-a-bundler-cdn).
-2. **Convert** your `.sspj` (SpriteStudio 7.5 or later) to `.ssab` in the browser with
-   [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/), and serve the `.ssab` with its textures beside it, or
-   convert with `--embedded` to carry them inside ([Preparing assets](https://cri-middleware.github.io/SSPlayerForWeb/usage/assets)).
+2. **Convert** your `.sspj` (SpriteStudio 7.5 or later) in the browser with
+   [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/): drop the project folder on it and extract the ZIP it
+   downloads into the folder your app serves as-is — Vite's `public/`, for example. The `.ssab`
+   loads its textures from beside it; check **Embedded Assets** to carry them inside instead
+   ([Preparing assets](https://cri-middleware.github.io/SSPlayerForWeb/usage/assets)).
+
+   ```
+   public/
+   └── Ringo/            ← the folder in the ZIP
+       ├── Ringo.ssab
+       └── Ringo.png
+   ```
+
 3. **Play** it — an `SSPlayer` is a Pixi `Container` that drives itself from `Ticker.shared`:
 
    ```ts
@@ -52,7 +62,7 @@ per-part overrides, textures) is the same path further in, in the
 
    const player = new SSPlayer();
    player.attachRenderer(app.renderer);   // optional: masks right from the first frame
-   await player.load('/Ringo.ssab');      // textures load from the .ssab's own directory
+   await player.load('/Ringo/Ringo.ssab');      // textures load from the .ssab's own directory
    player.setAnimation('run');
    player.position.set(640, 730);         // Ringo's origin is at its feet
    app.stage.addChild(player);

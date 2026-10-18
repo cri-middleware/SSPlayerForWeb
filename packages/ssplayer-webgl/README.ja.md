@@ -26,7 +26,15 @@
 **レンダラー自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 1. **導入**: `npm install @spritestudio/ssplayer-webgl`。バンドラーを使わない場合は CDN から読み込めます（[スニペット](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/webgl#without-a-bundler-cdn)）。
-2. **変換**: `.sspj`（SpriteStudio 7.5 以上）をブラウザ上の [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) で `.ssab` にし、テクスチャを隣に置いて配信します。`--embedded` で変換すればテクスチャは `.ssab` の中に入ります（[アセットの準備](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/assets)）。
+2. **変換**: `.sspj`（SpriteStudio 7.5 以上）をブラウザ上の [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) で変換します。プロジェクトのフォルダをドロップし、ダウンロードされた ZIP を、アプリがそのまま配信するフォルダ（Vite の `public/` など）に展開します。`.ssab` はテクスチャを隣から読み込みます。**Embedded Assets** にチェックを入れて変換すれば、テクスチャは `.ssab` の中に入ります（[アセットの準備](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/assets)）。
+
+   ```
+   public/
+   └── Ringo/            ← ZIP の中のフォルダ
+       ├── Ringo.ssab
+       └── Ringo.png
+   ```
+
 3. **再生**: `<ss-player>` 要素で再生するか、
 
    ```ts
@@ -35,7 +43,7 @@
    ```
 
    ```html
-   <ss-player src="/Ringo.ssab" animation="run" autoplay style="width:640px;height:480px"></ss-player>
+   <ss-player src="/Ringo/Ringo.ssab" animation="run" autoplay style="width:640px;height:480px"></ss-player>
    ```
 
    自前の Canvas にコードで描きます。
@@ -46,7 +54,7 @@
    await SSSurface.initialize();   // アプリ全体で一度
    const surface = new SSSurface(document.querySelector('canvas')!, { autoStart: true });
    const player = surface.createPlayer();
-   await player.load('/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれる
+   await player.load('/Ringo/Ringo.ssab');   // テクスチャは .ssab と同じディレクトリから読み込まれる
    player.setAnimation('run');
    player.setPlacement({});   // アニメーションのキャンバスをサーフェスに収める
    player.play();
