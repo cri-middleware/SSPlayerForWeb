@@ -71,7 +71,7 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssplayer-pixi` | npm |
 | `@spritestudio/ssconverter-core` | npm |
 | `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.md#for-contributors--building-from-source) |
-| `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](/usage/tyrano#building-from-source) |
+| `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranoscript/README.md#for-contributors--building-from-source) |
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](/usage/tyranobuilder#building-from-source) |
 | `@spritestudio/ssconverter-web` | hosted on GitHub Pages at `/ssconverter/`, plus a Node CLI in the repo |
 

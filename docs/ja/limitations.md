@@ -50,7 +50,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-pixi` | npm |
 | `@spritestudio/ssconverter-core` | npm |
 | `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.ja.md#コントリビューター向け--ソースからビルド) |
-| `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](/ja/usage/tyrano#building-from-source) |
+| `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranoscript/README.ja.md#コントリビューター向け--ソースからビルド) |
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](/ja/usage/tyranobuilder#building-from-source) |
 | `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI |
 
