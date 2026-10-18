@@ -31,7 +31,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 | | |
 | --- | --- |
-| TyranoScript | **V6（Ver603b）** で動作確認（サンプルが取得する `master` と同じ版）。自動セーブ復元のみ **V515 以降**が必要 |
+| TyranoScript | **V6** の **Ver603b**（サンプルが取得する `master` と同じ版）と **Ver602c**（TyranoStudio 6.03 が新規プロジェクトに使う版）で動作確認。自動セーブ復元のみ **V515 以降**が必要 |
 | 描画 | **WebGL1** 必須（WebGL2 があれば自動で昇格） |
 
 セーブデータからの復元は TyranoScript の `load-beforemaking` / `snapsave-start` イベントを使っており、これらは **V515 で追加された**ものです。**V514 以前**ではイベント機構が無いため自動復元が働かず、`data/scenario/make.ks` に `[ss_restore]` を書く必要があります（「6. セーブ /
