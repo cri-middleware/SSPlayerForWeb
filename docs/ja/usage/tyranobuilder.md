@@ -219,7 +219,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 | **SpriteStudio 全体一時停止 / 全体再開** | メニュー画面用にまとめて |
 | **SpriteStudio 音声設定** | 既定と違う鳴らし方にしたいときだけ |
 
-コンポーネント名はティラノビルダーの言語設定に従うので、英語のエディタでは "SpriteStudio: show" のように表示されます。
+コンポーネント名はティラノビルダー自身の言語に従います（`<TyranoBuilder>/lang/lang.txt` で決まります）。英語のエディタでは "SpriteStudio: show" のように表示されます。
 
 各項目について、知っておくと役に立つ点は次のとおりです。
 

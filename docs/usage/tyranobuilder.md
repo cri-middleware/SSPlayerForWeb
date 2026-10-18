@@ -293,8 +293,8 @@ Under **Plugin** in the palette:
 | **SpriteStudio: pause all / resume all** | All of them at once, for a menu screen |
 | **SpriteStudio: sound settings** | Only if you want something other than the defaults |
 
-The names follow TyranoBuilder's own language setting, so a Japanese editor shows
-「SpriteStudio 表示」and so on.
+The names follow TyranoBuilder's own language, which it takes from
+`<TyranoBuilder>/lang/lang.txt`, so a Japanese editor shows 「SpriteStudio 表示」and so on.
 
 A few things the fields do that are worth knowing:
 
