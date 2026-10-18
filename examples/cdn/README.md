@@ -97,5 +97,6 @@ yet, say:
    npx serve .   # then open http://localhost:3000/examples/cdn/pixi.html
    ```
 
-See each package's README (`packages/ssplayer-pixi`, `packages/ssplayer-webgl`) for the
-same snippets in prose, including the `<script type="module">` (ESM-from-CDN) variant.
+The same snippets in prose, including the `<script type="module">` (ESM-from-CDN) variant, are in
+the guides: [WebGL](https://cri-middleware.github.io/SSPlayerForWeb/usage/webgl#without-a-bundler-cdn)
+and [PixiJS](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi#without-a-bundler-cdn).

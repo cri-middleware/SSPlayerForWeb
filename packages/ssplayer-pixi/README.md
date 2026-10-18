@@ -25,165 +25,44 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 - **Game hooks on the timeline.** Events the artist placed arrive as callbacks (`onUserData` / `onSignal` / `onAudio`) that you wire straight into game logic.
 - **Smooth at any refresh rate.** **Sub-frame interpolation** (on by default) renders each frame at its exact display time, so motion stays fluid on 120 Hz+ displays and in slow motion.
 
-## Install
-
-```bash
-npm install @spritestudio/ssplayer-pixi pixi.js
-```
-
-`pixi.js` (v8) is a **peer dependency** — install it alongside the player if your app
-doesn't already depend on it.
-
 ## Quick start
 
-Load the WASM once, create an `SSPlayer`, add it to the stage, and `play()`:
+**Using it in your app?** Read on — install, convert, play. Everything after that (events,
+per-part overrides, textures) is the same path further in, in the
+[PixiJS guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi).
+**Working on the renderer?** [For contributors](#for-contributors--building-from-source) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-```ts
-import { Application } from 'pixi.js';
-import { SSPlayer } from '@spritestudio/ssplayer-pixi';
+1. **Install** with `npm install @spritestudio/ssplayer-pixi pixi.js` — `pixi.js` v8 is a peer
+   dependency. With no bundler, load both from a CDN:
+   [the snippets](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi#without-a-bundler-cdn).
+2. **Convert** your `.sspj` (SpriteStudio 7.5 or later) to `.ssab` in the browser with
+   [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/), and serve the `.ssab` with its textures beside it, or
+   convert with `--embedded` to carry them inside ([Preparing assets](https://cri-middleware.github.io/SSPlayerForWeb/usage/assets)).
+3. **Play** it — an `SSPlayer` is a Pixi `Container` that drives itself from `Ticker.shared`:
 
-// 1. Load the WASM runtime once for the whole app.
-await SSPlayer.initialize();
+   ```ts
+   import { Application } from 'pixi.js';
+   import { SSPlayer } from '@spritestudio/ssplayer-pixi';
 
-const app = new Application();
-await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
-document.body.appendChild(app.canvas);
+   await SSPlayer.initialize();   // once for the whole app
 
-// 2. Create a player, load a .ssab, and pick an animation.
-const player = new SSPlayer();
-player.attachRenderer(app.renderer); // optional — see the mask note below
-await player.load('/Ringo.ssab');   // textures load from the .ssab's own directory
-player.setAnimation('run');
+   const app = new Application();
+   await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
+   document.body.appendChild(app.canvas);
 
-player.position.set(640, 730);   // Ringo's origin is at its feet
-app.stage.addChild(player);
+   const player = new SSPlayer();
+   player.attachRenderer(app.renderer);   // optional: masks right from the first frame
+   await player.load('/Ringo.ssab');      // textures load from the .ssab's own directory
+   player.setAnimation('run');
+   player.position.set(640, 730);         // Ringo's origin is at its feet
+   app.stage.addChild(player);
+   player.play();
+   ```
 
-player.play();
-```
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with.
 
-> **`attachRenderer` and masks.** Mask / clipping parts are drawn through an
-> offscreen coverage pass, which needs a renderer — and the player is only handed
-> one when it is first drawn. Without `attachRenderer` the parts a mask governs are
-> therefore held back for exactly one frame (never drawn unclipped), and masking is
-> correct from the second. Pass the renderer up front and it is correct from the
-> first frame. Animations without masks render identically either way, so this is
-> only worth doing if you have any.
-
-> **Reference *and* embedded ssab both work.** `load()` handles either variant:
-> an ssab that references external texture files (fetched as sibling PNGs), or one
-> converted with `--embedded`, whose textures are inlined and decoded straight from
-> the binary — no sibling fetch, so the whole animation loads as a single
-> self-contained request. Verified against both in `examples/pixi-example`.
-
-## Use from a CDN (no build step)
-
-Don't want a bundler? This package also ships a browser build you can load straight
-from a CDN. **The one thing you must do by hand is point the loader at the WASM
-binary.** The runtime is a separate `.wasm` file, and outside a bundler (a classic
-`<script>`, or any CDN context) the automatic path resolution bundlers rely on
-isn't available — so pass its URL to `SSPlayer.initialize(wasmUrl)`.
-
-> **Copy the URL pair from a snippet below; don't assemble it by hand.** The `.wasm`
-> and its JS glue share an ABI, so **both** the `ssplayer-pixi` bundle and the
-> `ssplayer-core` `.wasm` need an exact version — a floating `@latest` on one can
-> desync it from the other. The two versions need not be identical, since the
-> packages are released independently; the pair as printed is one that works together.
-
-### Classic `<script>` — global `SSPixiPlayer`
-
-`pixi.js` is a peer dependency, so load Pixi's own global build first; the player
-bundle reads `window.PIXI`. The renderer class is `SSPixiPlayer.SSPlayer`.
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-pixi@7.0.0-beta.1/dist/browser/ssplayer-pixi.browser.min.js"></script>
-<script>
-  const { SSPlayer } = SSPixiPlayer;
-  const WASM_URL = 'https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm';
-
-  (async () => {
-    // Pass the explicit WASM URL — no bundler means no automatic resolution.
-    await SSPlayer.initialize(WASM_URL);
-
-    const app = new PIXI.Application();
-    await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
-    document.body.appendChild(app.canvas);
-
-    const player = new SSPlayer();
-    await player.load('./Ringo.ssab');   // serve over http(s), not file://
-    player.setAnimation('run');
-    player.position.set(640, 730);   // Ringo's origin is at its feet
-    app.stage.addChild(player);
-    player.play();
-  })();
-</script>
-```
-
-### ESM via CDN — `<script type="module">`
-
-Prefer native modules without a build step? Import from an ESM CDN (esm.sh below).
-Same rule: pass the WASM URL explicitly.
-
-```html
-<script type="module">
-  import { Application } from 'https://esm.sh/pixi.js@8';
-  import { SSPlayer } from 'https://esm.sh/@spritestudio/ssplayer-pixi@7.0.0-beta.1';
-
-  await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
-
-  const app = new Application();
-  await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e });
-  document.body.appendChild(app.canvas);
-
-  const player = new SSPlayer();
-  await player.load('./Ringo.ssab');
-  player.setAnimation('run');
-  player.position.set(640, 730);   // Ringo's origin is at its feet
-  app.stage.addChild(player);
-  player.play();
-</script>
-```
-
-A runnable copy of the classic `<script>` version is in [`examples/cdn`](../../examples/cdn/) (`pixi.html`).
-
-## Playback API (excerpt)
-
-```ts
-player.play(startFrame?);  player.pause();  player.resume();  player.stop();
-
-player.frameNo;                       // get/set the current frame
-player.speedScale = 1.5;            // playback speed multiplier
-player.loopCount;                   // configured loop count (-1 = infinite)
-player.totalFrames; player.startFrame; player.endFrame; player.frameRate;
-player.isPlaying; player.isPausing;
-
-player.setAnimationSection(start, end);
-player.setPlaybackDirection(direction, style);
-player.getPartNames();
-player.findPartIndex('body');
-```
-
-## Events
-
-Timeline events are fired by the runtime each frame. Every subscription returns
-an unsubscribe function.
-
-```ts
-const off = player.onUserData((e) => console.log('userData', e.partName));
-player.onSignal((e) => console.log('signal', e.commandId));
-player.onAudio((e) => console.log('audio', e.soundName));  // notification hook — audio also plays by default (see below)
-player.onAnimationFinished(() => {});
-player.onAnimationLooped(() => {});
-
-off(); // stop listening
-```
-
-**Audio just works by default.** When a loaded `.ssab` contains sounds and you
-haven't set `player.audioManager`, `load()` attaches a default `SSWebAudioManager`
-that plays them — no consumer code needed. To customise or replace playback,
-assign your own `IAudioManager` to `player.audioManager` **before** `load()` (the
-default is only attached when none is set). `onAudio` fires either way, so you can
-also drive sound entirely yourself.
+**Read next:** [PixiJS guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi) · [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic) ·
+[Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)
 
 ## License
 
