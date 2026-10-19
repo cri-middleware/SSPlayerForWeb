@@ -127,6 +127,12 @@ export class SSWebGLRenderer {
   private batchColor = new Float32Array(512 * 4);
   private batchVarg = new Float32Array(512 * 4);
   private batchIndices: Uint16Array | Uint32Array = new Uint16Array(512 * 3);
+  // Plain Normal/Mesh batches built into the batch arrays and not yet drawn:
+  // consecutive ones on one texture and blend draw as one (see flushRun).
+  private _runVerts = 0;
+  private _runIndices = 0;
+  private _runTexture = 0;
+  private _runBlend = -1;
   // Index element type: UNSIGNED_INT (WebGL2 / OES_element_index_uint) so large
   // batches (heavy effects, dense meshes) aren't capped at the 65535-vertex Uint16
   // limit; UNSIGNED_SHORT when 32-bit indices are unavailable. Set in the constructor.
@@ -331,19 +337,29 @@ export class SSWebGLRenderer {
     if (this.batchPos.length < vCount * 2) {
       let newLen = this.batchPos.length;
       while (newLen < vCount * 2) newLen *= 2;
-      this.batchPos = new Float32Array(newLen);
-      this.batchUv = new Float32Array(newLen);
+      const pos = new Float32Array(newLen);
+      pos.set(this.batchPos);
+      this.batchPos = pos;
+      const uv = new Float32Array(newLen);
+      uv.set(this.batchUv);
+      this.batchUv = uv;
     }
     if (this.batchColor.length < vCount * 4) {
       let newLen = this.batchColor.length;
       while (newLen < vCount * 4) newLen *= 2;
-      this.batchColor = new Float32Array(newLen);
-      this.batchVarg = new Float32Array(newLen);
+      const color = new Float32Array(newLen);
+      color.set(this.batchColor);
+      this.batchColor = color;
+      const varg = new Float32Array(newLen);
+      varg.set(this.batchVarg);
+      this.batchVarg = varg;
     }
     if (this.batchIndices.length < iCount) {
       let newLen = this.batchIndices.length;
       while (newLen < iCount) newLen *= 2;
-      this.batchIndices = this._uint32Index ? new Uint32Array(newLen) : new Uint16Array(newLen);
+      const indices = this._uint32Index ? new Uint32Array(newLen) : new Uint16Array(newLen);
+      indices.set(this.batchIndices);
+      this.batchIndices = indices;
     }
   }
 
@@ -630,9 +646,28 @@ export class SSWebGLRenderer {
       // batches and draw their colour there.)
       if (kind === DrawBatchKind.Mask) continue;
 
+      // Masked content (FLAG_MASK_INFLUENCE, 0x01): clip each part against the
+      // stencil coverage. Handled per-part (not batched), so skip the batched
+      // build/draw. The batch flag is the parts' own mask_influence, so
+      // requiring it alongside ctxInfluence is the AND. The test needs no
+      // pre-filter for which writers reach which part: where none does, a part
+      // that draws outside a mask passes and one that draws only inside fails,
+      // as it should. With no writer in the tree at all the batch skips the
+      // test: its outside parts draw unclipped and its inside parts not at all.
+      const batchInfluence = (b.flags() & 0x01) !== 0;
+      const target = batchInfluence && ctxInfluence;
+      const shaderBatch = hasShaders && kind === DrawBatchKind.Normal &&
+        this.normalBatchHasShader(fd, drawOrder, b.startRank(), b.count(), maskFlags);
+      // The Brain cuts a batch wherever the part kind changes, so Normal and Mesh
+      // runs on one texture and blend arrive as separate batches. One that takes
+      // the plain path joins the run already built; anything else draws it first.
+      const texHash = b.textureHash();
+      const joinsRun = (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh) && !(hasMask && target) && !shaderBatch;
+      if (!joinsRun || texHash !== this._runTexture || b.blendType() !== this._runBlend) this.flushRun();
+
       let texInfo = null;
       if (kind !== DrawBatchKind.Instance) {
-        texInfo = resourceManager.getTexture(b.textureHash());
+        texInfo = resourceManager.getTexture(texHash);
         if (texInfo) {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, texInfo.tex);
@@ -665,16 +700,6 @@ export class SSWebGLRenderer {
       const startRank = b.startRank();
       const count = b.count();
 
-      // Masked content (FLAG_MASK_INFLUENCE, 0x01): clip each part against the
-      // stencil coverage. Handled per-part (not batched), so skip the batched
-      // build/draw. The batch flag is the parts' own mask_influence, so
-      // requiring it alongside ctxInfluence is the AND. The test needs no
-      // pre-filter for which writers reach which part: where none does, a part
-      // that draws outside a mask passes and one that draws only inside fails,
-      // as it should. With no writer in the tree at all the batch skips the
-      // test: its outside parts draw unclipped and its inside parts not at all.
-      const batchInfluence = (b.flags() & 0x01) !== 0;
-      const target = batchInfluence && ctxInfluence;
       const dropInside = insideDropsOut && target;
       // Last read out of `b`: the instance recursion below re-points the shared
       // _scratchBatch, so the draw at the end of the loop must not read it again.
@@ -691,8 +716,7 @@ export class SSWebGLRenderer {
       // parts composite correctly. Only reached when the frame has shaders. Not
       // combined with masking (v1, matches ssplayer-pixi) — a masked shader part
       // already took the drawMaskedContent path above and draws with the plain program.
-      if (hasShaders && kind === DrawBatchKind.Normal &&
-          this.normalBatchHasShader(fd, drawOrder, startRank, count, maskFlags)) {
+      if (shaderBatch) {
         this.drawShaderNormalBatch(b, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts, dropInside ? ctxVisibleInside : null);
         continue;
       }
@@ -720,12 +744,13 @@ export class SSWebGLRenderer {
       }
 
       if ((kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape) && (totalVerts === 0 || totalIndices === 0)) continue;
+      if (!this._uint32Index && this._runVerts + totalVerts > 0xFFFF) this.flushRun();
       if (totalVerts > 0 && totalIndices > 0) {
-        this.ensureBatchCapacity(totalVerts, totalIndices);
+        this.ensureBatchCapacity(this._runVerts + totalVerts, this._runIndices + totalIndices);
       }
 
-      let vOffset = 0;
-      let iOffset = 0;
+      let vOffset = this._runVerts;
+      let iOffset = this._runIndices;
 
       for (let c = 0; c < count; c++) {
         const partIdx = drawOrder[startRank + c];
@@ -922,22 +947,40 @@ export class SSWebGLRenderer {
       }
 
       if (totalIndices > 0 && kind !== DrawBatchKind.Effect && kind !== DrawBatchKind.Instance) {
-        this.applyBlend(batchBlend);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-        this.uploadRange(gl.ARRAY_BUFFER, this.batchPos, totalVerts * 2);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
-        this.uploadRange(gl.ARRAY_BUFFER, this.batchUv, totalVerts * 2);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-        this.uploadRange(gl.ARRAY_BUFFER, this.batchColor, totalVerts * 4);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vargBuffer);
-        this.uploadRange(gl.ARRAY_BUFFER, this.batchVarg, totalVerts * 4);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this.uploadRange(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices, totalIndices);
-        gl.drawElements(gl.TRIANGLES, totalIndices, this.indexType, 0);
+        this._runVerts = vOffset;
+        this._runIndices = iOffset;
+        this._runTexture = texHash;
+        this._runBlend = batchBlend;
+        if (!joinsRun) this.flushRun();
       }
     }
+    this.flushRun();
+  }
+
+  /**
+   * Draw the run built into the batch arrays: the first `_runVerts` vertices and
+   * `_runIndices` indices, with the run's blend. The texture and the program
+   * state are still the run's, since only batches that join it come between.
+   */
+  private flushRun(): void {
+    if (this._runIndices === 0) return;
+    const gl = this.gl;
+    this.applyBlend(this._runBlend);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchPos, this._runVerts * 2);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchUv, this._runVerts * 2);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchColor, this._runVerts * 4);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vargBuffer);
+    this.uploadRange(gl.ARRAY_BUFFER, this.batchVarg, this._runVerts * 4);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    this.uploadRange(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices, this._runIndices);
+    gl.drawElements(gl.TRIANGLES, this._runIndices, this.indexType, 0);
+    this._runVerts = 0;
+    this._runIndices = 0;
   }
 
   private ensureMaskProgram(): MaskProgram {
