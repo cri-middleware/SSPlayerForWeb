@@ -174,24 +174,39 @@ export class SSABResource {
 const CONTEXT_READS = /^(get_|is_)|^(find_part_index|just_looped|track_just_looped|prepare_frame_data|free|constructor)$/;
 
 /**
- * Make every call on `ctx` that may change what a frame evaluates to run
+ * A context whose every call that may change what a frame evaluates to runs
  * `written` first. Matched by name, so a call the runtime adds later counts as a
- * write until it is listed as a read. Each wrapper takes fixed parameters, so a
- * call allocates nothing; a call with more parameters than that is refused here,
- * or its extra arguments would be dropped without a word.
+ * write until it is listed as a read. The wrappers live on this prototype, not on
+ * each context: as own properties they put the context in dictionary mode, which
+ * slows every call into the runtime, reads included. Each wrapper takes fixed
+ * parameters, so a call allocates nothing; a call with more parameters than that
+ * is refused here, or its extra arguments would be dropped without a word.
  */
-function onContextWrite(ctx: SSRuntimeContext, written: () => void): void {
-    const proto = Object.getPrototypeOf(ctx);
-    for (const name of Object.getOwnPropertyNames(proto)) {
-        if (CONTEXT_READS.test(name)) continue;
-        const call = Object.getOwnPropertyDescriptor(proto, name)?.value;
-        if (typeof call !== 'function') continue;
-        if (call.length > 6) throw new Error(`[ssplayer-core] SSRuntimeContext.${name} takes ${call.length} parameters; onContextWrite passes 6`);
-        (ctx as any)[name] = function (a: unknown, b: unknown, c: unknown, d: unknown, e: unknown, f: unknown) {
-            written();
-            return call.call(ctx, a, b, c, d, e, f);
-        };
+class TrackedContext extends SSRuntimeContext {
+    constructor(readonly written: () => void) {
+        super();
     }
+}
+
+let writesWrapped = false;
+
+function trackedContext(written: () => void): SSRuntimeContext {
+    if (!writesWrapped) {
+        const proto = SSRuntimeContext.prototype as any;
+        const tracked = TrackedContext.prototype as any;
+        for (const name of Object.getOwnPropertyNames(proto)) {
+            if (CONTEXT_READS.test(name)) continue;
+            const call = Object.getOwnPropertyDescriptor(proto, name)?.value;
+            if (typeof call !== 'function') continue;
+            if (call.length > 6) throw new Error(`[ssplayer-core] SSRuntimeContext.${name} takes ${call.length} parameters; the write tracking passes 6`);
+            tracked[name] = function (this: TrackedContext, a: unknown, b: unknown, c: unknown, d: unknown, e: unknown, f: unknown) {
+                this.written();
+                return call.call(this, a, b, c, d, e, f);
+            };
+        }
+        writesWrapped = true;
+    }
+    return new TrackedContext(written);
 }
 
 export class SSRuntimeManager {
@@ -250,7 +265,7 @@ export class SSRuntimeManager {
 
     /**
      * The frame the runtime last evaluated, while nothing has written to it since
-     * (see onContextWrite); NaN otherwise. Asked for that frame again, the runtime
+     * (see TrackedContext); NaN otherwise. Asked for that frame again, the runtime
      * would build the same bytes, so a stopped or paused player draws its frame
      * every tick without evaluating it every tick.
      */
@@ -258,8 +273,7 @@ export class SSRuntimeManager {
 
     constructor() {
         if (!wasmMemory) throw new Error("WASM module not initialized. Call initializeWasm() first.");
-        this.context = new SSRuntimeContext();
-        onContextWrite(this.context, () => { this._evaluatedFrame = NaN; });
+        this.context = trackedContext(() => { this._evaluatedFrame = NaN; });
         // 3rd arg is the unregister token (see SSABResource) — required so
         // destroy()'s unregister(this) actually cancels the GC finalizer.
         finalizationRegistry.register(this, this.context, this);
