@@ -1858,13 +1858,15 @@ export class SSPlayer extends Container {
                 //
                 // The Brain cuts a batch wherever the part kind changes, so Normal
                 // and Mesh runs on one texture and blend arrive as separate
-                // batches. The unmasked ones that follow this one join its mesh
-                // while nothing between them would draw on its own.
+                // batches. The ones that follow this one join its mesh while
+                // nothing between them would draw on its own and they are masked
+                // exactly when it is: a masked mesh samples the tree's one
+                // coverage, and each part brings its own number and polarity.
                 const spanKind = this._spanKind, spanStart = this._spanStart;
                 const spanCount = this._spanCount, spanDrop = this._spanDrop;
                 spanKind.length = spanStart.length = spanCount.length = spanDrop.length = 0;
                 spanKind.push(kind); spanStart.push(startRank); spanCount.push(count); spanDrop.push(dropInside);
-                if (!masked && kind !== DrawBatchKind.Shape) {
+                if (kind !== DrawBatchKind.Shape) {
                     for (let j = i + 1; j < drawBatchesLength; j++) {
                         const next = frameData.drawBatches(j, this._scratchBatch);
                         if (!next) break;
@@ -1872,7 +1874,8 @@ export class SSPlayer extends Container {
                         if (nextKind !== DrawBatchKind.Normal && nextKind !== DrawBatchKind.Mesh) break;
                         if (next.textureHash() !== textureHash || next.blendType() !== batchBlend) break;
                         const nextTarget = (next.flags() & 0x01) !== 0 && ctxInfluence;
-                        if (nextTarget && (cov !== null || maskDeferred)) break;
+                        if (nextTarget && maskDeferred) break;
+                        if ((cov !== null && nextTarget) !== masked) break;
                         if (nextKind === DrawBatchKind.Normal && hasShaders &&
                             this.batchHasShader(frameData, drawOrder, next.startRank(), next.count(), maskFlags)) break;
                         spanKind.push(nextKind); spanStart.push(next.startRank()); spanCount.push(next.count());
