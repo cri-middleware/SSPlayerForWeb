@@ -4,6 +4,10 @@ import { BlendType } from './ss/format/blend-type.js';
 import { EffectDrawPlan } from './ss/runtime/effect-draw-plan.js';
 import { FrameDataRaw } from './FrameDataRaw.js';
 
+const NO_F32 = new Float32Array(0);
+const NO_I32 = new Int32Array(0);
+const NO_U32 = new Uint32Array(0);
+
 /**
  * Encapsulates purely mathematical geometry operations:
  * - World Matrix multiplication
@@ -13,7 +17,20 @@ import { FrameDataRaw } from './FrameDataRaw.js';
  */
 export class GeometryBuilder {
     private runtimeManager: SSRuntimeManager;
-    private worldPositions: Float32Array = new Float32Array(0);
+    private matrices: Float32Array = NO_F32;
+    private localVertices: Float32Array = NO_F32;
+    private localUVs: Float32Array = NO_F32;
+    private meshVerticesX: Float32Array = NO_F32;
+    private meshVerticesY: Float32Array = NO_F32;
+    private meshUVs: Float32Array = NO_F32;
+    private meshIndices: Int32Array = NO_I32;
+    private meshVertexOffsets: Uint32Array = NO_U32;
+    private meshIndexOffsets: Int32Array = NO_I32;
+    private shapeVertices: Float32Array = NO_F32;
+    private shapeVertexBoxCoords: Float32Array = NO_F32;
+    private partViewsFresh = false;
+    private meshViewsFresh = false;
+    private shapeViewsFresh = false;
 
     /**
      * Optional parent 2D-affine applied to every emitted world position, packed
@@ -78,34 +95,45 @@ export class GeometryBuilder {
     }
 
     /**
-     * Re-calculates worldPositions by applying world_matrices to local_vertices.
-     * Must be called once per frame before building geometry.
+     * Marks the views over the geometry stale; the first build of each kind
+     * fetches its own afterwards. Must be called once per frame, after the frame
+     * data and before building geometry.
      */
     public updateWorldPositions(): void {
-        const matrices = this.runtimeManager.getWorldMatrices();
-        const positionData = this.runtimeManager.getLocalVertices();
-        if (positionData.length === 0) return;
-        if (this.worldPositions.length !== positionData.length) {
-            this.worldPositions = new Float32Array(positionData.length);
-        }
+        this.partViewsFresh = false;
+        this.meshViewsFresh = false;
+        this.shapeViewsFresh = false;
+    }
 
-        for (let i = 0; i < matrices.length / 16; i++) {
-            const mOff = i * 16;
-            const vOff = i * 10;
-            const m00 = matrices[mOff + 0];
-            const m10 = matrices[mOff + 1];
-            const m01 = matrices[mOff + 4];
-            const m11 = matrices[mOff + 5];
-            const tx  = matrices[mOff + 12];
-            const ty  = matrices[mOff + 13];
-            
-            for (let v = 0; v < 5; v++) {
-                const vx = positionData[vOff + v * 2];
-                const vy = positionData[vOff + v * 2 + 1];
-                this.worldPositions[vOff + v * 2] = m00 * vx + m01 * vy + tx;
-                this.worldPositions[vOff + v * 2 + 1] = m10 * vx + m11 * vy + ty;
-            }
-        }
+    // An instance child's evaluation can grow WASM memory mid-frame, which
+    // detaches every view to length 0; the data stays at the same offsets.
+    private fetchPartViews(): void {
+        if (this.partViewsFresh && this.matrices.length !== 0) return;
+        const rm = this.runtimeManager;
+        this.matrices = rm.getWorldMatrices();
+        this.localVertices = rm.getLocalVertices();
+        this.localUVs = rm.getLocalUVs();
+        this.partViewsFresh = true;
+    }
+
+    private fetchMeshViews(): void {
+        if (this.meshViewsFresh && this.meshVerticesX.length !== 0) return;
+        const rm = this.runtimeManager;
+        this.meshVerticesX = rm.getMeshVerticesX();
+        this.meshVerticesY = rm.getMeshVerticesY();
+        this.meshUVs = rm.getMeshUVs();
+        this.meshIndices = rm.getMeshIndices();
+        this.meshVertexOffsets = rm.getMeshVertexOffsets();
+        this.meshIndexOffsets = rm.getMeshIndexOffsets();
+        this.meshViewsFresh = true;
+    }
+
+    private fetchShapeViews(): void {
+        if (this.shapeViewsFresh && this.shapeVertices.length !== 0) return;
+        const rm = this.runtimeManager;
+        this.shapeVertices = rm.getShapeVertices();
+        this.shapeVertexBoxCoords = rm.getShapeVertexBoxCoords();
+        this.shapeViewsFresh = true;
     }
 
     /**
@@ -129,7 +157,8 @@ export class GeometryBuilder {
         const raw = this._raw.bind(frameData);
         if (raw.partsLen === 0) return;
 
-        const uvData = this.runtimeManager.getLocalUVs();
+        this.fetchPartViews();
+        const uvData = this.localUVs;
         if (uvData.length === 0) return;
 
         const pcIdx = raw.partColorIdx(partIdx);
@@ -170,10 +199,15 @@ export class GeometryBuilder {
         const stateAlpha = raw.partAlpha(partIdx);
 
         const pm = this.parentMatrix;
+        const m = this.matrices, mOff = partIdx * 16;
+        const m00 = m[mOff], m10 = m[mOff + 1], m01 = m[mOff + 4], m11 = m[mOff + 5], tx = m[mOff + 12], ty = m[mOff + 13];
+        const local = this.localVertices;
         for (let j = 0; j < 5; j++) {
             const ov = vertexOffset + j;
-            const wx = this.worldPositions[srcBase + j * 2];
-            const wy = this.worldPositions[srcBase + j * 2 + 1];
+            const vx = local[srcBase + j * 2];
+            const vy = local[srcBase + j * 2 + 1];
+            const wx = Math.fround(m00 * vx + m01 * vy + tx);
+            const wy = Math.fround(m10 * vx + m11 * vy + ty);
             if (pm) {
                 outPositions[ov * 2] = pm[0] * wx + pm[1] * wy + pm[4];
                 outPositions[ov * 2 + 1] = pm[2] * wx + pm[3] * wy + pm[5];
@@ -219,11 +253,13 @@ export class GeometryBuilder {
         vertexOffset: number = 0,
         indexOffset: number = 0
     ): void {
-        const shapeVertices = this.runtimeManager.getShapeVertices();
-        const shapeVertexBoxCoords = this.runtimeManager.getShapeVertexBoxCoords();
-        const matrices = this.runtimeManager.getWorldMatrices();
+        this.fetchPartViews();
+        this.fetchShapeViews();
+        const shapeVertices = this.shapeVertices;
+        const shapeVertexBoxCoords = this.shapeVertexBoxCoords;
+        const matrices = this.matrices;
 
-        const uvData = this.runtimeManager.getLocalUVs();
+        const uvData = this.localUVs;
         if (uvData.length === 0) return;
 
         const SHAPE_VERTICES_STRIDE = 24;
@@ -369,12 +405,13 @@ export class GeometryBuilder {
         vertexOffset: number = 0,
         indexOffset: number = 0
     ): void {
-        const meshVx = this.runtimeManager.getMeshVerticesX();
-        const meshVy = this.runtimeManager.getMeshVerticesY();
-        const meshUv = this.runtimeManager.getMeshUVs();
-        const meshIdx = this.runtimeManager.getMeshIndices();
-        const meshVOff = this.runtimeManager.getMeshVertexOffsets();
-        const meshIOff = this.runtimeManager.getMeshIndexOffsets();
+        this.fetchMeshViews();
+        const meshVx = this.meshVerticesX;
+        const meshVy = this.meshVerticesY;
+        const meshUv = this.meshUVs;
+        const meshIdx = this.meshIndices;
+        const meshVOff = this.meshVertexOffsets;
+        const meshIOff = this.meshIndexOffsets;
 
         const v0 = meshVOff[partIdx];
         const i0 = meshIOff[partIdx];
