@@ -175,6 +175,12 @@ export class SSPlayer extends Container {
     // rebinds it) and re-fetches.
     private readonly _raw = new FrameDataRaw();
     private readonly _scratchBatch = new DrawBatch();
+    // The batches drawn as one mesh: kind, start rank, part count, and whether
+    // its inside-only targets drop out. Reused, so a frame allocates none.
+    private readonly _spanKind: number[] = [];
+    private readonly _spanStart: number[] = [];
+    private readonly _spanCount: number[] = [];
+    private readonly _spanDrop: boolean[] = [];
     // Engine-agnostic `SHDR` read (core), shared with ssplayer-webgl: program id,
     // param0..7 and the cell UV rect derived from the quad's corners.
     private readonly _shaderAttr = new ShaderAttributeResolver();
@@ -1849,13 +1855,41 @@ export class SSPlayer extends Container {
                 // texture, the blend and the parent chain's alpha; each part's own
                 // alpha and colour ride on its vertices, and so do a masked part's
                 // number on the tree sequence and its polarity (aMaskUV).
+                //
+                // The Brain cuts a batch wherever the part kind changes, so Normal
+                // and Mesh runs on one texture and blend arrive as separate
+                // batches. The unmasked ones that follow this one join its mesh
+                // while nothing between them would draw on its own.
+                const spanKind = this._spanKind, spanStart = this._spanStart;
+                const spanCount = this._spanCount, spanDrop = this._spanDrop;
+                spanKind.length = spanStart.length = spanCount.length = spanDrop.length = 0;
+                spanKind.push(kind); spanStart.push(startRank); spanCount.push(count); spanDrop.push(dropInside);
+                if (!masked && kind !== DrawBatchKind.Shape) {
+                    for (let j = i + 1; j < drawBatchesLength; j++) {
+                        const next = frameData.drawBatches(j, this._scratchBatch);
+                        if (!next) break;
+                        const nextKind = next.kind();
+                        if (nextKind !== DrawBatchKind.Normal && nextKind !== DrawBatchKind.Mesh) break;
+                        if (next.textureHash() !== textureHash || next.blendType() !== batchBlend) break;
+                        const nextTarget = (next.flags() & 0x01) !== 0 && ctxInfluence;
+                        if (nextTarget && (cov !== null || maskDeferred)) break;
+                        if (nextKind === DrawBatchKind.Normal && hasShaders &&
+                            this.batchHasShader(frameData, drawOrder, next.startRank(), next.count(), maskFlags)) break;
+                        spanKind.push(nextKind); spanStart.push(next.startRank()); spanCount.push(next.count());
+                        spanDrop.push(insideDropsOut && nextTarget);
+                        i = j;
+                    }
+                }
+
                 let totalVerts = 0;
                 let totalIndices = 0;
-                for (let c = 0; c < count; c++) {
-                    const partIdx = drawOrder[startRank + c];
-                    if (!this.drawsPart(partIdx, frameData, maskFlags, dropInside, ctxVisibleInside)) continue;
-                    totalVerts += this.partVertices(kind, partIdx, meshVOff, meshIOff, shapeVertexCounts);
-                    totalIndices += this._partIndices;
+                for (let s = 0; s < spanKind.length; s++) {
+                    for (let c = 0; c < spanCount[s]; c++) {
+                        const partIdx = drawOrder[spanStart[s] + c];
+                        if (!this.drawsPart(partIdx, frameData, maskFlags, spanDrop[s], ctxVisibleInside)) continue;
+                        totalVerts += this.partVertices(spanKind[s], partIdx, meshVOff, meshIOff, shapeVertexCounts);
+                        totalIndices += this._partIndices;
+                    }
                 }
                 if (totalVerts === 0 || totalIndices === 0) continue;
 
@@ -1871,37 +1905,40 @@ export class SSPlayer extends Container {
 
                 let vOffset = 0;
                 let iOffset = 0;
-                for (let c = 0; c < count; c++) {
-                    const partIdx = drawOrder[startRank + c];
-                    // The same two calls as the count above, so the offsets land
-                    // exactly on the totals.
-                    if (!this.drawsPart(partIdx, frameData, maskFlags, dropInside, ctxVisibleInside)) continue;
-                    const numVerts = this.partVertices(kind, partIdx, meshVOff, meshIOff, shapeVertexCounts);
-                    if (numVerts === 0) continue;
-                    const numIndices = this._partIndices;
+                for (let s = 0; s < spanKind.length; s++) {
+                    const sKind = spanKind[s], sStart = spanStart[s];
+                    for (let c = 0; c < spanCount[s]; c++) {
+                        const partIdx = drawOrder[sStart + c];
+                        // The same two calls as the count above, so the offsets land
+                        // exactly on the totals.
+                        if (!this.drawsPart(partIdx, frameData, maskFlags, spanDrop[s], ctxVisibleInside)) continue;
+                        const numVerts = this.partVertices(sKind, partIdx, meshVOff, meshIOff, shapeVertexCounts);
+                        if (numVerts === 0) continue;
+                        const numIndices = this._partIndices;
 
-                    if (kind === DrawBatchKind.Normal) {
-                        geometryBuilder.buildNormal(
-                            partIdx, frameData, invTexW, invTexH,
-                            positions, uvs, colors, vargs, vOffset
-                        );
-                        writeQuadIndices(indices, iOffset, vOffset);
-                    } else if (kind === DrawBatchKind.Shape) {
-                        geometryBuilder.buildShape(
-                            partIdx, frameData, numVerts, invTexW, invTexH,
-                            positions, uvs, colors, vargs, indices, vOffset, iOffset
-                        );
-                    } else {
-                        geometryBuilder.buildMesh(
-                            partIdx, frameData, numVerts, numIndices, invTexW, invTexH,
-                            positions, uvs, colors, vargs, indices, vOffset, iOffset
-                        );
+                        if (sKind === DrawBatchKind.Normal) {
+                            geometryBuilder.buildNormal(
+                                partIdx, frameData, invTexW, invTexH,
+                                positions, uvs, colors, vargs, vOffset
+                            );
+                            writeQuadIndices(indices, iOffset, vOffset);
+                        } else if (sKind === DrawBatchKind.Shape) {
+                            geometryBuilder.buildShape(
+                                partIdx, frameData, numVerts, invTexW, invTexH,
+                                positions, uvs, colors, vargs, indices, vOffset, iOffset
+                            );
+                        } else {
+                            geometryBuilder.buildMesh(
+                                partIdx, frameData, numVerts, numIndices, invTexW, invTexH,
+                                positions, uvs, colors, vargs, indices, vOffset, iOffset
+                            );
+                        }
+                        if (masked) {
+                            this.fillMaskUV(mesh, vOffset, numVerts, seq ? seq[sStart + c] : 0, polarityOf(partIdx), cov!);
+                        }
+                        vOffset += numVerts;
+                        iOffset += numIndices;
                     }
-                    if (masked) {
-                        this.fillMaskUV(mesh, vOffset, numVerts, seq ? seq[startRank + c] : 0, polarityOf(partIdx), cov!);
-                    }
-                    vOffset += numVerts;
-                    iOffset += numIndices;
                 }
                 uploadMesh(mesh, totalVerts, totalIndices);
                 this.finishPart(mesh, masked ? cov : null, texture, blendMode, parentAlpha);
