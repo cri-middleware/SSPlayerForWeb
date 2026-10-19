@@ -55,6 +55,11 @@ const MAX_TREE_WRITERS = 256;
 /** Identity affine, for a writer whose context has no placement of its own. */
 const IDENTITY_AFFINE = new Float32Array([1, 0, 0, 1, 0, 0]);
 
+/** The stencil test a run draws under: none, outside the coverage, inside it. */
+const RUN_NO_STENCIL = 0;
+const RUN_OUTSIDE = 1;
+const RUN_INSIDE = 2;
+
 export class SSWebGLRenderer {
   public gl: WebGLRenderingContext | WebGL2RenderingContext;
   // Assigned in _createGLResources() (constructor + context restore).
@@ -127,12 +132,15 @@ export class SSWebGLRenderer {
   private batchColor = new Float32Array(512 * 4);
   private batchVarg = new Float32Array(512 * 4);
   private batchIndices: Uint16Array | Uint32Array = new Uint16Array(512 * 3);
-  // Plain Normal/Mesh batches built into the batch arrays and not yet drawn:
-  // consecutive ones on one texture and blend draw as one (see flushRun).
+  // Parts built into the batch arrays and not yet drawn: consecutive ones on one
+  // texture, blend and stencil test draw as one (see flushRun). Plain Normal/Mesh
+  // batches join with no test; masked content parts with the test of their
+  // polarity, until the coverage changes (syncMaskTo flushes before it writes).
   private _runVerts = 0;
   private _runIndices = 0;
   private _runTexture = 0;
   private _runBlend = -1;
+  private _runStencil = RUN_NO_STENCIL;
   // Index element type: UNSIGNED_INT (WebGL2 / OES_element_index_uint) so large
   // batches (heavy effects, dense meshes) aren't capped at the 65535-vertex Uint16
   // limit; UNSIGNED_SHORT when 32-bit indices are unavailable. Set in the constructor.
@@ -662,8 +670,12 @@ export class SSWebGLRenderer {
       // runs on one texture and blend arrive as separate batches. One that takes
       // the plain path joins the run already built; anything else draws it first.
       const texHash = b.textureHash();
+      const isContentKind = kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape;
+      const maskedContent = hasMask && isContentKind && target;
       const joinsRun = (kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh) && !(hasMask && target) && !shaderBatch;
-      if (!joinsRun || texHash !== this._runTexture || b.blendType() !== this._runBlend) this.flushRun();
+      const runMatches = texHash === this._runTexture && b.blendType() === this._runBlend;
+      // A masked content batch settles the stencil test part by part (drawMaskedContent).
+      if (maskedContent ? !runMatches : !joinsRun || !runMatches || this._runStencil !== RUN_NO_STENCIL) this.flushRun();
 
       let texInfo = null;
       if (kind !== DrawBatchKind.Instance) {
@@ -704,9 +716,8 @@ export class SSWebGLRenderer {
       // Last read out of `b`: the instance recursion below re-points the shared
       // _scratchBatch, so the draw at the end of the loop must not read it again.
       const batchBlend = b.blendType();
-      const isContentKind = kind === DrawBatchKind.Normal || kind === DrawBatchKind.Mesh || kind === DrawBatchKind.Shape;
-      if (hasMask && isContentKind && target) {
-        this.drawMaskedContent(b, kind, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts, seq, ctxVisibleInside);
+      if (maskedContent) {
+        this.drawMaskedContent(b, kind, texHash, drawOrder, fd, gb, invW, invH, maskFlags, texInfo, meshVOff, meshIOff, shapeVertexCounts, seq, ctxVisibleInside);
         continue;
       }
 
@@ -921,7 +932,7 @@ export class SSWebGLRenderer {
 
           // Re-fetch WASM views in case the child's rendering grew WASM memory —
           // a grow detaches the ArrayBuffer these views point into, and the next
-          // masked batch feeds them straight to buildOnePart (a detached view
+          // masked batch feeds them straight to the geometry builder (a detached view
           // reads as undefined, i.e. NaN counts).
           fd = player.runtimeManager.getFrameData(frameNo)!;
           drawOrder = fd.drawOrderArray()!;
@@ -959,13 +970,20 @@ export class SSWebGLRenderer {
 
   /**
    * Draw the run built into the batch arrays: the first `_runVerts` vertices and
-   * `_runIndices` indices, with the run's blend. The texture and the program
+   * `_runIndices` indices, with the run's blend and stencil test. The texture and the program
    * state are still the run's, since only batches that join it come between.
    */
   private flushRun(): void {
     if (this._runIndices === 0) return;
     const gl = this.gl;
     this.applyBlend(this._runBlend);
+    const stencil = this._runStencil;
+    if (stencil !== RUN_NO_STENCIL) {
+      gl.enable(gl.STENCIL_TEST);
+      gl.stencilMask(0x00); // content never modifies the stencil
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+      gl.stencilFunc(stencil === RUN_INSIDE ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
+    }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
     this.uploadRange(gl.ARRAY_BUFFER, this.batchPos, this._runVerts * 2);
@@ -979,6 +997,11 @@ export class SSWebGLRenderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     this.uploadRange(gl.ELEMENT_ARRAY_BUFFER, this.batchIndices, this._runIndices);
     gl.drawElements(gl.TRIANGLES, this._runIndices, this.indexType, 0);
+    if (stencil !== RUN_NO_STENCIL) {
+      gl.disable(gl.STENCIL_TEST);
+      gl.stencilMask(0xFF);
+      this._runStencil = RUN_NO_STENCIL;
+    }
     this._runVerts = 0;
     this._runIndices = 0;
   }
@@ -1280,7 +1303,7 @@ export class SSWebGLRenderer {
    * parts-color program (and disables the stencil test) on return, so the
    * caller must re-establish its own draw state afterwards.
    */
-  private syncMaskTo(at: number): void {
+  private syncMaskTo(at: number): boolean {
     const gl = this.gl;
     const tree = this.maskTree;
     const rm = this._drawRM!;
@@ -1293,16 +1316,25 @@ export class SSWebGLRenderer {
       if (state === 0) {
         if (closed) { this._wState[i] = 2; continue; }
         if (tree.open[i] >= at) continue;
-        if (!mp) { mp = this.ensureMaskProgram(); this.beginMaskWrite(mp); }
+        if (!mp) mp = this.beginTreeWrite();
         this.writeTreeWriter(mp, rm, i, tree.opInvert[i] !== 0 ? gl.INVERT : gl.INCR_WRAP);
         this._wState[i] = 1;
       } else if (closed) {
-        if (!mp) { mp = this.ensureMaskProgram(); this.beginMaskWrite(mp); }
+        if (!mp) mp = this.beginTreeWrite();
         this.writeTreeWriter(mp, rm, i, tree.opInvert[i] !== 0 ? gl.INVERT : gl.DECR_WRAP);
         this._wState[i] = 2;
       }
     }
     if (mp) this.endMaskWrite();
+    return mp !== null;
+  }
+
+  // The pending run is clipped by the coverage about to change: draw it first.
+  private beginTreeWrite(): MaskProgram {
+    this.flushRun();
+    const mp = this.ensureMaskProgram();
+    this.beginMaskWrite(mp);
+    return mp;
   }
 
   /**
@@ -1330,14 +1362,15 @@ export class SSWebGLRenderer {
   /**
    * Draw a masked content batch (parts with FLAG_MASK_INFLUENCE). For each part, in
    * ascending rank order, first bring the stencil coverage to its number on the
-   * tree sequence (syncMaskTo), then draw it clipped by the current coverage. Polarity is per-part: visible_inside_mask (mask flag
-   * 0x01) keeps texels where the stencil is set (NOTEQUAL 0), else where it is clear
-   * (EQUAL 0). Per-part because both the coverage AND the polarity can change within a
-   * batch (the batch key groups by texture/blend/mask-influence, not rank or polarity).
+   * tree sequence (syncMaskTo), then add it to the run under the stencil test of its
+   * polarity: visible_inside_mask (mask flag 0x01) keeps texels where the stencil is
+   * set (NOTEQUAL 0), else where it is clear (EQUAL 0). Both the coverage and the
+   * polarity can change within a batch (the batch key groups by
+   * texture/blend/mask-influence, not rank or polarity), and either ends the run.
    * draw_as_mask parts (0x08) are pure masks and never draw their colour.
    */
   private drawMaskedContent(
-    b: DrawBatch, kind: number, drawOrder: Uint16Array, fd: FrameData, gb: GeometryBuilder,
+    b: DrawBatch, kind: number, texHash: number, drawOrder: Uint16Array, fd: FrameData, gb: GeometryBuilder,
     invW: number, invH: number, maskFlags: Uint8Array | null,
     texInfo: { tex: WebGLTexture; width: number; height: number } | null | undefined,
     meshVOff: Uint32Array, meshIOff: Int32Array, shapeVertexCounts: Int32Array,
@@ -1355,31 +1388,51 @@ export class SSWebGLRenderer {
       const alpha = this._raw.partAlphaOf(fd, partIdx);
       if (alpha <= 0) continue;
 
-      // Bring the coverage up to this part's number. This may switch to the mask
-      // program and rebind textures, so re-establish the content draw state below.
-      if (seq) this.syncMaskTo(seq[startRank + c]);
-      gl.useProgram(pcp.program);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texInfo ? texInfo.tex : this.getWhiteTexture(gl));
-      if (pcp.uTexture) gl.uniform1i(pcp.uTexture, 0);
+      // Bring the coverage up to this part's number. A write switches to the mask
+      // program and rebinds textures, so re-establish the content draw state.
+      if (seq && this.syncMaskTo(seq[startRank + c])) {
+        gl.useProgram(pcp.program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texInfo ? texInfo.tex : this.getWhiteTexture(gl));
+        if (pcp.uTexture) gl.uniform1i(pcp.uTexture, 0);
+      }
 
-      const iCount = this.buildOnePart(kind, partIdx, fd, gb, invW, invH, meshVOff, meshIOff, shapeVertexCounts);
-      if (iCount === 0) continue;
-      this.uploadPart(this._builtVerts, iCount);
+      let vCount = 0;
+      let iCount = 0;
+      if (kind === DrawBatchKind.Normal) {
+        vCount = 5; iCount = 12;
+      } else if (kind === DrawBatchKind.Mesh) {
+        vCount = meshVOff[partIdx + 1] - meshVOff[partIdx];
+        iCount = meshIOff[partIdx + 1] - meshIOff[partIdx];
+      } else {
+        vCount = shapeVertexCounts[partIdx];
+        iCount = vCount >= 3 ? (vCount - 2) * 3 : 0;
+      }
+      if (vCount <= 0 || iCount <= 0) continue;
 
       // OR: an instance part that asked for "inside" wins for its sub-animation,
       // otherwise the part decides for itself.
-      const visInside = composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0);
-      gl.enable(gl.STENCIL_TEST);
-      gl.stencilMask(0x00); // content never modifies the stencil
-      gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-      gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
-      this.applyBlend(blendType);
-      gl.drawElements(gl.TRIANGLES, iCount, this.indexType, 0);
+      const stencil = composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[partIdx] : 0) ? RUN_INSIDE : RUN_OUTSIDE;
+      if (stencil !== this._runStencil || (!this._uint32Index && this._runVerts + vCount > 0xFFFF)) this.flushRun();
+      const vOffset = this._runVerts;
+      const iOffset = this._runIndices;
+      this.ensureBatchCapacity(vOffset + vCount, iOffset + iCount);
+      if (kind === DrawBatchKind.Normal) {
+        gb.buildNormal(partIdx, fd, invW, invH, this.batchPos, this.batchUv, this.batchColor, this.batchVarg, vOffset);
+        for (let j = 0; j < 12; j++) this.batchIndices[iOffset + j] = this.normalIndices[j] + vOffset;
+      } else if (kind === DrawBatchKind.Mesh) {
+        gb.buildMesh(partIdx, fd, vCount, iCount, invW, invH,
+          this.batchPos, this.batchUv, this.batchColor, this.batchVarg, this.batchIndices, vOffset, iOffset);
+      } else {
+        gb.buildShape(partIdx, fd, vCount, invW, invH,
+          this.batchPos, this.batchUv, this.batchColor, this.batchVarg, this.batchIndices, vOffset, iOffset);
+      }
+      this._runVerts = vOffset + vCount;
+      this._runIndices = iOffset + iCount;
+      this._runTexture = texHash;
+      this._runBlend = blendType;
+      this._runStencil = stencil;
     }
-
-    gl.disable(gl.STENCIL_TEST);
-    gl.stencilMask(0xFF);
   }
 
   public destroy(): void {
