@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MaskTreePlanner, type MaskTreeVisitor } from '../src/MaskTree.js';
 import { FrameDataRaw } from '../src/FrameDataRaw.js';
 import { DrawBatchKind } from '../src/ss/runtime/draw-batch-kind.js';
-import { MASK_FLAG_MASK_INFLUENCE, MASK_FLAG_MASK_WRITE } from '../src/MaskComposition.js';
+import { MASK_FLAG_DRAW_AS_MASK, MASK_FLAG_MASK_INFLUENCE, MASK_FLAG_MASK_WRITE } from '../src/MaskComposition.js';
 
 // MaskTreePlanner reaches the runtime only through the frame's draw order and
 // batches, the part states, the manager's static tables and the instance
@@ -23,7 +23,7 @@ interface CtxDesc {
     /** Instance children by part index. */
     children?: Record<number, { ctx: FakePlayer; visible?: boolean }>;
 }
-interface FakePlayer { runtimeManager: unknown; getInstanceChild(p: number): unknown; getDrawFrame(): number; }
+interface FakePlayer { runtimeManager: unknown; getInstanceChild(p: number): unknown; getDrawFrame(): number; hasMaskWriterParts(): boolean; }
 
 /** A player whose draw order is its batches' parts, concatenated. */
 function makePlayer(d: CtxDesc): FakePlayer {
@@ -42,10 +42,12 @@ function makePlayer(d: CtxDesc): FakePlayer {
         drawBatches: (i: number) => batches[i],
         parts: (p: number) => ({ mask: () => d.mask?.[p] ?? 255, hide: () => false }),
     };
-    const children = new Map<number, unknown>();
+    const children = new Map<number, { player: FakePlayer }>();
     for (const [p, c] of Object.entries(d.children ?? {})) {
-        children.set(Number(p), { visible: c.visible ?? true, player: c.ctx, parentMatrix: new Float32Array(6) });
+        children.set(Number(p), { visible: c.visible ?? true, player: c.ctx, parentMatrix: new Float32Array(6) } as { player: FakePlayer });
     }
+    const writerParts = d.batches.some(b => b.kind === DrawBatchKind.Mask)
+        || Object.values(d.flags ?? {}).some(f => (f & (CLIP | MASK_FLAG_DRAW_AS_MASK)) !== 0);
     return {
         runtimeManager: {
             getFrameData: () => frameData,
@@ -57,6 +59,7 @@ function makePlayer(d: CtxDesc): FakePlayer {
         },
         getInstanceChild: (p: number) => children.get(p),
         getDrawFrame: () => 0,
+        hasMaskWriterParts: () => writerParts || [...children.values()].some(c => c.player.hasMaskWriterParts()),
     };
 }
 
@@ -166,6 +169,22 @@ describe('MaskTreePlanner', () => {
         expect(tree.count).toBe(0);
         expect(seq(root)).toEqual([0, 1]);
         expect(tree.seqOf(child as any)).toBeUndefined();
+    });
+
+    it('does not walk a tree with no part that can write a mask', () => {
+        const child = makePlayer({ batches: [{ kind: DrawBatchKind.Normal, parts: [1] }], flags: { 1: MI } });
+        const childFrames = vi.spyOn(child.runtimeManager as { getFrameData(): unknown }, 'getFrameData');
+        const root = makePlayer({
+            batches: [
+                { kind: DrawBatchKind.Normal, parts: [1] },
+                { kind: DrawBatchKind.Instance, parts: [2] },
+            ],
+            children: { 2: { ctx: child } },
+        });
+        const { tree } = plan(root);
+        expect(tree.count).toBe(0);
+        expect(tree.seqOf(root as any)).toBeUndefined();
+        expect(childFrames).not.toHaveBeenCalled();
     });
 
     it('stops at its capacity and says so', () => {
