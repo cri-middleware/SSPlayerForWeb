@@ -119,18 +119,23 @@ export class MaskTreePlanner<T extends InternalPlayerBase<T>> {
      *
      * Asks the runtime for each visible child's frame, which can grow WASM
      * memory: a caller holding views into it re-derives them afterwards.
+     *
+     * A tree with no part that can write a mask is not walked: it returns 0
+     * and numbers nothing.
      */
     plan(root: T, frameData: FrameData, matrix: Float32Array | null, visitor: MaskTreeVisitor<T>): number {
         this.count = 0;
         this.exceeded = false;
         this._counter = 0;
+        if (!root.hasMaskWriterParts()) return 0;
         this.walk(root, frameData, matrix, ROOT_MASK_INFLUENCE, -1, 0, visitor);
         return this.count;
     }
 
     /**
      * Sequence number of each draw-order rank of `player`, as numbered by the
-     * last `plan()`. Undefined for a player that was not part of it.
+     * last `plan()` that found writers. Undefined for a player that was not
+     * part of it.
      */
     seqOf(player: T): Float32Array | undefined {
         return this._seq.get(player);

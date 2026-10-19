@@ -1964,6 +1964,20 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     /**
+     * Whether this player's pack, or an instance child's at any depth, has a
+     * part that can write a mask. When it is false, a mask plan of this tree
+     * finds no writer.
+     */
+    public hasMaskWriterParts(): boolean {
+        if (this.runtimeManager.hasMaskWriterParts()) return true;
+        if (this._instanceChildren.size === 0) return false;
+        for (const child of this._instanceChildren.values()) {
+            if (child.player.hasMaskWriterParts()) return true;
+        }
+        return false;
+    }
+
+    /**
      * Frees the allocated memory.
      */
     protected abstract createChildPlayer(resourceManager?: IResourceManager): T;

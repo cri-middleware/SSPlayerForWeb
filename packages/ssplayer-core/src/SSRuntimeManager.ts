@@ -237,6 +237,8 @@ export class SSRuntimeManager {
      */
     private partSkinnedFlags: Uint8Array | null = null;
 
+    private maskWriterParts = false;
+
     /**
      * Index of track 0's main animation within the SSAB `animations` table, or
      * -1 before setup / if the name didn't resolve: the set-up one, until a
@@ -324,6 +326,7 @@ export class SSRuntimeManager {
             const partNames: (string | null)[] = new Array(partsLen).fill(null);
             const refHashByPart = new Map<number, number>();
             let fallbackHash = 0;
+            let maskWriterParts = false;
             for (let i = 0; i < partsLen; i++) {
                 const part = ssab.parts(i);
                 if (!part) continue;
@@ -333,6 +336,7 @@ export class SSRuntimeManager {
                 if (part.maskInfluence()) mf |= 0x04;
                 if (part.drawAsMask()) mf |= 0x08;
                 maskFlags[i] = mf;
+                if ((mf & (0x02 | 0x08)) !== 0 || part.partTypeType() === PartType.PartTypeMask) maskWriterParts = true;
                 // Skinned = bound to bones. A rigid (deform-only) mesh has a
                 // mesh_binding but no influence bones, and follows correctly, so
                 // the bone count — not the presence of the binding — is what marks it.
@@ -348,6 +352,7 @@ export class SSRuntimeManager {
                 }
             }
             this.partMaskFlags = maskFlags;
+            this.maskWriterParts = maskWriterParts;
             this.partSkinnedFlags = skinnedFlags;
             this.partNames = partNames;
 
@@ -419,6 +424,7 @@ export class SSRuntimeManager {
         this.currentAnimationIndex = -1;
         this.partNames = null;
         this.partMaskFlags = null;
+        this.maskWriterParts = false;
         this.partSkinnedFlags = null;
         this.effectPartRefs = [];
     }
@@ -506,6 +512,14 @@ export class SSRuntimeManager {
      */
     public getPartMaskFlags(): Uint8Array | null {
         return this.partMaskFlags;
+    }
+
+    /**
+     * Whether any part of the bound pack can write a mask: `mask_write`,
+     * `draw_as_mask` or a mask part. False until an animation is set up.
+     */
+    public hasMaskWriterParts(): boolean {
+        return this.maskWriterParts;
     }
 
     /**
