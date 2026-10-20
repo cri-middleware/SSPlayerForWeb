@@ -134,8 +134,9 @@ TypeDoc parses `packages/*/src`, which import the bindings.
 
 The English pages also ship in each public package's `docs/`: the package's `build` runs
 `scripts/copy-docs.mjs`, which turns the site paths between pages into relative links and adds
-`scripts/release-docs/npm-README.md` as the folder's front door. Renaming a page the front door
-links to means editing it too; `build-release.sh` refuses a link that goes nowhere.
+`scripts/release-docs/npm-README.md` as the folder's front door. It writes the same pages to
+`skills/<package>/` as an Agent Skill, with the front door as its `SKILL.md`. Renaming a page the
+front door links to means editing it too; `build-release.sh` refuses a link that goes nowhere.
 
 `docs/.vitepress/config.mts` builds the Open Graph and Twitter Card tags in `transformHead`, from
 the title and description VitePress has already resolved. **One code path serves both locales** —
@@ -285,7 +286,7 @@ scripts/build-docs.sh      # TypeDoc のあと VitePress -> docs/.vitepress/dist
 `build-docs` が `locale=` を取るのに対し、こちらが取らないのはそのためです。wasm は省略できません。
 TypeDoc が読む `packages/*/src` がバインディングを import しているからです。
 
-英語のページは公開パッケージそれぞれの `docs/` にも入ります。パッケージの `build` が `scripts/copy-docs.mjs` を実行し、ページ間のサイトのパスを相対リンクに書き換え、`scripts/release-docs/npm-README.md` を入口ページとして加えます。入口ページが指すページを改名したら入口ページも直してください（行き先の無いリンクは `build-release.sh` が拒否します）。
+英語のページは公開パッケージそれぞれの `docs/` にも入ります。パッケージの `build` が `scripts/copy-docs.mjs` を実行し、ページ間のサイトのパスを相対リンクに書き換え、`scripts/release-docs/npm-README.md` を入口ページとして加えます。同じページを Agent Skill として `skills/<パッケージ名>/` にも書き、入口ページをその `SKILL.md` にします。入口ページが指すページを改名したら入口ページも直してください（行き先の無いリンクは `build-release.sh` が拒否します）。
 
 `docs/.vitepress/config.mts` は Open Graph / Twitter Card タグを `transformHead` で、VitePress が解決済みのタイトルと説明から組み立てます。**1 つのコードパスが両ロケールを賄います。** 日本語のカードは `locales.ja.description` から来るので、ローカライズはロケールごとの設定値を足して行い、
 `transformHead` の中でロケール分岐を書かないでください。`og:url` は `base` ではなく `SITE_URL` から作ります（`base` はローカル開発では `/` になるためです）。

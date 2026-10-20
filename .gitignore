@@ -824,8 +824,9 @@ packages/ssplayer-core/wasm/
 packages/ssplayer-core/wasm-nosimd
 packages/ssconverter-core/wasm/
 
-# The documentation each public package carries, copied by its build (scripts/copy-docs.mjs)
+# The documentation each public package carries, as pages and as an Agent Skill, copied by its build (scripts/copy-docs.mjs)
 packages/*/docs/
+packages/*/skills/
 
 # Cached SDK download zips (scripts/download-sdk.*)
 /scripts/.sdk-cache/

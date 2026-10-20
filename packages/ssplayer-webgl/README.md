@@ -4,7 +4,7 @@
 
 Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio** player, driven by a Rust/WebAssembly core — with a drop-in **`<ss-player>` custom element** for declarative, zero-JavaScript use.
 
-Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline.
+Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline, and in `skills/ssplayer-webgl/` as an Agent Skill, which pnpm 12.11 or later links into your coding agent's skills directory after `pnpm approve @spritestudio/ssplayer-webgl`.
 
 > **Who this is for:** web developers with no framework — drop a SpriteStudio player into any page, either as a single `<ss-player>` HTML tag or via the `SSPlayer` JS API, with zero runtime dependencies.
 > **Install:** `npm install @spritestudio/ssplayer-webgl`

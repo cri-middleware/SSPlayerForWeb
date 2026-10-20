@@ -15,7 +15,7 @@ PixiJS v8 app playing `.ssab`; drop your own file onto the page to play it.
 per-part colour / cell / visibility overrides at runtime (source in
 `examples/override-example`).
 
-Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline.
+Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline, and in `skills/ssplayer-pixi/` as an Agent Skill, which pnpm 12.11 or later links into your coding agent's skills directory after `pnpm approve @spritestudio/ssplayer-pixi`.
 
 ## ✨ Why SpriteStudio with PixiJS?
 

@@ -4,10 +4,17 @@
 // which is built from the latest release and can be ahead. English only, as the
 // Markdown source, with the layout kept.
 //
-//   node ../../scripts/copy-docs.mjs <dest>      (from a package: its `build` script)
+//   node ../../scripts/copy-docs.mjs <dest> <skill>      (from a package: its `build` script)
 //
 // <dest> is replaced, and gets scripts/release-docs/npm-README.md as its
 // README.md: the folder's front door, standing in for the site's home page.
+//
+// <skill> is replaced by the same pages as an Agent Skill, named after the
+// folder: the front door is its SKILL.md, under the frontmatter that names it.
+// pnpm links skills/<name>/ of a direct dependency into the project's agent
+// skill directories, and the npm skills CLI does the same, so a link that
+// leaves the folder resolves against the agent's directory instead -- the pages
+// are copied rather than pointed at.
 //
 // The pages are VitePress's, which links between them by site path
 // (`/usage/assets`). Those are rewritten as they are copied, so they resolve
@@ -21,20 +28,24 @@
 // so a page added to docs/ ships without anyone remembering to add it here.
 
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, posix, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SITE = 'https://cri-middleware.github.io/SSPlayerForWeb/';
+const SKILL_DESCRIPTION =
+  'Documentation of SpriteStudio Player for Web, for the version installed. Use when writing, ' +
+  'reviewing or debugging code that plays SpriteStudio animations (.ssab, converted from .sspj) ' +
+  'in a browser with @spritestudio/ssplayer-webgl, @spritestudio/ssplayer-pixi or ' +
+  '@spritestudio/ssplayer-core, or that converts .sspj with @spritestudio/ssconverter-core.';
 
-const [dest, ...rest] = process.argv.slice(2);
-if (!dest || rest.length > 0) {
-  console.error('usage: node scripts/copy-docs.mjs <dest>');
+const [dest, skill, ...rest] = process.argv.slice(2);
+if (!dest || !skill || rest.length > 0) {
+  console.error('usage: node scripts/copy-docs.mjs <dest> <skill>');
   process.exit(2);
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'docs');
-const out = resolve(dest);
 
 const SKIP_DIRS = new Set(['ja', 'api', 'node_modules', 'public', '.vitepress']);
 const pages = readdirSync(src, { recursive: true })
@@ -43,11 +54,12 @@ const pages = readdirSync(src, { recursive: true })
   .sort();
 const have = new Set(pages);
 
-// A site path (`/usage/assets#anchor`) as seen from <page>.
-function rewriteSitePath(target, page) {
+// A site path (`/usage/assets#anchor`) as seen from <page>, in a folder whose
+// front door is <front>.
+function rewriteSitePath(target, page, front) {
   const [path, anchor] = target.split(/(?=#)/);
   const hash = anchor ?? '';
-  if (path === '/') return posix.relative(posix.dirname(page), 'README.md') + hash;
+  if (path === '/') return posix.relative(posix.dirname(page), front) + hash;
   const bare = path.slice(1).replace(/\.md$/, '').replace(/\/$/, '');
   for (const file of [`${bare}.md`, `${bare}/index.md`]) {
     if (have.has(file)) return posix.relative(posix.dirname(page), file) + hash;
@@ -55,23 +67,33 @@ function rewriteSitePath(target, page) {
   return SITE + path.slice(1).replace(/\.md$/, '') + hash;
 }
 
-function rewrite(text, page) {
+function rewrite(text, page, front) {
   // The URL the site serves this page at (cleanUrls), for HTML's relative hrefs.
   const pageUrl = SITE + page.replace(/\.md$/, '');
   return text
-    .replace(/\]\((\/[^)\s]*)\)/g, (_, target) => `](${rewriteSitePath(target, page)})`)
+    .replace(/\]\((\/[^)\s]*)\)/g, (_, target) => `](${rewriteSitePath(target, page, front)})`)
     .replace(/href="([^"#:]*)"/g, (whole, target) => {
       if (target === '') return whole;
       return `href="${target.startsWith('/') ? SITE + target.slice(1) : new URL(target, pageUrl).href}"`;
     });
 }
 
-rmSync(out, { recursive: true, force: true });
-for (const page of pages) {
-  const to = join(out, page);
-  mkdirSync(dirname(to), { recursive: true });
-  writeFileSync(to, rewrite(readFileSync(join(src, page), 'utf8'), page));
+function copyPages(out, front, frontText) {
+  rmSync(out, { recursive: true, force: true });
+  for (const page of pages) {
+    const to = join(out, page);
+    mkdirSync(dirname(to), { recursive: true });
+    writeFileSync(to, rewrite(readFileSync(join(src, page), 'utf8'), page, front));
+  }
+  writeFileSync(join(out, front), frontText);
+  console.log(`copy-docs: ${pages.length} pages + ${front} -> ${relative(process.cwd(), out) || '.'}`);
 }
-writeFileSync(join(out, 'README.md'), readFileSync(join(root, 'scripts', 'release-docs', 'npm-README.md'), 'utf8'));
 
-console.log(`copy-docs: ${pages.length} pages + README.md -> ${relative(process.cwd(), out) || '.'}`);
+const frontDoor = readFileSync(join(root, 'scripts', 'release-docs', 'npm-README.md'), 'utf8');
+const skillName = basename(resolve(skill));
+copyPages(resolve(dest), 'README.md', frontDoor);
+copyPages(
+  resolve(skill),
+  'SKILL.md',
+  `---\nname: ${skillName}\ndescription: ${JSON.stringify(SKILL_DESCRIPTION)}\n---\n\n${frontDoor}`,
+);
