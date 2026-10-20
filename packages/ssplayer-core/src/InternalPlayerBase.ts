@@ -1931,7 +1931,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             // goes on below through calls the manager does see.
             const visible = childState.slot.raw.step(ev, childState.player.runtimeManager.context, parentFrame, deltaSeconds, parentLooped);
 
-            const childDeltaSeconds = ev ? deltaSeconds * Math.abs(ev.speed) : deltaSeconds;
+            // The child's own effects and instances run at the speed the slot just
+            // stepped the child at, read after the step. The event's speed is not
+            // that: before the first real key the event is the implicit one at
+            // speed 1, while a slot that last started an independent key ignores
+            // it and keeps that key's speed, leaving the sub-tree behind the child.
+            const childDeltaSeconds = deltaSeconds * Math.abs(childState.slot.raw.get_speed());
 
             if ((ev as any).free) (ev as any).free();
 

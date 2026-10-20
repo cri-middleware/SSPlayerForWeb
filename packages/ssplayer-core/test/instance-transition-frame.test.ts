@@ -9,6 +9,7 @@ interface Step {
     transitioned: boolean;
     independent: boolean;
     childFrameNo: number;
+    speed?: number;
 }
 
 function makeParent(step: Step) {
@@ -26,6 +27,7 @@ function makeParent(step: Step) {
             independent: () => step.independent,
             child_frame_no: () => step.childFrameNo,
             child_looped: () => false,
+            get_speed: () => step.speed ?? 1,
         },
     };
     const childPlayer = {
@@ -40,7 +42,7 @@ function makeParent(step: Step) {
         },
         _instanceChildren: new Map([[0, { slot, player: childPlayer, visible: false }]]),
     });
-    return { parent, child, childContext };
+    return { parent, child, childContext, childPlayer };
 }
 
 const stepParent = (parent: InternalPlayerBase<never>) =>
@@ -67,5 +69,16 @@ describe('an instance child on the tick its slot transitions', () => {
         stepParent(parent);
         expect(childContext.play).not.toHaveBeenCalled();
         expect(childContext.set_frame_no).not.toHaveBeenCalled();
+    });
+});
+
+describe('the time an instance child hands its own effects and instances', () => {
+    it('is scaled by the speed the slot stepped the child at, not the event\'s', () => {
+        // The event is the implicit key at speed 1 while the slot keeps running
+        // the child at its last real key's 1.5.
+        const { parent, childPlayer } = makeParent({ transitioned: false, independent: true, childFrameNo: 0, speed: -1.5 });
+        stepParent(parent);
+        expect(childPlayer.stepEffectSlots).toHaveBeenCalledWith(1.5 / 60, false);
+        expect(childPlayer.stepInstanceSlots).toHaveBeenCalledWith(1.5 / 60, false);
     });
 });
