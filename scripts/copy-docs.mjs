@@ -20,7 +20,9 @@
 // (`/usage/assets`). Those are rewritten as they are copied, so they resolve
 // as files: a page this folder has becomes a relative `.md` link, `/` becomes
 // the front door, and anything else -- the TypeDoc API pages, the demos, the
-// converter -- becomes its URL on the site, as does an HTML `href`.
+// converter, a section of the home page, which the front door stands in for
+// without having its sections -- becomes its URL on the site, as does an HTML
+// `href`.
 //
 // Left out of docs/: index.md (the home page), ja/ (the site has it), api/
 // (TypeDoc's output from the same comments dist/index.d.ts carries), and
@@ -59,7 +61,7 @@ const have = new Set(pages);
 function rewriteSitePath(target, page, front) {
   const [path, anchor] = target.split(/(?=#)/);
   const hash = anchor ?? '';
-  if (path === '/') return posix.relative(posix.dirname(page), front) + hash;
+  if (path === '/') return hash ? SITE + hash : posix.relative(posix.dirname(page), front);
   const bare = path.slice(1).replace(/\.md$/, '').replace(/\/$/, '');
   for (const file of [`${bare}.md`, `${bare}/index.md`]) {
     if (have.has(file)) return posix.relative(posix.dirname(page), file) + hash;
