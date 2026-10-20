@@ -679,26 +679,34 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // instances). Reset them IN PLACE: rebuilding the children here
         // (setupInstanceChildren) would destroy every child player, invalidating
         // any player the host took from getInstanceChild().
-        this.resetInstanceSlots();
-        this.setupEffectChildren();
+        this.resetSlots();
     }
 
     /**
-     * Re-arm the instance slots (and, recursively, each child's own slots) for a
-     * replay, without touching the child players themselves: a fresh
-     * InstanceSlotHandle is the runtime's reset for one instance part's playback
-     * state. Rebuilding the child players is `setupInstanceChildren`'s job, and
-     * belongs to setAnimation alone — see {@link play}.
+     * Put every effect and instance slot of this player, and of its instance
+     * children at any depth, back to its initial state, without touching the
+     * child players themselves. A slot not reset takes the first key after a
+     * restart for the one it last started, and never starts its child or effect.
+     *
+     * Runs on a replay, and on a child its slot starts over: there the
+     * grandchildren and the child's effects would otherwise carry on from where
+     * they were instead of starting with it. The reset is in place, as the
+     * second runs in the middle of playback.
      */
-    private resetInstanceSlots() {
-        this._instanceChildren.forEach(child => {
-            try { child.slot.destroy(); } catch { /* ignore */ }
-            child.slot = new InstanceSlotHandle();
+    private resetSlots() {
+        for (const item of this._effectChildren.values()) {
+            item.slot.raw.reset();
+            item.visible = false;
+            item.ev?.free();
+            item.ev = null;
+            item.drawn = true;
+        }
+        for (const child of this._instanceChildren.values()) {
+            child.slot.raw.reset();
             child.visible = false;
             child.player._prevFinished = false;
-            child.player.resetInstanceSlots();
-            child.player.setupEffectChildren();
-        });
+            child.player.resetSlots();
+        }
     }
 
     /**
@@ -1944,6 +1952,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             if (childState.slot.raw.transitioned()) {
                 const childContext = childState.player.runtimeManager.context;
                 childContext.play();
+                // The child starts over, so its own slots do too; the slot that
+                // started it is left alone.
+                childState.player.resetSlots();
                 // The slot has already put the child on the frame to draw this tick:
                 // its section's first frame when it plays on its own — where play()
                 // leaves it — and the parent-relative frame when it is synced.
