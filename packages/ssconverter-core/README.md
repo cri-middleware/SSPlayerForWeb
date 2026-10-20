@@ -14,7 +14,8 @@ it produces.
 
 For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/);
 the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable
-offline.
+offline, and in `skills/ssconverter-core/` as an Agent Skill, which pnpm 12.11 or later links
+into your coding agent's skills directory after `pnpm approve @spritestudio/ssconverter-core`.
 
 This package is the wasm build of the Rust [`libssconverter`] crate plus a small
 ergonomic TypeScript layer. It has **no filesystem or DOM dependencies** — bytes

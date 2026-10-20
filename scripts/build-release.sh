@@ -546,19 +546,31 @@ if [ "$VERIFY" = "yes" ]; then
       done <<< "$(node -p "(require('$ROOT_DIR/packages/$dir/package.json').files || []).join('\n')")"
 
       # docs/README.md is the front door to the pages the package carries
-      # (scripts/copy-docs.mjs). Every page it links to is looked up in this
-      # tarball, so renaming one fails the release instead of shipping a link
-      # that goes nowhere.
-      if grep -qx 'package/docs/README.md' "$entries"; then
-        front="$(tar -xzOf "$tgz" package/docs/README.md)"
-        links="$(grep -oE ']\([^):#]+\.md' <<< "$front" | sed 's/^](//' || true)"
-        [ -n "$links" ] || fail "$(basename "$tgz"): no page links parsed out of docs/README.md -- the check proved nothing"
-        for link in $links; do
-          grep -qxF "package/docs/$link" "$entries" \
-            || fail "$(basename "$tgz"): docs/README.md links to $link, which is not in it"
-        done
-      else
-        fail "$(basename "$tgz") has no docs/README.md"
+      # (scripts/copy-docs.mjs), and skills/<name>/SKILL.md the front door to the
+      # same pages as an Agent Skill. Every page each links to is looked up in
+      # this tarball, so renaming one fails the release instead of shipping a
+      # link that goes nowhere.
+      skill="${name#*/}"
+      for front_door in docs/README.md "skills/$skill/SKILL.md"; do
+        if grep -qxF "package/$front_door" "$entries"; then
+          front="$(tar -xzOf "$tgz" "package/$front_door")"
+          links="$(grep -oE ']\([^):#]+\.md' <<< "$front" | sed 's/^](//' || true)"
+          [ -n "$links" ] || fail "$(basename "$tgz"): no page links parsed out of $front_door -- the check proved nothing"
+          for link in $links; do
+            grep -qxF "package/${front_door%/*}/$link" "$entries" \
+              || fail "$(basename "$tgz"): $front_door links to $link, which is not in it"
+          done
+        else
+          fail "$(basename "$tgz") has no $front_door"
+        fi
+      done
+
+      # The skills CLIs know a skill by the name in its frontmatter, which the
+      # Agent Skills format requires to be its folder's.
+      if grep -qxF "package/skills/$skill/SKILL.md" "$entries"; then
+        front="$(tar -xzOf "$tgz" "package/skills/$skill/SKILL.md")"
+        grep -qxF "name: $skill" <<< "$front" \
+          || fail "$(basename "$tgz"): skills/$skill/SKILL.md does not name the skill $skill"
       fi
     done <<< "$PUBLIC_PKGS"
   fi
