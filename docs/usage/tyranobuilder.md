@@ -7,7 +7,7 @@ description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto impo
 Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
 code to write. Drop a SpriteStudio project into a folder in your game and the editor converts
 it for you — when the project opens, and again whenever you ask.
-Verified on **TyranoBuilder Ver 3.00** (Electron 24.8.8).
+Verified on **TyranoBuilder Ver 3.00**.
 
 Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
 animations as `[ss_*]` tags.
@@ -18,25 +18,6 @@ animations as `[ss_*]` tags.
 ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — the
 TyranoScript sample scene. There is no separate Builder demo because it is the same runtime:
 what the components place is what you see here.
-
-## One plugin, two halves
-
-`ssplayer.tbp` installs a single plugin folder holding both sides of the integration:
-
-| | File | What it does |
-| --- | --- | --- |
-| **Editor half** | `ssplayer.builder.js` | The [auto importer](#the-auto-importer) and the SpriteStudio [components](#the-components) in the palette |
-| **Runtime half** | `main.js` + `ssruntime_bg.wasm` | Registers the `[ss_*]` tags the components write, and renders the animations |
-
-The runtime half is [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) — the same bundle
-hand-written scenarios use. Shipping both in one folder keeps this to **one plugin**, which
-matters because TyranoBuilder's Standard edition (without PRO) loads at most two.
-
-The editor half runs when a project is opened: the builder finds
-`<id>/<id>.builder.js` in the project and constructs it. That is the hook the importer and the
-palette entries hang off. It also contributes `[plugin name="ssplayer"]` to
-`data/scenario/system/plugin_third.ks` (which the builder regenerates on every load), so your
-game boots the runtime with nothing for you to write.
 
 ## 1. Install
 

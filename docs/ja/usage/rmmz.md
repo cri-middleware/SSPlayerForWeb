@@ -7,22 +7,10 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
 
-このプラグインを使うと、**RPG ツクール MZ** のゲームで **SpriteStudio**（`.ssab`）のアニメーションを再生できます。アニメーションは MZ の PixiJS v5 レンダラーへ直接描画されるため、キャラクターやピクチャと正しい Z 順で重なります。描画は [`ssplayer-webgl`](/ja/usage/webgl) の `SSWebGLRenderer` を土台にしています。
+このプラグインを使うと、**RPG ツクール MZ** のゲームで **SpriteStudio**（`.ssab`）のアニメーションを再生できます。操作はプラグインコマンドで行い、コードは書きません。アニメーションはピクチャに載り、キャラクターやピクチャと正しい Z 順で重なります。
 
 ▶️ **<a href="../../examples/rmmz/" target="_blank" rel="noreferrer">ライブデモ</a>** —
 同梱のサンプル MZ プロジェクトをブラウザーで実行できます。
-
-## しくみ {#how-it-works}
-
-アニメーションは MZ 自身の **PixiJS v5 レンダラーへ直接描画** されます（MZ の Tilemap や同梱の Effekseer と同じ方式です）。オーバーレイ用の Canvas を重ねないため、キャラクターやピクチャと正しい Z 順で表示されます。
-
-- `SSPlayer` は `PIXI.Container` を継承し、`SSPlayerRenderer`（登録済みの
-  `PIXI.ObjectRenderer` `'ssplayer'`）が [`ssplayer-webgl`](/ja/usage/webgl) の
-  `SSWebGLRenderer` を MZ 共有の `gl` に対して再利用します。これにより、マスク・エフェクト・
-  13 種の SS 連携シェーダー・インスタンスパーツは WebGL プレイヤーと同じコードで描画されます。
-- **非 SIMD（スカラー）版の WASM** を同梱しているため、MZ 同梱の NW.js（WebAssembly SIMD 非対応の
-  Chromium）でも起動フラグなしで動作します。初期化に失敗した場合は SS アニメーションが無効化されるだけで、ゲーム自体は起動します（理由はコンソールに出ます）。
-- 独自のタイマーを持ちません。再生はピクチャのスプライトの `update()` からだけ進むため、メニューやメッセージ待ちではゲームと一緒に止まります。
 
 ## 1. インストール
 
@@ -167,6 +155,13 @@ img/   audio/   effects/
 音はキーに指定された回数だけ続けて鳴り、止まります。SpriteStudio の音声に無限ループはありません。ピクチャを消去すると、そのピクチャが鳴らした音だけが止まります。イベントコマンド「SEの停止」は、ほかの SE と一緒にこれらの音も止めます。
 
 **デプロイ。** ツクールは `.ssab` の中身を読めないため、「未使用ファイルを除外する」はアニメーションだけが鳴らす音声ファイルを削除します。公式プラグイン MaterialBase.js の「音声素材のリスト」に 1 つずつ登録するか、このオプションを OFF にしてデプロイしてください。MaterialBase.js は、必要な PluginCommonBase.js と一緒に MZ 本体の `dlc/BasicResources/plugins/official/` にあります。
+
+## しくみ {#how-it-works}
+
+- アニメーションは MZ の画面へ直接描画されます（MZ のタイルマップや同梱の Effekseer と同じ方式です）。上に別の画面を重ねないので、キャラクターやピクチャと正しい Z 順で表示されます。
+- マスク・エフェクト・SpriteStudio の連携シェーダー（13 種）・インスタンスパーツは、ブラウザ向けの WebGL 版と同じように描画されます。
+- 再生はピクチャと一緒に進むため、メニューやメッセージ待ちではゲームと一緒に止まります。
+- MZ 同梱の NW.js でそのまま動き、起動オプションの追加は要りません。初期化に失敗した場合は SS アニメーションが無効になるだけで、ゲームは起動します。理由はコンソール（F8）に出ます。
 
 ## 既知の制限 {#known-limitations}
 

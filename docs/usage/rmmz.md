@@ -7,29 +7,12 @@ description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, plugi
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
 
-This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**. Because
-the animation is drawn straight into MZ's PixiJS v5 renderer, it sits in the correct
-Z-order with your characters and pictures.
-Its rendering is built on [`ssplayer-webgl`](/usage/webgl)'s `SSWebGLRenderer`.
+This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**, driven by
+plugin commands with no code to write. An animation rides on a picture and sits in the
+correct Z-order with your characters and pictures.
 
 ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">Live demo</a>** — run
 the bundled sample MZ project in your browser.
-
-## How it works
-
-Animations are drawn **directly into MZ's own PixiJS v5 renderer** (the same approach as
-MZ's Tilemap and the bundled Effekseer). There is no overlay canvas, so they render in
-correct Z-order with characters and pictures.
-
-- `SSPlayer` extends `PIXI.Container`, and `SSPlayerRenderer` — a registered
-  `PIXI.ObjectRenderer` (`'ssplayer'`) — reuses [`ssplayer-webgl`](/usage/webgl)'s
-  `SSWebGLRenderer` against MZ's shared `gl`. Reusing that renderer means masks,
-  effects, the 13 SS integration shaders, and instance parts are drawn by the same code as in the WebGL player.
-- It bundles the **no-SIMD (scalar)** WASM, so it runs on MZ's bundled NW.js (a Chromium
-  without WebAssembly SIMD) with no launch flags. If initialization fails, SS animations
-  are disabled but the game still boots, and the console says why.
-- It keeps no timer of its own: playback advances from the picture's sprite `update()`, so
-  SS animations pause exactly with the game (menus, message waits).
 
 ## 1. Install
 
@@ -257,6 +240,18 @@ event command *Stop SE* stops them along with every other SE.
 files only an animation plays. Register each one in the *Audio File Material List* of the
 official MaterialBase.js plugin, or deploy with the option off. MaterialBase.js ships with
 MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it needs.
+
+## How it works
+
+- Animations are drawn straight into MZ's own screen (the same approach as MZ's tilemap and
+  the bundled Effekseer). Nothing is layered on top, so they render in correct Z-order with
+  characters and pictures.
+- Masks, effects, SpriteStudio's integration shaders (all 13) and instance parts draw as
+  they do in the browser WebGL player.
+- Playback advances with the picture, so SS animations pause exactly with the game (menus,
+  message waits).
+- It runs on MZ's bundled NW.js as it is, with no launch options to add. If initialization
+  fails, SS animations are disabled but the game still boots, and the console (F8) says why.
 
 ## Known limitations
 

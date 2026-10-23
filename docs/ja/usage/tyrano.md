@@ -4,8 +4,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 # TyranoScript で使う
 
-**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**
-（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤー上の `<div>`（描画はレイヤー共有の canvas が行います）なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。描画は [`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
+**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。アニメはキャラクター・背景・メッセージと同じ Tyrano のレイヤーに並び、Tyrano 標準の `[anim]` / `[kanim]` でも動かせます。ティラノスタジオで作ったプロジェクトでも同じように使えます。
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
@@ -16,16 +15,6 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 ::: tip ティラノビルダーで制作する場合
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。ランタイムは同じで、タグを書く代わりにコンポーネントパレットから配置でき、`.sspj` の変換も自動で行われます。このページのタグ一覧はそのまま有効です（各コンポーネントが書き出すのがこれらのタグです）。
 :::
-
-## しくみ
-
-プラグインは `[ss_*]` の KAG カスタムタグ群を Tyrano の `master_tag` に登録します。自己登録する単一の `main.js`（IIFE バンドル）が、TyranoScript / TyranoBuilder / TyranoStudio のいずれでも動作します。
-
-- `[ss_new]` ごとに名前付きプレイヤーを生成し、`.ssab` をロードして対象レイヤーへ `<div>` を追加し、[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer`（WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）で駆動します。描画はレイヤー共有の canvas に行われます。
-- `<div>` には **プレイヤー名**が識別子として付与されるため、他のキャラと同じように Tyrano 標準の
-  `[anim]` / `[kanim]` でそのまま動かせます。
-- 外部に残るのは **WASM バイナリ**（`ssruntime_bg.wasm`）だけで、レンダラと core の JS は `main.js`
-  に内包されています。
 
 ## 動作環境
 

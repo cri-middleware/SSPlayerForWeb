@@ -79,9 +79,11 @@ the internals:
   registered `PIXI.ObjectRenderer` (`'ssplayer'`) that reuses
   [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl)'s `SSWebGLRenderer` against MZ's
   shared `gl`. Raw-GL draws are bracketed with the exact WebGL-state save/restore MZ's
-  Effekseer sprite uses.
+  Effekseer sprite uses. It keeps no timer: playback advances only from the picture
+  sprite's `update()`.
 - **Layer 4 (plugin).** A drop-in IIFE that gates boot on WASM init
-  (`Scene_Boot.isReady`), attaches animations to pictures via a Game_Picture ↔
+  (`Scene_Boot.isReady`) — the no-SIMD (scalar) build, since MZ's bundled NW.js is a
+  Chromium without WebAssembly SIMD — attaches animations to pictures via a Game_Picture ↔
   Sprite_Picture bridge (so MZ move/scale apply and state survives save/load), and
   routes textures through `ImageManager`, sounds through `AudioManager`.
 

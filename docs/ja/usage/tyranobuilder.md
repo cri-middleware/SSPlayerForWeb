@@ -4,7 +4,7 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 
 # ティラノビルダーで使う
 
-**SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。動作確認は **TyranoBuilder Ver 3.00**（Electron 24.8.8）で行っています。
+**SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。動作確認は **TyranoBuilder Ver 3.00** で行っています。
 
 シナリオを手書きする場合は [TyranoScript で使う](/ja/usage/tyrano) を参照してください。同じアニメを
 `[ss_*]` タグで扱えます。
@@ -14,22 +14,6 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 
 ▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
 TyranoScript 版のサンプルシーンです。ランタイムは同じなのでビルダー専用のデモはありません。コンポーネントで配置した結果もここと同じ見た目になります。
-
-## プラグインの構成
-
-`ssplayer.tbp` は、両方の役割を持つ 1 つのプラグインフォルダをインストールします。
-
-| | ファイル | 役割 |
-| --- | --- | --- |
-| **エディタ側** | `ssplayer.builder.js` | [自動インポート](#the-auto-importer)と、パレットの [SpriteStudio コンポーネント](#the-components) |
-| **ランタイム側** | `main.js` + `ssruntime_bg.wasm` | コンポーネントが書き出す `[ss_*]` タグの登録と、アニメの描画 |
-
-ランタイム側は [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) そのもので、手書きシナリオで使うバンドルと同一です。1 つのフォルダに両方を同梱しているため、**プラグインの数は 1 つ**で済みます。スタンダード版はプラグインを 2 つまでしか読み込まないため、この点は重要です。
-
-エディタ側はプロジェクトを開いたときに動きます。ビルダーがプロジェクト内の
-`<id>/<id>.builder.js` を見つけて構築する、これがインポーターとパレット登録のフックです。あわせて
-`data/scenario/system/plugin_third.ks`（ビルダーが読み込みのたびに再生成します）に
-`[plugin name="ssplayer"]` を追加するので、ゲーム側でランタイムを読み込む記述は不要です。
 
 ## 1. インストール
 
