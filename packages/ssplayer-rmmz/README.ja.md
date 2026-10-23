@@ -83,10 +83,10 @@ pnpm --filter @spritestudio/ssplayer-rmmz run pack   # dist/pack/ssplayer-rmmz-p
 ```sh
 pnpm --filter rmmz-example run sync:plugin   # ビルド済みプラグイン + 非SIMD wasm を js/plugins/ へ
 pnpm deploy-examples                         # SS-SDK テストプロジェクトを spritestudio/ へ変換
-nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ エディタで開く）
+nw examples/rmmz-example/SampleProject test  # テストプレイ（または MZ エディタで開く）
 ```
 
-`sync:plugin` はビルド済みプラグインを同期します（`tyranoscript-example` と同じ方式です）。
+テストプレイになるのは `test` を付けたときです。MZ は最初の引数からそれを読み、付けずに起動するとデプロイ後のゲームと同じ扱いになります。`sync:plugin` はビルド済みプラグインを同期します（`tyranoscript-example` と同じ方式です）。
 `deploy-examples` はテストアセットの変換・配布を一手に担う単一の入口です。NW.js がなければ、
 `examples/rmmz-harness` のブラウザハーネス（実 `SSPlayer` / `SSPlayerRenderer` を PixiJS v5 上で駆動します）を使ってください。
 

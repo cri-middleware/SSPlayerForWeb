@@ -114,10 +114,11 @@ Run it in the bundled MZ example:
 ```sh
 pnpm --filter rmmz-example run sync:plugin   # copy the built plugin + no-SIMD wasm into js/plugins/
 pnpm deploy-examples                         # convert the SS-SDK test projects into spritestudio/
-nw examples/rmmz-example/SampleProject       # Test Play (or open the project in the MZ editor)
+nw examples/rmmz-example/SampleProject test  # Test Play (or open the project in the MZ editor)
 ```
 
-`sync:plugin` refreshes the built plugin (mirrors `tyranoscript-example`); `deploy-examples`
+`test` is what makes it a test play: MZ reads it from the first argument, and a launch without
+it runs as the deployed game. `sync:plugin` refreshes the built plugin (mirrors `tyranoscript-example`); `deploy-examples`
 is the single point that converts and distributes the SS test assets. No NW.js? Use
 the browser harness at `examples/rmmz-harness` (real `SSPlayer` / `SSPlayerRenderer`
 against PixiJS v5).
