@@ -73,7 +73,7 @@ Ringo を `SpriteStudio_Source/` に置くので、初回から変換対象が�
 
 [`examples/tyranobuilderexample`](../../examples/tyranobuilderexample) は、すぐに開けるサンプルプロジェクトです。Ringo にコンポーネントを使うシーンが 1 つ入っています。ビルダーで雛形用の新規プロジェクトを作り、`pnpm --filter tyranobuilderexample run setup <そのプロジェクト>` を実行します。詳しくはその README を参照してください。
 
-エディタ内部の仕組み（ベンダー非公開の部分を含む）はソースのコメント（主に `src/plugin.builder.ts`、`src/builderTypes.d.ts`、`src/buttonParam.ts`）に、残タスクは [ROADMAP.md](./ROADMAP.md) にあります。
+エディタ内部の仕組み（ベンダー非公開の部分を含む）はソースのコメント（主に `src/plugin.builder.ts`、`src/builderTypes.d.ts`、`src/buttonParam.ts`、`src/managerPanel.ts`）にあります。変換そのもの（記録ファイル、「変更された」の判定、Worker、ログ）は MZ のプラグインと共有する [`ssconverter-importer`](../ssconverter-importer) のもので、ビルダーが付け足している部分は `src/builderImporter.ts` です。ドキュメントサイトの[開発者向けガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/development/)に、ファイルの対応、本物のエディタをスクリプトから操作する方法、ファイルをまたぐ設計の理由があります。残タスクは [ROADMAP.md](./ROADMAP.md) にあります。
 
 ## ライセンス
 

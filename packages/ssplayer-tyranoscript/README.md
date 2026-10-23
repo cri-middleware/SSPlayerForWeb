@@ -168,7 +168,9 @@ pnpm --filter tyranoscript-example run sync:plugin             # copy the built 
 
 TyranoScript itself is not bundled: the example commits only the authored scenario, the
 plugin loader and the `.ssab` files, and you place a TyranoScript runtime yourself during
-development.
+development. The docs site's
+[Developer guide](https://cri-middleware.github.io/SSPlayerForWeb/development/) maps the files
+and says how to drive the example in a real engine from a script.
 
 ## License
 

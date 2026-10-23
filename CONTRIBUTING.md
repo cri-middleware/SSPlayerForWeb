@@ -97,6 +97,10 @@ for the core and WebGL, `examples/pixi-example` for PixiJS — with `pnpm run de
 `pnpm run example` (or `pnpm run example example=pixi`) does every step that is missing and starts
 the example: [`scripts/run-example.sh`](./scripts/run-example.sh) and its `.ps1` twin.
 
+Working on RPG Maker MZ, TyranoScript or TyranoBuilder, or using your build in a game of your
+own: the docs site's [Developer guide](./docs/development/index.md) maps the files, builds what a
+release builds, and says how to check a change in the real host.
+
 ### Regenerating the FlatBuffers accessors
 
 `packages/ssplayer-core/src/ss/` is flatc output over the SDK's `.fbs` schemas,
@@ -253,6 +257,8 @@ pnpm test             # 全ワークスペースの vitest スイート
 ```
 
 生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。`pnpm test` には上の 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。新規チェックアウトでは `pnpm run example`（別のサンプルは `pnpm run example example=pixi`）が、不足している手順をすべて実行してサンプルを起動します（[`scripts/run-example.sh`](./scripts/run-example.sh) とその `.ps1` の片割れ）。
+
+RPG ツクール MZ・TyranoScript・ティラノビルダーの連携を開発するとき、または自分のビルドを自分のゲームで使うときは、ドキュメントサイトの[開発者向けガイド](./docs/ja/development/index.md)を参照してください。ファイルの対応、リリースと同じ成果物のビルド、実際のホストでの確かめ方があります。
 
 ### FlatBuffers アクセサの再生成
 

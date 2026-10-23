@@ -58,7 +58,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 **Using it in your own project?** Read on. Everything after the first animation —
 events, per-part overrides, custom textures — is the same path further in, under
 [Customization](./docs/customize/events.md).
-**Working on SSPlayerForWeb itself?** [Running the examples from a checkout](#running-the-examples-from-a-checkout) below, then [CONTRIBUTING.md](./CONTRIBUTING.md).
+**Working on SSPlayerForWeb itself?** [Running the examples from a checkout](#running-the-examples-from-a-checkout) below, then [CONTRIBUTING.md](./CONTRIBUTING.md). The [Developer guide](./docs/development/index.md) maps the packages to their files, builds a changed version for your own app or game, and checks it in RPG Maker MZ and the Tyrano hosts.
 
 ### Install it
 

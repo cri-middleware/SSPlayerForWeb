@@ -90,7 +90,9 @@ nw examples/rmmz-example/SampleProject test  # テストプレイ（または MZ
 `deploy-examples` はテストアセットの変換・配布を一手に担う単一の入口です。NW.js がなければ、
 `examples/rmmz-harness` のブラウザハーネス（実 `SSPlayer` / `SSPlayerRenderer` を PixiJS v5 上で駆動します）を使ってください。
 
-サンプルでテストプレイでの変換を試すには、`packages/ssconverter-core/wasm/ssconverter_bg.wasm` を `SampleProject/js/plugins/` にコピーし、SpriteStudio のプロジェクトを `SampleProject/SpriteStudio_Source/` に置きます。どちらも git の管理対象外です。サンプルは Web デモとしても公開され、そこでは変換が動かないため、`sync:plugin` はコンバータをコピーしません。
+サンプルでテストプレイでの変換を試すには、`packages/ssconverter-core/wasm/ssconverter_bg.wasm` を `SampleProject/js/plugins/` にコピーし、SpriteStudio のプロジェクトを `SampleProject/SpriteStudio_Source/` に置きます。どちらも git の管理対象外です。サンプルは Web デモとしても公開され、そこでは変換が動かないため、`sync:plugin` はコンバータをコピーしません。変換を担うのは [`ssconverter-importer`](../ssconverter-importer) で、TyranoBuilder がプロジェクトを開いたときに走らせるものと同じインポーターです。MZ が付け足している部分は `src/rmmz/autoImport.ts` です。
+
+ドキュメントサイトの[開発者向けガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/development/)に、プラグインのファイルの対応、自分のゲーム向けにビルドする方法、エディタを使わずに本物の MZ で確かめる方法があります。
 
 ## ライセンス
 
