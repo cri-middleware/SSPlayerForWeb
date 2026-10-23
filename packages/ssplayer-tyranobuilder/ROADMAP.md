@@ -9,4 +9,4 @@ This file lists unfinished work that is specific to the TyranoBuilder plugin; wo
 
 ## Deliberate non-goals
 
-- **Background watching of the source folder** — The editor could notice a save, but a pass costs a synchronous bridge hop per source file on the UI thread, and the Ren'Py and Godot Players do not watch either; use Import now or Reconvert.
+- **Background watching of the source folder** — The editor could notice a save, but it has no reload of its own for a plugin to ride, as Ren'Py's autoreload is, and a polling pass costs a synchronous bridge hop per source file on the UI thread; SSPlayerForGodot does not watch either. Use Import now or Reconvert now.
