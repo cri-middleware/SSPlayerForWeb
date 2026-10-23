@@ -22,9 +22,22 @@ TyranoScript のプロジェクトと、**SpriteStudio 7.5 以上**で作成し�
 2. **変換**: ブラウザで [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) を開き、`.sspj` の入ったフォルダをドロップして ZIP をダウンロードします。ZIP を `data/others/ssdata/` に展開すると、プロジェクト名のフォルダの中に `.ssab` とテクスチャが入っています。デスクトップでは [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) で同じことができます。
 
    ```
-   data/others/
-   ├── plugin/ssplayer/   ← init.ks・main.js・ssruntime_bg.wasm・readme.txt
-   └── ssdata/Ringo/      ← Ringo.ssab・Ringo.png
+   mygame/
+   ├── index.html
+   └── data/
+       ├── scenario/
+       │   ├── first.ks
+       │   └── …
+       └── others/
+           ├── plugin/ssplayer/
+           │   ├── init.ks
+           │   ├── main.js
+           │   ├── ssruntime_bg.wasm
+           │   └── readme.txt
+           └── ssdata/
+               └── Ringo/       ← ZIP を展開したもの
+                   ├── Ringo.ssab
+                   └── Ringo.png
    ```
 
 3. **表示**: ゲームの冒頭でプラグインを 1 回だけ読み込み、キャラを出したい場面でプレイヤーを作ります。
@@ -38,7 +51,7 @@ TyranoScript のプロジェクトと、**SpriteStudio 7.5 以上**で作成し�
    [ss_play name="chr"]
    ```
 
-   `x` / `y` は Tyrano の左上原点のピクセルで、アニメのアンカーがその位置に来ます。`anime="…"` でアニメを名前で選べます。省略すると先頭のアニメです。
+   `storage` は `data/` から数えたパスです。`x` / `y` は Tyrano の左上原点のピクセルで、アニメのアンカーがその位置に来ます。`anime="…"` でアニメを名前で選べます。省略すると先頭のアニメです。
 
 この手順と並べて読める完成したシナリオが、同梱サンプルの [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) です。登場、`[anim]` によるフェード、複数レイヤー、セーブ / ロードをコメント付きで書いてあり、上のオンラインデモはこれを動かしています。
 

@@ -37,9 +37,22 @@ You need a TyranoScript project, and a project made in **SpriteStudio 7.5 or lat
    [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) does the same.
 
    ```
-   data/others/
-   ├── plugin/ssplayer/   ← init.ks, main.js, ssruntime_bg.wasm, readme.txt
-   └── ssdata/Ringo/      ← Ringo.ssab, Ringo.png
+   mygame/
+   ├── index.html
+   └── data/
+       ├── scenario/
+       │   ├── first.ks
+       │   └── …
+       └── others/
+           ├── plugin/ssplayer/
+           │   ├── init.ks
+           │   ├── main.js
+           │   ├── ssruntime_bg.wasm
+           │   └── readme.txt
+           └── ssdata/
+               └── Ringo/       ← extracted from the ZIP
+                   ├── Ringo.ssab
+                   └── Ringo.png
    ```
 
 3. **Show**: Load the plugin once, at the top of your game, then show a character wherever
@@ -54,8 +67,9 @@ You need a TyranoScript project, and a project made in **SpriteStudio 7.5 or lat
    [ss_play name="chr"]
    ```
 
-   `x` / `y` are Tyrano's top-left pixels, and the animation's anchor lands there.
-   `anime="…"` picks an animation by name; left out, it is the first one.
+   `storage` is a path from `data/`. `x` / `y` are Tyrano's top-left pixels, and the
+   animation's anchor lands there. `anime="…"` picks an animation by name; left out, it is
+   the first one.
 
 A complete scenario to read next to these steps is the bundled example's
 [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) (commented in Japanese) — entrances, `[anim]` fades, several layers and
