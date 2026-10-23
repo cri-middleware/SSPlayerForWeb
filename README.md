@@ -45,7 +45,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | **Converting `.sspj` → `.ssab`** | [`ssconverter-web`](./packages/ssconverter-web) (Web tool + Node CLI) | — |
 | **Embedding conversion in your own app/service** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, installed as plugin bundles rather than from npm. All three are **beta**:
+**Game-engine integrations** — plugins installed from GitHub Releases rather than npm, set up in the engine's editor with no code; each package's README has its own Quick start. All three are **beta**:
 
 | Your environment | Package | Runnable example |
 |---|---|---|
@@ -62,7 +62,7 @@ events, per-part overrides, custom textures — is the same path further in, und
 
 ### Install it
 
-No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab` (authored in **SpriteStudio 7.5 or later**), and play it in a few lines. The full walkthrough lives in the docs:
+No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab` (authored in **SpriteStudio 7.5 or later**), and play it in a few lines; in RPG Maker MZ, TyranoScript or TyranoBuilder, follow that plugin's README instead. The full walkthrough lives in the docs:
 
 **[Installation](./docs/setup/install.md)** · **[Quick Start](./docs/setup/quickstart.md)** · **[Preparing assets (.sspj → .ssab)](./docs/usage/assets.md)**
 
