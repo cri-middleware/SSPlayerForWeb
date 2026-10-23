@@ -28,7 +28,7 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true):
    open the Release named `@spritestudio/ssplayer-tyranobuilder <version>` and take the
    file under **Assets**, not the *Source code* archives. In TyranoBuilder, open
-   **plugin settings → add** and pick that file. Keep the name `ssplayer.tbp` —
+   **Project → Plugins**, press **Add New** and pick that file. Keep the name `ssplayer.tbp` —
    TyranoBuilder takes the plugin's name from it. It is the only download you need; do not
    also install the TyranoScript plugin ZIP.
 2. **Add an animation**: Copy your SpriteStudio project — the whole folder, not the `.sspj`

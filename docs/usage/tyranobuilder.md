@@ -50,7 +50,7 @@ the editor half, so **do not also install that ZIP** — both unpack to
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true): open the Release named
    `@spritestudio/ssplayer-tyranobuilder <version>` and take the file under **Assets**, not
    the *Source code* archives.
-2. In TyranoBuilder: **plugin settings → add → pick that file**.
+2. In TyranoBuilder, open **Project → Plugins**, press **Add New** and pick that file.
 
 **Do not rename the file.** TyranoBuilder derives the plugin's id from the filename and then
 looks for `<id>/<id>.builder.js` inside the archive, so `ssplayer-1.2.0.tbp` would install
@@ -132,15 +132,15 @@ So after saving in SpriteStudio, there are two ways back:
 | | Where | What it does |
 | --- | --- | --- |
 | **Reconvert now** | on the **SpriteStudio: show** component that plays the animation | Rebuilds that one pack, whatever its record says |
-| **Import now** | plugin manager (the **Plugin** menu) → **SpriteStudio** | Converts everything added or edited since the project was opened |
+| **Import now** | **Project → Plugins** → **SpriteStudio** | Converts everything added or edited since the project was opened |
 
 **Reconvert now** is the everyday one — it is per-pack and forced, because pressing it means
 you have already decided the pack is out of date. **Import now** is for a `.sspj` that is
 *new*: a component can only point at a pack that already exists, so a project dropped into
-`SpriteStudio_Source/` while the builder is open has nowhere to press. The plugin manager panel
+`SpriteStudio_Source/` while the builder is open has nowhere to press. The Plugins window
 is not attached to anything in the scenario, which is exactly why the button lives there.
 
-The same panel has **Open the source folder** and **Open the import log**, and shows the
+The same window has **Open the source folder** and **Open the import log**, and shows the
 converter build it is running (`converter <version> (ssab v1, ssqb v1)`) — the line to quote
 when you report a problem.
 
@@ -313,7 +313,7 @@ Each component writes the matching `[ss_*]` tag verbatim, so the
 ## Troubleshooting
 
 A conversion that fails says why on screen. The same reason, and every conversion that worked,
-is in `ss_import_log.txt` at your project root — the plugin manager panel opens it for you.
+is in `ss_import_log.txt` at your project root — the Plugins window opens it for you.
 
 While you preview, a component that cannot do its job — a name no *show* created, an animation
 the pack no longer has — says why in a dialog naming the scene file and line. An exported game
@@ -329,7 +329,7 @@ never shows it: the export turns the engine's debug switch off.
   the same `data/others/ssdata/<name>/`, so only the first one found is converted and the
   plugin names both. Rename one of them.
 - **A change in SpriteStudio was not picked up** — nothing runs on its own after the project is
-  opened. Use **Reconvert now** on the component, or **Import now** in the plugin manager for a
+  opened. Use **Reconvert now** on the component, or **Import now** in the Plugins window for a
   project that has no component yet; if neither takes, delete `.ss_import_state.json` and reopen
   the project.
 
