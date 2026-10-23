@@ -6,8 +6,9 @@
 // `SpriteStudio_Source/*.sspj`, reconverts whatever changed (mtime diff against
 // a success marker) and writes into `game/ss_assets/`. A host calls `runOnce()`
 // at its own equivalent of that moment, and after that nothing happens on its
-// own: SSPlayerForGodot has no freshness check at all, only an explicit
-// `Reconvert`, and the family answers the same way.
+// own. Ren'Py's block runs again whenever its autoreload reloads the game; the
+// hosts here have no such reload to ride, and SSPlayerForGodot has no freshness
+// check at all, only an explicit `Reconvert`.
 //
 // The marker discipline is copied deliberately: output mtimes alone cannot tell
 // you a run succeeded, because a failed conversion still leaves fresh-looking

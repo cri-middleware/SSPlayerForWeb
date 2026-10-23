@@ -28,9 +28,9 @@ features:
     link: /customize/events
     linkText: Customize
   - title: Extend & contribute
-    details: Understand the whole picture, then extend or contribute to the core and the WASM / FFI layer. CONTRIBUTING has the design principles and the build steps.
-    link: https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md
-    linkText: Contributing
+    details: Understand the whole picture, then change the packages and plugins, try your build in a game, and check it in the real host. The developer guide maps the files; CONTRIBUTING has the design principles and the build steps.
+    link: /development/
+    linkText: Developer guide
 ---
 
 <!-- The converter and the examples are built beside this site, not by VitePress

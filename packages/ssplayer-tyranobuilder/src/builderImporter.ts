@@ -1,15 +1,16 @@
 // The auto-importer as TyranoBuilder uses it.
 //
 // The builder gives us Ren'Py's opening — a plugin's constructor runs when the
-// project is opened — so the shape is Ren'Py's, deliberately: one pass when the
-// project opens, and after that nothing happens on its own.
+// project is opened — so the first pass is Ren'Py's: one when the project
+// opens. Ren'Py then picks up a save through its own autoreload; the builder has
+// no reload for a plugin to ride, so after that nothing happens on its own.
 //
 // The editor could do more (it is a long-lived process, so a save could be
 // noticed while it is open) and an earlier revision of this file did, driven by
-// the window regaining focus. It was dropped to keep the whole family of
-// players answering the same way: SSPlayerForGodot has no freshness check at
-// all, only an explicit `Reconvert`. `reconvertPack()` below is the
-// counterpart, reached from the `[ss_new]` inspector.
+// the window regaining focus. It was dropped to answer the way SSPlayerForGodot
+// does: no freshness check at all, only an explicit `Reconvert`.
+// `reconvertPack()` below is the counterpart, reached from the `[ss_new]`
+// inspector.
 //
 // A `.sspj` added to the source folder while the builder is open is therefore
 // not picked up on its own, and the inspector that hosts `Reconvert` cannot be

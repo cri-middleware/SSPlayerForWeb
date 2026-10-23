@@ -114,10 +114,11 @@ Run it in the bundled MZ example:
 ```sh
 pnpm --filter rmmz-example run sync:plugin   # copy the built plugin + no-SIMD wasm into js/plugins/
 pnpm deploy-examples                         # convert the SS-SDK test projects into spritestudio/
-nw examples/rmmz-example/SampleProject       # Test Play (or open the project in the MZ editor)
+nw examples/rmmz-example/SampleProject test  # Test Play (or open the project in the MZ editor)
 ```
 
-`sync:plugin` refreshes the built plugin (mirrors `tyranoscript-example`); `deploy-examples`
+`test` is what makes it a test play: MZ reads it from the first argument, and a launch without
+it runs as the deployed game. `sync:plugin` refreshes the built plugin (mirrors `tyranoscript-example`); `deploy-examples`
 is the single point that converts and distributes the SS test assets. No NW.js? Use
 the browser harness at `examples/rmmz-harness` (real `SSPlayer` / `SSPlayerRenderer`
 against PixiJS v5).
@@ -126,7 +127,13 @@ To try conversion on test play there, copy
 `packages/ssconverter-core/wasm/ssconverter_bg.wasm` into `SampleProject/js/plugins/` and
 put a SpriteStudio project under `SampleProject/SpriteStudio_Source/`; both are
 git-ignored. `sync:plugin` leaves the converter out because the sample is also published
-as the web demo, where nothing converts.
+as the web demo, where nothing converts. The conversion is
+[`ssconverter-importer`](../ssconverter-importer)'s, the importer TyranoBuilder runs on project
+open; `src/rmmz/autoImport.ts` is what MZ adds to it.
+
+The docs site's [Developer guide](https://cri-middleware.github.io/SSPlayerForWeb/development/)
+maps the plugin's files, says how to build it for a game of your own, and how to check it in
+the real MZ without its editor.
 
 ## License
 

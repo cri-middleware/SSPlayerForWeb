@@ -28,8 +28,8 @@ features:
     link: /ja/customize/events
     linkText: カスタマイズ
   - title: 拡張・貢献する
-    details: 全体構成を理解した上で core や WASM / FFI を拡張・貢献します。設計原則とビルド手順は CONTRIBUTING を参照してください。
-    link: https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md
+    details: 全体構成を理解した上で、パッケージやプラグインを改造し、自分のビルドをゲームで試し、実際のホストで確かめます。ファイルの地図は開発者向けガイドに、設計原則とビルド手順は CONTRIBUTING にあります。
+    link: /ja/development/
     linkText: コントリビューション
 ---
 

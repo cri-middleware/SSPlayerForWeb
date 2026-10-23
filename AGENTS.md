@@ -35,6 +35,7 @@ editor plugins.
 | Question | File |
 |---|---|
 | Using a package: every tag, command, API and limitation | the [docs site](./docs/) |
+| Working on a package or plugin: the file map, a changed build in a game, checking in the real host, reasons that span files | the docs site's [developer guide](./docs/development/index.md) |
 | Install, convert, first frame, where to read next; in a package's README, also working on it | [README.md](./README.md) and each package's, per `SpriteStudio-SDK/MAINTAINING_PLAYERS.md` |
 | The architecture diagram | [README.md](./README.md) |
 | Constraints, setup, build, test, code generation, the docs site | [CONTRIBUTING.md](./CONTRIBUTING.md) |

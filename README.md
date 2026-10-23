@@ -58,7 +58,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 **Using it in your own project?** Read on. Everything after the first animation —
 events, per-part overrides, custom textures — is the same path further in, under
 [Customization](./docs/customize/events.md).
-**Working on SSPlayerForWeb itself?** [Running the examples from a checkout](#running-the-examples-from-a-checkout) below, then [CONTRIBUTING.md](./CONTRIBUTING.md).
+**Working on SSPlayerForWeb itself?** [Running the examples from a checkout](#running-the-examples-from-a-checkout) below, then [CONTRIBUTING.md](./CONTRIBUTING.md). The [Developer guide](./docs/development/index.md) maps the packages to their files, builds a changed version for your own app or game, and checks it in RPG Maker MZ and the Tyrano hosts.
 
 ### Install it
 
@@ -103,7 +103,8 @@ flowchart TD
         direction LR
         sspj[".sspj"] --> convcore["ssconverter-core<br/>(WASM)"] --> ssab[".ssab"]
         convweb["ssconverter-web<br/>browser UI + Node CLI"] -. wraps .-> convcore
-        tyranob["ssplayer-tyranobuilder<br/>TyranoBuilder editor (beta)"] -. wraps .-> convcore
+        importer["ssconverter-importer<br/>auto-import in editor plugins"] -. wraps .-> convcore
+        tyranob["ssplayer-tyranobuilder<br/>TyranoBuilder editor (beta)"] -. uses .-> importer
     end
 
     subgraph play ["Playback (run-time)"]
@@ -119,11 +120,12 @@ flowchart TD
     end
 
     tyranob -. ships .-> tyrano
+    rmmz -. test play .-> importer
     ssab ==>|feeds| core
 ```
 
 - **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyranoscript` further build on `ssplayer-webgl`, and `ssplayer-tyranobuilder` is author-time tooling that ships the TyranoScript runtime and converts `.sspj` inside the editor.
-- **[`ssconverter-core`](./packages/ssconverter-core)** is a separate WASM core (a build of the Rust `libssconverter`) with the same bytes-in / bytes-out design, so the same converter runs in the browser, Node, a Worker, or an edge runtime — the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) covers the same step outside a build.
+- **[`ssconverter-core`](./packages/ssconverter-core)** is a separate WASM core (a build of the Rust `libssconverter`) with the same bytes-in / bytes-out design, so the same converter runs in the browser, Node, a Worker, or an edge runtime — the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) covers the same step outside a build. [`ssconverter-importer`](./packages/ssconverter-importer) runs it inside a host's editor, for the plugins that convert for their authors: TyranoBuilder when a project opens, RPG Maker MZ when a test play starts.
 
 Per-package details live in each package's README, linked from the tables above.
 
