@@ -51,7 +51,9 @@ not attach it to a public issue — contact the maintainers privately instead.*
 1. Fork the repository and create your branch from `main`.
 2. Follow the existing code style and the constraints above.
 3. Run `pnpm test`, then check the change in the example for the renderer you touched (see
-   [Development Environment](#development-environment)).
+   [Development Environment](#development-environment)). A change to the RPG Maker MZ,
+   TyranoScript or TyranoBuilder plugin is checked in the host itself, which the docs site's
+   [Developer guide](./docs/development/index.md) shows how to run from a script.
 4. Submit a Pull Request targeting `main` with a clear description of the change.
 
 ### Branching & releases
@@ -234,7 +236,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 ### プルリクエスト
 1. リポジトリをフォークし、`main` ブランチから作業用ブランチを作成してください。
 2. 既存のコードスタイルと上記の制約に従ってください。
-3. `pnpm test` を実行し、触ったレンダラーのサンプルで変更内容を確認してください（[開発環境のセットアップ](#開発環境のセットアップ)を参照）。
+3. `pnpm test` を実行し、触ったレンダラーのサンプルで変更内容を確認してください（[開発環境のセットアップ](#開発環境のセットアップ)を参照）。RPG ツクール MZ・TyranoScript・ティラノビルダーのプラグインの変更は、ホストそのもので確かめます。スクリプトから動かす方法はドキュメントサイトの[開発者向けガイド](./docs/ja/development/index.md)にあります。
 4. `main` ブランチに向けて、変更内容を明確に記載したプルリクエストを送信してください。
 
 ### ブランチとリリース
