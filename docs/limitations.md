@@ -99,7 +99,7 @@ Both integrations are **beta**. See [Using TyranoScript](/usage/tyrano) and
 [Using TyranoBuilder](/usage/tyranobuilder).
 
 ::: warning TyranoBuilder
-- **The free version loads at most two plugins**, and this counts as one.
+- **The Standard edition (without PRO) loads at most two plugins**, and this counts as one.
 - **Do not rename `ssplayer.tbp`.** TyranoBuilder takes the plugin's name from the file name.
 :::
 

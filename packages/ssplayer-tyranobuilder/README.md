@@ -53,8 +53,8 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
    pick your animation from its dropdowns.
 
 After editing in SpriteStudio, press **Reconvert now** on that component — nothing
-converts in the background while the editor is open. TyranoBuilder's free version loads
-at most two plugins, and this counts as one.
+converts in the background while the editor is open. TyranoBuilder's Standard edition
+(without PRO) loads at most two plugins, and this counts as one.
 
 No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with.
 

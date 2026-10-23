@@ -30,7 +30,7 @@ what the components place is what you see here.
 
 The runtime half is [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) — the same bundle
 hand-written scenarios use. Shipping both in one folder keeps this to **one plugin**, which
-matters because TyranoBuilder's free version loads at most two.
+matters because TyranoBuilder's Standard edition (without PRO) loads at most two.
 
 The editor half runs when a project is opened: the builder finds
 `<id>/<id>.builder.js` in the project and constructs it. That is the hook the importer and the
@@ -322,7 +322,7 @@ never shows it: the export turns the engine's debug switch off.
 - **The animation is not in the dropdown** — check the `.sspj` is inside `SpriteStudio_Source/`
   together with the rest of its folder, and look for a `FAILED` line in the log.
 - **The palette has no SpriteStudio components** — the plugin did not load. Re-add the `.tbp`,
-  and check you are not over the free version's two-plugin limit.
+  and check you are not over the Standard edition's two-plugin limit.
 - **It converted, but nothing shows in the game** — make sure *show* comes before the
   components that refer to it, and that the layer is one your game uses.
 - **One of two projects is never converted** — two `.sspj` of the same file name convert into
