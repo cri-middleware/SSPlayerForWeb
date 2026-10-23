@@ -25,7 +25,8 @@
 // `href`.
 //
 // Left out of docs/: index.md (the home page), ja/ (the site has it), api/
-// (TypeDoc's output from the same comments dist/index.d.ts carries), and
+// (TypeDoc's output from the same comments dist/index.d.ts carries),
+// development/ (working on this repository, not using the package), and
 // everything that is not a page. Everything else is taken by rule, not by list,
 // so a page added to docs/ ships without anyone remembering to add it here.
 
@@ -49,7 +50,7 @@ if (!dest || !skill || rest.length > 0) {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'docs');
 
-const SKIP_DIRS = new Set(['ja', 'api', 'node_modules', 'public', '.vitepress']);
+const SKIP_DIRS = new Set(['ja', 'api', 'development', 'node_modules', 'public', '.vitepress']);
 const pages = readdirSync(src, { recursive: true })
   .map((rel) => rel.split(sep).join('/'))
   .filter((rel) => rel.endsWith('.md') && rel !== 'index.md' && !SKIP_DIRS.has(rel.split('/')[0]))

@@ -233,6 +233,7 @@ export default withMermaid({
           {
             text: 'Development',
             items: [
+              { text: 'Developer guide', link: '/development/' },
               { text: 'Contributing', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
             ],
           },
@@ -333,6 +334,7 @@ export default withMermaid({
           {
             text: '開発・拡張',
             items: [
+              { text: '開発者向けガイド', link: '/ja/development/' },
               { text: 'コントリビューション', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
             ],
           },
