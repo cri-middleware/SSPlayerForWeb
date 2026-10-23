@@ -1951,8 +1951,9 @@ export class SSPlayer extends Container {
                 // group, slicing shared flat buffers. The per-vertex math lives in core's
                 // GeometryBuilder.buildEffectCommand.
                 //
-                // Dynamic batching: we gather every particle
-                // command in this batch in draw order — folding each effect part's own
+                // Dynamic batching: we gather every particle command in this batch,
+                // and in the unmasked effect batches right after it, in draw order —
+                // folding each effect part's own
                 // opacity into the vertex alpha — then merge consecutive commands sharing
                 // the same (cellmap, blend) into a single pooled Mesh / draw call. Only
                 // *consecutive* runs are merged, so draw order (hence blend compositing)
@@ -1963,7 +1964,23 @@ export class SSPlayer extends Container {
                 const fxInside = polarityOf(drawOrder[startRank]);
                 if (dropInside && fxInside) continue;
                 const fxSeq = seq ? seq[startRank] : 0;
-                const fxCount = this._fx.collect(player, frameData, drawOrder, startRank, count);
+                let fxCount = this._fx.collect(player, frameData, drawOrder, startRank, count);
+                // Unmasked, the effect batches that follow join this gather while they
+                // are unmasked too, so commands on one cell map and blend share a mesh
+                // across effect parts. The gather allocates nothing in WASM (the frame
+                // built the plans of the parts it draws when it was handed out).
+                if (!masked) {
+                    for (let j = i + 1; j < drawBatchesLength; j++) {
+                        const next = frameData.drawBatches(j, this._scratchBatch);
+                        if (!next || next.kind() !== DrawBatchKind.Effect) break;
+                        const nextTarget = (next.flags() & 0x01) !== 0 && ctxInfluence;
+                        if (nextTarget && (maskDeferred || cov !== null)) break;
+                        i = j;
+                        const nextStart = next.startRank();
+                        if (insideDropsOut && nextTarget && polarityOf(drawOrder[nextStart])) continue;
+                        fxCount = this._fx.collect(player, frameData, drawOrder, nextStart, next.count(), true);
+                    }
+                }
 
                 // The descriptors hold zero-copy EffectDrawPlan views over WASM
                 // memory. Nothing between the gather above and the build below
