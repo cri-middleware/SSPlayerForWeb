@@ -20,7 +20,7 @@ embeds, driven by a TyranoScript sample.
 **Building a game?** Read on — install, add, place, with no scenario code to write.
 Everything after that (picking up an edit, every component, troubleshooting) is the same
 path further in, in the [TyranoBuilder guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder).
-**Working on the plugin?** [For contributors](#for-contributors) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
+**Working on the plugin?** [For contributors](#for-contributors--building-from-source) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
 
@@ -65,7 +65,9 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 ---
 
-## For contributors
+## For contributors — building from source
+
+*Plugin users can stop here — everything below is for hacking on the plugin.*
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # the runtime half
@@ -99,6 +101,6 @@ How the editor hosts the plugin, including the parts the vendor does not documen
 source comments, chiefly `src/plugin.builder.ts`, `src/builderTypes.d.ts` and `src/buttonParam.ts`.
 What is left to build is in [ROADMAP.md](./ROADMAP.md).
 
-## Licence
+## License
 
-BSD-3-Clause. See [LICENSE.md](./LICENSE.md).
+BSD-3-Clause — see [LICENSE.md](./LICENSE.md).

@@ -86,7 +86,7 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 ## For contributors — building from source
 
-*Consumers can stop here — everything below is for hacking on this package.*
+*Plugin users can stop here — everything below is for hacking on the plugin.*
 
 This is a thin adapter. Rendering is handled by
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSPlayer`
@@ -173,4 +173,4 @@ development.
 
 ## License
 
-BSD-3-Clause © CRI Middleware Co., Ltd. — see [LICENSE.md](./LICENSE.md).
+BSD-3-Clause — see [LICENSE.md](./LICENSE.md).

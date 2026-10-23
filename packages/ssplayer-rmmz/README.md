@@ -130,4 +130,4 @@ as the web demo, where nothing converts.
 
 ## License
 
-BSD-3-Clause — see [LICENSE.md](../../LICENSE.md).
+BSD-3-Clause — see [LICENSE.md](./LICENSE.md).

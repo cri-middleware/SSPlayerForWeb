@@ -94,4 +94,4 @@ nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ
 
 ## ライセンス
 
-BSD-3-Clause — [LICENSE.md](../../LICENSE.md) を参照してください。
+BSD-3-Clause — [LICENSE.md](./LICENSE.md) を参照してください。

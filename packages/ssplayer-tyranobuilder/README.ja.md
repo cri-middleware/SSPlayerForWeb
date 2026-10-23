@@ -15,7 +15,7 @@
 ## クイックスタート
 
 **ゲームを作る場合**はこのまま下へ。入れる → 追加する → 配置する、の順で、シナリオは書きません。その先（編集の取り込み、全コンポーネント、うまくいかないとき）も同じ道の続きで、[ティラノビルダーガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder)にあります。
-**プラグイン自体を変更する場合**は下の[開発者向け](#開発者向け)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
+**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 ティラノビルダーと、**SpriteStudio 7.5 以上**で作成したプロジェクトを用意してください。
 
@@ -48,7 +48,9 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 ---
 
-## 開発者向け
+## コントリビューター向け — ソースからビルド
+
+*プラグインの利用者はここまで。以下はプラグインを開発する人向けです。*
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # ランタイム側
@@ -75,4 +77,4 @@ Ringo を `SpriteStudio_Source/` に置くので、初回から変換対象が�
 
 ## ライセンス
 
-BSD-3-Clause。[LICENSE.md](./LICENSE.md) を参照してください。
+BSD-3-Clause — [LICENSE.md](./LICENSE.md) を参照してください。

@@ -66,7 +66,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 ## コントリビューター向け — ソースからビルド
 
-*利用者はここまで。以下はこのパッケージを開発する人向けです。*
+*プラグインの利用者はここまで。以下はプラグインを開発する人向けです。*
 
 本パッケージは TyranoScript 向けの薄いアダプタです。描画は
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSPlayer`
@@ -131,4 +131,4 @@ TyranoScript 本体は同梱していません。サンプルがコミットし�
 
 ## ライセンス
 
-BSD-3-Clause © CRI Middleware Co., Ltd. — [LICENSE.md](./LICENSE.md) を参照してください。
+BSD-3-Clause — [LICENSE.md](./LICENSE.md) を参照してください。
