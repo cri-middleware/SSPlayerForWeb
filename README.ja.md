@@ -45,7 +45,7 @@
 | **`.sspj` → `.ssab` を変換する** | [`ssconverter-web`](./packages/ssconverter-web)（Web ツール + Node CLI） | — |
 | **変換機能を自作アプリ/サービスに組み込む** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです。npm ではなくプラグインとして導入します。3 つとも **beta** です:
+**ゲームエンジン統合** — npm ではなく GitHub Releases から入れるプラグインで、エンジンのエディタで設定し、コードは書きません。手順は各パッケージの README のクイックスタートにあります。3 つとも **beta** です:
 
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
@@ -60,7 +60,7 @@
 
 ### 導入する
 
-Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.5 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。詳しい手順はドキュメントにあります:
+Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.5 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。RPG ツクール MZ・TyranoScript・ティラノビルダーでは、代わりにそのプラグインの README の手順に従ってください。詳しい手順はドキュメントにあります:
 
 **[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
 
