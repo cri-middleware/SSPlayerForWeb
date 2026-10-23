@@ -45,7 +45,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 **次に読む:** [RPG ツクール MZ ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz) ·
 [プラグインコマンド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#_3-plugin-commands) ·
-[既知の制限](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#known-limitations)
+[制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations#rpg-maker-mz-beta)
 
 ---
 

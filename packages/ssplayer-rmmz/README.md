@@ -61,7 +61,7 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 **Read next:** [RPG Maker MZ guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/rmmz) ·
 [Plugin commands](https://cri-middleware.github.io/SSPlayerForWeb/usage/rmmz#_3-plugin-commands) ·
-[Known limitations](https://cri-middleware.github.io/SSPlayerForWeb/usage/rmmz#known-limitations)
+[Limitations](https://cri-middleware.github.io/SSPlayerForWeb/limitations#rpg-maker-mz-beta)
 
 ---
 
