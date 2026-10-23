@@ -157,26 +157,6 @@ starts the editor with a DevTools endpoint (`http://127.0.0.1:<port>/json`).
   with `/json/close/<id>`, then restart the editor: previews do not open again in that session.
 - Quit with `kill -9`. A plain kill stops at the unsaved-changes dialog and keeps the port.
 
-**Running the plugin in the builder's Electron, headless.** `TyranoBuilder.app` is an Electron
-runtime, so a copy of it whose `Contents/Resources/app/` holds a small test app of your own runs
-the plugin under the builder's Electron and `webPreferences`, with no window:
-
-1. Copy the app (`cp -Rc` clones it on APFS).
-2. Replace the copy's `Contents/Resources/app/` with your `package.json`, `main.js`,
-   `preload.js` and page. Have the preload publish `studio_api` as the builder's does, with
-   `fs-extra` required from the builder's own `node_modules`.
-3. Sign the copy ad hoc: `codesign --force --deep --sign - <copy>.app`. Unsigned, macOS kills it
-   at launch without a word.
-4. Run `Contents/MacOS/TyranoBuilder`. The page loads the plugin the way the builder does —
-   `await import('file://…/ssplayer.builder.js')`, then `new module.plugin_setting(TB)` with a
-   `TB` of `{ $, getProjectPath }` — writes its result, and quits.
-
-Point it at a copy of a project's `data/`, never at a real project: the plugin really converts,
-and appends to the log. Measure stalls of the editor thread from the gaps between `setInterval`
-ticks, since `requestAnimationFrame` is throttled in a hidden window. Deleting `Worker` before
-the import compares the in-thread fallback under the same conditions. Launched from Node, give
-the process `stdio: 'ignore'`.
-
 ### TyranoStudio {#checking-tyranostudio}
 
 TyranoStudio runs games with the TyranoScript it bundles, so the TyranoScript plugin is what

@@ -88,15 +88,6 @@ MZ が無い環境では、`examples/rmmz-harness`（`pnpm --filter rmmz-harness
 - プレビュー内の `kag.error` はネイティブのダイアログで、プロトコルからは閉じられません。そのウィンドウを `/json/close/<id>` で閉じたら、エディタを起動し直してください。そのセッションではプレビューが開かなくなります。
 - 終了は `kill -9` です。通常の kill は未保存の確認ダイアログで止まり、ポートも残ります。
 
-**ビルダーの Electron でプラグインをヘッドレスに動かす**: `TyranoBuilder.app` は Electron のランタイムなので、コピーの `Contents/Resources/app/` を自分の小さなテスト用アプリに置き換えると、ビルダーの Electron と `webPreferences` のもとで、ウィンドウを出さずにプラグインを動かせます。
-
-1. アプリをコピーします（APFS なら `cp -Rc` で複製されます）。
-2. コピーの `Contents/Resources/app/` を、自分の `package.json`・`main.js`・`preload.js`・ページに置き換えます。preload はビルダーのものと同じように `studio_api` を公開し、`fs-extra` はビルダー自身の `node_modules` から require します。
-3. コピーにアドホック署名をします（`codesign --force --deep --sign - <copy>.app`）。署名しないと、macOS が起動直後に何も言わずに止めます。
-4. `Contents/MacOS/TyranoBuilder` を実行します。ページはビルダーと同じ方法でプラグインを読み込み（`await import('file://…/ssplayer.builder.js')` のあと、`{ $, getProjectPath }` を持つ `TB` で `new module.plugin_setting(TB)`）、結果を書いて終了します。
-
-対象には本物のプロジェクトではなく、プロジェクトの `data/` のコピーを渡してください。プラグインは実際に変換し、ログにも追記します。エディタのスレッドの停止は `setInterval` の間隔の開きで測ります。`requestAnimationFrame` は非表示のウィンドウで間引かれるためです。読み込みの前に `Worker` を消すと、スレッド内で変換するフォールバックを同じ条件で比べられます。Node から起動するときは `stdio: 'ignore'` にしてください。
-
 ### TyranoStudio {#checking-tyranostudio}
 
 TyranoStudio は同梱の TyranoScript でゲームを動かすので、そこで動くのは TyranoScript 用のプラグインです。ライセンスがアプリの改造を禁じているので、起動フラグだけで確かめます（`Contents/MacOS/TyranoStudio --remote-debugging-port=<port>`）。プレビューは別の Electron ウィンドウで、プロジェクトの `index.html` を `file://` で開き、`TYRANO.kag.is_studio === true` になります。ここでも `kag.error` はネイティブのダイアログなので、リロードの前に初期化スクリプトで `window.alert` を置き換えてください。
