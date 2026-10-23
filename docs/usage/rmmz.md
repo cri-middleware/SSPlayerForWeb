@@ -20,54 +20,28 @@ the bundled sample MZ project in your browser.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true): open the Release named
    `@spritestudio/ssplayer-rmmz <version>` and take the file under **Assets**, not the
    *Source code* archives. It holds `ssplayer-rpgmakermz.js`, `ssruntime_bg.wasm` and
-   `ssconverter_bg.wasm`; the last is needed only if you want test play to convert your
-   `.sspj` for you ([below](#convert-on-test-play)).
-2. Extract them into your project's `js/plugins/`, flat (the WASM files must sit next to the
+   `ssconverter_bg.wasm`.
+2. Extract all three into your project's `js/plugins/`, flat (the WASM files must sit next to the
    `.js`).
-3. Enable **ssplayer-rpgmakermz** in the Plugin Manager. There are no parameters — the
+3. Turn **ssplayer-rpgmakermz** ON in **Tools → Plugin Manager**. There are no parameters — the
    WASM files are auto-loaded from the same folder as the plugin `.js`.
 
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. See [Preparing assets](/usage/assets) for how to convert.
-
-Put the output under a **`spritestudio/` folder at your project root** — beside `img/`,
-not inside it. Deployment deletes unused files from `img/` (see
-[Deployment](#_4-deployment) below), so keeping SS assets out of it is what makes them
-survive:
-
-```
-MyGame/
-├── img/                     ← pruned by "Exclude unused files"
-├── js/plugins/
-│   ├── ssplayer-rpgmakermz.js
-│   └── ssruntime_bg.wasm
-└── spritestudio/            ← safe
-    └── Ringo/
-        ├── Ringo.ssab
-        └── Ringo.png        ← textures sit beside their .ssab
-```
-
-Each `.ssab` is named after an animation file (`.ssae`) in the project, not after the
-project: the converter writes one per `.ssae` (`Ringo.ssae` → `Ringo.ssab`). The `Show SS`
-path is therefore `spritestudio/<project>/<animation file>.ssab`. Keep each `.ssab` and its
-textures in the same folder — the plugin resolves textures relative to the `.ssab`.
-
-### Convert on test play
-
-With `ssconverter_bg.wasm` in `js/plugins/`, test play does the converting for you:
+plugin actually plays. Test play does the converting, with the `ssconverter_bg.wasm` in
+`js/plugins/`:
 
 1. Put your SpriteStudio project under `SpriteStudio_Source/` at your project root — the
    `.sspj` **and its folder**, since an animation is several files. Subfolders are fine.
 2. Start a test play. Before the title, every project that changed since it was last
-   converted is converted into `spritestudio/<project>/`, a folder named after its
-   `.sspj`. The `.ssab` files inside are named after the `.ssae` files, as above.
+   converted is converted into `spritestudio/<project>/`.
 3. After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and
    the change is converted on the way back up.
 
 ```
 MyGame/
+├── img/
 ├── js/plugins/
 │   ├── ssplayer-rpgmakermz.js
 │   ├── ssruntime_bg.wasm
@@ -75,12 +49,23 @@ MyGame/
 ├── SpriteStudio_Source/        ← you put projects here
 │   └── Ringo/
 │       ├── Ringo.sspj
-│       └── …                   (.ssae, .ssce, textures)
+│       ├── Ringo.png
+│       └── …
 └── spritestudio/               ← test play writes here
     └── Ringo/
         ├── Ringo.ssab
         └── Ringo.png
 ```
+
+The folder is named after the `.sspj`. Each `.ssab` inside is named after an animation file
+(`.ssae`), not after the project: the converter writes one per `.ssae` (`Ringo.ssae` →
+`Ringo.ssab`). Show SS's `SSAB File` is therefore
+`spritestudio/<project>/<animation file>.ssab`. Keep each `.ssab` and its textures in the
+same folder — the plugin resolves textures relative to the `.ssab`.
+
+`spritestudio/` sits beside `img/`, not inside it: deployment's "Exclude unused files"
+deletes unused files from `img/`, so keeping SS assets out of it is what makes them survive
+(see [4. Deployment](#_4-deployment)).
 
 If a project fails to convert, the boot stops on MZ's error screen, naming the project and
 the reason. Fix it in SpriteStudio, save, and press **Retry**. Two projects with the same
@@ -93,6 +78,13 @@ conversion also removes the files the previous one wrote and this one no longer 
 leaves anything else in the folder alone. Sounds are not converted — see
 [5. Sound](#_5-sound). Before you deploy, leave the sources out
 ([4. Deployment](#_4-deployment)).
+
+### Converting it yourself
+
+If you convert with one of the tools in [Preparing assets](/usage/assets), such as
+ssconverter-web, put the project-named folder it gives you in `spritestudio/`
+(`spritestudio/Ringo/Ringo.ssab`). You then need neither `ssconverter_bg.wasm` nor
+`SpriteStudio_Source/`.
 
 ## 3. Plugin commands
 

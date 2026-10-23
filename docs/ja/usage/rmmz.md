@@ -14,41 +14,21 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 
 ## 1. インストール
 
-1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中身は `ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm` の 3 つで、`ssconverter_bg.wasm` はテストプレイで `.sspj` を自動変換したい場合にだけ使います（[後述](#convert-on-test-play)）。
-2. これらをプロジェクトの `js/plugins/` へフラットに展開します（WASM は `.js` と同じ場所に置く必要があります）。
-3. プラグイン管理で **ssplayer-rpgmakermz** を有効化します。パラメーターはありません。WASM はプラグイン `.js` と同じフォルダーから自動で読み込まれます。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中身は `ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm` の 3 つです。
+2. 3 つともプロジェクトの `js/plugins/` へフラットに展開します（WASM は `.js` と同じ場所に置く必要があります）。
+3. **ツール → プラグイン管理** で **ssplayer-rpgmakermz** を有効化します。パラメーターはありません。WASM はプラグイン `.js` と同じフォルダーから自動で読み込まれます。
 
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
-
-出力は **プロジェクト直下の `spritestudio/` フォルダー** へ置きます。`img/` の中ではなく、
-`img/` と並ぶ位置です。デプロイ時に `img/` の中の未使用ファイルは削除されるので（[デプロイ](#_4-deployment) 参照）、そこから出しておくことが素材を守る唯一のポイントです。
-
-```
-MyGame/
-├── img/                     ← 「未使用ファイルを除外する」で削除される
-├── js/plugins/
-│   ├── ssplayer-rpgmakermz.js
-│   └── ssruntime_bg.wasm
-└── spritestudio/            ← 安全
-    └── Ringo/
-        ├── Ringo.ssab
-        └── Ringo.png        ← テクスチャは .ssab と同じ場所に置く
-```
-
-`.ssab` の名前はプロジェクト名ではなく、プロジェクト内のアニメーションファイル（`.ssae`）の名前です。コンバーターは `.ssae` 1 つにつき `.ssab` を 1 つ書き出します（`Ringo.ssae` → `Ringo.ssab`）。そのため「SS表示」のパスは `spritestudio/<project>/<アニメーションファイル名>.ssab` になります。テクスチャは `.ssab` からの相対で解決されるため、`.ssab` と同じフォルダーに置いたままにしてください。
-
-### テストプレイで変換する {#convert-on-test-play}
-
-`js/plugins/` に `ssconverter_bg.wasm` を置くと、テストプレイのときにプラグインが変換します。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換はテストプレイのときに、`js/plugins/` の `ssconverter_bg.wasm` が行います。
 
 1. SpriteStudio のプロジェクトを、プロジェクト直下の `SpriteStudio_Source/` に置きます。アニメーションは複数のファイルで構成されるので、**`.sspj` だけでなくフォルダーごと**置いてください。サブフォルダーに入れても構いません。
-2. テストプレイを開始します。タイトルの前に、前回の変換から変更のあったプロジェクトがすべて `spritestudio/<project>/` へ変換されます。フォルダー名は `.sspj` の名前で、中の `.ssab` の名前は上と同じく `.ssae` の名前です。
+2. テストプレイを開始します。タイトルの前に、前回の変換から変更のあったプロジェクトがすべて `spritestudio/<project>/` へ変換されます。
 3. SpriteStudio で保存したら、テストプレイ中に **F5** を押します。ゲームが再起動し、その途中で変更が変換されます。
 
 ```
 MyGame/
+├── img/
 ├── js/plugins/
 │   ├── ssplayer-rpgmakermz.js
 │   ├── ssruntime_bg.wasm
@@ -56,16 +36,25 @@ MyGame/
 ├── SpriteStudio_Source/        ← プロジェクトはここに置く
 │   └── Ringo/
 │       ├── Ringo.sspj
-│       └── …                   （.ssae・.ssce・テクスチャ）
+│       ├── Ringo.png
+│       └── …
 └── spritestudio/               ← 変換結果はここに書かれる
     └── Ringo/
         ├── Ringo.ssab
         └── Ringo.png
 ```
 
+フォルダー名は `.sspj` の名前です。中の `.ssab` の名前はプロジェクト名ではなくアニメーションファイル（`.ssae`）の名前で、`.ssae` 1 つにつき 1 つできます（`Ringo.ssae` → `Ringo.ssab`）。そのため「SS表示」の `SSABファイル` は `spritestudio/<project>/<アニメーションファイル名>.ssab` になります。テクスチャは `.ssab` からの相対で読み込まれるため、`.ssab` と同じフォルダーに置いたままにしてください。
+
+`spritestudio/` は `img/` の中ではなく、`img/` と並ぶ位置です。デプロイの「未使用ファイルを除外する」は `img/` の中の未使用ファイルを削除するので、そこから出しておくことで素材が残ります（[4. デプロイ](#_4-deployment) を参照）。
+
 変換に失敗したプロジェクトがあると、起動が MZ のエラー画面で止まり、プロジェクト名と理由が表示されます。SpriteStudio で直して保存し、**Retry** を押してください。同じファイル名のプロジェクトが 2 つある場合も止まります（`chara/hero.sspj` と `enemy/hero.sspj` はどちらも `spritestudio/hero/` に書き出すため）。どちらかの名前を変えてください。詳しい内容はコンソール（F8）に出ます。
 
 変換するのはテストプレイのときだけで、デプロイしたゲームでは変換しません。変換するのは変更のあったものだけです（これまでの変換の記録は `SpriteStudio_Source/.ss_import_state.json`）。変換では、前回の変換が書き出して今回は書き出さなかったファイルを消します。フォルダー内のそれ以外のファイルには触れません。音声は変換しません（[5. 音声](#_5-sound) を参照）。デプロイの前にソースを除外してください（[4. デプロイ](#_4-deployment) を参照）。
+
+### 自分で変換する場合
+
+[アセットの準備](/ja/usage/assets) のツール（ssconverter-web など）で変換した場合は、出力されたプロジェクト名のフォルダーを `spritestudio/` に置きます（`spritestudio/Ringo/Ringo.ssab`）。この場合 `ssconverter_bg.wasm` と `SpriteStudio_Source/` は要りません。
 
 ## 3. プラグインコマンド {#_3-plugin-commands}
 
