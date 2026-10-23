@@ -814,9 +814,9 @@ export class SSWebGLRenderer {
 
       if (kind === DrawBatchKind.Effect) {
         // Effect as a masked target (FLAG_MASK_INFLUENCE): clip the particle quads
-        // against the coverage. Effect batches are unbatchable (one effect part each),
-        // so the whole batch shares startRank's number + polarity. Bring the coverage
-        // there, then keep the stencil test on for every quad draw below.
+        // against the coverage. An effect batch holds one effect part, so the whole
+        // batch shares startRank's number + polarity. Bring the coverage there, then
+        // keep the stencil test on for every quad draw below.
         const visInside = composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[drawOrder[startRank]] : 0);
         if (dropInside && visInside) continue;
         const effectMasked = hasMask && target;
@@ -828,7 +828,25 @@ export class SSWebGLRenderer {
           gl.stencilFunc(visInside ? gl.NOTEQUAL : gl.EQUAL, 0, 0xFF);
         }
 
-        const fxCount = this._fx.collect(player, fd, drawOrder, startRank, count);
+        let fxCount = this._fx.collect(player, fd, drawOrder, startRank, count);
+        // Unclipped, the effect batches that follow join this gather, so commands on
+        // one cell map and blend draw as one across effect parts. A clipped one keeps
+        // its own stencil test and draws on its own. The gather allocates nothing in
+        // WASM (the frame built the plans of the parts it draws when it was handed
+        // out), so the plans already gathered stay valid. `b` is not read again.
+        if (!effectMasked) {
+          while (i + 1 < batchesLen) {
+            const next = fd.drawBatches(i + 1, this._scratchBatch);
+            if (!next || next.kind() !== DrawBatchKind.Effect) break;
+            const nextTarget = (next.flags() & 0x01) !== 0 && ctxInfluence;
+            if (hasMask && nextTarget) break;
+            i++;
+            const nextStart = next.startRank();
+            if (insideDropsOut && nextTarget &&
+              composeVisibleInside(ctxVisibleInside, maskFlags ? maskFlags[drawOrder[nextStart]] : 0)) continue;
+            fxCount = this._fx.collect(player, fd, drawOrder, nextStart, next.count(), true);
+          }
+        }
 
         let g = 0;
         while (g < fxCount) {
