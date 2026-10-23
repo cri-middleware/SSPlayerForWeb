@@ -126,7 +126,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run test    # vitest (モッ�
 pnpm --filter tyranoscript-example run sync:plugin             # ビルド済みプラグイン + wasm をサンプルへコピー
 ```
 
-TyranoScript 本体は同梱していません。サンプルがコミットしているのは、作成したシナリオ・プラグインローダ・`.ssab` ファイルだけです。TyranoScript 本体は開発時に各自で配置してください。ドキュメントサイトの[開発者向けガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/development/)に、ファイルの対応と、サンプルを本物のエンジンでスクリプトから動かす方法があります。
+TyranoScript 本体は同梱していません。サンプルがコミットしているのは、作成したシナリオ・プラグインローダ・`.ssab` ファイルだけです。TyranoScript 本体は開発時に各自で配置してください。サンプルを本物のエンジンでスクリプトから動かす方法は、ドキュメントサイトの[ビルドガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/development/build)にあります。
 
 ## ライセンス
 

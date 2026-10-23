@@ -53,7 +53,7 @@ not attach it to a public issue — contact the maintainers privately instead.*
 3. Run `pnpm test`, then check the change in the example for the renderer you touched (see
    [Development Environment](#development-environment)). A change to the RPG Maker MZ,
    TyranoScript or TyranoBuilder plugin is checked in the host itself, which the docs site's
-   [Developer guide](./docs/development/index.md) shows how to run from a script.
+   [Build Guide](./docs/development/build.md) shows how to run from a script.
 4. Submit a Pull Request targeting `main` with a clear description of the change.
 
 ### Branching & releases
@@ -100,8 +100,10 @@ for the core and WebGL, `examples/pixi-example` for PixiJS — with `pnpm run de
 the example: [`scripts/run-example.sh`](./scripts/run-example.sh) and its `.ps1` twin.
 
 Working on RPG Maker MZ, TyranoScript or TyranoBuilder, or using your build in a game of your
-own: the docs site's [Developer guide](./docs/development/index.md) maps the files, builds what a
-release builds, and says how to check a change in the real host.
+own: the docs site's [Build Guide](./docs/development/build.md) builds what a release builds and
+says how to check a change in the real host, and
+[How the Player Is Put Together](./docs/development/architecture.md) says how the packages fit
+together and why.
 
 ### Regenerating the FlatBuffers accessors
 
@@ -236,7 +238,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 ### プルリクエスト
 1. リポジトリをフォークし、`main` ブランチから作業用ブランチを作成してください。
 2. 既存のコードスタイルと上記の制約に従ってください。
-3. `pnpm test` を実行し、触ったレンダラーのサンプルで変更内容を確認してください（[開発環境のセットアップ](#開発環境のセットアップ)を参照）。RPG ツクール MZ・TyranoScript・ティラノビルダーのプラグインの変更は、ホストそのもので確かめます。スクリプトから動かす方法はドキュメントサイトの[開発者向けガイド](./docs/ja/development/index.md)にあります。
+3. `pnpm test` を実行し、触ったレンダラーのサンプルで変更内容を確認してください（[開発環境のセットアップ](#開発環境のセットアップ)を参照）。RPG ツクール MZ・TyranoScript・ティラノビルダーのプラグインの変更は、ホストそのもので確かめます。スクリプトから動かす方法はドキュメントサイトの[ビルドガイド](./docs/ja/development/build.md)にあります。
 4. `main` ブランチに向けて、変更内容を明確に記載したプルリクエストを送信してください。
 
 ### ブランチとリリース
@@ -260,7 +262,7 @@ pnpm test             # 全ワークスペースの vitest スイート
 
 生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。`pnpm test` には上の 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。新規チェックアウトでは `pnpm run example`（別のサンプルは `pnpm run example example=pixi`）が、不足している手順をすべて実行してサンプルを起動します（[`scripts/run-example.sh`](./scripts/run-example.sh) とその `.ps1` の片割れ）。
 
-RPG ツクール MZ・TyranoScript・ティラノビルダーの連携を開発するとき、または自分のビルドを自分のゲームで使うときは、ドキュメントサイトの[開発者向けガイド](./docs/ja/development/index.md)を参照してください。ファイルの対応、リリースと同じ成果物のビルド、実際のホストでの確かめ方があります。
+RPG ツクール MZ・TyranoScript・ティラノビルダーの連携を開発するとき、または自分のビルドを自分のゲームで使うときは、ドキュメントサイトの[ビルドガイド](./docs/ja/development/build.md)を参照してください。リリースと同じ成果物のビルドと、実際のホストでの確かめ方があります。パッケージの組み合わせとその理由は[プレイヤーの構成](./docs/ja/development/architecture.md)にあります。
 
 ### FlatBuffers アクセサの再生成
 

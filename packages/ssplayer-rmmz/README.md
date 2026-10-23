@@ -129,11 +129,12 @@ put a SpriteStudio project under `SampleProject/SpriteStudio_Source/`; both are
 git-ignored. `sync:plugin` leaves the converter out because the sample is also published
 as the web demo, where nothing converts. The conversion is
 [`ssconverter-importer`](../ssconverter-importer)'s, the importer TyranoBuilder runs on project
-open; `src/rmmz/autoImport.ts` is what MZ adds to it.
+open.
 
-The docs site's [Developer guide](https://cri-middleware.github.io/SSPlayerForWeb/development/)
-maps the plugin's files, says how to build it for a game of your own, and how to check it in
-the real MZ without its editor.
+The docs site's [Build Guide](https://cri-middleware.github.io/SSPlayerForWeb/development/build)
+says how to build the plugin for a game of your own and how to check it in the real MZ without
+its editor; [How the Player Is Put Together](https://cri-middleware.github.io/SSPlayerForWeb/development/architecture)
+says why it is built the way it is.
 
 ## License
 
