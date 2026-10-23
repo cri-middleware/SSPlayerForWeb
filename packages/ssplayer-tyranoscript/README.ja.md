@@ -90,8 +90,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
   をバッファ倍率に反映し、`maxDPR` で上限を設けます。
 - **`[anim]` 用の命名**: 生成時にキャラクターの `<div>` へプレイヤー名を CSS クラスとして付与します（`$.setName`＝`addClass(name)`。TyranoScript のキャラ識別と同じ仕組み）。`ss-player`
   クラスも付くので `$(".ss-player")` で一括選択できます。絶対座標指定はレンダラ内部の
-  `setTransform`（Spine の `[spine_mod]` 相当）を経由するため、`[anim]` とは別に
-  `[ss_pos]` / `[ss_move]` が存在します。
+  `setTransform` を経由するため、`[anim]` とは別に `[ss_pos]` / `[ss_move]` が存在します。
 - **セーブ対象**: 各プレイヤーの復元情報を `TYRANO.kag.stat.f.__ssplayers` へミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝`make.ks` と同じ隙間）でプラグインが自動的に再構築します。`[ss_restore]` は同じ処理を明示的に行うタグで、自動復元が実行中ならそれを待ち合わせて二重実行を避けます。
 - **解放**: `[ss_free]` / `[ss_free_all]` が `destroy()` を呼びます。`FinalizationRegistry`
   任せにしないでください。

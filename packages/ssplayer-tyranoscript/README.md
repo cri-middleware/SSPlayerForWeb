@@ -119,9 +119,8 @@ control. Remaining work lives in
 - **Naming for `[anim]`**: on creation the character's `<div>` is tagged with the player name as a
   CSS class (`$.setName` is `addClass(name)`, the same way TyranoScript identifies a
   named element). It also carries an `ss-player` class, so `$(".ss-player")` selects
-  them all. Absolute positioning goes through the renderer's internal `setTransform`
-  (the `[spine_mod]` equivalent), which is why `[ss_pos]` / `[ss_move]` exist
-  alongside `[anim]`.
+  them all. Absolute positioning goes through the renderer's internal `setTransform`,
+  which is why `[ss_pos]` / `[ss_move]` exist alongside `[anim]`.
 - **Save target**: each player's reconstruction data is mirrored into
   `TYRANO.kag.stat.f.__ssplayers`. On load the plugin rebuilds from it on the
   engine's `load-beforemaking` event — the moment the saved variables are back and
