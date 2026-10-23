@@ -5,10 +5,9 @@ description: "The ssplayer-tyranoscript plugin for TyranoScript: the scenario ta
 # TyranoScript
 
 Show and play **SpriteStudio** (`.ssab`) animations inside a **TyranoScript** visual novel by
-writing `[ss_*]` tags in your scenario — no coding required. Each animation is a
-`<div>` on a Tyrano layer (drawn on that layer's shared canvas), so it sits in the normal
-layer stack alongside characters, backgrounds, and messages.
-Rendering is built on [`ssplayer-webgl`](/usage/webgl)'s `SSPlayer`.
+writing `[ss_*]` tags in your scenario — no coding required. The animations sit on Tyrano's
+layers alongside characters, backgrounds and messages, and Tyrano's own `[anim]` / `[kanim]`
+move them too. Projects made in TyranoStudio use it the same way.
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
@@ -21,21 +20,6 @@ See [TyranoBuilder](/usage/tyranobuilder) instead. It is the same runtime, reach
 component palette rather than by writing tags, and it converts your `.sspj` for you. The tag
 reference on this page still applies — the components write these tags.
 :::
-
-## How it works
-
-The plugin registers a family of `[ss_*]` KAG custom tags onto Tyrano's `master_tag`.
-A single self-registering `main.js` (an IIFE bundle) works across TyranoScript,
-TyranoBuilder, and TyranoStudio.
-
-- Each `[ss_new]` creates a named player: it loads the `.ssab`, adds a `<div>` to the
-  target layer, and drives the animation with [`ssplayer-webgl`](/usage/webgl)'s
-  `SSPlayer` (WebGL1 baseline + WebGL2 auto-upgrade, zero dependencies), drawn on the
-  layer's shared canvas.
-- The `<div>` is tagged with **your player name** as its identifier, so Tyrano's own
-  `[anim]` / `[kanim]` tags drive it directly — just like any character.
-- Only the **WASM binary** (`ssruntime_bg.wasm`) stays external; the renderer and
-  core JS are inlined into `main.js`.
 
 ## Requirements
 
@@ -51,15 +35,6 @@ automatic restore does not run and you must write `[ss_restore]` into `data/scen
 
 ## 1. Install
 
-::: tip Which download do I need?
-The plugin ZIP described here is **for TyranoScript**. If you author in **TyranoBuilder**,
-install `ssplayer.tbp` instead — it already contains this ZIP's three runtime files plus the editor
-half (components and auto-conversion), so it is the only download you need.
-**Install one or the other, never both:** they unpack to the same
-`data/others/plugin/ssplayer/`, so stacking them leaves the editor and runtime halves on
-different versions.
-:::
-
 1. Download `ssplayer-tyranoscript-plugin-<version>.zip` from
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true): open the Release named
    `@spritestudio/ssplayer-tyranoscript <version>` and take the file under **Assets**, not
@@ -71,10 +46,10 @@ different versions.
 
 ```
 data/others/plugin/ssplayer/
-  init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
-  main.js              # the plugin bundle (renderer + core inlined)
-  ssruntime_bg.wasm    # the animation runtime binary
-data/others/ssdata/<ssae name>.ssab   # one per .ssae in your project, named after it
+├── init.ks
+├── main.js
+├── ssruntime_bg.wasm
+└── readme.txt
 ```
 
 **The location and the folder name are fixed.** `[plugin name="x"]` is TyranoScript
@@ -85,16 +60,26 @@ nothing. The paths inside `init.ks` are written against that location too.
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. See [Preparing assets](/usage/assets) for how to convert. Put the
-output under `data/others/ssdata/` and point `[ss_new storage=...]` at it. Giving each
-project its own folder (`data/others/ssdata/Ringo/`) keeps textures of the same name from
-colliding; you then load it as `storage="others/ssdata/Ringo/Ringo.ssab"`.
+plugin actually plays. See [Preparing assets](/usage/assets) for how to convert.
+
+Put what you convert under `data/others/ssdata/`, one folder per project. The ZIP from
+ssconverter-web already holds that folder, named after the project, so extracting it there
+is all it takes. There is one `.ssab` per animation file (`.ssae`), named after it.
+
+```
+data/others/ssdata/
+└── Ringo/
+    ├── Ringo.ssab
+    └── Ringo.png
+```
+
+`[ss_new]`'s `storage=` is a path from `data/` — here,
+`storage="others/ssdata/Ringo/Ringo.ssab"`. Keep the textures in the same folder as their
+`.ssab`.
 
 ## 3. Quick start
 
-A minimal scenario that shows one looping character:
-
-Load the plugin once, at the top of your game:
+A minimal scenario that shows one looping character. Load the plugin once, at the top of your game:
 
 ```
 ; first.ks
@@ -188,7 +173,7 @@ The rest are described with their tags below.
 A tag that fails never stops the scenario. With the engine's debug switch on
 (`;debugMenu.visible = true` in `data/system/Config.tjs`), the reason appears in the
 engine's own error dialog with the scenario file and line — for example
-`[ss_play] next="Wiat" is not in others/ssdata/Chara.ssab.`
+`[ss_play] next="Wiat" is not in others/ssdata/Ringo/Ringo.ssab.`
 Turn the switch off for release; the reason then goes only to the browser console.
 
 ### Preload, show, hide
@@ -197,7 +182,7 @@ Turn the switch off for release; the reason then goes only to the browser consol
 can be prepared ahead of the scene that needs it and revealed instantly:
 
 ```
-[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]
+[ss_new name="akane" storage="others/ssdata/Akane/Akane.ssab" visible="false"]
 [ss_show name="akane" x="640" y="480" time="800"]   ; appears, already loaded
 [ss_hide name="akane" time="500"]                   ; off screen, still loaded
 ```
@@ -345,7 +330,7 @@ positioning box: the drawing happens on the layer's shared canvas, which follows
 every frame (see [Resources & lifecycle](/customize/resources)):
 
 ```
-[ss_new name="ringo" storage="others/ssdata/ringo.ssab" layer="0" x="640" y="480"]
+[ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
 [anim name="ringo" time="800" opacity="0"]        ; fade out (disappear)
 [anim name="ringo" time="800" opacity="255"]      ; fade in (appear)
 [anim name="ringo" time="600" left="120" top="0"] ; slide
@@ -364,8 +349,7 @@ element. A CSS transform therefore moves and resizes where the character sits wi
 scaling or rotating what is drawn there.
 
 Use **`[ss_pos]`** (instant) or **`[ss_move]`** (tween), which scale the animation itself
-and about its own anchor. `[anim]`'s `scale` / `rotate` pivoted on the screen centre rather
-than the anchor, so they were never accurate for this anyway.
+and about its own anchor.
 :::
 
 **When to use which:**
@@ -425,8 +409,6 @@ the player; neither touches any other sound. `[stopse]` does not reach these sou
 
 ## Known limitations
 
-TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships
-as a `.tbp`, adds SpriteStudio components to the palette, and converts your `.sspj` from inside
-the editor — see [TyranoBuilder](/usage/tyranobuilder). What neither integration covers yet is
-listed in [Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
+What this plugin does not cover is listed in
+[Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
 

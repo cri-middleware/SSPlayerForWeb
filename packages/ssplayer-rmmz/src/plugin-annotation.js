@@ -9,28 +9,23 @@
  * MZ's PixiJS v5 renderer so they respect Z-order with characters and pictures.
  *
  * SETUP
- *   1. Put this file and "ssruntime_bg.wasm" together in js/plugins/ (same
- *      folder) and enable the plugin. The WASM loads automatically from beside
- *      this .js — no path parameter to set.
- *   2. Convert your .sspj to .ssab with the SpriteStudio converter tooling
- *      (ssconverter-web) and place the output under a "spritestudio" folder at
- *      your PROJECT ROOT — beside img/, not inside it (see DEPLOYMENT below):
+ *   1. Extract the plugin ZIP's three files (this file, "ssruntime_bg.wasm" and
+ *      "ssconverter_bg.wasm") flat into js/plugins/ and enable the plugin. The
+ *      WASM files load automatically from beside this .js — no path to set.
+ *   2. Copy your SpriteStudio project FOLDER into a "SpriteStudio_Source"
+ *      folder at your PROJECT ROOT and start a test play. Before the title,
+ *      what changed is converted into a "spritestudio" folder at the project
+ *      root — beside img/, not inside it (see DEPLOYMENT below) — one .ssab per
+ *      animation file (.ssae), named after it:
  *        MyGame/spritestudio/<project>/<ssae name>.ssab (+ its .png textures)
- *      There is one .ssab per animation file (.ssae) in the project, named
- *      after it.
- *      Or let test play convert: put "ssconverter_bg.wasm" beside this plugin
- *      and your SpriteStudio project FOLDERS under SpriteStudio_Source/ at the
- *      project root. Every test play converts what changed into
- *      spritestudio/<project>/ before the title; after saving in SpriteStudio,
- *      press F5. A project that fails stops the boot with the reason and a
- *      Retry button. A deployed game never converts.
+ *      After saving in SpriteStudio, press F5. A project that fails stops the
+ *      boot with the reason and a Retry button. A deployed game never converts.
+ *      Converted with ssconverter-web instead? Put its <project> folder under
+ *      spritestudio/ yourself; ssconverter_bg.wasm is then not needed.
  *   3. Use the "Show SS" plugin command to attach an animation to a picture id.
  *
  * The animation is attached as a CHILD of the picture, so Move Picture / scale
  * apply to it. Playback advances with MZ time (it pauses when the game pauses).
- *
- * The WASM runtime (ssruntime_bg.wasm) is loaded automatically from the same
- * folder as this plugin .js — no path configuration needed.
  *
  * ■ COMPATIBILITY — no special setup
  *   This plugin bundles the no-SIMD (scalar) SpriteStudio runtime, so it runs on
@@ -566,26 +561,23 @@
  * ピクチャと正しい前後関係（Zオーダー）で表示します。
  *
  * 導入手順
- *   1. 本ファイルと "ssruntime_bg.wasm" を js/plugins/ に一緒に（同じフォルダに）置き、
- *      プラグインを有効化。WASM はこの .js と同じ場所から自動で読み込まれます（パス設定不要）。
- *   2. .sspj を SpriteStudio コンバータ（ssconverter-web）で .ssab に変換し、出力を
- *      【プロジェクト直下】の spritestudio フォルダに配置します。img/ の中では
- *      なく、img/ と並ぶ位置です（後述の「デプロイメント」参照）。
- *        ゲームフォルダ/spritestudio/<プロジェクト名>/<ssae名>.ssab（＋ .png）
+ *   1. プラグイン ZIP の 3 ファイル（本ファイル・"ssruntime_bg.wasm"・
+ *      "ssconverter_bg.wasm"）を js/plugins/ にフラットに展開し、プラグインを
+ *      有効化します。WASM はこの .js と同じ場所から自動で読み込まれます（パス設定不要）。
+ *   2. SpriteStudio のプロジェクトを【フォルダごと】、【プロジェクト直下】の
+ *      SpriteStudio_Source フォルダにコピーし、テストプレイを開始します。タイトルの
+ *      前に、変更のあったものがプロジェクト直下の spritestudio フォルダへ変換されます。
+ *      img/ の中ではなく、img/ と並ぶ位置です（後述の「デプロイメント」参照）。
  *      .ssab はアニメーションファイル（.ssae）1 つにつき 1 つ、同じ名前でできます。
- *      テストプレイに変換させることもできます。このプラグインの隣に
- *      ssconverter_bg.wasm を置き、SpriteStudio のプロジェクトを【フォルダごと】
- *      プロジェクト直下の SpriteStudio_Source/ に置きます。テストプレイのたびに、
- *      変更のあったものがタイトルの前に spritestudio/<プロジェクト名>/ へ変換され
- *      ます。SpriteStudio で保存したら F5 を押してください。変換に失敗すると起動が
- *      止まり、理由と Retry ボタンが表示されます。デプロイしたゲームでは変換しません。
+ *        ゲームフォルダ/spritestudio/<プロジェクト名>/<ssae名>.ssab（＋ .png）
+ *      SpriteStudio で保存したら F5 を押してください。変換に失敗すると起動が止まり、
+ *      理由と Retry ボタンが表示されます。デプロイしたゲームでは変換しません。
+ *      ssconverter-web などで自分で変換した場合は、出力の <プロジェクト名> フォルダを
+ *      spritestudio/ に置きます。その場合 ssconverter_bg.wasm は要りません。
  *   3. プラグインコマンド「SS表示」でピクチャ番号にアニメを割り当てます。
  *
  * アニメはピクチャの子として追加されるため、ピクチャの移動・拡大がそのまま適用
  * されます。再生は MZ の時間に同期し、ゲームのポーズで一緒に止まります。
- *
- * WASM ランタイム（ssruntime_bg.wasm）はこのプラグイン .js と同じフォルダから
- * 自動で読み込まれます。パス設定は不要です。
  *
  * ■ 動作環境 — 追加設定は不要
  *   本プラグインは no-SIMD（スカラー）版 SpriteStudio ランタイムを同梱しているため、
@@ -594,7 +586,7 @@
  *   SS アニメは無効化されますが、ゲーム自体は動作します。
  *
  * ■ デプロイメント — SS 素材は img/ の外に置いてください
- *   デプロイメントの「未使用ファイルを含まない」で除外されるのは、公式ヘルプに
+ *   デプロイメントの「未使用ファイルを除外する」が対象にするのは、公式ヘルプに
  *   ある通り以下の 3 フォルダの中だけです。
  *     img/  audio/  effects/
  *   SS 素材は本プラグインが動的に読み込むためツクールからは未使用に見えます。
@@ -611,7 +603,7 @@
  *   テクスチャを分けるのではなく、spritestudio フォルダごと img/ の下
  *   （img/spritestudio/）へ戻してください。.ssab は画像ではないので暗号化されません
  *   が、同じフォルダにあるテクスチャは暗号化され、本プラグインが ImageManager 経由で
- *   読み込むため復号は自動です。ただしその際は「未使用ファイルを含まない」を OFF に
+ *   読み込むため復号は自動です。ただしその際は「未使用ファイルを除外する」を OFF に
  *   するか、デプロイメント後に img/spritestudio/ フォルダを出力先へコピーする必要が
  *   あります。
  *

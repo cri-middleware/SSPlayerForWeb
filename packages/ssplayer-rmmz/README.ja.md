@@ -45,7 +45,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 **次に読む:** [RPG ツクール MZ ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz) ·
 [プラグインコマンド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#_3-plugin-commands) ·
-[既知の制限](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#known-limitations)
+[制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations#rpg-maker-mz-beta)
 
 ---
 
@@ -59,8 +59,8 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 - **Layer 3（レンダラ）**：`SSPlayer` は `PIXI.Container`、`SSPlayerRenderer` は登録済みの
   `PIXI.ObjectRenderer`（`'ssplayer'`）で、[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl)
-  の `SSWebGLRenderer` を MZ の共有 `gl` 上で駆動します。生 GL 描画の前後は、MZ の Effekseer スプライトと同一の WebGL ステート退避／復元で挟んでいます。
-- **Layer 4（プラグイン）**：ドロップイン型の IIFE です。`Scene_Boot.isReady` で WASM の初期化を待ち、Game_Picture ↔ Sprite_Picture ブリッジでアニメをピクチャにアタッチします（MZ の移動・拡大が適用され、セーブ／ロードで状態が復元されます）。テクスチャは `ImageManager`、音声は
+  の `SSWebGLRenderer` を MZ の共有 `gl` 上で駆動します。生 GL 描画の前後は、MZ の Effekseer スプライトと同一の WebGL ステート退避／復元で挟んでいます。独自のタイマーは持たず、再生はピクチャのスプライトの `update()` からだけ進みます。
+- **Layer 4（プラグイン）**：ドロップイン型の IIFE です。`Scene_Boot.isReady` で WASM の初期化を待ちます。WASM は非 SIMD（スカラー）版で、MZ 同梱の NW.js が WebAssembly SIMD 非対応の Chromium だからです。Game_Picture ↔ Sprite_Picture ブリッジでアニメをピクチャにアタッチします（MZ の移動・拡大が適用され、セーブ／ロードで状態が復元されます）。テクスチャは `ImageManager`、音声は
   `AudioManager` に委譲します。
 
 **既知の制限（技術的な内訳）。** 平易な要約はガイドの [既知の制限](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#known-limitations) を参照してください。内部的には次のとおりです。
@@ -94,4 +94,4 @@ nw examples/rmmz-example/SampleProject       # テストプレイ（または MZ
 
 ## ライセンス
 
-BSD-3-Clause — [LICENSE.md](../../LICENSE.md) を参照してください。
+BSD-3-Clause — [LICENSE.md](./LICENSE.md) を参照してください。

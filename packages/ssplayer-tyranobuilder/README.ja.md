@@ -15,11 +15,11 @@
 ## クイックスタート
 
 **ゲームを作る場合**はこのまま下へ。入れる → 追加する → 配置する、の順で、シナリオは書きません。その先（編集の取り込み、全コンポーネント、うまくいかないとき）も同じ道の続きで、[ティラノビルダーガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder)にあります。
-**プラグイン自体を変更する場合**は下の[開発者向け](#開発者向け)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
+**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 ティラノビルダーと、**SpriteStudio 7.5 以上**で作成したプロジェクトを用意してください。
 
-1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。ティラノビルダーの**プラグイン設定 → 追加**でそのファイルを選びます。ティラノビルダーはファイル名からプラグイン名を決めるので、`ssplayer.tbp` の名前は変えないでください。必要なのはこのファイルだけで、TyranoScript 用のプラグイン ZIP を一緒に入れてはいけません。
+1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。ティラノビルダーはファイル名からプラグイン名を決めるので、`ssplayer.tbp` の名前は変えないでください。必要なのはこのファイルだけです（TyranoScript 用プラグイン ZIP の中身も入っています）。
 2. **アニメを追加**: SpriteStudio のプロジェクトを `.sspj` だけでなくフォルダごと、ゲームのフォルダの `SpriteStudio_Source/` にコピーし（初めてプロジェクトを開いたときにプラグインが作ります）、プロジェクトを開くか開き直します。開くときに変換され、メッセージで知らせます。
 
    ```
@@ -37,7 +37,7 @@
 
 3. **配置**: コンポーネントパレットの **プラグイン** から **SpriteStudio 表示** を配置し、プルダウンでアニメを選びます。
 
-SpriteStudio で編集したら、そのコンポーネントの **今すぐ再変換** を押してください。エディタを開いている間、裏で変換が走ることはありません。ティラノビルダーの無料版が読み込めるプラグインは 2 つまでで、これで 1 つを使います。
+SpriteStudio で編集したら、そのコンポーネントの **今すぐ再変換** を押してください。エディタを開いている間、裏で変換が走ることはありません。ティラノビルダーのスタンダード版が読み込めるプラグインは 2 つまでで、これで 1 つを使います。
 
 SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。
 
@@ -48,7 +48,9 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 ---
 
-## 開発者向け
+## コントリビューター向け — ソースからビルド
+
+*プラグインの利用者はここまで。以下はプラグインを開発する人向けです。*
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # ランタイム側
@@ -75,4 +77,4 @@ Ringo を `SpriteStudio_Source/` に置くので、初回から変換対象が�
 
 ## ライセンス
 
-BSD-3-Clause。[LICENSE.md](./LICENSE.md) を参照してください。
+BSD-3-Clause — [LICENSE.md](./LICENSE.md) を参照してください。

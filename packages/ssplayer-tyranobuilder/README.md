@@ -20,7 +20,7 @@ embeds, driven by a TyranoScript sample.
 **Building a game?** Read on — install, add, place, with no scenario code to write.
 Everything after that (picking up an edit, every component, troubleshooting) is the same
 path further in, in the [TyranoBuilder guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder).
-**Working on the plugin?** [For contributors](#for-contributors) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
+**Working on the plugin?** [For contributors](#for-contributors--building-from-source) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
 
@@ -28,9 +28,9 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true):
    open the Release named `@spritestudio/ssplayer-tyranobuilder <version>` and take the
    file under **Assets**, not the *Source code* archives. In TyranoBuilder, open
-   **plugin settings → add** and pick that file. Keep the name `ssplayer.tbp` —
-   TyranoBuilder takes the plugin's name from it. It is the only download you need; do not
-   also install the TyranoScript plugin ZIP.
+   **Project → Plugins**, press **Add New** and pick that file. Keep the name `ssplayer.tbp` —
+   TyranoBuilder takes the plugin's name from it. It is the only download you need: it
+   already holds the TyranoScript plugin ZIP's contents.
 2. **Add an animation**: Copy your SpriteStudio project — the whole folder, not the `.sspj`
    alone — into `SpriteStudio_Source/` in your game's folder (the plugin creates it the
    first time the project opens), then open or reopen the project. It is converted as the
@@ -53,8 +53,8 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
    pick your animation from its dropdowns.
 
 After editing in SpriteStudio, press **Reconvert now** on that component — nothing
-converts in the background while the editor is open. TyranoBuilder's free version loads
-at most two plugins, and this counts as one.
+converts in the background while the editor is open. TyranoBuilder's Standard edition
+(without PRO) loads at most two plugins, and this counts as one.
 
 No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with.
 
@@ -65,7 +65,9 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 ---
 
-## For contributors
+## For contributors — building from source
+
+*Plugin users can stop here — everything below is for hacking on the plugin.*
 
 ```sh
 pnpm --filter @spritestudio/ssplayer-tyranoscript  run build   # the runtime half
@@ -99,6 +101,6 @@ How the editor hosts the plugin, including the parts the vendor does not documen
 source comments, chiefly `src/plugin.builder.ts`, `src/builderTypes.d.ts` and `src/buttonParam.ts`.
 What is left to build is in [ROADMAP.md](./ROADMAP.md).
 
-## Licence
+## License
 
-BSD-3-Clause. See [LICENSE.md](./LICENSE.md).
+BSD-3-Clause — see [LICENSE.md](./LICENSE.md).

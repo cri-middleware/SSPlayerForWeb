@@ -26,7 +26,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # 配布 zip を�
 ## 導入（手書きシナリオ）
 
 1. 配布 zip を展開し、`ssplayer/` を `data/others/plugin/` に置く。
-2. SS アセット（reference `.ssab` + テクスチャ）を `data/others/ssdata/` に置く。
+2. 変換したアニメーションを、プロジェクトごとのフォルダのまま `data/others/ssdata/` に置く（`data/others/ssdata/Ringo/Ringo.ssab` + テクスチャ）。
 3. `first.ks` で 1 回読み込む → 各シーンで `[ss_new]`/`[ss_play]`/… を使う:
 
 ```
@@ -34,7 +34,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # 配布 zip を�
 [plugin name="ssplayer"]
 
 ; scene1.ks
-[ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480"]
+[ss_new name="chr" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
 ```
 
 `[plugin]` が展開する `init.ks` が `[ss_init wasm=...]` まで済ませるので、シナリオ側で

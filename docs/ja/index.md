@@ -20,7 +20,7 @@ hero:
 # See the English index.md for the same note.
 features:
   - title: まず動かす
-    details: パッケージを入れて .ssab を読み込み、数行で再生。「はじめに」→「使い方」→「API リファレンス」を順に読めば、そこまでで動くところに届きます。以降は読まなくても構いません。
+    details: パッケージを入れて .ssab を読み込み、数行で再生。RPG ツクール MZ・TyranoScript・ティラノビルダーではプラグインを入れるだけで、コードは書きません。「はじめに」→「使い方」→「API リファレンス」を順に読めば、そこまでで動くところに届きます。以降は読まなくても構いません。
     link: /ja/setup/install
     linkText: はじめに
   - title: 作り込む

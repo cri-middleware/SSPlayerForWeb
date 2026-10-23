@@ -37,9 +37,22 @@ You need a TyranoScript project, and a project made in **SpriteStudio 7.5 or lat
    [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) does the same.
 
    ```
-   data/others/
-   ├── plugin/ssplayer/   ← init.ks, main.js, ssruntime_bg.wasm, readme.txt
-   └── ssdata/Ringo/      ← Ringo.ssab, Ringo.png
+   mygame/
+   ├── index.html
+   └── data/
+       ├── scenario/
+       │   ├── first.ks
+       │   └── …
+       └── others/
+           ├── plugin/ssplayer/
+           │   ├── init.ks
+           │   ├── main.js
+           │   ├── ssruntime_bg.wasm
+           │   └── readme.txt
+           └── ssdata/
+               └── Ringo/       ← extracted from the ZIP
+                   ├── Ringo.ssab
+                   └── Ringo.png
    ```
 
 3. **Show**: Load the plugin once, at the top of your game, then show a character wherever
@@ -54,8 +67,9 @@ You need a TyranoScript project, and a project made in **SpriteStudio 7.5 or lat
    [ss_play name="chr"]
    ```
 
-   `x` / `y` are Tyrano's top-left pixels, and the animation's anchor lands there.
-   `anime="…"` picks an animation by name; left out, it is the first one.
+   `storage` is a path from `data/`. `x` / `y` are Tyrano's top-left pixels, and the
+   animation's anchor lands there. `anime="…"` picks an animation by name; left out, it is
+   the first one.
 
 A complete scenario to read next to these steps is the bundled example's
 [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) (commented in Japanese) — entrances, `[anim]` fades, several layers and
@@ -72,7 +86,7 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 ## For contributors — building from source
 
-*Consumers can stop here — everything below is for hacking on this package.*
+*Plugin users can stop here — everything below is for hacking on the plugin.*
 
 This is a thin adapter. Rendering is handled by
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.md)'s `SSPlayer`
@@ -105,9 +119,8 @@ control. Remaining work lives in
 - **Naming for `[anim]`**: on creation the character's `<div>` is tagged with the player name as a
   CSS class (`$.setName` is `addClass(name)`, the same way TyranoScript identifies a
   named element). It also carries an `ss-player` class, so `$(".ss-player")` selects
-  them all. Absolute positioning goes through the renderer's internal `setTransform`
-  (the `[spine_mod]` equivalent), which is why `[ss_pos]` / `[ss_move]` exist
-  alongside `[anim]`.
+  them all. Absolute positioning goes through the renderer's internal `setTransform`,
+  which is why `[ss_pos]` / `[ss_move]` exist alongside `[anim]`.
 - **Save target**: each player's reconstruction data is mirrored into
   `TYRANO.kag.stat.f.__ssplayers`. On load the plugin rebuilds from it on the
   engine's `load-beforemaking` event — the moment the saved variables are back and
@@ -159,4 +172,4 @@ development.
 
 ## License
 
-BSD-3-Clause © CRI Middleware Co., Ltd. — see [LICENSE.md](./LICENSE.md).
+BSD-3-Clause — see [LICENSE.md](./LICENSE.md).

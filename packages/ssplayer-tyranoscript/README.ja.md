@@ -22,9 +22,22 @@ TyranoScript のプロジェクトと、**SpriteStudio 7.5 以上**で作成し�
 2. **変換**: ブラウザで [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) を開き、`.sspj` の入ったフォルダをドロップして ZIP をダウンロードします。ZIP を `data/others/ssdata/` に展開すると、プロジェクト名のフォルダの中に `.ssab` とテクスチャが入っています。デスクトップでは [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) で同じことができます。
 
    ```
-   data/others/
-   ├── plugin/ssplayer/   ← init.ks・main.js・ssruntime_bg.wasm・readme.txt
-   └── ssdata/Ringo/      ← Ringo.ssab・Ringo.png
+   mygame/
+   ├── index.html
+   └── data/
+       ├── scenario/
+       │   ├── first.ks
+       │   └── …
+       └── others/
+           ├── plugin/ssplayer/
+           │   ├── init.ks
+           │   ├── main.js
+           │   ├── ssruntime_bg.wasm
+           │   └── readme.txt
+           └── ssdata/
+               └── Ringo/       ← ZIP を展開したもの
+                   ├── Ringo.ssab
+                   └── Ringo.png
    ```
 
 3. **表示**: ゲームの冒頭でプラグインを 1 回だけ読み込み、キャラを出したい場面でプレイヤーを作ります。
@@ -38,7 +51,7 @@ TyranoScript のプロジェクトと、**SpriteStudio 7.5 以上**で作成し�
    [ss_play name="chr"]
    ```
 
-   `x` / `y` は Tyrano の左上原点のピクセルで、アニメのアンカーがその位置に来ます。`anime="…"` でアニメを名前で選べます。省略すると先頭のアニメです。
+   `storage` は `data/` から数えたパスです。`x` / `y` は Tyrano の左上原点のピクセルで、アニメのアンカーがその位置に来ます。`anime="…"` でアニメを名前で選べます。省略すると先頭のアニメです。
 
 この手順と並べて読める完成したシナリオが、同梱サンプルの [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) です。登場、`[anim]` によるフェード、複数レイヤー、セーブ / ロードをコメント付きで書いてあり、上のオンラインデモはこれを動かしています。
 
@@ -53,7 +66,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 ## コントリビューター向け — ソースからビルド
 
-*利用者はここまで。以下はこのパッケージを開発する人向けです。*
+*プラグインの利用者はここまで。以下はプラグインを開発する人向けです。*
 
 本パッケージは TyranoScript 向けの薄いアダプタです。描画は
 [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl/README.ja.md) の `SSPlayer`
@@ -77,8 +90,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
   をバッファ倍率に反映し、`maxDPR` で上限を設けます。
 - **`[anim]` 用の命名**: 生成時にキャラクターの `<div>` へプレイヤー名を CSS クラスとして付与します（`$.setName`＝`addClass(name)`。TyranoScript のキャラ識別と同じ仕組み）。`ss-player`
   クラスも付くので `$(".ss-player")` で一括選択できます。絶対座標指定はレンダラ内部の
-  `setTransform`（Spine の `[spine_mod]` 相当）を経由するため、`[anim]` とは別に
-  `[ss_pos]` / `[ss_move]` が存在します。
+  `setTransform` を経由するため、`[anim]` とは別に `[ss_pos]` / `[ss_move]` が存在します。
 - **セーブ対象**: 各プレイヤーの復元情報を `TYRANO.kag.stat.f.__ssplayers` へミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝`make.ks` と同じ隙間）でプラグインが自動的に再構築します。`[ss_restore]` は同じ処理を明示的に行うタグで、自動復元が実行中ならそれを待ち合わせて二重実行を避けます。
 - **解放**: `[ss_free]` / `[ss_free_all]` が `destroy()` を呼びます。`FinalizationRegistry`
   任せにしないでください。
@@ -118,4 +130,4 @@ TyranoScript 本体は同梱していません。サンプルがコミットし�
 
 ## ライセンス
 
-BSD-3-Clause © CRI Middleware Co., Ltd. — [LICENSE.md](./LICENSE.md) を参照してください。
+BSD-3-Clause — [LICENSE.md](./LICENSE.md) を参照してください。

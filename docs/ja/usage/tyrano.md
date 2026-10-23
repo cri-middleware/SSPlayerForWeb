@@ -4,8 +4,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 # TyranoScript で使う
 
-**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**
-（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。各アニメはレイヤー上の `<div>`（描画はレイヤー共有の canvas が行います）なので、キャラクター・背景・メッセージと同じレイヤースタックに並びます。描画は [`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer` を土台にしています。
+**TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。アニメはキャラクター・背景・メッセージと同じ Tyrano のレイヤーに並び、Tyrano 標準の `[anim]` / `[kanim]` でも動かせます。ティラノスタジオで作ったプロジェクトでも同じように使えます。
 
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
@@ -16,16 +15,6 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 ::: tip ティラノビルダーで制作する場合
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。ランタイムは同じで、タグを書く代わりにコンポーネントパレットから配置でき、`.sspj` の変換も自動で行われます。このページのタグ一覧はそのまま有効です（各コンポーネントが書き出すのがこれらのタグです）。
 :::
-
-## しくみ
-
-プラグインは `[ss_*]` の KAG カスタムタグ群を Tyrano の `master_tag` に登録します。自己登録する単一の `main.js`（IIFE バンドル）が、TyranoScript / TyranoBuilder / TyranoStudio のいずれでも動作します。
-
-- `[ss_new]` ごとに名前付きプレイヤーを生成し、`.ssab` をロードして対象レイヤーへ `<div>` を追加し、[`ssplayer-webgl`](/ja/usage/webgl) の `SSPlayer`（WebGL1 必須 + WebGL2 自動昇格 / 依存ゼロ）で駆動します。描画はレイヤー共有の canvas に行われます。
-- `<div>` には **プレイヤー名**が識別子として付与されるため、他のキャラと同じように Tyrano 標準の
-  `[anim]` / `[kanim]` でそのまま動かせます。
-- 外部に残るのは **WASM バイナリ**（`ssruntime_bg.wasm`）だけで、レンダラと core の JS は `main.js`
-  に内包されています。
 
 ## 動作環境
 
@@ -39,10 +28,6 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 ## 1. インストール
 
-::: tip どちらをダウンロードすればよい？
-ここで説明するプラグイン ZIP は **TyranoScript 用**です。**ティラノビルダー**で制作する場合は代わりに `ssplayer.tbp` を入れてください。`.tbp` はこの ZIP のランタイム 3 ファイルをそのまま内包した上で、エディタ側（コンポーネントと自動変換）を追加したものなので、ダウンロードはそれ 1 つで足ります。**どちらか一方だけを入れてください。** 展開先はどちらも同じ `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
-:::
-
 1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍すると `ssplayer/` フォルダが入っています（`init.ks`＝ローダ、`main.js`＝プラグイン本体、
    `ssruntime_bg.wasm`＝ランタイム、`readme.txt`＝バージョンと簡単な使い方）。
 2. その `ssplayer/` フォルダを Tyrano プロジェクトの `data/others/plugin/` にコピーします。
@@ -50,23 +35,32 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 ```
 data/others/plugin/ssplayer/
-  init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
-  main.js              # プラグイン本体（レンダラ + core を内包）
-  ssruntime_bg.wasm    # アニメーションランタイムのバイナリ
-data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつき 1 つ、同じ名前
+├── init.ks
+├── main.js
+├── ssruntime_bg.wasm
+└── readme.txt
 ```
 
 **置き場所とフォルダ名は固定です。** `[plugin name="x"]` は TyranoScript で `[call storage="../others/plugin/x/init.ks"]` の省略形なので、プラグインはちょうど `data/others/plugin/ssplayer/` に置く必要があります。名前を変えたり別の場所へ移したりすると、`[plugin name="ssplayer"]` は何も見つけられません。`init.ks` の中のパスも、この場所を前提に書かれています。
 
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。出力は `data/others/ssdata/` 以下に置き、`[ss_new storage=...]` から指します。プロジェクトごとにフォルダを分けておくと（`data/others/ssdata/Ringo/`）、同じ名前のテクスチャがぶつかりません。その場合は `storage="others/ssdata/Ringo/Ringo.ssab"` で読み込みます。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
+
+変換したものは、プロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。`.ssab` はアニメーションファイル（`.ssae`）1 つにつき 1 つ、同じ名前でできます。
+
+```
+data/others/ssdata/
+└── Ringo/
+    ├── Ringo.ssab
+    └── Ringo.png
+```
+
+`[ss_new]` の `storage=` は `data/` からのパスで、この例なら `storage="others/ssdata/Ringo/Ringo.ssab"` です。テクスチャは `.ssab` と同じフォルダに置いたままにしてください。
 
 ## 3. クイックスタート
 
-ループするキャラを 1 体表示する最小シナリオ:
-
-プラグインの読み込みは、ゲーム冒頭で 1 回だけです:
+ループするキャラを 1 体表示する最小のシナリオです。プラグインの読み込みは、ゲーム冒頭で 1 回だけです:
 
 ```
 ; first.ks
@@ -144,14 +138,14 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 
 そのほかの属性は、以下でタグごとに説明します。
 
-タグは失敗してもシナリオを止めません。エンジンのデバッグ設定（`data/system/Config.tjs` の `;debugMenu.visible = true`）が有効なら、原因はエンジン自身のエラーダイアログに、シナリオのファイル名と行番号付きで表示されます。たとえば `[ss_play] next="Wiat" is not in others/ssdata/Chara.ssab.` のように表示されます。リリース時はこの設定をオフにしてください。オフのときは、原因はブラウザのコンソールにだけ出力されます。
+タグは失敗してもシナリオを止めません。エンジンのデバッグ設定（`data/system/Config.tjs` の `;debugMenu.visible = true`）が有効なら、原因はエンジン自身のエラーダイアログに、シナリオのファイル名と行番号付きで表示されます。たとえば `[ss_play] next="Wiat" is not in others/ssdata/Ringo/Ringo.ssab.` のように表示されます。リリース時はこの設定をオフにしてください。オフのときは、原因はブラウザのコンソールにだけ出力されます。
 
 ### 先読み・表示・非表示 {#preload-show-hide}
 
 `[ss_new visible="false"]` は**表示せずにロードだけ**行います。サイズの大きい `.ssab` を必要な場面より前に準備しておき、その瞬間に即座に出せます:
 
 ```
-[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]
+[ss_new name="akane" storage="others/ssdata/Akane/Akane.ssab" visible="false"]
 [ss_show name="akane" x="640" y="480" time="800"]   ; ロード済みなので待たされない
 [ss_hide name="akane" time="500"]                   ; 画面から消す（ロードは維持）
 ```
@@ -257,7 +251,7 @@ SpriteStudio のアニメ単位で行うものです:
 各 SS プレイヤーはレイヤー内の実要素で、プレイヤー名が識別子として付与されています。そのため他のキャラと同じように、Tyrano 標準の `[anim]` / `[kanim]` でそのまま動かせます。要素は**位置を決める箱**で、描画自体はレイヤー共有の canvas が受け持ち、毎フレーム要素に追従します（[リソースとライフサイクル](/ja/customize/resources) 参照）:
 
 ```
-[ss_new name="ringo" storage="others/ssdata/ringo.ssab" layer="0" x="640" y="480"]
+[ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
 [anim name="ringo" time="800" opacity="0"]        ; フェードアウト（消える）
 [anim name="ringo" time="800" opacity="255"]      ; フェードイン（現れる）
 [anim name="ringo" time="600" left="120" top="0"] ; スライド
@@ -271,7 +265,7 @@ TyranoScript の `[anim]` の **`opacity` は 0〜255**（0〜1 ではない）�
 ::: warning `scale` / `rotate` はアニメに効きません
 `[anim]` / `[kanim]` の `scale` / `rotate` はキャラの**要素**に CSS 変形を掛けます。一方、レイヤー上の SS キャラはそれぞれの要素の中ではなく、**レイヤー共有の canvas 1 枚**に描かれます。そのため CSS 変形は「キャラが座る位置と大きさ」を動かすだけで、描かれている絵は拡縮も回転もしません。
 
-拡縮には **`[ss_pos]`**（瞬間）または **`[ss_move]`**（補間）を使ってください。こちらはアニメ自体を、そのアンカーを軸に拡縮します。`[anim]` の `scale`/`rotate` は元々アンカーではなく画面中心が軸だったため、この用途には正確ではありませんでした。
+拡縮には **`[ss_pos]`**（瞬間）または **`[ss_move]`**（補間）を使ってください。こちらはアニメ自体を、そのアンカーを軸に拡縮します。
 :::
 
 **使い分け:**
@@ -304,6 +298,5 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 ## 既知の制限
 
-ティラノビルダーについては専用プラグイン `@spritestudio/ssplayer-tyranobuilder` があり、`.tbp` として配布され、コンポーネントパレットへの追加に加えて `.sspj` の変換もエディタ内で行います（[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照）。どちらの統合でも未対応の範囲は
-[制約と適用範囲](/ja/limitations#tyranoscript-tyranobuilder) を参照してください。
+未対応の範囲は [制約と適用範囲](/ja/limitations#tyranoscript-tyranobuilder) を参照してください。
 

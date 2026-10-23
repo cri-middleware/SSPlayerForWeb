@@ -6,25 +6,20 @@ description: レンダラーパッケージの選び方、インストール、�
 
 ## どのパッケージを選ぶか
 
-使う環境に合わせてレンダラーパッケージを 1 つ選びます。
+使う環境に合わせてパッケージを 1 つ選びます。
 
 | 環境 | パッケージ |
 |---|---|
 | フレームワーク非依存 / ドロップイン（`<ss-player>` Web Component を含む） | [`@spritestudio/ssplayer-webgl`](/ja/usage/webgl) |
 | **PixiJS v8** で構築済みのアプリ | [`@spritestudio/ssplayer-pixi`](/ja/usage/pixi) |
 | 独自エンジンにレンダラーを自作する | `@spritestudio/ssplayer-core` |
+| **RPG ツクール MZ** で作るゲーム | [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz)（プラグイン） |
+| **TyranoScript** のノベル | [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano)（プラグイン） |
+| **ティラノビルダー** で作るゲーム | [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder)（`.tbp` のプラグイン） |
 
 レンダラーパッケージは `@spritestudio/ssplayer-core` を再エクスポートしているため、コアを個別に入れる必要はありません。
 
-::: tip フレームワーク連携
-ゲーム/ノベルフレームワーク向けの連携は `ssplayer-webgl` を土台とし、各フレームワークのプラグイン機構で読み込む **IIFE バンドル**として提供されます（npm からインストールするのではなくプラグインとして利用）:
-
-- **RPG ツクール MZ**（`@spritestudio/ssplayer-rmmz`）— [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照。
-- **TyranoScript**（`@spritestudio/ssplayer-tyranoscript`）— [TyranoScript で使う](/ja/usage/tyrano) を参照。
-- **ティラノビルダー**（`@spritestudio/ssplayer-tyranobuilder`）— `.tbp` として配布されます。[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照。
-
-それぞれの未対応範囲は [制約と適用範囲](/ja/limitations) にまとめてあります。
-:::
+RPG ツクール MZ・TyranoScript・ティラノビルダーは npm のパッケージではなくプラグインとして入れ、コードは書きません。手順はそれぞれのページにすべてあり、未対応の範囲は [制約と適用範囲](/ja/limitations) にまとめてあります。このページのこの先は、それ以外のパッケージのインストール手順です。
 
 ## インストール
 

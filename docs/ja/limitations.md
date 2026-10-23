@@ -54,7 +54,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.ja.md#開発者向け) |
 | `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI |
 
-## RPG ツクール MZ（beta）
+## RPG ツクール MZ（beta） {#rpg-maker-mz-beta}
 
 `@spritestudio/ssplayer-rmmz` は **beta** です。
 [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
@@ -62,7 +62,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 ::: warning
 - **ピクチャの色調とブレンドモードは SS アニメーションに影響しません。** *不透明度*・*移動*・*拡大縮小*は反映されます。
 - **一部の画面エフェクトは通常のピクチャと挙動が異なります。** 一部の PIXI フィルターはアニメーションの位置をずらすことがあります。ツクール本体のフラッシュ・色調変更は影響を受けません。
-- **デプロイ時の「未使用ファイルを含まない」は `img/` に置いたものを削除します。**
+- **デプロイ時の「未使用ファイルを除外する」は `img/` に置いたものを削除します。**
   `.ssab` とテクスチャは動的に読み込まれるためツクールからは未使用と判定されますが、このオプションの対象は `img/`・`audio/`・`effects/` だけです。プロジェクト直下の `spritestudio/`
   フォルダに置けば削除されません。代わりに、同じく `img/` だけが対象の画像暗号化も掛からなくなります。
 - **同じオプションは、アニメーションだけが鳴らす音声ファイルも削除します。** 音声はこのオプションの対象である `audio/se/` から再生されるため、公式プラグイン MaterialBase.js で登録してください（[音声](/ja/usage/rmmz#_5-sound)）。
@@ -74,7 +74,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
 ::: warning ティラノビルダー
-- **無料版が読み込めるプラグインは 2 つまで**で、本プラグインはその 1 つを消費します。
+- **スタンダード版が読み込めるプラグインは 2 つまで**で、本プラグインはその 1 つを消費します。
 - **`ssplayer.tbp` はリネームしないでください。** ティラノビルダーはファイル名からプラグイン名を取得します。
 :::
 

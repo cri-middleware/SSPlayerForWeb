@@ -7,29 +7,12 @@ description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, plugi
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
 
-This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**. Because
-the animation is drawn straight into MZ's PixiJS v5 renderer, it sits in the correct
-Z-order with your characters and pictures.
-Its rendering is built on [`ssplayer-webgl`](/usage/webgl)'s `SSWebGLRenderer`.
+This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**, driven by
+plugin commands with no code to write. An animation rides on a picture and sits in the
+correct Z-order with your characters and pictures.
 
 ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">Live demo</a>** — run
 the bundled sample MZ project in your browser.
-
-## How it works
-
-Animations are drawn **directly into MZ's own PixiJS v5 renderer** (the same approach as
-MZ's Tilemap and the bundled Effekseer). There is no overlay canvas, so they render in
-correct Z-order with characters and pictures.
-
-- `SSPlayer` extends `PIXI.Container`, and `SSPlayerRenderer` — a registered
-  `PIXI.ObjectRenderer` (`'ssplayer'`) — reuses [`ssplayer-webgl`](/usage/webgl)'s
-  `SSWebGLRenderer` against MZ's shared `gl`. Reusing that renderer means masks,
-  effects, the 13 SS integration shaders, and instance parts are drawn by the same code as in the WebGL player.
-- It bundles the **no-SIMD (scalar)** WASM, so it runs on MZ's bundled NW.js (a Chromium
-  without WebAssembly SIMD) with no launch flags. If initialization fails, SS animations
-  are disabled but the game still boots, and the console says why.
-- It keeps no timer of its own: playback advances from the picture's sprite `update()`, so
-  SS animations pause exactly with the game (menus, message waits).
 
 ## 1. Install
 
@@ -37,54 +20,28 @@ correct Z-order with characters and pictures.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true): open the Release named
    `@spritestudio/ssplayer-rmmz <version>` and take the file under **Assets**, not the
    *Source code* archives. It holds `ssplayer-rpgmakermz.js`, `ssruntime_bg.wasm` and
-   `ssconverter_bg.wasm`; the last is needed only if you want test play to convert your
-   `.sspj` for you ([below](#convert-on-test-play)).
-2. Extract them into your project's `js/plugins/`, flat (the WASM files must sit next to the
+   `ssconverter_bg.wasm`.
+2. Extract all three into your project's `js/plugins/`, flat (the WASM files must sit next to the
    `.js`).
-3. Enable **ssplayer-rpgmakermz** in the Plugin Manager. There are no parameters — the
+3. Turn **ssplayer-rpgmakermz** ON in **Tools → Plugin Manager**. There are no parameters — the
    WASM files are auto-loaded from the same folder as the plugin `.js`.
 
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. See [Preparing assets](/usage/assets) for how to convert.
-
-Put the output under a **`spritestudio/` folder at your project root** — beside `img/`,
-not inside it. Deployment deletes unused files from `img/` (see
-[Deployment](#_4-deployment) below), so keeping SS assets out of it is what makes them
-survive:
-
-```
-MyGame/
-├── img/                     ← pruned by "Exclude unused files"
-├── js/plugins/
-│   ├── ssplayer-rpgmakermz.js
-│   └── ssruntime_bg.wasm
-└── spritestudio/            ← safe
-    └── Ringo/
-        ├── Ringo.ssab
-        └── Ringo.png        ← textures sit beside their .ssab
-```
-
-Each `.ssab` is named after an animation file (`.ssae`) in the project, not after the
-project: the converter writes one per `.ssae` (`Ringo.ssae` → `Ringo.ssab`). The `Show SS`
-path is therefore `spritestudio/<project>/<animation file>.ssab`. Keep each `.ssab` and its
-textures in the same folder — the plugin resolves textures relative to the `.ssab`.
-
-### Convert on test play
-
-With `ssconverter_bg.wasm` in `js/plugins/`, test play does the converting for you:
+plugin actually plays. Test play does the converting, with the `ssconverter_bg.wasm` in
+`js/plugins/`:
 
 1. Put your SpriteStudio project under `SpriteStudio_Source/` at your project root — the
    `.sspj` **and its folder**, since an animation is several files. Subfolders are fine.
 2. Start a test play. Before the title, every project that changed since it was last
-   converted is converted into `spritestudio/<project>/`, a folder named after its
-   `.sspj`. The `.ssab` files inside are named after the `.ssae` files, as above.
+   converted is converted into `spritestudio/<project>/`.
 3. After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and
    the change is converted on the way back up.
 
 ```
 MyGame/
+├── img/
 ├── js/plugins/
 │   ├── ssplayer-rpgmakermz.js
 │   ├── ssruntime_bg.wasm
@@ -92,12 +49,23 @@ MyGame/
 ├── SpriteStudio_Source/        ← you put projects here
 │   └── Ringo/
 │       ├── Ringo.sspj
-│       └── …                   (.ssae, .ssce, textures)
+│       ├── Ringo.png
+│       └── …
 └── spritestudio/               ← test play writes here
     └── Ringo/
         ├── Ringo.ssab
         └── Ringo.png
 ```
+
+The folder is named after the `.sspj`. Each `.ssab` inside is named after an animation file
+(`.ssae`), not after the project: the converter writes one per `.ssae` (`Ringo.ssae` →
+`Ringo.ssab`). Show SS's `SSAB File` is therefore
+`spritestudio/<project>/<animation file>.ssab`. Keep each `.ssab` and its textures in the
+same folder — the plugin resolves textures relative to the `.ssab`.
+
+`spritestudio/` sits beside `img/`, not inside it: deployment's "Exclude unused files"
+deletes unused files from `img/`, so keeping SS assets out of it is what makes them survive
+(see [4. Deployment](#_4-deployment)).
 
 If a project fails to convert, the boot stops on MZ's error screen, naming the project and
 the reason. Fix it in SpriteStudio, save, and press **Retry**. Two projects with the same
@@ -111,6 +79,13 @@ leaves anything else in the folder alone. Sounds are not converted — see
 [5. Sound](#_5-sound). Before you deploy, leave the sources out
 ([4. Deployment](#_4-deployment)).
 
+### Converting it yourself
+
+If you convert with one of the tools in [Preparing assets](/usage/assets), such as
+ssconverter-web, put the project-named folder it gives you in `spritestudio/`
+(`spritestudio/Ringo/Ringo.ssab`). You then need neither `ssconverter_bg.wasm` nor
+`SpriteStudio_Source/`.
+
 ## 3. Plugin commands
 
 Run these from an event's **Plugin Command** → `ssplayer-rpgmakermz`. An SS animation
@@ -123,8 +98,9 @@ the internal command ID.
 **Show / attach**
 
 - **Show SS** (`showSS`) — create a picture and attach an animation in one step. Its
-  arguments are `pictureId`, `ssab` (e.g. `spritestudio/Ringo/Ringo.ssab`), `animation`,
-  `x`, `y`, `scale`, `loop`, `signalSwitch` and `wait`.
+  arguments are `Picture Id`, `SSAB File` (e.g. `spritestudio/Ringo/Ringo.ssab`),
+  `Animation Name`, `X`, `Y`, `Scale (%)`, `Loop Count`, `Signal -> Switch` and
+  `Wait for Completion`.
 - **Set SS As Picture** (`setSSAsPicture`) — attach SS to a picture you have **already**
   shown with the native *Show Picture* command. From there, position and erase it with
   the standard *Move / Erase Picture* commands. Don't drive one picture id with both a
@@ -134,7 +110,7 @@ the internal command ID.
 
 - **Change SS Animation** (`changeSSAnimation`) — switch to another animation **within
   the same `.ssab`** (no reload).
-- **Play SS Once** (`playSSOnce`) — play an animation a set number of times, then
+- **Play SS Once (return to loop)** (`playSSOnce`) — play an animation a set number of times, then
   **auto-return to the current loop** (idle → expression → idle).
 - **Play SS Sequence** (`playSSSequence`) — a comma-separated list where each entry plays
   once except the **last, which loops** (e.g. `attack1,attack2,wait1`).
@@ -142,7 +118,7 @@ the internal command ID.
   smooth even when slow).
 
 *Change SS Animation*, *Play SS Once*, *Play SS Sequence* and *Set SS Talk* take a
-`transition` in ms: above 0 the switch crossfades from what is on screen over that time,
+`Transition (ms)`: above 0 the switch crossfades from what is on screen over that time,
 and 0 (the default) cuts.
 
 **Tracks (layering animations)**
@@ -151,11 +127,11 @@ Lay more animations over the picture's own one (track 0), on tracks numbered 1 a
 gesture over a walk, an expression over a pose. Tracks are saved with the picture. A change of the picture's animation **without** a
 crossfade empties them, as it does in the player itself; a crossfade keeps them.
 
-- **Set SS Track** (`setSSTrack`) — lay an animation on a track, with its `alpha` (how
-  strongly it applies), `blend` (*Mix*, or *Additive* to add its offset from the setup
-  pose), `loop` and `transition`.
-- **Fade SS Track** (`fadeSSTrack`) — fade a track's `alpha` to a target over a time;
-  `wait` holds the event until it completes.
+- **Set SS Track** (`setSSTrack`) — lay an animation on a track, with its `Alpha` (how
+  strongly it applies), `Blend` (*Mix*, or *Additive* to add its offset from the setup
+  pose), `Loop Count` and `Transition (ms)`.
+- **Fade SS Track** (`fadeSSTrack`) — fade a track's alpha to `Target Alpha` over
+  `Duration (ms)`; `Wait for Completion` holds the event until it completes.
 - **Clear SS Track** (`clearSSTrack`) — empty a track. Fade it to 0 first to take it off
   gradually.
 
@@ -169,19 +145,19 @@ start of the animation, as it does for every other picture state).
   (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type; the four blend
   operations are the authored Parts Color ones. **Normal parts only.**
 - **Set SS Part Visibility** (`setSSPartVisibility`) — force-hide one part. Turn on
-  `cascade` to hide its descendants too: an authored hide never cascades, so this is the
+  `Cascade to descendants` to hide its descendants too: an authored hide never cascades, so this is the
   way to hide a whole body part.
 - **Set SS Part Cell** (`setSSPartCell`) — make a part draw a different cell (swapping
   equipment, for instance). The cell-map name carries no `.ssce` extension. **Normal and
   mask parts only.**
-- **Clear SS Part Overrides** (`clearSSPartOverrides`) — leave `part` blank to clear every
+- **Clear SS Part Overrides** (`clearSSPartOverrides`) — leave `Part Name` blank to clear every
   part on that picture.
 
-**Priority** (colour / cell only) is one of *yield to the next keyframe* / *hold until the
-animation changes* (default) / *permanent*. Changing the animation clears everything but
+**Priority** (colour / cell only) is one of *Yield to the next keyframe* / *Hold until the
+animation changes* (default) / *Permanent (survives animation changes)*. Changing the animation clears everything but
 the **permanent** ones — the saved copy is pruned at the same time, so nothing the runtime
 discarded comes back on load. Visibility has no priority mode and is always cleared by an
-animation change. A crossfade (`transition` above 0) is the exception: it keeps every
+animation change. A crossfade (`Transition (ms)` above 0) is the exception: it keeps every
 override.
 
 **Part tracking (script only)**
@@ -193,17 +169,18 @@ Making a display object of your own follow a part has **no plugin command**. Get
 **Playback / lifecycle**
 
 - **Play / Pause / Stop / Remove SS** (`playSS` / `pauseSS` / `stopSS` / `removeSS`), and
-  **Wait for SS** (`waitForSS`) — by `pictureId`. *Wait for SS* holds the event until
-  every configured loop has played (give it a finite `loop`; note `0` is a synonym for
-  infinite, so it waits forever).
+  **Wait for SS** (`waitForSS`) — by `Picture Id`. *Wait for SS* holds the event until
+  the picture has played every loop of its `Loop Count` (keep that finite: `0` is a synonym
+  for infinite, so it waits forever).
 
 **Lip-sync (talking portrait — advanced)**
 
-- **Set SS Talk** (`setSSTalk`) — bind a picture to a **speaker name** (the message name
-  box): it plays `talk` while that speaker's message is on screen and `idle` otherwise.
+- **Set SS Talk (lip-sync)** (`setSSTalk`) — bind a picture to a `Speaker Name` (the
+  message name box): it plays the `Talk Animation` while that speaker's message is on screen
+  and the `Idle Animation` otherwise.
 - **Clear SS Talk** (`clearSSTalk`) — unbind it (do this when the conversation ends).
 
-Leaving `animation` empty auto-picks the first; a wrong name warns in the console and
+Leaving `Animation Name` empty auto-picks the first; a wrong name warns in the console and
 lists the real names (the MZ editor can't read a `.ssab` to build a dropdown).
 
 ## 4. Deployment
@@ -227,12 +204,6 @@ option's reach — see [5. Sound](#_5-sound).
 `SpriteStudio_Source/` — your editable SpriteStudio projects — would ship with the game.
 Enter `SpriteStudio_Source,ssconverter_bg.wasm` in the deployment's
 **[Exclude files/folders]** option; the game needs neither to play.
-
-::: warning Migrating an existing project
-If your assets are still under `img/spritestudio/`, move the whole folder up one level to
-`spritestudio/` and update the `SSAB File` argument of each `Show SS` / `Set SS As
-Picture` command (drop the leading `img/`).
-:::
 
 **Trade-off — encryption.** MZ's *Encrypt Image Files* option is likewise limited to
 `img/`, so SS textures outside `img/` ship unencrypted. If you want them
@@ -261,6 +232,18 @@ event command *Stop SE* stops them along with every other SE.
 files only an animation plays. Register each one in the *Audio File Material List* of the
 official MaterialBase.js plugin, or deploy with the option off. MaterialBase.js ships with
 MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it needs.
+
+## How it works
+
+- Animations are drawn straight into MZ's own screen (the same approach as MZ's tilemap and
+  the bundled Effekseer). Nothing is layered on top, so they render in correct Z-order with
+  characters and pictures.
+- Masks, effects, SpriteStudio's integration shaders (all 13) and instance parts draw as
+  they do in the browser WebGL player.
+- Playback advances with the picture, so SS animations pause exactly with the game (menus,
+  message waits).
+- It runs on MZ's bundled NW.js as it is, with no launch options to add. If initialization
+  fails, SS animations are disabled but the game still boots, and the console (F8) says why.
 
 ## Known limitations
 
