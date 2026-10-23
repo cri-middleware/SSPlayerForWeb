@@ -10,7 +10,8 @@
     Missing one half is this family's most common defect.
 *   **Never break a line between two Japanese characters**; Chrome renders the break as a space.
 *   **Finish with this repository's checks**: the commands in [CONTRIBUTING.md](./CONTRIBUTING.md), and
-    `pnpm run build` again before checking an example, since examples consume the **built** packages. Read
+    `pnpm run build` again before checking an example, since examples consume the **built** packages; a
+    plugin change is checked in its real host, as the developer guide shows. Read
     what a run says it verified, not its exit code — several checks pass, or skip themselves, without a
     prerequisite.
 *   **Do not restate what another file owns**; the table below says which file. A fact no file owns goes
