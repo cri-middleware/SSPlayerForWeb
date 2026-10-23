@@ -50,17 +50,28 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 ```
 data/others/plugin/ssplayer/
-  init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
-  main.js              # プラグイン本体（レンダラ + core を内包）
-  ssruntime_bg.wasm    # アニメーションランタイムのバイナリ
-data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつき 1 つ、同じ名前
+├── init.ks
+├── main.js
+├── ssruntime_bg.wasm
+└── readme.txt
 ```
 
 **置き場所とフォルダ名は固定です。** `[plugin name="x"]` は TyranoScript で `[call storage="../others/plugin/x/init.ks"]` の省略形なので、プラグインはちょうど `data/others/plugin/ssplayer/` に置く必要があります。名前を変えたり別の場所へ移したりすると、`[plugin name="ssplayer"]` は何も見つけられません。`init.ks` の中のパスも、この場所を前提に書かれています。
 
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。出力は `data/others/ssdata/` 以下に置き、`[ss_new storage=...]` から指します。プロジェクトごとにフォルダを分けておくと（`data/others/ssdata/Ringo/`）、同じ名前のテクスチャがぶつかりません。その場合は `storage="others/ssdata/Ringo/Ringo.ssab"` で読み込みます。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
+
+変換したものは、プロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。`.ssab` はアニメーションファイル（`.ssae`）1 つにつき 1 つ、同じ名前でできます。
+
+```
+data/others/ssdata/
+└── Ringo/
+    ├── Ringo.ssab
+    └── Ringo.png
+```
+
+`[ss_new]` の `storage=` は `data/` からのパスで、この例なら `storage="others/ssdata/Ringo/Ringo.ssab"` です。テクスチャは `.ssab` と同じフォルダに置いたままにしてください。
 
 ## 3. クイックスタート
 
@@ -144,14 +155,14 @@ data/others/ssdata/<ssae名>.ssab      # プロジェクトの .ssae 1 つにつ
 
 そのほかの属性は、以下でタグごとに説明します。
 
-タグは失敗してもシナリオを止めません。エンジンのデバッグ設定（`data/system/Config.tjs` の `;debugMenu.visible = true`）が有効なら、原因はエンジン自身のエラーダイアログに、シナリオのファイル名と行番号付きで表示されます。たとえば `[ss_play] next="Wiat" is not in others/ssdata/Chara.ssab.` のように表示されます。リリース時はこの設定をオフにしてください。オフのときは、原因はブラウザのコンソールにだけ出力されます。
+タグは失敗してもシナリオを止めません。エンジンのデバッグ設定（`data/system/Config.tjs` の `;debugMenu.visible = true`）が有効なら、原因はエンジン自身のエラーダイアログに、シナリオのファイル名と行番号付きで表示されます。たとえば `[ss_play] next="Wiat" is not in others/ssdata/Ringo/Ringo.ssab.` のように表示されます。リリース時はこの設定をオフにしてください。オフのときは、原因はブラウザのコンソールにだけ出力されます。
 
 ### 先読み・表示・非表示 {#preload-show-hide}
 
 `[ss_new visible="false"]` は**表示せずにロードだけ**行います。サイズの大きい `.ssab` を必要な場面より前に準備しておき、その瞬間に即座に出せます:
 
 ```
-[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]
+[ss_new name="akane" storage="others/ssdata/Akane/Akane.ssab" visible="false"]
 [ss_show name="akane" x="640" y="480" time="800"]   ; ロード済みなので待たされない
 [ss_hide name="akane" time="500"]                   ; 画面から消す（ロードは維持）
 ```
@@ -257,7 +268,7 @@ SpriteStudio のアニメ単位で行うものです:
 各 SS プレイヤーはレイヤー内の実要素で、プレイヤー名が識別子として付与されています。そのため他のキャラと同じように、Tyrano 標準の `[anim]` / `[kanim]` でそのまま動かせます。要素は**位置を決める箱**で、描画自体はレイヤー共有の canvas が受け持ち、毎フレーム要素に追従します（[リソースとライフサイクル](/ja/customize/resources) 参照）:
 
 ```
-[ss_new name="ringo" storage="others/ssdata/ringo.ssab" layer="0" x="640" y="480"]
+[ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
 [anim name="ringo" time="800" opacity="0"]        ; フェードアウト（消える）
 [anim name="ringo" time="800" opacity="255"]      ; フェードイン（現れる）
 [anim name="ringo" time="600" left="120" top="0"] ; スライド

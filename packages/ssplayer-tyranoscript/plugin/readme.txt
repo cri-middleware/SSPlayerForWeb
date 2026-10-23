@@ -41,9 +41,15 @@
              init.ks
              main.js
              ssruntime_bg.wasm
+             readme.txt
 
-    2. 変換済みのアニメーション（.ssab とテクスチャ）を
+    2. 変換済みのアニメーションを、プロジェクトごとのフォルダのまま
        data/others/ssdata/ に置きます。
+
+           data/others/ssdata/Ringo/
+             Ringo.ssab
+             Ringo.png
+
        .sspj から .ssab への変換方法はドキュメントを参照してください。
 
     3. シナリオから [plugin name="ssplayer"] で読み込みます。
@@ -54,7 +60,7 @@
     [plugin name="ssplayer"]
 
     ; scene1.ks — 出したい場面で
-    [ss_new name="chr" storage="others/ssdata/Chara.ssab" layer="0" x="640" y="480" loop="true"]
+    [ss_new name="chr" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480" loop="true"]
     [ss_play name="chr"]
 
     [plugin] がプラグインの読み込みとランタイムの起動をまとめて行い

@@ -71,10 +71,10 @@ different versions.
 
 ```
 data/others/plugin/ssplayer/
-  init.ks              # [loadjs storage="plugin/ssplayer/main.js"] → [return]
-  main.js              # the plugin bundle (renderer + core inlined)
-  ssruntime_bg.wasm    # the animation runtime binary
-data/others/ssdata/<ssae name>.ssab   # one per .ssae in your project, named after it
+├── init.ks
+├── main.js
+├── ssruntime_bg.wasm
+└── readme.txt
 ```
 
 **The location and the folder name are fixed.** `[plugin name="x"]` is TyranoScript
@@ -85,10 +85,22 @@ nothing. The paths inside `init.ks` are written against that location too.
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. See [Preparing assets](/usage/assets) for how to convert. Put the
-output under `data/others/ssdata/` and point `[ss_new storage=...]` at it. Giving each
-project its own folder (`data/others/ssdata/Ringo/`) keeps textures of the same name from
-colliding; you then load it as `storage="others/ssdata/Ringo/Ringo.ssab"`.
+plugin actually plays. See [Preparing assets](/usage/assets) for how to convert.
+
+Put what you convert under `data/others/ssdata/`, one folder per project. The ZIP from
+ssconverter-web already holds that folder, named after the project, so extracting it there
+is all it takes. There is one `.ssab` per animation file (`.ssae`), named after it.
+
+```
+data/others/ssdata/
+└── Ringo/
+    ├── Ringo.ssab
+    └── Ringo.png
+```
+
+`[ss_new]`'s `storage=` is a path from `data/` — here,
+`storage="others/ssdata/Ringo/Ringo.ssab"`. Keep the textures in the same folder as their
+`.ssab`.
 
 ## 3. Quick start
 
@@ -188,7 +200,7 @@ The rest are described with their tags below.
 A tag that fails never stops the scenario. With the engine's debug switch on
 (`;debugMenu.visible = true` in `data/system/Config.tjs`), the reason appears in the
 engine's own error dialog with the scenario file and line — for example
-`[ss_play] next="Wiat" is not in others/ssdata/Chara.ssab.`
+`[ss_play] next="Wiat" is not in others/ssdata/Ringo/Ringo.ssab.`
 Turn the switch off for release; the reason then goes only to the browser console.
 
 ### Preload, show, hide
@@ -197,7 +209,7 @@ Turn the switch off for release; the reason then goes only to the browser consol
 can be prepared ahead of the scene that needs it and revealed instantly:
 
 ```
-[ss_new name="akane" storage="others/ssdata/Akane.ssab" visible="false"]
+[ss_new name="akane" storage="others/ssdata/Akane/Akane.ssab" visible="false"]
 [ss_show name="akane" x="640" y="480" time="800"]   ; appears, already loaded
 [ss_hide name="akane" time="500"]                   ; off screen, still loaded
 ```
@@ -345,7 +357,7 @@ positioning box: the drawing happens on the layer's shared canvas, which follows
 every frame (see [Resources & lifecycle](/customize/resources)):
 
 ```
-[ss_new name="ringo" storage="others/ssdata/ringo.ssab" layer="0" x="640" y="480"]
+[ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
 [anim name="ringo" time="800" opacity="0"]        ; fade out (disappear)
 [anim name="ringo" time="800" opacity="255"]      ; fade in (appear)
 [anim name="ringo" time="600" left="120" top="0"] ; slide
