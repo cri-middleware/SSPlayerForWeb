@@ -123,8 +123,9 @@ the internal command ID.
 **Show / attach**
 
 - **Show SS** (`showSS`) — create a picture and attach an animation in one step. Its
-  arguments are `pictureId`, `ssab` (e.g. `spritestudio/Ringo/Ringo.ssab`), `animation`,
-  `x`, `y`, `scale`, `loop`, `signalSwitch` and `wait`.
+  arguments are `Picture Id`, `SSAB File` (e.g. `spritestudio/Ringo/Ringo.ssab`),
+  `Animation Name`, `X`, `Y`, `Scale (%)`, `Loop Count`, `Signal -> Switch` and
+  `Wait for Completion`.
 - **Set SS As Picture** (`setSSAsPicture`) — attach SS to a picture you have **already**
   shown with the native *Show Picture* command. From there, position and erase it with
   the standard *Move / Erase Picture* commands. Don't drive one picture id with both a
@@ -134,7 +135,7 @@ the internal command ID.
 
 - **Change SS Animation** (`changeSSAnimation`) — switch to another animation **within
   the same `.ssab`** (no reload).
-- **Play SS Once** (`playSSOnce`) — play an animation a set number of times, then
+- **Play SS Once (return to loop)** (`playSSOnce`) — play an animation a set number of times, then
   **auto-return to the current loop** (idle → expression → idle).
 - **Play SS Sequence** (`playSSSequence`) — a comma-separated list where each entry plays
   once except the **last, which loops** (e.g. `attack1,attack2,wait1`).
@@ -142,7 +143,7 @@ the internal command ID.
   smooth even when slow).
 
 *Change SS Animation*, *Play SS Once*, *Play SS Sequence* and *Set SS Talk* take a
-`transition` in ms: above 0 the switch crossfades from what is on screen over that time,
+`Transition (ms)`: above 0 the switch crossfades from what is on screen over that time,
 and 0 (the default) cuts.
 
 **Tracks (layering animations)**
@@ -151,11 +152,11 @@ Lay more animations over the picture's own one (track 0), on tracks numbered 1 a
 gesture over a walk, an expression over a pose. Tracks are saved with the picture. A change of the picture's animation **without** a
 crossfade empties them, as it does in the player itself; a crossfade keeps them.
 
-- **Set SS Track** (`setSSTrack`) — lay an animation on a track, with its `alpha` (how
-  strongly it applies), `blend` (*Mix*, or *Additive* to add its offset from the setup
-  pose), `loop` and `transition`.
-- **Fade SS Track** (`fadeSSTrack`) — fade a track's `alpha` to a target over a time;
-  `wait` holds the event until it completes.
+- **Set SS Track** (`setSSTrack`) — lay an animation on a track, with its `Alpha` (how
+  strongly it applies), `Blend` (*Mix*, or *Additive* to add its offset from the setup
+  pose), `Loop Count` and `Transition (ms)`.
+- **Fade SS Track** (`fadeSSTrack`) — fade a track's alpha to `Target Alpha` over
+  `Duration (ms)`; `Wait for Completion` holds the event until it completes.
 - **Clear SS Track** (`clearSSTrack`) — empty a track. Fade it to 0 first to take it off
   gradually.
 
@@ -169,19 +170,19 @@ start of the animation, as it does for every other picture state).
   (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type; the four blend
   operations are the authored Parts Color ones. **Normal parts only.**
 - **Set SS Part Visibility** (`setSSPartVisibility`) — force-hide one part. Turn on
-  `cascade` to hide its descendants too: an authored hide never cascades, so this is the
+  `Cascade to descendants` to hide its descendants too: an authored hide never cascades, so this is the
   way to hide a whole body part.
 - **Set SS Part Cell** (`setSSPartCell`) — make a part draw a different cell (swapping
   equipment, for instance). The cell-map name carries no `.ssce` extension. **Normal and
   mask parts only.**
-- **Clear SS Part Overrides** (`clearSSPartOverrides`) — leave `part` blank to clear every
+- **Clear SS Part Overrides** (`clearSSPartOverrides`) — leave `Part Name` blank to clear every
   part on that picture.
 
-**Priority** (colour / cell only) is one of *yield to the next keyframe* / *hold until the
-animation changes* (default) / *permanent*. Changing the animation clears everything but
+**Priority** (colour / cell only) is one of *Yield to the next keyframe* / *Hold until the
+animation changes* (default) / *Permanent (survives animation changes)*. Changing the animation clears everything but
 the **permanent** ones — the saved copy is pruned at the same time, so nothing the runtime
 discarded comes back on load. Visibility has no priority mode and is always cleared by an
-animation change. A crossfade (`transition` above 0) is the exception: it keeps every
+animation change. A crossfade (`Transition (ms)` above 0) is the exception: it keeps every
 override.
 
 **Part tracking (script only)**
@@ -193,17 +194,18 @@ Making a display object of your own follow a part has **no plugin command**. Get
 **Playback / lifecycle**
 
 - **Play / Pause / Stop / Remove SS** (`playSS` / `pauseSS` / `stopSS` / `removeSS`), and
-  **Wait for SS** (`waitForSS`) — by `pictureId`. *Wait for SS* holds the event until
-  every configured loop has played (give it a finite `loop`; note `0` is a synonym for
-  infinite, so it waits forever).
+  **Wait for SS** (`waitForSS`) — by `Picture Id`. *Wait for SS* holds the event until
+  the picture has played every loop of its `Loop Count` (keep that finite: `0` is a synonym
+  for infinite, so it waits forever).
 
 **Lip-sync (talking portrait — advanced)**
 
-- **Set SS Talk** (`setSSTalk`) — bind a picture to a **speaker name** (the message name
-  box): it plays `talk` while that speaker's message is on screen and `idle` otherwise.
+- **Set SS Talk (lip-sync)** (`setSSTalk`) — bind a picture to a `Speaker Name` (the
+  message name box): it plays the `Talk Animation` while that speaker's message is on screen
+  and the `Idle Animation` otherwise.
 - **Clear SS Talk** (`clearSSTalk`) — unbind it (do this when the conversation ends).
 
-Leaving `animation` empty auto-picks the first; a wrong name warns in the console and
+Leaving `Animation Name` empty auto-picks the first; a wrong name warns in the console and
 lists the real names (the MZ editor can't read a `.ssab` to build a dropdown).
 
 ## 4. Deployment
