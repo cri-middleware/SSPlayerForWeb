@@ -101,7 +101,8 @@ flowchart TD
         direction LR
         sspj[".sspj"] --> convcore["ssconverter-core<br/>WASM"] --> ssab[".ssab"]
         convweb["ssconverter-web<br/>ブラウザ UI + Node CLI"] -. 内包 .-> convcore
-        tyranob["ssplayer-tyranobuilder<br/>TyranoBuilder エディター（beta）"] -. 内包 .-> convcore
+        importer["ssconverter-importer<br/>エディター内の自動インポート"] -. 内包 .-> convcore
+        tyranob["ssplayer-tyranobuilder<br/>TyranoBuilder エディター（beta）"] -. 利用 .-> importer
     end
 
     subgraph play ["再生（ランタイム）"]
@@ -117,11 +118,12 @@ flowchart TD
     end
 
     tyranob -. 同梱 .-> tyrano
+    rmmz -. テストプレイ .-> importer
     ssab ==>|入力| core
 ```
 
 - **[`ssplayer-core`](./packages/ssplayer-core)** がタイムラインと WASM 処理をすべて担い、各フレームを素の描画データとしてレンダラーへ渡します（DOM・エンジンに非依存）。各レンダラーはその上に載る薄いバインディングなので、新規レンダラーの追加（[ROADMAP](./ROADMAP.md) 参照）はそのパッケージだけで完結します。`ssplayer-rmmz` / `ssplayer-tyranoscript` はさらに `ssplayer-webgl` を再利用します。また `ssplayer-tyranobuilder` は、TyranoScript ランタイムを同梱し、エディター内で `.sspj` を変換するオーサリング時ツールです。
-- **[`ssconverter-core`](./packages/ssconverter-core)** は独立した変換用 WASM コア（Rust `libssconverter` のビルド）で、バイト入力・バイト出力の設計は同じ。ブラウザ・Node・Worker・エッジランタイムのいずれでも同じ変換器が動きます。ビルド環境の外では、デスクトップの [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) が同じ工程を担います。
+- **[`ssconverter-core`](./packages/ssconverter-core)** は独立した変換用 WASM コア（Rust `libssconverter` のビルド）で、バイト入力・バイト出力の設計は同じ。ブラウザ・Node・Worker・エッジランタイムのいずれでも同じ変換器が動きます。ビルド環境の外では、デスクトップの [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) が同じ工程を担います。作者の代わりに変換するプラグインでは、[`ssconverter-importer`](./packages/ssconverter-importer) がホストのエディター内でこれを動かします（TyranoBuilder はプロジェクトを開いたとき、RPG ツクール MZ はテストプレイの開始時）。
 
 各パッケージの詳細（API・オプション）は上の表からリンクした各 README を参照してください。
 
