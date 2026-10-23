@@ -42,9 +42,8 @@ Nothing else to set up — no plugin tag to write, no runtime to initialise.
 ## The auto importer
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the game
-actually plays. Every integration needs that conversion to happen somewhere — the
-[standalone tools](/usage/assets) do it by hand, and this plugin does it inside the editor, for
-you, whenever the sources change.
+actually plays. This plugin converts the SpriteStudio projects you put in your game's folder
+into `.ssab`, inside the editor.
 
 ```mermaid
 graph LR
@@ -74,8 +73,8 @@ graph LR
     class BIN generated;
 ```
 
-The imported route and the manual route land in the same place, and the component dropdowns
-list both — see [Bringing in a pack you converted yourself](#bringing-in-a-pack-you-converted-yourself).
+Imported packs and packs you copy in by hand land in the same place, and the component
+dropdowns list both (see [Bringing in a pack you converted yourself](#bringing-in-a-pack-you-converted-yourself)).
 
 ### Basic use
 
@@ -83,8 +82,8 @@ list both — see [Bringing in a pack you converted yourself](#bringing-in-a-pac
    animation is several files — into **`SpriteStudio_Source/`** in your project folder. The
    plugin creates that folder on first run, so it is already there waiting.
 2. Open the project in TyranoBuilder.
-3. A toast tells you what was converted. The animation is now in the **SpriteStudio: show**
-   component's dropdowns.
+3. A message tells you what was converted. The animation is now in the **SpriteStudio: show**
+   component's dropdowns. A conversion that fails says why in a dialog.
 
 Each `.sspj` becomes a folder named after it, under `data/others/ssdata/`:
 
@@ -93,100 +92,47 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
                                                                  (+ its textures)
 ```
 
-Subfolders are searched too, so you can group sources however you like — the whole tree is
-walked for `.sspj` files, and only the file name of the `.sspj` itself decides the output
-name.
+Subfolders are searched too, so you can group sources however you like; only the file name of
+the `.sspj` itself decides the output name.
 
 ### Picking up a change
 
-A pass runs **when the project is opened**, and after that only when you ask for one. Nothing
-polls in the background: a pass costs one `stat` per source file, each a synchronous hop across
-Electron's contextBridge on the thread that draws the editor, and polling would buy nothing — you are
-in SpriteStudio when the save happens, not looking at the toast. This is the same shape as
-[SpriteStudio Player for Ren'Py](https://github.com/cri-middleware/SSPlayerForRenPy) (which
-converts at startup and needs `Shift + R`) and
-[SpriteStudio Player for Godot](https://github.com/cri-middleware/SSPlayerForGodot) (which has
-an inspector button and no freshness check at all).
-
-So after saving in SpriteStudio, there are two ways back:
+A pass runs **when the project is opened**, and after that only when you ask for one —
+nothing converts in the background while the editor is open. After saving in SpriteStudio,
+there are two ways back:
 
 | | Where | What it does |
 | --- | --- | --- |
 | **Reconvert now** | on the **SpriteStudio: show** component that plays the animation | Rebuilds that one pack, whatever its record says |
 | **Import now** | **Project → Plugins** → **SpriteStudio** | Converts everything added or edited since the project was opened |
 
-**Reconvert now** is the everyday one — it is per-pack and forced, because pressing it means
-you have already decided the pack is out of date. **Import now** is for a `.sspj` that is
-*new*: a component can only point at a pack that already exists, so a project dropped into
-`SpriteStudio_Source/` while the builder is open has nowhere to press. The Plugins window
-is not attached to anything in the scenario, which is exactly why the button lives there.
+**Reconvert now** is the everyday one. **Import now** is for a project you put in
+`SpriteStudio_Source/` *while* the project is open: no component can point at it yet, so this
+is where it gets converted.
 
 The same window has **Open the source folder** and **Open the import log**, and shows the
 converter build it is running (`converter <version> (ssab v1, ssqb v1)`) — the line to quote
 when you report a problem.
 
-::: tip Where the notifications come from
-A reconversion often finishes while you are in SpriteStudio rather than in the editor, so it is
-reported as a **toast** rather than a modal — nothing steals focus from the app you are
-actually using. A conversion that *failed* is a dialog, because the reason is in it and the
-editor has no console to fall back on; so is a name clash, because you have to rename
-something. The other dialog is for a project that has never imported anything and has no
-`.sspj` to import, which tells a first-time author where projects go.
-:::
-
-::: tip The editor keeps drawing while it converts
-The converter is WebAssembly and its call is synchronous, so it runs in a Worker: on a folder
-of 20 sample projects, the longest pause is under 50 ms. Reading and writing the files happens
-on the editor's thread, because the filesystem reaches a plugin through a renderer-only bridge;
-that is where the pause comes from.
-:::
-
 ### What counts as a change
 
-Each pass compares, per project, the **newest modification time anywhere in that project's
-folder** (`.sspj`, `.ssae`, `.ssce`, textures — all of it) against what the last **successful**
-import covered. Newer sources mean a reconversion; otherwise the project is skipped and costs a
-few `stat` calls. A pack is also rebuilt when it was last converted by a different converter build, so
-updating the plugin refreshes packs whose sources have not changed.
+When the project opens, each project's folder is compared — the **newest modification time
+anywhere in it** (`.sspj`, `.ssae`, `.ssce`, textures, all of it) — against what the last
+**successful** conversion covered, and only newer sources are converted again. Updating the
+plugin rebuilds packs whose sources have not changed, and a missing output folder
+(`data/others/ssdata/Ringo/`, say) is rebuilt too.
 
-That record is a small JSON file, `.ss_import_state.json`, at the project root:
+A reconversion deletes the files the previous one wrote and this one no longer does, so an
+animation you remove in SpriteStudio stops appearing in the dropdowns and in your exported
+game. Anything you put in the folder yourself stays.
 
-```json
-{
-  "packs": {
-    "data/others/ssdata/Ringo": {
-      "source_mtime": 1753142400000,
-      "converter": "…",
-      "source": "SpriteStudio_Source/Ringo/Ringo.sspj",
-      "files": ["Ringo.ssab", "Ringo.ssqb", "Ringo.png"]
-    }
-  }
-}
-```
-
-A record is keyed by the folder it describes and names the `.sspj` it came from, so a pack can
-always be traced back to a project. `files` is what that import wrote: the next conversion of
-the same folder deletes whatever it no longer produces, so an animation you remove in
-SpriteStudio stops appearing in the dropdowns and stops being copied into your exported game.
-Only files a record says the importer wrote are ever removed — anything you put in the folder
-yourself stays.
-
-Two details are worth knowing, because they decide when a reconversion happens:
-
-- **The state file, not the output timestamps, is the source of truth.** A conversion that
-  fails partway still leaves fresh-looking files behind, so output mtimes cannot tell you a run
-  succeeded. Only a record written *after* a successful run lets the next one skip.
-- **A missing output forces a reconversion** even when the state says the pack is current. If
-  you delete `data/others/ssdata/Ringo/`, the next pass rebuilds it.
-
-So if you ever want to force everything to be rebuilt, delete `.ss_import_state.json` (or just
-the output folder) and reopen the project.
+The record is `.ss_import_state.json` at the project root. To force everything to be rebuilt,
+delete it (or the output folder) and reopen the project.
 
 ### Bringing in a pack you converted yourself
 
-The importer owns `SpriteStudio_Source/` → `data/others/ssdata/`, but it does not own the
-**Animation pack** dropdown. That dropdown lists **every `.ssab` anywhere under `data/`**, with
-the imported ones first and the rest alphabetically.
+The **Animation pack** dropdown lists **every `.ssab` anywhere under `data/`**, with the
+imported ones first and the rest alphabetically.
 
 A pack you converted with [`ssconverter-web`, SSConverter GUI or `ssconverter-cli`](/usage/assets)
 and copied in by hand shows up like any other — put it wherever suits your project (next to a
@@ -196,7 +142,7 @@ it is accurate for those packs too.
 Only what lives under `SpriteStudio_Source/` is kept in sync automatically. **Reconvert now**
 still works on a pack you copied *out of* `data/others/ssdata/`, and rebuilds it where it now
 lies rather than back where it was generated; a pack converted somewhere else entirely has no
-project here to rebuild it from, and the plugin says so rather than pretending.
+project here to rebuild it from, and the plugin says so.
 
 ### Where the importer puts things
 
@@ -204,22 +150,16 @@ project here to rebuild it from, and the plugin says so rather than pretending.
 | --- | --- | --- |
 | `SpriteStudio_Source/` | Your `.sspj` projects — the input | No |
 | `data/others/ssdata/<name>/` | The converted `.ssab` + textures | **Yes** — this is what the game plays |
-| `.ss_import_state.json` | What the last successful import covered, and which `.sspj` each folder came from | No |
-| `ss_import_log.txt` | Everything the importer did, and why anything failed | No |
+| `.ss_import_state.json` | What the last successful conversion covered, and which `.sspj` each folder came from | No |
+| `ss_import_log.txt` | Every conversion, and why anything failed | No |
 | `.ss_tools/ssconverter_bg.wasm` | The converter itself, moved out of the plugin folder | No |
 
-TyranoBuilder's export is three unfiltered copies — `index.html`, `data/`, `tyrano/` — so
-**anything left under `data/` ships inside every built game.** That is the whole reason the
-author-time files above sit outside it, and why the converter is relocated to
-`.ss_tools/` the first time the plugin runs: a `.tbp` can only deliver files into the plugin
-folder, which is under `data/`, but nothing except the editor half ever reads the converter.
+An exported game carries everything under `data/`, so the author-time files sit outside it.
 
 ### Reading the log
 
-TyranoBuilder's main window is built with no menu bar and no DevTools shortcut, so
-`console.log` is invisible to an author. Every line the importer writes therefore also lands in
-**`ss_import_log.txt`** at your project root, flushed as it happens and appended across
-sessions (it is started over once it passes 256 KB):
+The editor has no console, so every line the importer writes lands in **`ss_import_log.txt`**
+at your project root, appended across sessions (it is started over once it passes 256 KB):
 
 ```
 2026-07-29T04:15:02.118Z  --- session start ---
@@ -230,21 +170,16 @@ sessions (it is started over once it passes 256 KB):
 2026-07-29T04:15:02.220Z  first pass: 1 converted, 0 up to date, 0 failed, 0 dropped
 ```
 
-The `converter:` line says where the wasm ran. `worker` is the normal answer; `inline` means
-the editor could not start a Worker, the reason is printed on the same line, and conversions
-block the UI while they run.
+When the `converter:` line says `inline`, the editor stops responding while a conversion runs;
+the reason is on the same line.
 
 It also records the host environment it found at startup, which is the first thing to look at
 if the plugin does not seem to be doing anything.
 
 ### Current limits
 
-- **Reading and writing the files still happens on the editor's thread.** The conversion itself
-  does not — it runs in a Worker — but a plugin reaches the filesystem only through a
-  renderer-only bridge, so the I/O around each project cannot move. On a folder of 20 sample
-  projects that leaves pauses under 50 ms.
 - **The folders are fixed.** `SpriteStudio_Source/` and `data/others/ssdata/` are not
-  configurable (Ren'Py's importer takes an override; this one does not).
+  configurable.
 - **Textures are copied, not embedded.** Each pack ships its images as sibling files next to
   the `.ssab`. Keep them together if you move a pack by hand.
 - **Only `.sspj` files are picked up.** Anything else in `SpriteStudio_Source/` is ignored
