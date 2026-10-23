@@ -28,9 +28,9 @@ features:
     link: /ja/customize/events
     linkText: カスタマイズ
   - title: 拡張・貢献する
-    details: 全体構成を理解した上で、パッケージやプラグインを改造し、自分のビルドをゲームで試し、実際のホストで確かめます。ファイルの地図は開発者向けガイドに、設計原則とビルド手順は CONTRIBUTING にあります。
-    link: /ja/development/
-    linkText: コントリビューション
+    details: 全体構成を理解した上で、パッケージやプラグインを改造し、自分のビルドをゲームで試し、実際のホストで確かめます。開発者向けのページはビルドガイドとプレイヤーの構成で、設計原則とビルド手順は CONTRIBUTING にあります。
+    link: /ja/development/build
+    linkText: ビルドガイド
 ---
 
 <!-- See the English index.md for why these are relative paths on a raw <a>,

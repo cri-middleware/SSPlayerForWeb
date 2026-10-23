@@ -38,7 +38,7 @@ const demo = (text: string, link: string) => ({ text, link, target: '_blank', re
 // top-to-bottom, the effort required rises naturally:
 //   1. Getting started / Usage / API  … copy-paste and it runs
 //   2. Customize            … a little effort to polish expression
-//   3. Development           … understand the whole, then touch core / WASM
+//   3. For Player & SDK Developers … understand the whole, then touch core / WASM
 export default withMermaid({
   title: 'SpriteStudio Player for Web',
   description: 'A player for SpriteStudio animations in the browser (WebAssembly + PixiJS / WebGL)',
@@ -231,9 +231,10 @@ export default withMermaid({
             ],
           },
           {
-            text: 'Development',
+            text: 'For Player & SDK Developers',
             items: [
-              { text: 'Developer guide', link: '/development/' },
+              { text: 'Build Guide', link: '/development/build' },
+              { text: 'How the Player Is Put Together', link: '/development/architecture' },
               { text: 'Contributing', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
             ],
           },
@@ -332,9 +333,10 @@ export default withMermaid({
             ],
           },
           {
-            text: '開発・拡張',
+            text: 'Player・SDK 開発者向けガイド',
             items: [
-              { text: '開発者向けガイド', link: '/ja/development/' },
+              { text: 'ビルドガイド', link: '/ja/development/build' },
+              { text: 'プレイヤーの構成', link: '/ja/development/architecture' },
               { text: 'コントリビューション', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
             ],
           },
