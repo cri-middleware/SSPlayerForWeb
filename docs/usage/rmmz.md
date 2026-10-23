@@ -230,12 +230,6 @@ option's reach — see [5. Sound](#_5-sound).
 Enter `SpriteStudio_Source,ssconverter_bg.wasm` in the deployment's
 **[Exclude files/folders]** option; the game needs neither to play.
 
-::: warning Migrating an existing project
-If your assets are still under `img/spritestudio/`, move the whole folder up one level to
-`spritestudio/` and update the `SSAB File` argument of each `Show SS` / `Set SS As
-Picture` command (drop the leading `img/`).
-:::
-
 **Trade-off — encryption.** MZ's *Encrypt Image Files* option is likewise limited to
 `img/`, so SS textures outside `img/` ship unencrypted. If you want them
 encrypted, move the **whole `spritestudio/` folder back under `img/`**
