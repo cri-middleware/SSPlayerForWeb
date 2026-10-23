@@ -88,9 +88,7 @@ data/others/ssdata/
 
 ## 3. Quick start
 
-A minimal scenario that shows one looping character:
-
-Load the plugin once, at the top of your game:
+A minimal scenario that shows one looping character. Load the plugin once, at the top of your game:
 
 ```
 ; first.ks
@@ -360,8 +358,7 @@ element. A CSS transform therefore moves and resizes where the character sits wi
 scaling or rotating what is drawn there.
 
 Use **`[ss_pos]`** (instant) or **`[ss_move]`** (tween), which scale the animation itself
-and about its own anchor. `[anim]`'s `scale` / `rotate` pivoted on the screen centre rather
-than the anchor, so they were never accurate for this anyway.
+and about its own anchor.
 :::
 
 **When to use which:**
@@ -421,8 +418,6 @@ the player; neither touches any other sound. `[stopse]` does not reach these sou
 
 ## Known limitations
 
-TyranoBuilder is covered by its own plugin, `@spritestudio/ssplayer-tyranobuilder`, which ships
-as a `.tbp`, adds SpriteStudio components to the palette, and converts your `.sspj` from inside
-the editor — see [TyranoBuilder](/usage/tyranobuilder). What neither integration covers yet is
-listed in [Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
+What this plugin does not cover is listed in
+[Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
 
