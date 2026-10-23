@@ -6,28 +6,23 @@ description: Choosing a renderer package, installing it, and the prerequisites.
 
 ## Choosing a package
 
-Pick a single renderer package that matches your environment.
+Pick the one package that matches your environment.
 
 | Environment | Package |
 |---|---|
 | Frameworkless / drop-in (includes the `<ss-player>` Web Component) | [`@spritestudio/ssplayer-webgl`](/usage/webgl) |
 | Apps already built on **PixiJS v8** | [`@spritestudio/ssplayer-pixi`](/usage/pixi) |
 | Building your own renderer on a custom engine | `@spritestudio/ssplayer-core` |
+| A game made in **RPG Maker MZ** | [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) (a plugin) |
+| A **TyranoScript** visual novel | [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) (a plugin) |
+| A game made in **TyranoBuilder** | [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) (a `.tbp` plugin) |
 
 Each renderer package re-exports `@spritestudio/ssplayer-core`, so you don't need to
 install the core separately.
 
-::: tip Framework integrations
-Integrations for game/VN frameworks are built on `ssplayer-webgl` and ship as **IIFE
-plugin bundles** loaded by the host framework's plugin system — so they are consumed as
-plugins, not installed from npm:
-
-- **RPG Maker MZ** (`@spritestudio/ssplayer-rmmz`) — see [Using RPG Maker MZ](/usage/rmmz).
-- **TyranoScript** (`@spritestudio/ssplayer-tyranoscript`) — see [Using TyranoScript](/usage/tyrano).
-- **TyranoBuilder** (`@spritestudio/ssplayer-tyranobuilder`) — distributed as a `.tbp`. See [Using TyranoBuilder](/usage/tyranobuilder).
-
-What each one does not cover yet is in [Limitations & Scope](/limitations).
-:::
+RPG Maker MZ, TyranoScript and TyranoBuilder take a plugin rather than an npm package, and
+need no code: each one's page has its whole setup, and what each does not cover is in
+[Limitations & Scope](/limitations). The rest of this page installs the other packages.
 
 ## Install
 

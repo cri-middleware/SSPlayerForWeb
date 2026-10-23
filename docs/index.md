@@ -20,7 +20,7 @@ hero:
 # "how to read these docs" table to explain themselves.
 features:
   - title: Get it running
-    details: Install a package, load a .ssab, and play it in a few lines. Read "Getting started" → "Usage" → "API reference" in that order and you have a working player. Nothing below is needed to get there.
+    details: Install a package, load a .ssab, and play it in a few lines — or, in RPG Maker MZ, TyranoScript or TyranoBuilder, add a plugin and write no code at all. Read "Getting started" → "Usage" → "API reference" in that order and you have a working player. Nothing below is needed to get there.
     link: /setup/install
     linkText: Getting started
   - title: Build it out
