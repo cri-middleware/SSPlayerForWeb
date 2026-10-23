@@ -98,13 +98,13 @@ project in the builder for its template, then run
 `pnpm --filter tyranobuilderexample run setup <that project>`; its README has the details.
 
 How the editor hosts the plugin, including the parts the vendor does not document, is in the
-source comments, chiefly `src/plugin.builder.ts`, `src/builderTypes.d.ts`, `src/buttonParam.ts`
-and `src/managerPanel.ts`. The conversion itself — the state file, the freshness rule, the Worker,
-the log — is [`ssconverter-importer`](../ssconverter-importer)'s, shared with the MZ plugin;
-`src/builderImporter.ts` is what the builder adds to it. The docs site's
-[Developer guide](https://cri-middleware.github.io/SSPlayerForWeb/development/) maps the files,
-says how to drive the real editor from a script, and gives the reasons that span them. What is
-left to build is in [ROADMAP.md](./ROADMAP.md).
+source comments, chiefly `src/plugin.builder.ts`, `src/builderTypes.d.ts` and `src/buttonParam.ts`.
+The conversion itself — the state file, the freshness rule, the Worker, the log — is
+[`ssconverter-importer`](../ssconverter-importer)'s, shared with the MZ plugin. The docs site's
+[Build Guide](https://cri-middleware.github.io/SSPlayerForWeb/development/build) says how to drive
+the real editor from a script, and
+[How the Player Is Put Together](https://cri-middleware.github.io/SSPlayerForWeb/development/architecture)
+gives the reasons that span the packages. What is left to build is in [ROADMAP.md](./ROADMAP.md).
 
 ## License
 

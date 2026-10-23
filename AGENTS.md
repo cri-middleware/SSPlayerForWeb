@@ -11,7 +11,7 @@
 *   **Never break a line between two Japanese characters**; Chrome renders the break as a space.
 *   **Finish with this repository's checks**: the commands in [CONTRIBUTING.md](./CONTRIBUTING.md), and
     `pnpm run build` again before checking an example, since examples consume the **built** packages; a
-    plugin change is checked in its real host, as the developer guide shows. Read
+    plugin change is checked in its real host, as the Build Guide shows. Read
     what a run says it verified, not its exit code — several checks pass, or skip themselves, without a
     prerequisite.
 *   **Do not restate what another file owns**; the table below says which file. A fact no file owns goes
@@ -36,7 +36,8 @@ editor plugins.
 | Question | File |
 |---|---|
 | Using a package: every tag, command, API and limitation | the [docs site](./docs/) |
-| Working on a package or plugin: the file map, a changed build in a game, checking in the real host, reasons that span files | the docs site's [developer guide](./docs/development/index.md) |
+| A changed build in a game, checking in the real host | the docs site's [Build Guide](./docs/development/build.md) |
+| How the packages fit together, and the reasons that span them | [docs/development/architecture.md](./docs/development/architecture.md) |
 | Install, convert, first frame, where to read next; in a package's README, also working on it | [README.md](./README.md) and each package's, per `SpriteStudio-SDK/MAINTAINING_PLAYERS.md` |
 | The architecture diagram | [README.md](./README.md) |
 | Constraints, setup, build, test, code generation, the docs site | [CONTRIBUTING.md](./CONTRIBUTING.md) |

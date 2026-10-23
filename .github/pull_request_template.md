@@ -18,7 +18,7 @@ that is useful information, not a problem.
 
 - [ ] `pnpm run build:wasm` (or `download:wasm`), `pnpm run build`, `pnpm test` — read the summary; the conversion suites skip without the converter WASM
 - [ ] `pnpm run dev` in `examples/webgl-example` or `examples/pixi-example`
-- [ ] For an MZ, TyranoScript or TyranoBuilder plugin change, checked in the host itself — the docs' developer guide (`docs/development/`) shows how
+- [ ] For an MZ, TyranoScript or TyranoBuilder plugin change, checked in the host itself — the docs' Build Guide (`docs/development/build.md`) shows how
 - [ ] `scripts/build-docs.sh`, if the docs changed — nothing on a pull request builds them
 - [ ] Not run — see notes below / 未実行（理由は下記）
 
