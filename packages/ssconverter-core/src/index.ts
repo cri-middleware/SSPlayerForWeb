@@ -39,8 +39,10 @@ export interface ConvertOptions {
 /**
  * Convert a SpriteStudio project to `.ssab`/`.ssqb`.
  *
- * `files` maps every path in the project directory (including the `.sspj`) to
- * its bytes. Pure — no fs, no DOM. Call {@link init} first.
+ * `files` maps every path in the project directory to its bytes, and must hold
+ * exactly one `.sspj`: the converter takes no name, so leave out any other
+ * `.sspj` in that directory ({@link locateProject} finds the one). Pure — no
+ * fs, no DOM. Call {@link init} first.
  */
 export function convertProject(
   files: Map<string, Uint8Array>,

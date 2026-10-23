@@ -96,6 +96,9 @@ async function main() {
                 readDirRecursive(fullPath);
             } else {
                 const relativePath = path.relative(sspjDir, fullPath).replace(/\\/g, '/');
+                // Exactly one .sspj tells the converter which project this is;
+                // leave out any other (a backup beside it, a project below it).
+                if (relativePath !== path.basename(sspjPath) && relativePath.toLowerCase().endsWith('.sspj')) continue;
                 filesMap.set(relativePath, new Uint8Array(fs.readFileSync(fullPath)));
             }
         }

@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { AutoImporter } from './autoImporter.js';
+import { convertProjectAt, type Converter } from './converter.js';
 import { HostFs } from './hostFs.js';
 import type { HostBackend } from './hostTypes.js';
 
@@ -157,6 +158,36 @@ function countEntries(dir: string): number {
 
 afterAll(() => {
   for (const dir of tempRoots) rmSync(dir, { recursive: true, force: true });
+});
+
+describe('convertProjectAt', () => {
+  it('hands the converter the one .sspj it was asked for, and no other', async () => {
+    // The converter takes no name: with two `.sspj` in the map it converted
+    // whichever came last, so a backup beside the project replaced it without
+    // a word, and a project in a subfolder failed the whole conversion.
+    const root = makeEmptyProject();
+    const dir = nodePath.join(root, 'hero');
+    mkdirSync(nodePath.join(dir, 'old'), { recursive: true });
+    for (const name of ['hero.sspj', 'hero.ssae', 'hero_old.sspj', 'old/hero.sspj']) {
+      writeFileSync(nodePath.join(dir, name), name);
+    }
+
+    let handed: string[] = [];
+    const converter: Converter = {
+      version: 'test',
+      schema: { ssab: 0, ssqb: 0 },
+      mode: 'inline',
+      detail: '',
+      convert: async (files) => {
+        handed = [...files.keys()].sort();
+        return { output: new Map(), assets: new Map() };
+      },
+      dispose: () => {},
+    };
+    await convertProjectAt(fsFor('faithful'), converter, nodePath.join(dir, 'hero.sspj'), nodePath.join(root, 'out'), () => 0);
+
+    expect(handed).toEqual(['hero.ssae', 'hero.sspj']);
+  });
 });
 
 describe.skipIf(!haveFixtures)('AutoImporter', () => {
