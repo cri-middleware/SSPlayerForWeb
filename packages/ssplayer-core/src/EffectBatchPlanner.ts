@@ -34,10 +34,13 @@ export interface EffectDrawItem {
  * per-vertex math is already shared, in `GeometryBuilder.buildEffectCommand`.
  *
  * **Only consecutive commands merge**, so draw order — and with it blend
- * compositing — comes out exactly as the runtime laid it down.
+ * compositing — comes out exactly as the runtime laid it down. The Brain gives
+ * every effect part a batch of its own, so a renderer gathers the effect batches
+ * that follow one another into one list ({@link collect} with `append`), and
+ * commands merge across parts too.
  *
  * Allocation-free in steady state: {@link items} is a pooled array reused across
- * frames, valid until the next {@link collect}.
+ * frames, valid until the next {@link collect} that does not append.
  */
 export class EffectBatchPlanner<T extends InternalPlayerBase<T>> {
     /** The gathered commands. Only the first {@link count} entries are live. */
@@ -52,10 +55,11 @@ export class EffectBatchPlanner<T extends InternalPlayerBase<T>> {
      * Gather every drawable particle command of the batch at `startRank`, in
      * draw order. Skips a fully transparent effect part and one whose slot is
      * not playing (`getEffectDrawPlan` returns null), and drops empty commands.
-     * Returns {@link EffectBatchPlanner.count | count}.
+     * With `append`, the commands go after the ones already gathered instead of
+     * replacing them. Returns {@link EffectBatchPlanner.count | count}.
      */
-    public collect(player: T, frameData: FrameData, drawOrder: Uint16Array, startRank: number, count: number): number {
-        this.count = 0;
+    public collect(player: T, frameData: FrameData, drawOrder: Uint16Array, startRank: number, count: number, append = false): number {
+        if (!append) this.count = 0;
         for (let c = 0; c < count; c++) {
             const partIdx = drawOrder[startRank + c];
             const alpha = this._raw.partAlphaOf(frameData, partIdx);
