@@ -323,9 +323,14 @@ export async function convertProjectAt(
   const started = now();
   const sourceDir = fs.path.dirname(sspjPath);
 
+  // The converter is told which project to convert only by being handed
+  // exactly one `.sspj`, so any other under this folder — a backup beside it,
+  // a project in a subfolder — stays out of the map.
+  const sspjName = fs.path.basename(sspjPath);
   const files = new Map<string, Uint8Array>();
   for (const full of fs.walkFiles(sourceDir)) {
     const rel = fs.path.relative(sourceDir, full).replace(/\\/g, '/');
+    if (rel !== sspjName && rel.toLowerCase().endsWith('.sspj')) continue;
     files.set(rel, fs.readBinary(full));
   }
   if (files.size === 0) {
