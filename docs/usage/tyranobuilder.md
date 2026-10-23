@@ -21,21 +21,16 @@ what the components place is what you see here.
 
 ## 1. Install
 
-::: tip Which download do I need?
-`ssplayer.tbp` is the only one. It already contains the TyranoScript plugin ZIP's contents plus
-the editor half, so **do not also install that ZIP** — both unpack to
-`data/others/plugin/ssplayer/`, and stacking them leaves the two halves on different versions.
-:::
-
 1. Download `ssplayer.tbp` from
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true): open the Release named
    `@spritestudio/ssplayer-tyranobuilder <version>` and take the file under **Assets**, not
-   the *Source code* archives.
+   the *Source code* archives. It is the only download you need: it already holds the
+   TyranoScript plugin ZIP's contents.
 2. In TyranoBuilder, open **Project → Plugins**, press **Add New** and pick that file.
 
-**Do not rename the file.** TyranoBuilder derives the plugin's id from the filename and then
-looks for `<id>/<id>.builder.js` inside the archive, so `ssplayer-1.2.0.tbp` would install
-nothing. The version lives in the release, not in the filename.
+**Keep the file named `ssplayer.tbp`.** TyranoBuilder finds the plugin by its file name, so
+under another name, such as `ssplayer-1.2.0.tbp`, nothing installs. The Release's name tells
+you the version.
 
 Nothing else to set up — no plugin tag to write, no runtime to initialise.
 

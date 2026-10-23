@@ -29,8 +29,8 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
    open the Release named `@spritestudio/ssplayer-tyranobuilder <version>` and take the
    file under **Assets**, not the *Source code* archives. In TyranoBuilder, open
    **Project → Plugins**, press **Add New** and pick that file. Keep the name `ssplayer.tbp` —
-   TyranoBuilder takes the plugin's name from it. It is the only download you need; do not
-   also install the TyranoScript plugin ZIP.
+   TyranoBuilder takes the plugin's name from it. It is the only download you need: it
+   already holds the TyranoScript plugin ZIP's contents.
 2. **Add an animation**: Copy your SpriteStudio project — the whole folder, not the `.sspj`
    alone — into `SpriteStudio_Source/` in your game's folder (the plugin creates it the
    first time the project opens), then open or reopen the project. It is converted as the

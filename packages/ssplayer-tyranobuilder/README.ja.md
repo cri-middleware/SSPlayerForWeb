@@ -19,7 +19,7 @@
 
 ティラノビルダーと、**SpriteStudio 7.5 以上**で作成したプロジェクトを用意してください。
 
-1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。ティラノビルダーはファイル名からプラグイン名を決めるので、`ssplayer.tbp` の名前は変えないでください。必要なのはこのファイルだけで、TyranoScript 用のプラグイン ZIP を一緒に入れてはいけません。
+1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。ティラノビルダーはファイル名からプラグイン名を決めるので、`ssplayer.tbp` の名前は変えないでください。必要なのはこのファイルだけです（TyranoScript 用プラグイン ZIP の中身も入っています）。
 2. **アニメを追加**: SpriteStudio のプロジェクトを `.sspj` だけでなくフォルダごと、ゲームのフォルダの `SpriteStudio_Source/` にコピーし（初めてプロジェクトを開いたときにプラグインが作ります）、プロジェクトを開くか開き直します。開くときに変換され、メッセージで知らせます。
 
    ```

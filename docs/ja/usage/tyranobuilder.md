@@ -17,14 +17,10 @@ TyranoScript 版のサンプルシーンです。ランタイムは同じなの�
 
 ## 1. インストール
 
-::: tip どれをダウンロードすればよい？
-必要なのは `ssplayer.tbp` だけです。TyranoScript 用プラグイン ZIP の中身はすべて含まれているため、**あの ZIP を重ねて入れないでください。** 展開先はどちらも `data/others/plugin/ssplayer/` で、両方入れるとエディタ側とランタイム側でバージョンがずれます。
-:::
-
-1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。必要なのはこのファイルだけです（TyranoScript 用プラグイン ZIP の中身も入っています）。
 2. ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。
 
-**ファイル名は変えないでください。** ティラノビルダーはファイル名からプラグイン id を決め、その id でアーカイブ内の `<id>/<id>.builder.js` を探します。`ssplayer-1.2.0.tbp` にすると何もインストールされません。バージョンはファイル名ではなくリリース側で管理します。
+**ファイル名は `ssplayer.tbp` のまま使います。** ティラノビルダーはファイル名からプラグインを探すので、`ssplayer-1.2.0.tbp` のように名前が変わると何もインストールされません。版は Release の名前で分かります。
 
 これ以外の準備は不要です。プラグイン読み込みのタグも、ランタイムの初期化も要りません。
 

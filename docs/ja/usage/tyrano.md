@@ -28,10 +28,6 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 
 ## 1. インストール
 
-::: tip どちらをダウンロードすればよい？
-ここで説明するプラグイン ZIP は **TyranoScript 用**です。**ティラノビルダー**で制作する場合は代わりに `ssplayer.tbp` を入れてください。`.tbp` はこの ZIP のランタイム 3 ファイルをそのまま内包した上で、エディタ側（コンポーネントと自動変換）を追加したものなので、ダウンロードはそれ 1 つで足ります。**どちらか一方だけを入れてください。** 展開先はどちらも同じ `data/others/plugin/ssplayer/` で、重ねて入れるとエディタ側とランタイム側でバージョンがずれます。
-:::
-
 1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍すると `ssplayer/` フォルダが入っています（`init.ks`＝ローダ、`main.js`＝プラグイン本体、
    `ssruntime_bg.wasm`＝ランタイム、`readme.txt`＝バージョンと簡単な使い方）。
 2. その `ssplayer/` フォルダを Tyrano プロジェクトの `data/others/plugin/` にコピーします。

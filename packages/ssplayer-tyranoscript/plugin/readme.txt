@@ -76,10 +76,7 @@
     このフォルダは TyranoScript 用です。ティラノビルダーには別配布の
     ssplayer.tbp があり、こちらのファイルをそのまま内包した上で、
     エディタ側（コンポーネントと .sspj の自動変換）を追加しています。
-
-    どちらか一方だけを入れてください。展開先はどちらも
-    data/others/plugin/ssplayer/ で、重ねて入れるとエディタ側と
-    ランタイム側でバージョンがずれます。
+    ティラノビルダーでは ssplayer.tbp だけを入れます。
 
 ■ ドキュメント
     https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano
