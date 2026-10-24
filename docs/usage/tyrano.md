@@ -255,7 +255,8 @@ Tracks lay more animations **above** the character's own one (track 0, the one
 Frame numbers count from 0, as SpriteStudio shows them. `[ss_seek]` keeps a playing
 animation playing and a paused one paused. `[ss_section]` moves the playhead to the
 start of the section; leave out `start=` or `end=` for that edge of the animation, and
-both to go back to the whole of it. `direction=` is `forward` or `backward`, and
+both to go back to the whole of it. An `end=` before `start=` is refused: the section stays as it
+was, and the browser console says why. `direction=` is `forward` or `backward`, and
 `style=` is `normal` (once through) or `pingpong`.
 
 Speed and direction stay when the animation changes. A section does not, because a

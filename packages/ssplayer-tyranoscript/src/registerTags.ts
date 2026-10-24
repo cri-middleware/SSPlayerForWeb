@@ -230,9 +230,12 @@ function requireNumber(attr: string, value: unknown): number {
   return n;
 }
 
-/** Push a section to the player; `undefined` is the whole animation. */
-function applySection(player: SSPlayer, section: SSSection | undefined): void {
-  player.setAnimationSection(section?.start ?? -1, section?.end ?? -1);
+/**
+ * Push a section to the player; `undefined` is the whole animation. False when
+ * the player refused it (an end before the start), which it reports itself.
+ */
+function applySection(player: SSPlayer, section: SSSection | undefined): boolean {
+  return player.setAnimationSection(section?.start ?? -1, section?.end ?? -1);
 }
 
 function gameResolution(kag: TyranoKag): { w: number; h: number } {
@@ -1186,7 +1189,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const side = (attr: string, value: unknown): number =>
           value === undefined || value === '' ? -1 : requireNumber(attr, value);
         const section = { start: side('start', pm.start), end: side('end', pm.end) };
-        applySection(entry.player, section);
+        // A refused section is not kept, so a save does not carry it either.
+        if (!applySection(entry.player, section)) return;
         entry.meta.section = section.start < 0 && section.end < 0 ? undefined : section;
         persist();
       });

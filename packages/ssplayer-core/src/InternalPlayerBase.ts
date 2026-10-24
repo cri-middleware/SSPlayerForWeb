@@ -209,7 +209,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // setup the new pack still needs — leaving it bound but unplayable.
         this._animationName = '';
         this._canvasRect = undefined;
-        this._reportedLabels = null;
+        this._reported = null;
         // A new pack means new assets: re-arm the one-shot load.
         this._resourceManager?.reset?.();
         this._prepared = null;
@@ -1059,8 +1059,29 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return this.runtimeManager.context.get_frame_rate();
     }
 
-    public setAnimationSection(startFrame: number, endFrame: number) {
-        this.runtimeManager.context.set_animation_section(startFrame, endFrame);
+    /**
+     * Limits playback to `[startFrame, endFrame]` of the current animation,
+     * both ends included, so a section whose ends are one frame holds it. An
+     * end outside the animation (`-1`, say) is the animation's edge on that
+     * side. Moves the playhead to the start of the section.
+     *
+     * Returns false, and says so once in the console, when both ends are inside
+     * the animation and the end is before the start; the section and the
+     * playhead stay as they were.
+     */
+    public setAnimationSection(startFrame: number, endFrame: number): boolean {
+        try {
+            this.runtimeManager.context.set_animation_section(startFrame, endFrame);
+            return true;
+        } catch (cause) {
+            const animation = this._animationName;
+            this.reportOnce(
+                `section\u0000${animation}\u0000${startFrame}\u0000${endFrame}`,
+                `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} refused the section ` +
+                    `${startFrame}..${endFrame} (${String(cause)}): its end is before its start, so the section stays as it was.`,
+            );
+            return false;
+        }
     }
 
     public getAnimationSectionStart(): number {
@@ -1098,8 +1119,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
         const from = start + startOffset;
         const to = end + endOffset;
-        this.setAnimationSection(from, to < from ? from : to);
-        return true;
+        return this.setAnimationSection(from, to < from ? from : to);
     }
 
     /**
@@ -1117,16 +1137,20 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         return data ? labelTableOf(data) : null;
     }
 
-    // What setAnimationSectionByLabel has already reported since the last bind.
-    private _reportedLabels: Set<string> | null = null;
+    // What the section setters have already reported since the last bind.
+    private _reported: Set<string> | null = null;
 
-    private reportMissingLabel(animation: string, labels: string[]): void {
-        const key = `${animation}\u0000${labels.join('\u0000')}`;
-        const reported = (this._reportedLabels ??= new Set());
+    private reportOnce(key: string, message: string): void {
+        const reported = (this._reported ??= new Set());
         if (reported.has(key)) return;
         reported.add(key);
+        console.warn(message);
+    }
+
+    private reportMissingLabel(animation: string, labels: string[]): void {
         const names = labels.map(l => `"${l}"`).join(' or ');
-        console.warn(
+        this.reportOnce(
+            `label\u0000${animation}\u0000${labels.join('\u0000')}`,
             `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} has no label ${names}, ` +
                 'so the section stays as it was.',
         );
