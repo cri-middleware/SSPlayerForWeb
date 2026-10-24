@@ -599,9 +599,10 @@ export class SSPlayer {
   /**
    * {@link setAnimationSection} with the ends named by labels of the current
    * animation, each with an offset in frames. `_start` / `_end` name the
-   * animation's first / last frame, and an end before the start is pulled up to
-   * it. Returns false, and says so once in the console, when the animation has
-   * no such label; the section is then left as it was.
+   * animation's first / last frame. Returns false, and says so once in the
+   * console, when the animation has no such label or the frames it lands on
+   * are a section {@link setAnimationSection} refuses; the section is then
+   * left as it was.
    */
   public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
     return this.internalPlayer.setAnimationSectionByLabel(startLabel, endLabel, startOffset, endOffset);

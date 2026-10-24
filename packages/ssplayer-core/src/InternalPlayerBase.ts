@@ -1070,6 +1070,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * playhead stay as they were.
      */
     public setAnimationSection(startFrame: number, endFrame: number): boolean {
+        return this.applySection(startFrame, endFrame, `${startFrame}..${endFrame}`);
+    }
+
+    private applySection(startFrame: number, endFrame: number, given: string): boolean {
         try {
             this.runtimeManager.context.set_animation_section(startFrame, endFrame);
             return true;
@@ -1078,7 +1082,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this.reportOnce(
                 `section\u0000${animation}\u0000${startFrame}\u0000${endFrame}`,
                 `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} refused the section ` +
-                    `${startFrame}..${endFrame} (${String(cause)}): its end is before its start, so the section stays as it was.`,
+                    `${given} (${String(cause)}): its end is before its start, so the section stays as it was.`,
             );
             return false;
         }
@@ -1097,13 +1101,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * **current** animation: from `startLabel`'s frame plus `startOffset` to
      * `endLabel`'s frame plus `endOffset`, the rule an Instance part's start and
      * end labels follow. `_start` and `_end` name the animation's first and last
-     * frame, as they do in SpriteStudio, and an end that lands before the start
-     * is pulled up to it. It does not play.
+     * frame, as they do in SpriteStudio. It does not play.
      *
-     * Returns false when the current animation has no such label, and says so
-     * once in the console; the section stays as it was. Before an animation is
-     * set up it returns false and says nothing. Like any section,
-     * {@link setAnimation} wipes it.
+     * Returns false when the current animation has no such label, or when the
+     * frames it lands on are a section {@link setAnimationSection} refuses (both
+     * inside the animation, the end before the start), and says so once in the
+     * console; the section stays as it was. Before an animation is set up it
+     * returns false and says nothing. Like any section, {@link setAnimation}
+     * wipes it.
      */
     public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
         const animation = this._animationName;
@@ -1119,7 +1124,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
         const from = start + startOffset;
         const to = end + endOffset;
-        return this.setAnimationSection(from, to < from ? from : to);
+        return this.applySection(from, to, `"${startLabel}".."${endLabel}" (${from}..${to})`);
     }
 
     /**
@@ -1916,12 +1921,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * It is the outline as drawn. A part with a cell is its four drawn corners,
      * skew and vertex deform included. A Mesh part is the axis-aligned box
      * around its vertices, which the runtime hands over in world space and a
-     * skinned mesh's own transform does not describe. A Shape is the box around
-     * its own vertices, through its pose, since a vertex deform can carry them
-     * outside its size; another part with a size and no cell is that size
-     * around its pivot. Null, bone, Instance and Effect parts have no size, and
-     * read null; a part drawn at alpha 0 still has an outline. It evaluates
-     * nothing.
+     * skinned mesh's own transform does not describe. A part with a size and no
+     * cell — a Shape — is that size around its pivot, through its pose; a vertex
+     * deform that carries a Shape's vertices outside its size is not followed.
+     * Null, bone, Instance and Effect parts have no size, and read null; a part
+     * drawn at alpha 0 still has an outline. It evaluates nothing.
      */
     public getPartQuad(part: number | string, out?: Float32Array): SSPartQuad | null {
         const index = this.resolveKnownPartIndex(part);
@@ -1991,28 +1995,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             if (v + 8 > local.length) return false;
             for (let c = 0; c < 8; c += 2) this.placeCorner(w, m, local[v + c], local[v + c + 1], out, c);
         } else {
-            let l: number, t: number, r: number, b: number;
-            const shapeCount = rm.getShapeVertexCounts()[index] ?? 0;
-            if (shapeCount > 0) {
-                // Part-local, 12 vertices to a part, as buildShape reads them.
-                const sv = rm.getShapeVertices();
-                const at = index * 24;
-                l = t = Infinity;
-                r = b = -Infinity;
-                for (let i = at; i < at + shapeCount * 2; i += 2) {
-                    if (sv[i] < l) l = sv[i];
-                    if (sv[i] > r) r = sv[i];
-                    if (sv[i + 1] < t) t = sv[i + 1];
-                    if (sv[i + 1] > b) b = sv[i + 1];
-                }
-            } else {
-                const width = state.sizeX(), height = state.sizeY();
-                if (!(width > 0 && height > 0)) return false;
-                l = -(0.5 + state.pivotX()) * width;
-                t = -(0.5 + state.pivotY()) * height;
-                r = l + width;
-                b = t + height;
-            }
+            const width = state.sizeX(), height = state.sizeY();
+            if (!(width > 0 && height > 0)) return false;
+            const l = -(0.5 + state.pivotX()) * width;
+            const t = -(0.5 + state.pivotY()) * height;
+            const r = l + width;
+            const b = t + height;
             this.placeCorner(w, m, l, t, out, 0);
             this.placeCorner(w, m, r, t, out, 2);
             this.placeCorner(w, m, l, b, out, 4);

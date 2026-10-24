@@ -86,10 +86,10 @@ player.setAnimation('attack');
 player.setAnimationSectionByLabel('windup', 'hit', 0, -1); // up to the frame before `hit`
 ```
 
-`_start` and `_end` name the animation's first and last frame, as they do in SpriteStudio, and an end
-that lands before the start is pulled up to it. A label the animation does not have returns `false`,
-says so once in the console, and leaves the section as it was. Like `setAnimationSection`, it does not
-play, and `setAnimation` wipes it.
+`_start` and `_end` name the animation's first and last frame, as they do in SpriteStudio. A label the
+animation does not have, or labels and offsets that land on a section `setAnimationSection` refuses,
+return `false`, say so once in the console, and leave the section as it was. Like
+`setAnimationSection`, it does not play, and `setAnimation` wipes it.
 
 ## Flip and offset
 

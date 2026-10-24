@@ -151,7 +151,7 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
             player.destroy();
         }, 60_000);
 
-        it('reports a Shape as the box around its vertices, deformed past its size or not', async () => {
+        it('reports a Shape as its size around its pivot, and does not follow a vertex deform past it', async () => {
             await initializeWasm(readFileSync(RUNTIME_WASM));
             const packs = await convert(OVERALL);
             const player = new DirectInternalPlayer(textures);
@@ -161,7 +161,9 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
             await player.prepareResources();
             player.setAnimation(player.animationNames[0]);
             const counts = () => player.runtimeManager.getShapeVertexCounts();
-            let checked = 0;
+            const rounded = (box: Box) => box.map(v => Math.round(v * 1000));
+            const first = new Map<number, number[]>();
+            let undeformed = 0;
             let deformed = 0;
             for (let frame = 0; frame < player.getTotalFrames(); frame++) {
                 player.setFrameNo(frame);
@@ -170,21 +172,23 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
                     if (!(counts()[part] > 0)) continue;
                     const quad = player.getPartQuad(part);
                     if (!quad) continue;
-                    const [l, t, r, b] = boundsOf(quad);
-                    const drawn = builtPositions(player, part);
-                    const [dl, dt, dr, db] = boundsOf(drawn);
-                    expect(dl).toBeGreaterThanOrEqual(l - 1e-3);
-                    expect(dt).toBeGreaterThanOrEqual(t - 1e-3);
-                    expect(dr).toBeLessThanOrEqual(r + 1e-3);
-                    expect(db).toBeLessThanOrEqual(b + 1e-3);
-                    // Shape's pose neither turns nor skews, so the box is tight.
-                    expect([dl, dt, dr, db].map(v => Math.round(v * 1000))).toEqual([l, t, r, b].map(v => Math.round(v * 1000)));
-                    if (l < -48 || t < -48) deformed++;
-                    checked++;
+                    // Neither Shape part's pose moves, so its outline reads the
+                    // same on every frame, vertex deform or not.
+                    const box = rounded(boundsOf(quad));
+                    if (!first.has(part)) first.set(part, box);
+                    expect(box).toEqual(first.get(part));
+                    const drawn = rounded(boundsOf(builtPositions(player, part)));
+                    if (drawn.join() === box.join()) {
+                        undeformed++;
+                    } else {
+                        // `Shape` keys its top-left vertex out past its 96x96 size.
+                        expect(drawn[0] < box[0] || drawn[1] < box[1]).toBe(true);
+                        deformed++;
+                    }
                 }
             }
-            expect(checked).toBeGreaterThan(0);
-            // Shape keys its top-left vertex out past the 96x96 box.
+            expect(first.size).toBe(2);
+            expect(undeformed).toBeGreaterThan(0);
             expect(deformed).toBeGreaterThan(0);
             player.destroy();
         }, 60_000);

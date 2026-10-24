@@ -122,10 +122,25 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
             player.destroy();
         }, 60_000);
 
-        it('pulls an end before the start up to it', async () => {
+        it('refuses labels that land on an end before the start, keeps the section, and reports it once', async () => {
             const player = await loaded();
-            expect(player.setAnimationSectionByLabel('End', 'Start')).toBe(true);
-            expect(section(player)).toEqual([20, 20]);
+            player.setAnimationSectionByLabel('Start', 'End');
+            player.setFrameNo(15);
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+            expect(player.setAnimationSectionByLabel('End', 'Start')).toBe(false);
+            expect(player.setAnimationSectionByLabel('End', 'Start')).toBe(false);
+            expect(player.setAnimationSectionByLabel('Start', 'Start', 0, -1)).toBe(false);
+            expect(section(player)).toEqual([10, 20]);
+            expect(player.getFrameNo()).toBe(15);
+
+            expect(warn).toHaveBeenCalledTimes(2);
+            const said = String(warn.mock.calls[0][0]);
+            expect(said).toContain('"End".."Start" (20..10)');
+            expect(said).toContain('animation "anime_1"');
+
+            expect(player.setAnimationSectionByLabel('Start', 'Start')).toBe(true);
+            expect(section(player)).toEqual([10, 10]);
             player.destroy();
         }, 60_000);
 
