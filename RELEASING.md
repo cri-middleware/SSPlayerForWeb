@@ -30,7 +30,7 @@ prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refna
 A run releases every package whose current version has no Release yet, named or not. So the first release names every package at the version it already has, or leaves the plugins out with `-f release_plugins=false`:
 
 ```text
-ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
+ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssplayer-pixi-ui@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
 ```
 
 Step 4 takes the decision in place of its `<versions>`, in quotes, as in `"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"`.
@@ -263,7 +263,7 @@ prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refna
 run は、指定したかどうかに関わらず、現在のバージョンにまだ Release が無いパッケージをすべて出します。そのため初回のリリースでは、全パッケージをいま持っているバージョンのまま指定するか、`-f release_plugins=false` でプラグインを外します。
 
 ```text
-ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
+ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssplayer-pixi-ui@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
 ```
 
 手順 4 は、決めた組を引用符で囲んで `<versions>` の位置に受け取ります（`"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"` など）。

@@ -67,7 +67,8 @@ fi
 
 # --- 4. the packages ------------------------------------------------------
 if [ ! -f packages/ssplayer-core/dist/index.js ] || [ ! -f packages/ssconverter-core/dist/index.js ] \
-  || [ ! -f packages/ssplayer-webgl/dist/index.js ] || [ ! -f packages/ssplayer-pixi/dist/index.js ]; then
+  || [ ! -f packages/ssplayer-webgl/dist/index.js ] || [ ! -f packages/ssplayer-pixi/dist/index.js ] \
+  || [ ! -f packages/ssplayer-pixi-ui/dist/index.js ]; then
   echo ">> $APP: pnpm run build"
   pnpm run build
 fi

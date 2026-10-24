@@ -29,6 +29,7 @@ import {
   type WebPlaybackDirection,
   type WebPlaybackStyle,
   type SSPartFollowOptions,
+  type SSPartQuad,
   type SSTrackBlend,
   type SSTrackSync,
   type SSPartAttachment as SSPartAttachmentOf,
@@ -561,6 +562,10 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public setAnimationSection(startFrame: number, endFrame: number): void {
     this.internalPlayer.setAnimationSection(startFrame, endFrame);
   }
+  /** {@link setAnimationSection} with the ends named by labels of the current animation. See the core player for the rule. */
+  public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
+    return this.internalPlayer.setAnimationSectionByLabel(startLabel, endLabel, startOffset, endOffset);
+  }
   public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle): void {
     this.internalPlayer.setPlaybackDirection(direction, style);
   }
@@ -844,6 +849,24 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    */
   public isPartSkinnedMesh(part: number | string): boolean | null {
     return this.internalPlayer.isPartSkinnedMesh(part);
+  }
+
+  /**
+   * The outline the part is drawn with on the frame last drawn, as four corners
+   * `[ltx, lty, rtx, rty, lbx, lby, rbx, rby]` in the space
+   * {@link getPartTransform} reports, or null when the part is unknown, hidden,
+   * or draws nothing of its own. See the core player for each kind of part.
+   */
+  public getPartQuad(part: number | string, out?: Float32Array): SSPartQuad | null {
+    return this.internalPlayer.getPartQuad(part, out);
+  }
+
+  /**
+   * The index of the front-most part whose {@link getPartQuad} outline holds
+   * `(x, y)`, among `parts` (every part when omitted), or -1 when none does.
+   */
+  public hitTestPart(x: number, y: number, parts?: ReadonlyArray<number | string>): number {
+    return this.internalPlayer.hitTestPart(x, y, parts);
   }
 
   /**

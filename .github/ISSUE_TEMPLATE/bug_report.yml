@@ -43,6 +43,7 @@ body:
       options:
         - "@spritestudio/ssplayer-webgl"
         - "@spritestudio/ssplayer-pixi"
+        - "@spritestudio/ssplayer-pixi-ui"
         - "@spritestudio/ssplayer-rmmz"
         - "@spritestudio/ssplayer-tyranoscript"
         - "@spritestudio/ssplayer-tyranobuilder"

@@ -540,6 +540,26 @@ export class SSRuntimeManager {
     }
 
     /**
+     * SSAB `AnimationData` for the animation named `animationName` in the bound
+     * pack, set up or not, re-derived from the borrowed buffer like
+     * {@link getCurrentAnimationData}. `null` before a resource is bound or for a
+     * name the pack does not have.
+     */
+    public getAnimationDataByName(animationName: string, out?: AnimationData): AnimationData | null {
+        if (!this.resource) return null;
+        const ptr = this.context.get_ssab_buf();
+        const len = this.context.get_ssab_len();
+        if (ptr === 0 || len === 0) return null;
+        const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
+        const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(new flatbuffers.ByteBuffer(buf));
+        const anim = out ?? new AnimationData();
+        for (let i = 0; i < ssab.animationsLength(); i++) {
+            if (ssab.animations(i, anim)?.name() === animationName) return anim;
+        }
+        return null;
+    }
+
+    /**
      * Get all referenced sound assets (name and path) for the currently loaded SSAB.
      */
     public getSounds(): SoundAsset[] {

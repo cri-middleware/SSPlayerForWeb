@@ -1,5 +1,5 @@
 import { Container, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, SSPartFollower, type SSPartFollowOptions, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, SSPartFollower, type SSPartFollowOptions, type SSPartQuad, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -839,6 +839,17 @@ export class SSPlayer extends Container {
         this.internalPlayer.setAnimationSection(startFrame, endFrame);
     }
 
+    /**
+     * {@link setAnimationSection} with the ends named by labels of the current
+     * animation, each with an offset in frames. `_start` / `_end` name the
+     * animation's first / last frame, and an end before the start is pulled up to
+     * it. Returns false, and says so once in the console, when the animation has
+     * no such label; the section is then left as it was.
+     */
+    public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
+        return this.internalPlayer.setAnimationSectionByLabel(startLabel, endLabel, startOffset, endOffset);
+    }
+
     public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle) {
         this.internalPlayer.setPlaybackDirection(direction, style);
     }
@@ -1122,6 +1133,27 @@ export class SSPlayer extends Container {
      */
     public isPartSkinnedMesh(part: number | string): boolean | null {
         return this.internalPlayer.isPartSkinnedMesh(part);
+    }
+
+    /**
+     * The outline the part is drawn with on the frame last drawn, as four corners
+     * `[ltx, lty, rtx, rty, lbx, lby, rbx, rby]` in the space
+     * {@link getPartTransform} reports — or null when the part is unknown or
+     * hidden, or draws nothing of its own (a Null, bone, Instance or Effect part).
+     * Skew and vertex deform are included; a Mesh part reads the box around its
+     * vertices. Pass `out` (a `Float32Array(8)`) to avoid allocation.
+     */
+    public getPartQuad(part: number | string, out?: Float32Array): SSPartQuad | null {
+        return this.internalPlayer.getPartQuad(part, out);
+    }
+
+    /**
+     * The index of the front-most part whose {@link getPartQuad} outline holds
+     * `(x, y)` — a point in the space {@link getPartTransform} reports — among
+     * `parts` (names or indices; every part when omitted), or -1 when none does.
+     */
+    public hitTestPart(x: number, y: number, parts?: ReadonlyArray<number | string>): number {
+        return this.internalPlayer.hitTestPart(x, y, parts);
     }
 
     // --- Part overrides ---

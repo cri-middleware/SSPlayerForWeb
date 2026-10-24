@@ -15,7 +15,7 @@ SpriteStudio の Player に共通すること（再生・モーションブレ�
 **再生側**は、ページやゲームの中で動きます。
 
 - `ssplayer-core` はランタイムの WebAssembly 版を包み、各フレームを描画データに変えます。DOM にもエンジンにも依存しません。
-- `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。
+- `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。`ssplayer-pixi-ui` は `ssplayer-pixi` のプレイヤーを `@pixi/ui` のボタンに入れます。`@pixi/ui` を連れてくるので、アニメーションを再生するだけのアプリが入れずに済むよう、別のパッケージにしています。
 - ホスト向けのプラグインは `ssplayer-webgl` の上に載ります。`ssplayer-rmmz` は RPG ツクール MZ のプラグインです。アニメはピクチャに属するので、MZ が移動・拡大し、ゲームと一緒にセーブします。動かすのはプラグインコマンドです。`ssplayer-tyranoscript` は `[ss_*]` タグで、ティラノビルダーと TyranoStudio のランタイム側でもあります。各キャラクターは Tyrano のレイヤー上の `<div>` で、その状態はセーブに入ります。
 
 **変換側**は、`.sspj` を `.ssab` に変えます。

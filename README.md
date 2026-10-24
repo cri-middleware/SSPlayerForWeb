@@ -41,6 +41,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 |---|---|---|
 | **Standalone / no framework** (`<ss-player>` Web Component) | [`@spritestudio/ssplayer-webgl`](./packages/ssplayer-webgl) | [examples/webgl-example](./examples/webgl-example) |
 | **PixiJS v8 app** | [`@spritestudio/ssplayer-pixi`](./packages/ssplayer-pixi) | [examples/pixi-example](./examples/pixi-example) |
+| **Buttons drawn by animations in a PixiJS v8 app** (`@pixi/ui`) | [`@spritestudio/ssplayer-pixi-ui`](./packages/ssplayer-pixi-ui) | [examples/pixi-example](./examples/pixi-example) (`ui.html`) |
 | **Building your own renderer** | [`@spritestudio/ssplayer-core`](./packages/ssplayer-core) | — |
 | **Converting `.sspj` → `.ssab`** | [`ssconverter-web`](./packages/ssconverter-web) (Web tool + Node CLI) | — |
 | **Embedding conversion in your own app/service** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
@@ -111,10 +112,12 @@ flowchart TD
         core["ssplayer-core<br/>(WASM, engine-agnostic)"]
         webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
+        pixiui["ssplayer-pixi-ui<br/>@pixi/ui buttons"]
         rmmz["ssplayer-rmmz<br/>RPG Maker MZ (beta)"]
         tyrano["ssplayer-tyranoscript<br/>TyranoScript (beta)"]
         core --> webgl
         core --> pixi
+        pixi --> pixiui
         webgl --> rmmz
         webgl --> tyrano
     end

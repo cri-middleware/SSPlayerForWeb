@@ -38,6 +38,7 @@ export default defineConfig(({ command }) => {
         input: {
           index: path.resolve(import.meta.dirname, 'index.html'),
           blend: path.resolve(import.meta.dirname, 'blend.html'),
+          ui: path.resolve(import.meta.dirname, 'ui.html'),
         },
         external: ['pixi.js'],
       }

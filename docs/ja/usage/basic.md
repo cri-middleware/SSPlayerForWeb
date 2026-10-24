@@ -69,6 +69,15 @@ player.frameSkipEnabled = false;                       // フレームスキッ�
 
 区間を設定すると `startFrame` / `endFrame` / `totalFrames` はいずれもその区間に追従します。
 
+区間の両端は、今のアニメーションのラベルで指定することもできます。それぞれにフレーム数のオフセットを足せます。
+
+```ts
+player.setAnimation('attack');
+player.setAnimationSectionByLabel('windup', 'hit', 0, -1); // `hit` の 1 フレーム手前まで
+```
+
+`_start` と `_end` は SpriteStudio と同じくアニメーションの最初と最後のフレームを指し、終わりが始まりより前になったときは始まりに揃えます。アニメーションに無いラベルを渡すと `false` を返し、コンソールに 1 度だけ知らせ、区間はそのままにします。`setAnimationSection` と同じく再生は始めず、`setAnimation` で消えます。
+
 ## 反転とオフセット {#flip-and-offset}
 
 ```ts

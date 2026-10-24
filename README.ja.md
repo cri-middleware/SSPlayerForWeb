@@ -41,6 +41,7 @@
 |---|---|---|
 | **単体 / フレームワーク非依存**（`<ss-player>` Web Component） | [`@spritestudio/ssplayer-webgl`](./packages/ssplayer-webgl) | [examples/webgl-example](./examples/webgl-example) |
 | **PixiJS v8 アプリ** | [`@spritestudio/ssplayer-pixi`](./packages/ssplayer-pixi) | [examples/pixi-example](./examples/pixi-example) |
+| **PixiJS v8 アプリで、アニメーションで描くボタン**（`@pixi/ui`） | [`@spritestudio/ssplayer-pixi-ui`](./packages/ssplayer-pixi-ui) | [examples/pixi-example](./examples/pixi-example)（`ui.html`） |
 | **自作レンダラーを実装する** | [`@spritestudio/ssplayer-core`](./packages/ssplayer-core) | — |
 | **`.sspj` → `.ssab` を変換する** | [`ssconverter-web`](./packages/ssconverter-web)（Web ツール + Node CLI） | — |
 | **変換機能を自作アプリ/サービスに組み込む** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
@@ -109,10 +110,12 @@ flowchart TD
         core["ssplayer-core<br/>WASM・エンジン非依存"]
         webgl["ssplayer-webgl<br/>単体 WebGL + &lt;ss-player&gt;"]
         pixi["ssplayer-pixi<br/>PixiJS v8"]
+        pixiui["ssplayer-pixi-ui<br/>@pixi/ui buttons"]
         rmmz["ssplayer-rmmz<br/>RPG ツクール MZ（beta）"]
         tyrano["ssplayer-tyranoscript<br/>TyranoScript（beta）"]
         core --> webgl
         core --> pixi
+        pixi --> pixiui
         webgl --> rmmz
         webgl --> tyrano
     end

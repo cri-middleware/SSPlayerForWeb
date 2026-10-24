@@ -41,6 +41,9 @@ hide or re-cell a single part at run time, see
 [Part control](/customize/part-overrides) — `SSPlayer` carries the same override methods as the
 WebGL player, and re-renders the current frame when one is set while playback is stopped.
 
+To make an animation a button — its labels playing hover, pressed, disabled and focus, and its parts
+taking the pointer — see [UI buttons (PixiJS)](/usage/pixi-ui).
+
 ## Masks on the first frame
 
 Mask and clipping parts are drawn through an offscreen pass that needs the renderer, and a player

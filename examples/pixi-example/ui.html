@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- PIXI_IMPORT_MAP -->
+  <title>UI buttons</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; background: #16161d; color: #e6e6ea;
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; box-sizing: border-box; min-height: 100vh;
+    }
+    canvas { display: block; width: 720px; height: 480px; background: #1a1a2e; border-radius: 8px; flex: none; }
+    aside { flex: 1; min-width: 300px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    select { background: #22222c; color: inherit; border: 1px solid #33333f; border-radius: 6px; padding: 4px 8px; }
+    label { display: block; margin: 6px 0; }
+    table { border-collapse: collapse; margin: 8px 0 12px; }
+    td { padding: 1px 10px 1px 0; vertical-align: top; }
+    td:first-child { color: #85859a; white-space: nowrap; }
+    td b { color: #7ee787; font-weight: 600; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    kbd {
+      font-family: ui-monospace, Menlo, Consolas, monospace; background: #22222c;
+      border: 1px solid #33333f; border-radius: 4px; padding: 0 5px;
+    }
+    #events { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: #c9c9d4; white-space: pre; }
+    a { color: #d6e9ff; }
+  </style>
+</head>
+<body>
+  <canvas id="view" width="720" height="480"></canvas>
+  <aside>
+    <h1>UI buttons</h1>
+    <p>
+      Ringo stands in for a button's artwork: each state plays one of its animations through a clip
+      (normal <code>wait1</code>, hover <code>walk</code>, pressed <code>attack1</code>, disabled
+      <code>dead</code>, focused <code>jump_wait</code>).
+      &nbsp;<a href="index.html">&larr; main demo</a>
+    </p>
+    <label>Left button takes pointers on
+      <select id="hit">
+        <option value="box">the whole canvas</option>
+        <option value="any">any part</option>
+        <option value="apple" selected>apple</option>
+        <option value="head+body">head + body</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="outlines" checked> Show the outlines the hit test uses</label>
+    <label><input type="checkbox" id="enabled" checked> Enabled</label>
+    <label>Reduced motion
+      <select id="motion">
+        <option value="os">follow the OS</option>
+        <option value="on">on</option>
+        <option value="off">off</option>
+      </select>
+    </label>
+    <table id="state"></table>
+    <p><kbd>Tab</kbd> turns Pixi's accessibility layer on and moves the focus between the buttons;
+      <kbd>Enter</kbd> presses the focused one. Moving the mouse turns it off again.</p>
+    <div>Signals:</div>
+    <div id="events"></div>
+  </aside>
+  <script type="module" src="/src/ui-demo.ts"></script>
+</body>
+</html>

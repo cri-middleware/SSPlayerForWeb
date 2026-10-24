@@ -101,6 +101,7 @@ graph LR
 |---|---|
 | [`@spritestudio/ssplayer-webgl`](/ja/usage/webgl) | 依存ゼロの単体 WebGL レンダラー（Web Component `<ss-player>` を含む）。フレームワークを使わない構成やドロップイン利用に向いています。 |
 | [`@spritestudio/ssplayer-pixi`](/ja/usage/pixi) | すでに **PixiJS v8** で構築したアプリ向けのレンダラーです。 |
+| [`@spritestudio/ssplayer-pixi-ui`](/ja/usage/pixi-ui) | `ssplayer-pixi` の上で、アニメーションを `@pixi/ui` のボタンにします。ラベルで状態を再生し、パーツでポインタを受けます。 |
 | `@spritestudio/ssplayer-core` | エンジン非依存の WASM コア（レンダラーを自作する場合）です。 |
 | [`ssconverter-web`](/ja/usage/assets) | `.sspj` → `.ssab` 変換ツール（ブラウザツール + Node CLI）です。 |
 | [`@spritestudio/ssconverter-core`](/ja/usage/assets) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合）です。 |

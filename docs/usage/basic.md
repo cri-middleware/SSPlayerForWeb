@@ -74,6 +74,18 @@ player.frameSkipEnabled = false;                       // stop skipping frames; 
 
 `startFrame` / `endFrame` / `totalFrames` all follow the section once one is set.
 
+The ends can be labels of the current animation instead, each with an offset in frames:
+
+```ts
+player.setAnimation('attack');
+player.setAnimationSectionByLabel('windup', 'hit', 0, -1); // up to the frame before `hit`
+```
+
+`_start` and `_end` name the animation's first and last frame, as they do in SpriteStudio, and an end
+that lands before the start is pulled up to it. A label the animation does not have returns `false`,
+says so once in the console, and leaves the section as it was. Like `setAnimationSection`, it does not
+play, and `setAnimation` wipes it.
+
 ## Flip and offset
 
 ```ts
