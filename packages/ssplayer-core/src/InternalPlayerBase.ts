@@ -1070,6 +1070,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * playhead stay as they were.
      */
     public setAnimationSection(startFrame: number, endFrame: number): boolean {
+        return this.applySection(startFrame, endFrame, `${startFrame}..${endFrame}`);
+    }
+
+    private applySection(startFrame: number, endFrame: number, given: string): boolean {
         try {
             this.runtimeManager.context.set_animation_section(startFrame, endFrame);
             return true;
@@ -1078,7 +1082,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this.reportOnce(
                 `section\u0000${animation}\u0000${startFrame}\u0000${endFrame}`,
                 `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} refused the section ` +
-                    `${startFrame}..${endFrame} (${String(cause)}): its end is before its start, so the section stays as it was.`,
+                    `${given} (${String(cause)}): its end is before its start, so the section stays as it was.`,
             );
             return false;
         }
@@ -1097,13 +1101,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * **current** animation: from `startLabel`'s frame plus `startOffset` to
      * `endLabel`'s frame plus `endOffset`, the rule an Instance part's start and
      * end labels follow. `_start` and `_end` name the animation's first and last
-     * frame, as they do in SpriteStudio, and an end that lands before the start
-     * is pulled up to it. It does not play.
+     * frame, as they do in SpriteStudio. It does not play.
      *
-     * Returns false when the current animation has no such label, and says so
-     * once in the console; the section stays as it was. Before an animation is
-     * set up it returns false and says nothing. Like any section,
-     * {@link setAnimation} wipes it.
+     * Returns false when the current animation has no such label, or when the
+     * frames it lands on are a section {@link setAnimationSection} refuses (both
+     * inside the animation, the end before the start), and says so once in the
+     * console; the section stays as it was. Before an animation is set up it
+     * returns false and says nothing. Like any section, {@link setAnimation}
+     * wipes it.
      */
     public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
         const animation = this._animationName;
@@ -1119,7 +1124,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         }
         const from = start + startOffset;
         const to = end + endOffset;
-        return this.setAnimationSection(from, to < from ? from : to);
+        return this.applySection(from, to, `"${startLabel}".."${endLabel}" (${from}..${to})`);
     }
 
     /**
