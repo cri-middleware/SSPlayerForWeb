@@ -29,6 +29,7 @@ import {
   type WebPlaybackDirection,
   type WebPlaybackStyle,
   type SSPartFollowOptions,
+  type SSPartQuad,
   type SSTrackBlend,
   type SSTrackSync,
   type SSPartAttachment as SSPartAttachmentOf,
@@ -848,6 +849,24 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    */
   public isPartSkinnedMesh(part: number | string): boolean | null {
     return this.internalPlayer.isPartSkinnedMesh(part);
+  }
+
+  /**
+   * The outline the part is drawn with on the frame last drawn, as four corners
+   * `[ltx, lty, rtx, rty, lbx, lby, rbx, rby]` in the space
+   * {@link getPartTransform} reports, or null when the part is unknown, hidden,
+   * or draws nothing of its own. See the core player for each kind of part.
+   */
+  public getPartQuad(part: number | string, out?: Float32Array): SSPartQuad | null {
+    return this.internalPlayer.getPartQuad(part, out);
+  }
+
+  /**
+   * The index of the front-most part whose {@link getPartQuad} outline holds
+   * `(x, y)`, among `parts` (every part when omitted), or -1 when none does.
+   */
+  public hitTestPart(x: number, y: number, parts?: ReadonlyArray<number | string>): number {
+    return this.internalPlayer.hitTestPart(x, y, parts);
   }
 
   /**

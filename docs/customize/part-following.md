@@ -53,6 +53,8 @@ player.detachFromPart(sword);
 | `getPartTransform(part, out?)` | The part's transform for the current frame, as a 2D affine `[m00, m01, m10, m11, tx, ty]`, with the player's `flipX` / `flipY` / `offsetX` / `offsetY` applied. `null` if the part is unknown |
 | `isPartHidden(part)` | Whether the part is hidden on the current frame. `null` if the part is unknown |
 | `isPartSkinnedMesh(part)` | Whether the part is a **skinned (bone-bound) mesh** — a poor follow target (see the warning above). `null` if the part is unknown |
+| `getPartQuad(part, out?)` | The outline the part is drawn with on the current frame, as four corners `[ltx, lty, rtx, rty, lbx, lby, rbx, rby]` in the same space as `getPartTransform` (see [A part's outline](#a-parts-outline)). `null` if the part is unknown or hidden, or draws nothing of its own |
+| `hitTestPart(x, y, parts?)` | Index of the front-most part whose outline holds the point, among `parts` (names or indices; every part when omitted), or `-1` |
 | `onFrame(cb)` | Fires on each advanced frame, after the world matrices are final. Returns an unsubscribe function (`Unsubscribe`) |
 | `findPartIndex(partName)` | Part index, or `-1` if it isn't in the current animation |
 
@@ -151,6 +153,25 @@ const { x, y, rotation, scaleX, scaleY } = decomposePartAffine(m);
 
 > For a mirrored part, the sign of the determinant is folded into `scaleY` (it comes back negative).
 
+## A part's outline {#a-parts-outline}
+
+`getPartQuad()` returns the four corners a part is drawn with — left-top, right-top, left-bottom,
+right-bottom — in the same space as `getPartTransform()`, so a rotated part gives a rotated quad.
+`hitTestPart()` tests a point against those outlines and answers the front-most part that holds it:
+
+```ts
+// A point in the player's own space: on PixiJS, a pointer event's position through player.toLocal().
+const index = player.hitTestPart(local.x, local.y, ['button_face']);
+if (index >= 0) console.log('hit', player.getPartNames()[index]);
+```
+
+The outline is what is drawn. A part with a cell gives its four drawn corners, skew and vertex deform
+included. A Mesh part gives the axis-aligned box around its vertices, which is where it is drawn even
+when bones bind it. A Shape gives the box around its own vertices, through its transform, so a vertex
+deform that carries a corner out is inside it. Null, bone, Instance and Effect parts draw nothing of
+their own and have no outline, and neither does a hidden part; a part drawn at alpha 0 still has one.
+Like `getPartTransform()`, both read the frame last drawn and evaluate nothing.
+
 ## Building a follow-target picker
 
 If you build UI that lets someone choose which part to follow, mirror what the SpriteStudio, Unity and Godot editors do: **list every part, but keep skinned mesh parts out of reach** so they can't be chosen by accident — while still accepting a name typed by hand, since following one is occasionally deliberate.
@@ -180,7 +201,7 @@ The `examples/part-follow` demo does exactly this: the Ringo character's skinned
 - It only restores a hide **it imposed itself**, though. A target you hid with `visible = false` stays hidden, including through a detach.
 - `isPartHidden()` reports the part's `hide` in the frame the player last drew, the same frame `getPartTransform()` reports: the animation's **`hide` keyframe** with any force-hide from `setPartVisibilityOverride()` applied, its cascade included (see [Part control](/customize/part-overrides)). It evaluates nothing, so an override reads back from the next frame drawn, together with the drawing.
 - A part's world matrix is computed every frame regardless of `hide`, so with `onHide: 'follow'` (the default) **a hidden part is still followed**.
-- Part names resolve against the parts of the animation the player itself is running. **Parts inside an Instance part (the child animation) cannot be specified** (the Instance part itself can).
+- Part names resolve against the parts of the animation the player itself is running. **Parts inside an Instance part (the child animation) cannot be specified** (the Instance part itself can), and `getPartQuad()` / `hitTestPart()` do not see them.
 - Calling `attachToPart()` twice with the same target replaces the earlier attachment.
 - Changing animation re-resolves part names automatically, so nothing has to be attached again. **Following also survives a swap to a different `.ssab` that shares the same rig.**
 - Destroying the player detaches every target automatically, so it never destroys or leaves hidden a target the host still owns.

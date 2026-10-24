@@ -12,6 +12,7 @@ import { GeometryBuilder } from './GeometryBuilder.js';
 import { addSharedPack, retainSharedPack } from './SharedPacks.js';
 import { canvasRectFrom, type SSPlacementBox } from './Placement.js';
 import { labelFrameOf, labelTableOf, type SSLabelTable } from './Labels.js';
+import { partQuadContains, type SSPartQuad } from './PartQuad.js';
 
 export interface EffectChildState {
     slot: EffectSlotHandle;
@@ -1879,6 +1880,135 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const index = this.resolveKnownPartIndex(part);
         if (index < 0) return null;
         return this.runtimeManager.getPartSkinnedFlag(index);
+    }
+
+    /**
+     * The outline the part is drawn with on the frame last evaluated, as an
+     * {@link SSPartQuad} in the space {@link getPartTransform} reports, flip and
+     * offset included — or null when the part is unknown or hidden, draws
+     * nothing of its own, or no frame has been evaluated. Pass `out` (a
+     * `Float32Array(8)`) to avoid allocation.
+     *
+     * It is the outline as drawn. A part with a cell is its four drawn corners,
+     * skew and vertex deform included. A Mesh part is the axis-aligned box
+     * around its vertices, which the runtime hands over in world space and a
+     * skinned mesh's own transform does not describe. A Shape is the box around
+     * its own vertices, through its pose, since a vertex deform can carry them
+     * outside its size; another part with a size and no cell is that size
+     * around its pivot. Null, bone, Instance and Effect parts have no size, and
+     * read null; a part drawn at alpha 0 still has an outline. It evaluates
+     * nothing.
+     */
+    public getPartQuad(part: number | string, out?: Float32Array): SSPartQuad | null {
+        const index = this.resolveKnownPartIndex(part);
+        if (index < 0) return null;
+        const frameData = this.runtimeManager.getLastFrameData();
+        if (!frameData || index >= frameData.partsLength()) return null;
+        const state = frameData.parts(index, this._partState);
+        if (!state || state.hide()) return null;
+        const quad = out ?? new Float32Array(8);
+        return this.partQuadInto(index, state, quad) ? quad : null;
+    }
+
+    /**
+     * The index of the front-most part whose {@link getPartQuad} outline holds
+     * `(x, y)`, among `parts` (names or indices; every part when omitted), on
+     * the frame last evaluated — or -1 when none does, as {@link findPartIndex}
+     * answers. The point is in the space {@link getPartTransform} reports. A
+     * name the animation does not have is skipped.
+     */
+    public hitTestPart(x: number, y: number, parts?: ReadonlyArray<number | string>): number {
+        const frameData = this.runtimeManager.getLastFrameData();
+        const order = frameData?.drawOrderArray();
+        if (!frameData || !order) return -1;
+        let targets: number[] | null = null;
+        if (parts) {
+            targets = [];
+            for (const p of parts) {
+                const i = this.resolveKnownPartIndex(p);
+                if (i >= 0) targets.push(i);
+            }
+        }
+        const count = frameData.partsLength();
+        const quad = this._hitQuad;
+        // Back to front, and the runtime leaves hidden parts out of the order.
+        for (let rank = order.length - 1; rank >= 0; rank--) {
+            const index = order[rank];
+            if (index >= count || (targets && !targets.includes(index))) continue;
+            const state = frameData.parts(index, this._partState);
+            if (!state || state.hide()) continue;
+            if (this.partQuadInto(index, state, quad) && partQuadContains(quad, x, y)) return index;
+        }
+        return -1;
+    }
+
+    private readonly _hitQuad = new Float32Array(8);
+
+    private partQuadInto(index: number, state: PartState, out: Float32Array): boolean {
+        const rm = this.runtimeManager;
+        const w = rm.getWorldMatrices();
+        const m = index * 16;
+        if (m + 16 > w.length) return false;
+        const meshAt = rm.getMeshVertexOffsets();
+        if (index + 1 < meshAt.length && meshAt[index + 1] > meshAt[index]) {
+            const xs = rm.getMeshVerticesX(), ys = rm.getMeshVerticesY();
+            let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+            for (let v = meshAt[index]; v < meshAt[index + 1]; v++) {
+                if (xs[v] < l) l = xs[v];
+                if (xs[v] > r) r = xs[v];
+                if (ys[v] < t) t = ys[v];
+                if (ys[v] > b) b = ys[v];
+            }
+            out[0] = l; out[1] = t; out[2] = r; out[3] = t;
+            out[4] = l; out[5] = b; out[6] = r; out[7] = b;
+        } else if (state.cell() >= 0) {
+            const local = rm.getLocalVertices();
+            const v = index * 10;
+            if (v + 8 > local.length) return false;
+            for (let c = 0; c < 8; c += 2) this.placeCorner(w, m, local[v + c], local[v + c + 1], out, c);
+        } else {
+            let l: number, t: number, r: number, b: number;
+            const shapeCount = rm.getShapeVertexCounts()[index] ?? 0;
+            if (shapeCount > 0) {
+                // Part-local, 12 vertices to a part, as buildShape reads them.
+                const sv = rm.getShapeVertices();
+                const at = index * 24;
+                l = t = Infinity;
+                r = b = -Infinity;
+                for (let i = at; i < at + shapeCount * 2; i += 2) {
+                    if (sv[i] < l) l = sv[i];
+                    if (sv[i] > r) r = sv[i];
+                    if (sv[i + 1] < t) t = sv[i + 1];
+                    if (sv[i + 1] > b) b = sv[i + 1];
+                }
+            } else {
+                const width = state.sizeX(), height = state.sizeY();
+                if (!(width > 0 && height > 0)) return false;
+                l = -(0.5 + state.pivotX()) * width;
+                t = -(0.5 + state.pivotY()) * height;
+                r = l + width;
+                b = t + height;
+            }
+            this.placeCorner(w, m, l, t, out, 0);
+            this.placeCorner(w, m, r, t, out, 2);
+            this.placeCorner(w, m, l, b, out, 4);
+            this.placeCorner(w, m, r, b, out, 6);
+        }
+        // The same root affine the renderer folds into the geometry.
+        const root = this.getRootAffine();
+        if (root) {
+            for (let c = 0; c < 8; c += 2) {
+                const x = out[c], y = out[c + 1];
+                out[c] = root[0] * x + root[1] * y + root[4];
+                out[c + 1] = root[2] * x + root[3] * y + root[5];
+            }
+        }
+        return true;
+    }
+
+    private placeCorner(w: Float32Array, m: number, x: number, y: number, out: Float32Array, at: number): void {
+        out[at] = w[m] * x + w[m + 4] * y + w[m + 12];
+        out[at + 1] = w[m + 1] * x + w[m + 5] * y + w[m + 13];
     }
 
     private resolvePartIndex(part: number | string): number {

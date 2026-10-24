@@ -11,7 +11,6 @@ This file lists unfinished work only. Technical constraints live in [Limitations
 The DOM *is* the UI toolkit here, and `<ss-player>` is already the integration point — a Custom Element with a `ResizeObserver`, a shared-overlay mode and a standalone mode, and it fits the animation into its box. The vocabulary is shared with the sibling Players: `fit` / `align` for placement, a part rect read-out for hit areas, and a UI-state map.
 
 - [ ] **Per-part hit testing and pointer events** — An animation cannot be clicked on its artwork: the shared overlay canvas is `pointer-events: none` (`SSOverlay`), and a standalone element answers as a rectangle.
-  - [ ] A part rect read-out built from the `PartState` fields the runtime already delivers every frame (`size_x` / `size_y`, `anchor`, `pivot`) plus `getPartTransform`. It also positions a DOM overlay on a part, which `getPartTransform` leaves entirely to the caller.
   - [ ] `hitTestPart(x, y)` in element coordinates, with the `fit` transform applied. The element answers from it rather than the canvas, which keeps overlay mode `pointer-events: none` and still clickable.
 - [ ] **UI state binding and ARIA** — A player used as a button is a picture to the page: it takes no role, no label and no state.
   - [ ] Map `normal` / `hover` / `pressed` / `disabled` / `focused` to an animation or a label, driven by the element's own pointer / focus events, so the animation follows `:hover` and `:focus-visible` without page script.
