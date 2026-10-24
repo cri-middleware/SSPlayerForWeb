@@ -49,7 +49,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     getAnimationNames = vi.fn(() => ['Anime_1', 'Anime_2', 'Talk', 'Idle']);
     setAnimation = vi.fn().mockResolvedValue(undefined);
     setTransform = vi.fn();
-    setAnimationSection = vi.fn();
+    // False for an end before the start, both inside the animation, as the runtime refuses it.
+    setAnimationSection = vi.fn((start: number, end: number) => !(start >= 0 && end >= 0 && end < start));
     setPlaybackDirection = vi.fn();
     // The runtime's three states, as the real player reports them: a pause is a
     // hold, so `isPlaying` stays true across one and `isPausing` is what tells
@@ -1473,6 +1474,16 @@ describe('registerSSTags', () => {
     await runTag(h.tags.ss_section, { name: 'chr' }, h.nextOrder); // back to the whole animation
     expect(p.setAnimationSection).toHaveBeenLastCalledWith(-1, -1);
     expect(savedSlot(h).chr.section).toBeUndefined();
+  });
+
+  it('ss_section keeps the section it had when the player refuses an end before the start', async () => {
+    const h = await withPlayer();
+    const p = FakeSSPlayer.instances[0];
+
+    await runTag(h.tags.ss_section, { name: 'chr', start: '5', end: '9' }, h.nextOrder);
+    await runTag(h.tags.ss_section, { name: 'chr', start: '9', end: '5' }, h.nextOrder);
+    expect(p.setAnimationSection).toHaveBeenLastCalledWith(9, 5);
+    expect(savedSlot(h).chr.section).toEqual({ start: 5, end: 9 });
   });
 
   it('an animation change drops the section, as the runtime does', async () => {

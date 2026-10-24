@@ -835,8 +835,14 @@ export class SSPlayer extends Container {
         return this.internalPlayer.isPlayingForward;
     }
 
-    public setAnimationSection(startFrame: number, endFrame: number) {
-        this.internalPlayer.setAnimationSection(startFrame, endFrame);
+    /**
+     * Limits playback to `[startFrame, endFrame]`, both ends included; an end
+     * outside the animation (`-1`) is its edge on that side. Returns false, and
+     * says so once in the console, when both ends are inside the animation and
+     * the end is before the start; the section is then left as it was.
+     */
+    public setAnimationSection(startFrame: number, endFrame: number): boolean {
+        return this.internalPlayer.setAnimationSection(startFrame, endFrame);
     }
 
     /**

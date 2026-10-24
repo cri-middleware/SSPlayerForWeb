@@ -74,6 +74,11 @@ player.frameSkipEnabled = false;                       // stop skipping frames; 
 
 `startFrame` / `endFrame` / `totalFrames` all follow the section once one is set.
 
+Both ends are included, so `setAnimationSection(10, 10)` holds frame 10, and an end outside the
+animation (`-1`) is its edge on that side. A section whose end is before its start, both inside the
+animation, is refused: `setAnimationSection` returns `false`, says so once in the console, and leaves
+the section and the playhead as they were.
+
 The ends can be labels of the current animation instead, each with an offset in frames:
 
 ```ts

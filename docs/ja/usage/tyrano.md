@@ -198,7 +198,7 @@ data/others/ssdata/
 [ss_direction name="akane" direction="backward" style="pingpong"]
 ```
 
-フレーム番号は SpriteStudio の表示と同じく 0 から数えます。`[ss_seek]` は、再生中なら再生を続け、一時停止中なら一時停止のままです。`[ss_section]` は再生位置を区間の先頭へ移します。`start=` か `end=` を省略するとその側はアニメの端になり、両方省略するとアニメ全体に戻ります。`direction=` は `forward`（順）か `backward`（逆）、`style=` は `normal`（1 回）か `pingpong`（往復）です。
+フレーム番号は SpriteStudio の表示と同じく 0 から数えます。`[ss_seek]` は、再生中なら再生を続け、一時停止中なら一時停止のままです。`[ss_section]` は再生位置を区間の先頭へ移します。`start=` か `end=` を省略するとその側はアニメの端になり、両方省略するとアニメ全体に戻ります。`end=` が `start=` より前なら受け付けず、区間はそのままで、理由はブラウザのコンソールに出ます。`direction=` は `forward`（順）か `backward`（逆）、`style=` は `normal`（1 回）か `pingpong`（往復）です。
 
 速度と方向はアニメを切り替えても残ります。区間は残りません。フレーム番号は別のアニメでは意味を持たないためで、`[ss_play anime=]` でも `next=` の続きでも解除されます。3 つともセーブに含まれます。
 

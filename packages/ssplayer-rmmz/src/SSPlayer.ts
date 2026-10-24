@@ -559,8 +559,9 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     return this.internalPlayer.getReplaceableTextureNames();
   }
 
-  public setAnimationSection(startFrame: number, endFrame: number): void {
-    this.internalPlayer.setAnimationSection(startFrame, endFrame);
+  /** Limits playback to `[startFrame, endFrame]`; false, reported once, for an end before the start. See the core player. */
+  public setAnimationSection(startFrame: number, endFrame: number): boolean {
+    return this.internalPlayer.setAnimationSection(startFrame, endFrame);
   }
   /** {@link setAnimationSection} with the ends named by labels of the current animation. See the core player for the rule. */
   public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {

@@ -584,12 +584,16 @@ export class SSPlayer {
   public set frameSkipEnabled(v: boolean) { this.internalPlayer.setFrameSkipEnabled(v); }
 
   /**
-   * Limit playback to `[startFrame, endFrame]`. This narrows the range every
-   * other frame API reports and loops within — {@link SSPlayer.startFrame | startFrame},
-   * {@link SSPlayer.endFrame | endFrame} and {@link totalFrames} all follow it.
+   * Limit playback to `[startFrame, endFrame]`, both ends included; an end
+   * outside the animation (`-1`) is its edge on that side. This narrows the
+   * range every other frame API reports and loops within —
+   * {@link SSPlayer.startFrame | startFrame}, {@link SSPlayer.endFrame | endFrame}
+   * and {@link totalFrames} all follow it. Returns false, and says so once in
+   * the console, when both ends are inside the animation and the end is before
+   * the start; the section is then left as it was.
    */
-  public setAnimationSection(startFrame: number, endFrame: number): void {
-    this.internalPlayer.setAnimationSection(startFrame, endFrame);
+  public setAnimationSection(startFrame: number, endFrame: number): boolean {
+    return this.internalPlayer.setAnimationSection(startFrame, endFrame);
   }
 
   /**
