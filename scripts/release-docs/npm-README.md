@@ -13,6 +13,7 @@ Every npm package of SpriteStudio Player for Web carries these same pages.
 | How to load, select, play, seek and loop an animation | [usage/basic.md](usage/basic.md) |
 | How to use the `<ss-player>` element, or `SSSurface` and `SSPlayer` on plain WebGL | [usage/webgl.md](usage/webgl.md) |
 | How to use the player in a PixiJS v8 app | [usage/pixi.md](usage/pixi.md) |
+| How to make an animation a `@pixi/ui` button with `@spritestudio/ssplayer-pixi-ui` | [usage/pixi-ui.md](usage/pixi-ui.md) |
 | Which class to start from, and the types you touch (each package's `dist/index.d.ts` carries the full API) | [api-guide.md](api-guide.md) |
 | How to produce `.ssab` files, including converting in your own app with `@spritestudio/ssconverter-core` | [usage/assets.md](usage/assets.md) |
 | How to react to events and user data | [customize/events.md](customize/events.md) |

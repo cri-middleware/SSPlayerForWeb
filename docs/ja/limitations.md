@@ -48,6 +48,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-core` | npm |
 | `@spritestudio/ssplayer-webgl` | npm |
 | `@spritestudio/ssplayer-pixi` | npm |
+| `@spritestudio/ssplayer-pixi-ui` | npm |
 | `@spritestudio/ssconverter-core` | npm |
 | `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.ja.md#コントリビューター向け--ソースからビルド) |
 | `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranoscript/README.ja.md#コントリビューター向け--ソースからビルド) |

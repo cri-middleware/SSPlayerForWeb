@@ -69,6 +69,7 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssplayer-core` | npm |
 | `@spritestudio/ssplayer-webgl` | npm |
 | `@spritestudio/ssplayer-pixi` | npm |
+| `@spritestudio/ssplayer-pixi-ui` | npm |
 | `@spritestudio/ssconverter-core` | npm |
 | `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.md#for-contributors--building-from-source) |
 | `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranoscript/README.md#for-contributors--building-from-source) |
