@@ -172,6 +172,9 @@ deform that carries a corner out is inside it. Null, bone, Instance and Effect p
 their own and have no outline, and neither does a hidden part; a part drawn at alpha 0 still has one.
 Like `getPartTransform()`, both read the frame last drawn and evaluate nothing.
 
+To make an animation a button that takes the pointer only on some of its parts, see
+[UI buttons (PixiJS)](/usage/pixi-ui), which builds on these two.
+
 ## Building a follow-target picker
 
 If you build UI that lets someone choose which part to follow, mirror what the SpriteStudio, Unity and Godot editors do: **list every part, but keep skinned mesh parts out of reach** so they can't be chosen by accident — while still accepting a name typed by hand, since following one is occasionally deliberate.

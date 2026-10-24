@@ -5,6 +5,7 @@
     "../packages/ssplayer-core",
     "../packages/ssplayer-webgl",
     "../packages/ssplayer-pixi",
+    "../packages/ssplayer-pixi-ui",
     "../packages/ssconverter-core"
   ],
   "packageOptions": {

@@ -38,8 +38,9 @@ const SITE = 'https://cri-middleware.github.io/SSPlayerForWeb/';
 const SKILL_DESCRIPTION =
   'Documentation of SpriteStudio Player for Web, for the version installed. Use when writing, ' +
   'reviewing or debugging code that plays SpriteStudio animations (.ssab, converted from .sspj) ' +
-  'in a browser with @spritestudio/ssplayer-webgl, @spritestudio/ssplayer-pixi or ' +
-  '@spritestudio/ssplayer-core, or that converts .sspj with @spritestudio/ssconverter-core.';
+  'in a browser with @spritestudio/ssplayer-webgl, @spritestudio/ssplayer-pixi, ' +
+  '@spritestudio/ssplayer-pixi-ui or @spritestudio/ssplayer-core, or that converts .sspj with ' +
+  '@spritestudio/ssconverter-core.';
 
 const [dest, skill, ...rest] = process.argv.slice(2);
 if (!dest || !skill || rest.length > 0) {

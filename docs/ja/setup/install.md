@@ -12,12 +12,13 @@ description: レンダラーパッケージの選び方、インストール、�
 |---|---|
 | フレームワーク非依存 / ドロップイン（`<ss-player>` Web Component を含む） | [`@spritestudio/ssplayer-webgl`](/ja/usage/webgl) |
 | **PixiJS v8** で構築済みのアプリ | [`@spritestudio/ssplayer-pixi`](/ja/usage/pixi) |
+| **PixiJS v8** のアプリで、アニメーションで描くボタン（`@pixi/ui`） | [`@spritestudio/ssplayer-pixi-ui`](/ja/usage/pixi-ui) |
 | 独自エンジンにレンダラーを自作する | `@spritestudio/ssplayer-core` |
 | **RPG ツクール MZ** で作るゲーム | [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz)（プラグイン） |
 | **TyranoScript** のノベル | [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano)（プラグイン） |
 | **ティラノビルダー** で作るゲーム | [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder)（`.tbp` のプラグイン） |
 
-レンダラーパッケージは `@spritestudio/ssplayer-core` を再エクスポートしているため、コアを個別に入れる必要はありません。
+レンダラーパッケージは `@spritestudio/ssplayer-core` を再エクスポートしているため、コアを個別に入れる必要はありません。`@spritestudio/ssplayer-pixi-ui` も同じく `@spritestudio/ssplayer-pixi` を再エクスポートしています。
 
 RPG ツクール MZ・TyranoScript・ティラノビルダーは npm のパッケージではなくプラグインとして入れ、コードは書きません。手順はそれぞれのページにすべてあり、未対応の範囲は [制約と適用範囲](/ja/limitations) にまとめてあります。このページのこの先は、それ以外のパッケージのインストール手順です。
 

@@ -12,13 +12,15 @@ Pick the one package that matches your environment.
 |---|---|
 | Frameworkless / drop-in (includes the `<ss-player>` Web Component) | [`@spritestudio/ssplayer-webgl`](/usage/webgl) |
 | Apps already built on **PixiJS v8** | [`@spritestudio/ssplayer-pixi`](/usage/pixi) |
+| Buttons drawn by animations in a **PixiJS v8** app (`@pixi/ui`) | [`@spritestudio/ssplayer-pixi-ui`](/usage/pixi-ui) |
 | Building your own renderer on a custom engine | `@spritestudio/ssplayer-core` |
 | A game made in **RPG Maker MZ** | [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) (a plugin) |
 | A **TyranoScript** visual novel | [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) (a plugin) |
 | A game made in **TyranoBuilder** | [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) (a `.tbp` plugin) |
 
 Each renderer package re-exports `@spritestudio/ssplayer-core`, so you don't need to
-install the core separately.
+install the core separately; `@spritestudio/ssplayer-pixi-ui` re-exports `@spritestudio/ssplayer-pixi`
+in the same way.
 
 RPG Maker MZ, TyranoScript and TyranoBuilder take a plugin rather than an npm package, and
 need no code: each one's page has its whole setup, and what each does not cover is in

@@ -5,12 +5,12 @@
   "type": "module",
   "description": "SSPlayerForWeb documentation site (VitePress)",
   "//typescript": "Pinned to 6.x ON PURPOSE — do not raise to match the root. TypeScript 7 no longer exposes the compiler API surface TypeDoc reads (`ts.SyntaxKind` is undefined), so TypeDoc crashes on import before it looks at a single source file, and 0.28.20 (latest) still declares `typescript: 5.0.x .. 6.0.x`. Nothing here is compiled with it: TypeDoc only parses the packages' sources to emit api/, while the packages themselves build with the root TypeScript 7 via tsdown. Raise this only once TypeDoc's peer range covers 7.x.",
-  "//api": "Builds ssplayer-core before TypeDoc. TypeDoc reads packages/*/src, but ssplayer-webgl and ssplayer-pixi import @spritestudio/ssplayer-core by name, which resolves to its dist/*.d.ts: without that dist every such import fails with TS2307 and TypeDoc writes no api/, and a stale one documents the renderers against the old core.",
+  "//api": "Builds ssplayer-core and ssplayer-pixi before TypeDoc. TypeDoc reads packages/*/src, but ssplayer-webgl and ssplayer-pixi import @spritestudio/ssplayer-core by name, and ssplayer-pixi-ui imports @spritestudio/ssplayer-pixi, which resolve to their dist/*.d.ts: without that dist every such import fails with TS2307 and TypeDoc writes no api/, and a stale one documents the packages against the old one.",
   "scripts": {
     "dev": "pnpm run api && vitepress dev",
     "build": "pnpm run api && vitepress build",
     "preview": "vitepress preview",
-    "api": "pnpm --filter=@spritestudio/ssplayer-core run build && typedoc"
+    "api": "pnpm --filter=@spritestudio/ssplayer-core --filter=@spritestudio/ssplayer-pixi run build && typedoc"
   },
   "devDependencies": {
     "vitepress": "^1.6.4",

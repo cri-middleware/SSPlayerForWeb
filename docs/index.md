@@ -110,6 +110,7 @@ For details on the three paths (SSConverter GUI / `ssconverter-web` / `ssconvert
 |---|---|
 | [`@spritestudio/ssplayer-webgl`](/usage/webgl) | Zero-dependency standalone WebGL renderer (includes the `<ss-player>` Web Component). A good fit for frameworkless setups and drop-in use. |
 | [`@spritestudio/ssplayer-pixi`](/usage/pixi) | Renderer for apps already built on **PixiJS v8**. |
+| [`@spritestudio/ssplayer-pixi-ui`](/usage/pixi-ui) | An animation as a `@pixi/ui` button on top of `ssplayer-pixi`: its labels play the states, and its parts can take the pointer. |
 | `@spritestudio/ssplayer-core` | Engine-agnostic WASM core (for writing your own renderer). |
 | [`ssconverter-web`](/usage/assets) | `.sspj` → `.ssab` conversion tool (browser tool + Node CLI). |
 | [`@spritestudio/ssconverter-core`](/usage/assets) | Engine-agnostic WASM conversion core (for embedding conversion in your own app). |

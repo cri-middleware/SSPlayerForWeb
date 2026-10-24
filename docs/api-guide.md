@@ -17,6 +17,7 @@ installed. Everything else hangs off it.
 | Frameworkless / drop-in | [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
 | Plain HTML, no JS wiring | `<ss-player>` (see [WebGL & Web Components](/usage/webgl)) | `ssplayer-webgl` |
 | PixiJS v8 app | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
+| A button in a PixiJS v8 app (see [UI buttons](/usage/pixi-ui)) | [`SSButton`](/api/@spritestudio/ssplayer-pixi-ui/classes/SSButton.md) | `ssplayer-pixi-ui` |
 | Your own renderer | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
 
 Both player classes must be initialized once before any instance is constructed, because the WASM
@@ -26,10 +27,10 @@ runtime is a module-level singleton:
 await SSSurface.initialize();  // or SSPlayer.initialize()
 ```
 
-::: tip The same symbol appears three times
-Each renderer package **re-exports `ssplayer-core`**, so `SSRuntimeManager`, `IResourceManager`,
-`BlendType` and friends show up under all three package pages in the generated reference. They are
-the same declarations. Import from the package you installed — never add `ssplayer-core` alongside
+::: tip The same symbol appears four times
+Each renderer package **re-exports `ssplayer-core`**, and `ssplayer-pixi-ui` re-exports
+`ssplayer-pixi`, so `SSRuntimeManager`, `IResourceManager`, `BlendType` and friends show up under all
+four package pages in the generated reference. They are the same declarations. Import from the package you installed — never add `ssplayer-core` alongside
 a renderer just to reach a core type.
 :::
 

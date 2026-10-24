@@ -15,6 +15,7 @@ description: どのクラスから始めるか、その下に何があるか、�
 | フレームワーク非依存 / ドロップイン | [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
 | HTML だけで済ませたい | `<ss-player>`（[WebGL・Web Components で使う](/ja/usage/webgl)） | `ssplayer-webgl` |
 | PixiJS v8 アプリ | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
+| PixiJS v8 アプリのボタン（[UI ボタン](/ja/usage/pixi-ui) を参照） | [`SSButton`](/api/@spritestudio/ssplayer-pixi-ui/classes/SSButton.md) | `ssplayer-pixi-ui` |
 | レンダラーを自作する | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
 
 WASM ランタイムはモジュールレベルのシングルトンなので、どちらのプレイヤークラスもインスタンスを作る前に一度だけ初期化が必要です。
@@ -23,9 +24,9 @@ WASM ランタイムはモジュールレベルのシングルトンなので、
 await SSSurface.initialize();  // または SSPlayer.initialize()
 ```
 
-::: tip 同じシンボルが 3 回出てくる理由
-各レンダラーパッケージは **`ssplayer-core` を再エクスポート**しています。そのため
-`SSRuntimeManager` / `IResourceManager` / `BlendType` などは、生成リファレンスの 3 つのパッケージページすべてに現れます。実体は同じ宣言です。**インストールしたパッケージから
+::: tip 同じシンボルが 4 回出てくる理由
+各レンダラーパッケージは **`ssplayer-core` を再エクスポート**し、`ssplayer-pixi-ui` は `ssplayer-pixi` を再エクスポートしています。そのため
+`SSRuntimeManager` / `IResourceManager` / `BlendType` などは、生成リファレンスの 4 つのパッケージページすべてに現れます。実体は同じ宣言です。**インストールしたパッケージから
 import** してください。コアの型を使いたいだけの理由で、レンダラーと併せて `ssplayer-core` を追加インストールしないでください。
 :::
 

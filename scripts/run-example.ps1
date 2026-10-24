@@ -90,7 +90,7 @@ if (Missing "packages/ssplayer-core/wasm/ssruntime_bg.wasm", "packages/ssconvert
 }
 
 # --- 4. the packages ------------------------------------------------------
-if (Missing "packages/ssplayer-core/dist/index.js", "packages/ssconverter-core/dist/index.js", "packages/ssplayer-webgl/dist/index.js", "packages/ssplayer-pixi/dist/index.js") {
+if (Missing "packages/ssplayer-core/dist/index.js", "packages/ssconverter-core/dist/index.js", "packages/ssplayer-webgl/dist/index.js", "packages/ssplayer-pixi/dist/index.js", "packages/ssplayer-pixi-ui/dist/index.js") {
     Write-Host ">> ${APP}: pnpm run build"
     Run pnpm @("run", "build")
 }
