@@ -11,6 +11,7 @@ import { InstancePackProvider, resolveInstancePacks } from './PackResolver.js';
 import { GeometryBuilder } from './GeometryBuilder.js';
 import { addSharedPack, retainSharedPack } from './SharedPacks.js';
 import { canvasRectFrom, type SSPlacementBox } from './Placement.js';
+import { labelFrameOf, labelTableOf, type SSLabelTable } from './Labels.js';
 
 export interface EffectChildState {
     slot: EffectSlotHandle;
@@ -207,6 +208,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // setup the new pack still needs — leaving it bound but unplayable.
         this._animationName = '';
         this._canvasRect = undefined;
+        this._reportedLabels = null;
         // A new pack means new assets: re-arm the one-shot load.
         this._resourceManager?.reset?.();
         this._prepared = null;
@@ -1066,6 +1068,67 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     public getAnimationSectionEnd(): number {
         return this.runtimeManager.context.get_end_frame();
+    }
+
+    /**
+     * {@link setAnimationSection} with the ends named by labels of the
+     * **current** animation: from `startLabel`'s frame plus `startOffset` to
+     * `endLabel`'s frame plus `endOffset`, the rule an Instance part's start and
+     * end labels follow. `_start` and `_end` name the animation's first and last
+     * frame, as they do in SpriteStudio, and an end that lands before the start
+     * is pulled up to it. It does not play.
+     *
+     * Returns false when the current animation has no such label, and says so
+     * once in the console; the section stays as it was. Before an animation is
+     * set up it returns false and says nothing. Like any section,
+     * {@link setAnimation} wipes it.
+     */
+    public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
+        const animation = this._animationName;
+        const table = animation ? this.getLabelTable() : null;
+        if (!table) return false;
+        const start = labelFrameOf(table, startLabel);
+        const end = labelFrameOf(table, endLabel);
+        if (start === null || end === null) {
+            const missing = start === null ? [startLabel] : [];
+            if (end === null && endLabel !== startLabel) missing.push(endLabel);
+            this.reportMissingLabel(animation, missing);
+            return false;
+        }
+        const from = start + startOffset;
+        const to = end + endOffset;
+        this.setAnimationSection(from, to < from ? from : to);
+        return true;
+    }
+
+    /**
+     * The labels of `animationName` in the bound pack — the current animation
+     * when omitted — in frame order, with the frame range it was authored with.
+     * Null before a pack is bound, or for an animation the pack does not have.
+     *
+     * Read out of the pack on every call, so hold the table rather than calling
+     * this per frame.
+     */
+    public getLabelTable(animationName?: string): SSLabelTable | null {
+        const data = animationName === undefined
+            ? this.runtimeManager.getCurrentAnimationData()
+            : this.runtimeManager.getAnimationDataByName(animationName);
+        return data ? labelTableOf(data) : null;
+    }
+
+    // What setAnimationSectionByLabel has already reported since the last bind.
+    private _reportedLabels: Set<string> | null = null;
+
+    private reportMissingLabel(animation: string, labels: string[]): void {
+        const key = `${animation}\u0000${labels.join('\u0000')}`;
+        const reported = (this._reportedLabels ??= new Set());
+        if (reported.has(key)) return;
+        reported.add(key);
+        const names = labels.map(l => `"${l}"`).join(' or ');
+        console.warn(
+            `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} has no label ${names}, ` +
+                'so the section stays as it was.',
+        );
     }
 
     public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle) {

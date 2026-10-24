@@ -29,5 +29,6 @@ export * from './EffectBatchPlanner.js';
 export * from './ShaderAttributeResolver.js';
 export * from './BlendState.js';
 export * from './Placement.js';
+export * from './Labels.js';
 export * from './ShaderIds.js';
 export * from './ListenerSet.js';

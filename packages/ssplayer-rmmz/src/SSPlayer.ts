@@ -561,6 +561,10 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   public setAnimationSection(startFrame: number, endFrame: number): void {
     this.internalPlayer.setAnimationSection(startFrame, endFrame);
   }
+  /** {@link setAnimationSection} with the ends named by labels of the current animation. See the core player for the rule. */
+  public setAnimationSectionByLabel(startLabel: string, endLabel: string, startOffset: number = 0, endOffset: number = 0): boolean {
+    return this.internalPlayer.setAnimationSectionByLabel(startLabel, endLabel, startOffset, endOffset);
+  }
   public setPlaybackDirection(direction: WebPlaybackDirection, style: WebPlaybackStyle): void {
     this.internalPlayer.setPlaybackDirection(direction, style);
   }

@@ -4,7 +4,6 @@ This file lists unfinished work only. Technical constraints live in [Limitations
 
 ## Playback & rendering
 
-- [ ] **Label playback** — Set the playback section by a start and an end label, each with an offset (`setAnimationSectionByLabel`, the stem the SDK's API conventions register); `setAnimationSection` takes frame numbers only. Labels ride in the `.ssab` (`AnimationData.labels`, readable through `ssplayer-core`), so no SDK change is needed: resolve the name to a frame in `ssplayer-core` and every renderer inherits it.
 - [ ] **Confirm the five approximated blend modes** — `Mulalpha` and `Mul2` draw as Mul, `Screen2` as Screen, and `Div2` and `Overlay2` as Mix, in `ssplayer-webgl` and `ssplayer-pixi` alike (one table, `ssBlendMode` in `ssplayer-core`) and as in SpriteStudio Player for wgpu. The approximation is listed in [Shaders and blend modes](https://cri-middleware.github.io/SSPlayerForWeb/customize/shaders); none of the five has been checked against a reference render.
 
 ## UI integration
