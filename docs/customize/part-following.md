@@ -165,12 +165,12 @@ const index = player.hitTestPart(local.x, local.y, ['button_face']);
 if (index >= 0) console.log('hit', player.getPartNames()[index]);
 ```
 
-The outline is what is drawn. A part with a cell gives its four drawn corners, skew and vertex deform
-included. A Mesh part gives the axis-aligned box around its vertices, which is where it is drawn even
-when bones bind it. A Shape gives the box around its own vertices, through its transform, so a vertex
-deform that carries a corner out is inside it. Null, bone, Instance and Effect parts draw nothing of
-their own and have no outline, and neither does a hidden part; a part drawn at alpha 0 still has one.
-Like `getPartTransform()`, both read the frame last drawn and evaluate nothing.
+The outline follows what is drawn. A part with a cell gives its four drawn corners, skew and vertex
+deform included. A Mesh part gives the axis-aligned box around its vertices, which is where it is drawn
+even when bones bind it. A Shape gives its size around its pivot, through its transform; a vertex deform
+that carries a corner outside that size is not followed. Null, bone, Instance and Effect parts draw
+nothing of their own and have no outline, and neither does a hidden part; a part drawn at alpha 0 still
+has one. Like `getPartTransform()`, both read the frame last drawn and evaluate nothing.
 
 To make an animation a button that takes the pointer only on some of its parts, see
 [UI buttons (PixiJS)](/usage/pixi-ui), which builds on these two.
