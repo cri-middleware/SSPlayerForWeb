@@ -113,7 +113,7 @@ export class SSPlayerElement extends HTMLElement {
   }
 
   async connectedCallback(): Promise<void> {
-    if (!this._canvas) this.buildDom();
+    if (!this.shadowRoot) this.buildDom();
     // Captured as locals, not fields: a re-connect installs a fresh promise, and
     // this cycle must still be able to settle the one it handed out.
     let readyResolve!: () => void;

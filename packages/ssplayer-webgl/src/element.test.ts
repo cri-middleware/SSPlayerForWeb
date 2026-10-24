@@ -191,6 +191,22 @@ describe('<ss-player>', () => {
     });
   });
 
+  it.each([
+    ['on the shared overlay', {}],
+    ['standalone', { standalone: '' }],
+  ])('plays again when it is taken out of the page and put back, %s', async (_mode, attrs) => {
+    const { el, errors } = await mount({ src: 'chara.ssab', ...attrs });
+    el.remove();
+    expect(el.player).toBeNull();
+    document.body.append(el);
+    await settle();
+    await expect(el.ready).resolves.toBeUndefined();
+    expect(el.player).toBe(player);
+    expect(player.load).toHaveBeenCalledTimes(2);
+    expect(el.shadowRoot!.querySelectorAll('style')).toHaveLength(1);
+    expect(errors).toEqual([]);
+  });
+
   it('is not displayed while it carries the `hidden` attribute', async () => {
     const { el } = await mount({ src: 'chara.ssab', hidden: '' });
     const css = el.shadowRoot!.querySelector('style')!.textContent!;
