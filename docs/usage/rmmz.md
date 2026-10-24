@@ -113,7 +113,8 @@ the internal command ID.
 - **Play SS Once (return to loop)** (`playSSOnce`) — play an animation a set number of times, then
   **auto-return to the current loop** (idle → expression → idle).
 - **Play SS Sequence** (`playSSSequence`) — a comma-separated list where each entry plays
-  once except the **last, which loops** (e.g. `attack1,attack2,wait1`).
+  once except the **last, which loops** (e.g. `attack1,attack2,wait1`). Once the last
+  starts, it is the picture's animation.
 - **Set SS Speed** (`setSSSpeed`) — a playback-speed multiplier (subframe-interpolated,
   smooth even when slow).
 
@@ -138,8 +139,7 @@ crossfade empties them, as it does in the player itself; a crossfade keeps them.
 **Part overrides (colour / cell / visibility)**
 
 Replace how one part looks at run time, **winning over the animation's keyframes**. The
-settings are stored on the picture, so they **survive save/load** (playback resumes from the
-start of the animation, as it does for every other picture state).
+settings are stored on the picture, so they **survive save/load**.
 
 - **Set SS Part Color** (`setSSPartColor`) — tint one part. The colour is hex
   (`#RRGGBB` / `#RRGGBBAA`) because MZ has no colour parameter type; the four blend
@@ -241,7 +241,10 @@ MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it 
 - Masks, effects, SpriteStudio's integration shaders (all 13) and instance parts draw as
   they do in the browser WebGL player.
 - Playback advances with the picture, so SS animations pause exactly with the game (menus,
-  message waits).
+  message waits). After a menu, a battle or a load, the picture's animation carries on from
+  the frame it was on, paused or finished ones included. Tracks start over, and a *Play SS
+  Once* or a *Play SS Sequence* that has not reached its last entry gives way to the
+  picture's animation from its start.
 - It runs on MZ's bundled NW.js as it is, with no launch options to add. If initialization
   fails, SS animations are disabled but the game still boots, and the console (F8) says why.
 

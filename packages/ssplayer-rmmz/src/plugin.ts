@@ -13,7 +13,7 @@ import { installAutoImport } from './rmmz/autoImport.js';
 import { installWasmBootGate } from './rmmz/boot.js';
 import { defineSpriteSpriteStudio } from './rmmz/Sprite_SpriteStudio.js';
 import { installGamePictureBridge } from './rmmz/gamePictureBridge.js';
-import { armLiveChain, clearLiveChain, getLivePlayer } from './rmmz/liveRegistry.js';
+import { adoptLivePlayer, armLiveChain, clearLiveChain, getLivePlayer } from './rmmz/liveRegistry.js';
 import { installInterpreterWait, beginSSWait, beginSSTrackFadeWait } from './rmmz/interpreterWait.js';
 import { installMessageTalk, setSSTalk, clearSSTalk } from './rmmz/messageTalk.js';
 import { playAnimation } from './rmmz/playAnimation.js';
@@ -108,6 +108,16 @@ function boot(): void {
     const pic = g.$gameScreen.picture(pictureId);
     const cur = pic && pic.ssData ? pic.ssData() : null;
     if (cur?.tracks) pic.setSSData({ ...cur, tracks: undefined });
+  };
+
+  /** Make what the live player has reached the picture's own animation, so a scene change or a load keeps it. */
+  const settle = (pictureId: number): void => {
+    const player = getLivePlayer(pictureId);
+    const pic = g.$gameScreen.picture(pictureId);
+    const cur = pic && pic.ssData ? pic.ssData() : null;
+    if (!player || !cur) return;
+    pic.setSSData({ ...cur, animation: player.currentAnimation, loop: player.loopCount });
+    adoptLivePlayer(pictureId);
   };
 
   /** The track number a track command was given, or null (warned) for track 0 and below. */
@@ -266,8 +276,8 @@ function boot(): void {
   // Play a comma-separated SEQUENCE of animations: every entry but the LAST
   // plays once, the last plays with `loop` (default -1 = loop forever). The
   // RenPy portrait idiom: "attack1,attack2,wait1" -> attack1 once, attack2 once,
-  // then wait1 loops. Make the last entry your idle/base loop so the resting
-  // state matches _ssData (save/load resumes the base).
+  // then wait1 loops. The last entry becomes the picture's animation once it
+  // starts.
   reg(PLUGIN_NAME, 'playSSSequence', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
     clearLiveChain(pictureId); // supersede an earlier one-shot / sequence
@@ -302,6 +312,7 @@ function boot(): void {
       }
       try {
         if (playAnimation(player, name, loop, transition)) afterCut(pictureId);
+        if (isLast) settle(pictureId);
       } catch (e: unknown) {
         clearLiveChain(pictureId);
         console.error('[ssplayer-rmmz] playSSSequence: failed to play:', e);
