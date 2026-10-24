@@ -91,15 +91,16 @@ the internals:
 [Known limitations](https://cri-middleware.github.io/SSPlayerForWeb/usage/rmmz#known-limitations);
 the internals:
 
-- MZ **tint** is not forwarded to the SS draw. *Opacity* is — `SSPlayerRenderer` passes
-  Pixi's `worldAlpha` to `SSWebGLRenderer` as a world tint — and so are *move* and *scale*.
-- A **PIXI filter placed directly on the SS sprite** can misplace it — the projection
-  is **fixed full-screen**. MZ screen effects (flash, tint) are separate overlays and
+- *Opacity*, *move* and *scale* reach the SS draw — `SSPlayerRenderer` passes Pixi's
+  `worldAlpha` to `SSWebGLRenderer` as a world tint. MZ's picture **tint** is a
+  `ColorFilter` on the picture's sprite, so it falls under the next point.
+- A **PIXI filter on the sprite that carries the animation** can misplace it — the filter
+  renders into a texture sized to the sprite's bounds, while the projection is **fixed
+  full-screen**. MZ's screen flash, fade and tint are filters over the whole screen and
   are unaffected.
 - **Stencil masks** need a stencil buffer on MZ's canvas (present by default).
 
-Wiring MZ's tint into the world tint `SSWebGLRenderer` already takes for opacity, and
-injecting a projection matrix for the projection limitation, are planned follow-ups — see
+Keeping the animation in place under such a filter is a planned follow-up — see
 [ROADMAP.md](./ROADMAP.md).
 
 ### Build & try it
