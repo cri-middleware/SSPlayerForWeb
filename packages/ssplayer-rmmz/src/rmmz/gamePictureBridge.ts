@@ -2,8 +2,9 @@
 //
 // Model (Game_Picture): we stash the "which SS animation to play" data on the
 // picture object itself. Game objects are serialized by MZ's save system, so the
-// animation is restored automatically on load (exact frame is not persisted —
-// it resumes from the start, matching the official Spine plugin's behaviour).
+// animation is restored automatically on load. Where track 0 stands is written
+// there as each scene ends, which every save comes after, so the player the
+// next scene or a load builds carries on from that frame.
 //
 // View (Sprite_Picture): rather than monkey-patching the bitmap pipeline, we
 // alias updateBitmap to (a) keep an SS-bearing picture visible even with no
@@ -14,9 +15,11 @@ import type { ISpriteSpriteStudio } from './Sprite_SpriteStudio.js';
 import { setLivePlayer, clearLivePlayer, markLivePlayerEnded } from './liveRegistry.js';
 import { isWasmOk } from './boot.js';
 import { SSLoadError } from './loadError.js';
+import { applyPlayhead, readPlayhead, type SSPlayhead } from './playhead.js';
 import { applyPartOverrides, applySavedTracks, type SSPartOverride, type SSSavedTrack } from '@spritestudio/ssplayer-webgl';
 
 let _warnedNoWasm = false;
+const mounted = new Set<any>();
 
 export interface SSPictureData {
   ssabUrl: string;
@@ -49,6 +52,14 @@ export interface SSPictureData {
    * command that cuts empties this too; a crossfade keeps it.
    */
   tracks?: SSSavedTrack[];
+  /**
+   * Optional: where track 0 stood when the last scene ended, applied by every
+   * mount of that animation until the next scene end replaces it. It is not
+   * consumed: Scene_Battle mounts the map's pictures during its create, before
+   * MZ redirects pictures to the battle's own, and would use it up. Absent, as
+   * in saves made without it, plays from the head.
+   */
+  playhead?: SSPlayhead;
 }
 
 interface GamePictureLike {
@@ -78,6 +89,22 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
   };
   Game_Picture.prototype.ssData = function (this: any): SSPictureData | null {
     return this._ssData || null;
+  };
+
+  // Taken at terminate rather than destroy: the next scene's pictures mount
+  // during its create, before MZ destroys this one.
+  const SceneManager = g.SceneManager;
+  if (SceneManager) {
+    const _onSceneTerminate = SceneManager.onSceneTerminate;
+    SceneManager.onSceneTerminate = function (this: any): void {
+      for (const sprite of mounted) sprite._ssCapture();
+      _onSceneTerminate.call(this);
+    };
+  }
+  const _destroy = Sprite_Picture.prototype.destroy;
+  Sprite_Picture.prototype.destroy = function (this: any, options?: unknown): void {
+    mounted.delete(this);
+    _destroy.call(this, options);
   };
 
   // --- View ---
@@ -126,8 +153,9 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     // rebuild happens only when the .ssab itself changes.
     if (this._ssChild && this._ssAsset === ss.ssabUrl) {
       this._ssKey = key;
+      this._ssHeldEnded = false;
       // Reset the "ended" flag so waitForSS tracks the new animation.
-      if (typeof this._pictureId === 'number') setLivePlayer(this._pictureId, this._ssChild.player);
+      if (typeof this._pictureId === 'number') setLivePlayer(this._pictureId, this._ssChild.player, () => this._ssAdopt());
       // No override re-application here: the context survives an in-place
       // switch, so the runtime already kept the Permanent ones and dropped the
       // rest itself, or kept them all on a crossfade (the persisted copy is
@@ -156,10 +184,12 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     this._ssSpeed = undefined;
     this._ssSignalSwitch = 0;
     this._ssSignalUnsub = null;
+    this._ssHeldEnded = false;
     this.addChild(child as unknown as any);
+    mounted.add(this);
     if (typeof this._pictureId === 'number') {
       const pid = this._pictureId;
-      setLivePlayer(pid, child.player);
+      setLivePlayer(pid, child.player, () => this._ssAdopt());
       // Drive waitForSS: mark ended when a non-looping animation finishes.
       child.player.onAnimationFinished(() => markLivePlayerEnded(pid));
     }
@@ -173,7 +203,15 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
         applyPartOverrides(child.player, ss.overrides);
         // Read now, not at mount: a setSSTrack made while this loaded saved its
         // track and left laying it to us.
-        applySavedTracks(child.player, (this.picture() as GamePictureLike | null)?.ssData()?.tracks);
+        const picture = this.picture() as GamePictureLike | null;
+        const now = picture?.ssData();
+        applySavedTracks(child.player, now?.tracks);
+        if (now?.playhead && this._ssChild === child && applyPlayhead(child.player, now.playhead)) {
+          if (now.playhead.state === 'ended') {
+            this._ssHeldEnded = true;
+            if (typeof this._pictureId === 'number') markLivePlayerEnded(this._pictureId);
+          }
+        }
       })
       .catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to load SS animation:', e);
@@ -227,8 +265,27 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     }
   };
 
+  // A player still loading leaves the playhead it was given in place.
+  Sprite_Picture.prototype._ssCapture = function (this: any): void {
+    const child = this._ssChild;
+    const picture = this.picture() as GamePictureLike | null;
+    const ss = picture?.ssData();
+    if (!child || !picture || !ss || this._ssAsset !== ss.ssabUrl || !child.player.currentAnimation) return;
+    const playhead = readPlayhead(child.player, this._ssHeldEnded);
+    picture.setSSData({ ...ss, playhead: playhead.animation === ss.animation ? playhead : undefined });
+  };
+
+  // The model was set to what the player already plays, so sync without a switch.
+  Sprite_Picture.prototype._ssAdopt = function (this: any): void {
+    const player = this._ssChild?.player;
+    if (!player) return;
+    this._ssKey = `${this._ssAsset}|${player.currentAnimation}`;
+    this._ssLoop = player.loopCount;
+  };
+
   Sprite_Picture.prototype._ssRemove = function (this: any): void {
     if (!this._ssChild) return;
+    mounted.delete(this);
     if (typeof this._pictureId === 'number') clearLivePlayer(this._pictureId);
     if (this._ssSignalUnsub) {
       this._ssSignalUnsub();
@@ -245,5 +302,6 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     this._ssLoop = undefined;
     this._ssSpeed = undefined;
     this._ssSignalSwitch = 0;
+    this._ssHeldEnded = false;
   };
 }

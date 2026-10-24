@@ -23,14 +23,19 @@ interface Entry {
    * adapter, which solves the same problem for `[ss_play next=]`.
    */
   chain?: Unsubscribe;
+  adopt?: () => void;
 }
 
 const entries = new Map<number, Entry>();
 
-export function setLivePlayer(pictureId: number, player: SSPlayer): void {
+export function setLivePlayer(pictureId: number, player: SSPlayer, adopt?: () => void): void {
   // A (re)mount supersedes whatever the previous player had armed.
   clearLiveChain(pictureId);
-  entries.set(pictureId, { player, ended: false });
+  entries.set(pictureId, { player, ended: false, adopt });
+}
+/** The picture's model now names what its player plays: have the view sync to it without switching. */
+export function adoptLivePlayer(pictureId: number): void {
+  entries.get(pictureId)?.adopt?.();
 }
 export function clearLivePlayer(pictureId: number): void {
   clearLiveChain(pictureId);
