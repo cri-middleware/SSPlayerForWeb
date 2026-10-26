@@ -61,7 +61,7 @@
 
 ### 導入する
 
-Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.5 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。RPG ツクール MZ・TyranoScript・ティラノビルダーでは、代わりにそのプラグインの README の手順に従ってください。詳しい手順はドキュメントにあります:
+Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.6 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。RPG ツクール MZ・TyranoScript・ティラノビルダーでは、代わりにそのプラグインの README の手順に従ってください。詳しい手順はドキュメントにあります:
 
 **[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
 

@@ -22,7 +22,7 @@ Everything after that (picking up an edit, every component, troubleshooting) is 
 path further in, in the [TyranoBuilder guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder).
 **Working on the plugin?** [For contributors](#for-contributors--building-from-source) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-You need TyranoBuilder, and a project made in **SpriteStudio 7.5 or later**.
+You need TyranoBuilder, and a project made in **SpriteStudio 7.6 or later**.
 
 1. **Install**: Download `ssplayer.tbp` from
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true):

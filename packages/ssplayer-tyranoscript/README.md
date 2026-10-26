@@ -22,7 +22,7 @@ tag, crossfades and tracks, signals, save/load, sound) is the same path further 
 the [TyranoScript guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyrano).
 **Working on the plugin?** [For contributors](#for-contributors--building-from-source) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-You need a TyranoScript project, and a project made in **SpriteStudio 7.5 or later**.
+You need a TyranoScript project, and a project made in **SpriteStudio 7.6 or later**.
 
 1. **Install**: Download `ssplayer-tyranoscript-plugin-<version>.zip` from
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true):
