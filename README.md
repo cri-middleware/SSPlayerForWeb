@@ -63,7 +63,7 @@ events, per-part overrides, custom textures — is the same path further in, und
 
 ### Install it
 
-No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab` (authored in **SpriteStudio 7.5 or later**), and play it in a few lines; in RPG Maker MZ, TyranoScript or TyranoBuilder, follow that plugin's README instead. The full walkthrough lives in the docs:
+No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab` (authored in **SpriteStudio 7.6 or later**), and play it in a few lines; in RPG Maker MZ, TyranoScript or TyranoBuilder, follow that plugin's README instead. The full walkthrough lives in the docs:
 
 **[Installation](./docs/setup/install.md)** · **[Quick Start](./docs/setup/quickstart.md)** · **[Preparing assets (.sspj → .ssab)](./docs/usage/assets.md)**
 

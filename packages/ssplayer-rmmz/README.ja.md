@@ -15,7 +15,7 @@
 **ゲームを作る場合**はこのまま下へ。入れる → 変換する → 表示する、の順で、コードは書きません。その先（トラック、パーツ上書き、デプロイ、音声）も同じ道の続きで、[RPG ツクール MZ ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz)にあります。
 **プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
-RPG ツクール MZ と、**SpriteStudio 7.5 以上**で作成したプロジェクトを用意してください。
+RPG ツクール MZ と、**SpriteStudio 7.6 以上**で作成したプロジェクトを用意してください。
 
 1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true) から `ssplayer-rmmz-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-rmmz <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。中の 3 ファイル（`ssplayer-rpgmakermz.js`・`ssruntime_bg.wasm`・`ssconverter_bg.wasm`）をゲームの `js/plugins/` にフラットに展開し、**ツール → プラグイン管理**で **ssplayer-rpgmakermz** を ON にします。
 2. **変換**: ゲームの直下に `SpriteStudio_Source/` フォルダを作り、SpriteStudio のプロジェクトを `.sspj` だけでなくフォルダごとコピーして、テストプレイを開始します。タイトルが出る前にプロジェクトが `spritestudio/<プロジェクト名>/` へ変換されます。`.ssab` はアニメーションファイル（`.ssae`）1 つにつき 1 つです。

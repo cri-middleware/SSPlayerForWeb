@@ -31,7 +31,7 @@ per-part overrides, textures) is the same path further in, in the
 
 1. **Install** with `npm install @spritestudio/ssplayer-webgl` — or, with no bundler, load it
    from a CDN: [the snippets](https://cri-middleware.github.io/SSPlayerForWeb/usage/webgl#without-a-bundler-cdn).
-2. **Convert** your `.sspj` (SpriteStudio 7.5 or later) in the browser with
+2. **Convert** your `.sspj` (SpriteStudio 7.6 or later) in the browser with
    [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/): drop the project folder on it and extract the ZIP it
    downloads into the folder your app serves as-is — Vite's `public/`, for example. The `.ssab`
    loads its textures from beside it; check **Embedded Assets** to carry them inside instead

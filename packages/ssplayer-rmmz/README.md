@@ -18,7 +18,7 @@ after that (tracks, part overrides, deployment, sound) is the same path further 
 the [RPG Maker MZ guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/rmmz).
 **Working on the plugin?** [For contributors](#for-contributors--building-from-source) below, then [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-You need RPG Maker MZ, and a project made in **SpriteStudio 7.5 or later**.
+You need RPG Maker MZ, and a project made in **SpriteStudio 7.6 or later**.
 
 1. **Install**: Download `ssplayer-rmmz-plugin-<version>.zip` from
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true):

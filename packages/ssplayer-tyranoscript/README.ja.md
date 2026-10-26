@@ -16,7 +16,7 @@
 **シナリオを書く場合**はこのまま下へ。入れる → 変換する → 表示する、の順です。その先（全タグ、クロスフェードとトラック、シグナル、セーブ / ロード、音声）も同じ道の続きで、[TyranoScript ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano)にあります。
 **プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
-TyranoScript のプロジェクトと、**SpriteStudio 7.5 以上**で作成したプロジェクトを用意してください。
+TyranoScript のプロジェクトと、**SpriteStudio 7.6 以上**で作成したプロジェクトを用意してください。
 
 1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍し、中の `ssplayer/` フォルダを名前を変えずにプロジェクトの `data/others/plugin/` へコピーします。`[plugin name="ssplayer"]` はそこを探します。
 2. **変換**: ブラウザで [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) を開き、`.sspj` の入ったフォルダをドロップして ZIP をダウンロードします。ZIP を `data/others/ssdata/` に展開すると、プロジェクト名のフォルダの中に `.ssab` とテクスチャが入っています。デスクトップでは [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) で同じことができます。
