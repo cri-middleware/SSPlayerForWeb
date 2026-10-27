@@ -25,6 +25,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "typecheck": "tsc --noEmit",
     "pack": "node scripts/pack-plugin.mjs",
     "clean": "rimraf dist",
     "test": "vitest run"

@@ -18,6 +18,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
     "test": "vitest run",
     "pack": "node scripts/pack-tbp.mjs",

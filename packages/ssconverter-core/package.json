@@ -54,6 +54,7 @@
   },
   "scripts": {
     "build": "tsdown && node ../../scripts/copy-docs.mjs docs skills/ssconverter-core",
+    "typecheck": "tsc --noEmit",
     "clean": "rimraf dist docs skills",
     "test": "vitest run",
     "prepack": "node ../../scripts/verify-publish-artifacts.mjs"

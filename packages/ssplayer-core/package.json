@@ -58,6 +58,7 @@
   },
   "scripts": {
     "build": "tsdown && copyfiles -u 1 \"wasm/*.wasm\" dist/ && node ../../scripts/copy-docs.mjs docs skills/ssplayer-core",
+    "typecheck": "tsc --noEmit",
     "clean": "rimraf dist docs skills",
     "test": "vitest run",
     "prepack": "node ../../scripts/verify-publish-artifacts.mjs"

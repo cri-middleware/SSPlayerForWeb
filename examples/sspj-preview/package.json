@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "description": "Drop a SpriteStudio project (.sspj) folder and play it — conversion (ssconverter-core) and playback (ssplayer-webgl or ssplayer-pixi) in one page, no build step",
   "scripts": {
-    "test": "tsc --noEmit && vitest run",
+    "test": "vitest run",
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
   },
   "license": "BSD-3-Clause",

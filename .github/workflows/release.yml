@@ -118,10 +118,11 @@ jobs:
           git commit -m "chore(release): $VERSIONS"
 
       # scripts/build-release.sh IS the release build: the wasm, the build, the
-      # tests, the npm tarballs and the plugin archives, then the checks only a
-      # finished artifact can show. Everything published or attached below comes
-      # out of release-dist/, so what goes out is what was checked. Every option
-      # is spelled out, so a release cannot change because a default did.
+      # type check, the tests, the npm tarballs and the plugin archives, then the
+      # checks only a finished artifact can show. Everything published or
+      # attached below comes out of release-dist/, so what goes out is what was
+      # checked. Every option is spelled out, so a release cannot change because
+      # a default did.
       - name: Build, test and check the release
         run: ./scripts/build-release.sh skip=install sdk=download out=release-dist verify=yes clean=yes
 

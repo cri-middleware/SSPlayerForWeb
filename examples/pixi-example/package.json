@@ -8,6 +8,7 @@
     "test": "echo \"(pixi-example) no unit tests\"",
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
   },
   "keywords": [],
