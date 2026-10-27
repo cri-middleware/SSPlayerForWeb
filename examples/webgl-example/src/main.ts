@@ -3,21 +3,6 @@ import { UIManager, showToast } from './ui/UIManager.js';
 import { ViewControls } from './view/ViewControls.js';
 import { collectDroppedFiles, resolveRelativePath, sortByPath, type DroppedFile } from './dropHelpers.js';
 
-// Bundled sample ssabs served from public/. The deploy nests each project under
-// public/<project>/ (ssconverter --stem-dir): the `overall` test project in
-// overall/, Ringo in Ringo/. Their <option> value is the URL. (The live
-// dropdown is defined in index.html; this list documents the bundled set.)
-//
-// The URLs are RELATIVE — no leading slash. The demo is served from a subpath
-// on GitHub Pages (/SSPlayerForWeb/examples/webgl/), where a root-absolute
-// '/overall/…' resolves to the site root and 404s. Textures follow the ssab:
-// the player derives their base from the ssab URL, so a relative ssab keeps its
-// sibling PNGs relative too.
-const BUNDLED_SSABS = [
-  'overall/Basic.ssab', 'overall/Shape.ssab', 'overall/PartsColor.ssab', 'overall/Mesh.ssab', 'Ringo/Ringo.ssab',
-  'overall/Effect.ssab', 'overall/Mask.ssab', 'overall/Instance.ssab', 'overall/BlendMode.ssab',
-];
-
 async function main() {
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // Fixed drawing-buffer size (matches pixi-example's 1280x960). Effect-heavy
@@ -104,6 +89,15 @@ async function main() {
   };
 
   // --- Bundled ssab (loaded by URL; textures fetched from public/) ---
+  // The bundled set is the <option>s of #ssab-select in index.html, each value
+  // a URL. The deploy nests each project under public/<project>/ (ssconverter
+  // --stem-dir): the `overall` test project in overall/, Ringo in Ringo/.
+  //
+  // The URLs are RELATIVE — no leading slash. The demo is served from a subpath
+  // on GitHub Pages (/SSPlayerForWeb/examples/webgl/), where a root-absolute
+  // '/overall/…' resolves to the site root and 404s. Textures follow the ssab:
+  // the player derives their base from the ssab URL, so a relative ssab keeps its
+  // sibling PNGs relative too.
   const loadBundled = async (url: string, seq: number) => {
     notify(`Loading ${url}...`);
     await loadInTurn(seq, () => player.load(url));
