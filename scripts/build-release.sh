@@ -60,7 +60,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Stages, in the order they run. Neither the checksums nor the verification are
 # stages: they are cheap and they read whatever the stages produced.
-STAGES="install wasm build test npm plugins"
+STAGES="install wasm build typecheck test npm plugins"
 
 # The plugin channel, one row per Release asset: <package>|<dir>|<path under
 # packages/<dir>, %v = version>. The only place these names live -- release.yml
@@ -110,6 +110,8 @@ echo "  -h | --help             Show this help"
   echo "  install   pnpm install --frozen-lockfile"
   echo "  wasm      the SDK runtime + converter wasm (not in git), per sdk="
   echo "  build     pnpm run build (every package except docs)"
+  echo "  typecheck pnpm run typecheck (tsc --noEmit in every package and example"
+  echo "            written in TypeScript)"
   echo "  test      pnpm run test -- the gate the release runs before it publishes"
   echo "  npm       pnpm pack for each public package -> <out>/npm"
   echo "  plugins   each private package's pack script -> <out>/plugins"
@@ -382,6 +384,15 @@ done
 # --- build -----------------------------------------------------------------
 if stage build "build the packages"; then
   pnpm run build
+fi
+
+# --- typecheck -------------------------------------------------------------
+# tsdown's declaration build fails only when it cannot write a .d.ts, and vitest
+# strips the types, so a type error passes both the build and the tests. The
+# workspace packages read each other's types from dist/, so this comes after the
+# build.
+if stage typecheck "pnpm run typecheck"; then
+  pnpm run typecheck
 fi
 
 # --- test ------------------------------------------------------------------

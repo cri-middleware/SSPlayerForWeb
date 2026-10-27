@@ -30,6 +30,7 @@
   },
   "scripts": {
     "build": "tsdown && node scripts/prepend-annotation.mjs",
+    "typecheck": "tsc --noEmit",
     "pack": "node scripts/pack-plugin.mjs",
     "clean": "rimraf dist",
     "test": "vitest run"

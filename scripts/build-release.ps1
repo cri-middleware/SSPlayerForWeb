@@ -67,7 +67,7 @@ $ROOT_DIR = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 
 # Stages, in the order they run. Neither the checksums nor the verification are
 # stages: they are cheap and they read whatever the stages produced.
-$STAGES = @("install", "wasm", "build", "test", "npm", "plugins")
+$STAGES = @("install", "wasm", "build", "typecheck", "test", "npm", "plugins")
 
 # The plugin channel, one row per Release asset (%v = version). The only place
 # these names live -- release.yml takes them out of the manifest this run writes
@@ -195,6 +195,8 @@ Write-Host "  -h | --help             Show this help"
     Write-Host "  install   pnpm install --frozen-lockfile"
     Write-Host "  wasm      the SDK runtime + converter wasm (not in git), per sdk="
     Write-Host "  build     pnpm run build (every package except docs)"
+    Write-Host "  typecheck pnpm run typecheck (tsc --noEmit in every package and example"
+    Write-Host "            written in TypeScript)"
     Write-Host "  test      pnpm run test -- the gate the release runs before it publishes"
     Write-Host "  npm       pnpm pack for each public package -> <out>/npm"
     Write-Host "  plugins   each private package's pack script -> <out>/plugins"
@@ -398,6 +400,15 @@ try {
     # --- build ------------------------------------------------------------
     if (Enter-Stage "build" "build the packages") {
         Invoke-Checked "packages build" { & pnpm run build }
+    }
+
+    # --- typecheck --------------------------------------------------------
+    # tsdown's declaration build fails only when it cannot write a .d.ts, and
+    # vitest strips the types, so a type error passes both the build and the
+    # tests. The workspace packages read each other's types from dist/, so
+    # this comes after the build.
+    if (Enter-Stage "typecheck" "pnpm run typecheck") {
+        Invoke-Checked "typecheck" { & pnpm run typecheck }
     }
 
     # --- test -------------------------------------------------------------

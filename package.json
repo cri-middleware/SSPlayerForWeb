@@ -12,6 +12,7 @@
     "sync:docs": "node scripts/sync-doc-versions.mjs",
     "check:docs": "node scripts/sync-doc-versions.mjs --check",
     "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
     "clean": "pnpm -r run clean"
   },
   "devDependencies": {

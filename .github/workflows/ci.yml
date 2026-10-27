@@ -2,8 +2,9 @@ name: CI
 
 # Two tiers, as in SpriteStudio-SDK. Every pull request runs
 # scripts/build-release.sh with sdk=build: the wasm compiled from the SDK
-# submodule, every package built and tested, and the npm tarballs and plugin
-# archives packed and checked, as release.yml does with the pinned SDK release.
+# submodule, every package built, type-checked and tested, and the npm tarballs
+# and plugin archives packed and checked, as release.yml does with the pinned
+# SDK release.
 # The weekly run and a dispatch also build the Pages site the way pages.yml does.
 # main takes every pull request and a release is dispatched from it, so there is
 # no release PR to run the weekly tier on.
