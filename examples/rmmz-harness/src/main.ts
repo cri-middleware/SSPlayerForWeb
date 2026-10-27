@@ -121,7 +121,7 @@ async function boot() {
   // Pixi ticker with the real frame delta.
   app.ticker.add(() => {
     player.update(app.ticker.deltaMS);
-    setStatus(`${animSel.value}  frame ${player.frame}/${player.totalFrames}`);
+    setStatus(`${animSel.value}  frame ${player.frameNo}/${player.totalFrames}`);
   });
 }
 
