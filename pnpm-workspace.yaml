@@ -21,3 +21,4 @@ minimumReleaseAgeExclude:
   - whatwg-url@17.2.0
   - '@asamuzakjp/dom-selector@10.0.3'
   - cytoscape@3.34.4
+  - tsdown@0.23.3
