@@ -39,7 +39,7 @@
     "./package.json": "./package.json"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "unpkg": "./dist/browser/ssplayer-pixi.browser.min.js",
   "jsdelivr": "./dist/browser/ssplayer-pixi.browser.min.js",
