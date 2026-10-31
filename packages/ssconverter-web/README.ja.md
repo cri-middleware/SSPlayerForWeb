@@ -87,7 +87,7 @@ Usage: node packages/ssconverter-web/scripts/cli.js [-o output_dir] [-e|--embedd
 
 ## ライブラリに組み込む方は
 
-ツールを実行するのではなく、`.sspj → .ssab` 変換を自作アプリに組み込みたい場合は、環境非依存のエンジン [`@spritestudio/ssconverter-core`](../ssconverter-core) を直接依存に加えてください。ここにある 2 つのインターフェースは、いずれもその上に載る薄い**ホスト**です。本パッケージは I/O（ブラウザ: File System Access API + ZIP ダウンロード、
+ツールを実行するのではなく、`.sspj → .ssab` 変換を自作アプリに組み込みたい場合は、環境非依存のエンジン [`@spritestudio/ssconverter-core`](../ssconverter-core) を直接依存に加えてください。ここにある 2 つのインターフェースは、いずれもその上に載る薄い**ホスト**です。本パッケージは I/O（ブラウザ: フォルダの選択とドロップ + ZIP ダウンロード、
 CLI: ファイルシステム）を担い、変換そのものはコアが行います。
 
 ## ライセンス

@@ -33,8 +33,8 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 
 このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>）でホストしているため、インストールは不要です。同梱の Node CLI は開発者向けのツールです。
 
-::: warning 対応ブラウザ
-フォルダ選択に **File System Access API**（`showDirectoryPicker` / ディレクトリのドラッグ＆ドロップ）を使うため、**Chromium 系ブラウザ（Chrome / Edge など）** が必要です。Firefox / Safari では動作しません。
+::: info フォルダのドロップ
+ドロップ領域へのフォルダのドラッグ＆ドロップは **File System Access API** を使うため、**Chromium 系ブラウザ（Chrome / Edge など）** が必要です。ほかのブラウザでは `Browse...` でフォルダを選択してください。
 :::
 
 ### 手順

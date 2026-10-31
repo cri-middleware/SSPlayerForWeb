@@ -34,9 +34,7 @@ description: Web 版 Player がまだ対応していないこと、ブラウザ�
 ランタイムは WebAssembly SIMD 命令を使用してビルドされており、**SIMD 非対応のブラウザでは動作しません**。本リポジトリのすべてのパッケージが対象です（RPG Maker MZ プラグインは、MZ の NW.js 向けに SIMD なしのビルドを同梱しているため対象外です）。配信先のブラウザ要件として扱ってください。
 :::
 
-ブラウザ版コンバーター `ssconverter-web` はさらに、フォルダー選択に **File System Access API**
-（`showDirectoryPicker` / ディレクトリのドラッグ＆ドロップ）を使用するため、**Chromium 系ブラウザ**（Chrome / Edge など）が必要です。Firefox・Safari では動作しません。
-[アセットの準備](/ja/usage/assets) を参照してください。
+ブラウザ版コンバーター `ssconverter-web` でフォルダーをドロップするには **File System Access API** が要るため、**Chromium 系ブラウザ**（Chrome / Edge など）でしか動作しません。ほかのブラウザでは `Browse...` でフォルダーを選択してください。[アセットの準備](/ja/usage/assets) を参照してください。
 
 ## 各パッケージの入手方法
 
