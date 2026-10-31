@@ -18,7 +18,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div class="panel">
     <div class="form-group drop-zone" id="dropZoneIn">
       <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
-        <span style="font-size: 1.1rem; color: #818cf8;">📥 Drop Project Folder Here</span>
+        <span style="font-size: 1.1rem; color: #818cf8;" id="dropHeading">📥 Drop Project Folder Here</span>
         <button class="btn" id="btnClear" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;">Clear Input</button>
       </label>
       <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; margin-bottom: 0.25rem;">
@@ -27,6 +27,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div class="input-row" style="margin-top: 0.5rem;">
         <input type="text" id="inDirDisplay" readonly placeholder="Drag & Drop a folder, or click Browse...">
         <button class="btn" id="btnSelectIn">Browse...</button>
+        <input type="file" id="inDirPicker" webkitdirectory hidden>
       </div>
     </div>
     
@@ -79,6 +80,8 @@ const dropZoneIn = document.getElementById('dropZoneIn')!;
 const btnClear = document.getElementById('btnClear') as HTMLButtonElement;
 const outDirDisplay = document.getElementById('outDirDisplay') as HTMLInputElement;
 const btnSelectIn = document.getElementById('btnSelectIn') as HTMLButtonElement;
+const inDirPicker = document.getElementById('inDirPicker') as HTMLInputElement;
+const dropHeading = document.getElementById('dropHeading')!;
 const btnConvert = document.getElementById('btnConvert') as HTMLButtonElement;
 const btnCopyLog = document.getElementById('btnCopyLog') as HTMLButtonElement;
 const btnClearLog = document.getElementById('btnClearLog') as HTMLButtonElement;
@@ -91,43 +94,35 @@ const versionDisplay = document.getElementById('versionDisplay')!;
 
 const chkEmbedded = document.getElementById('chkEmbedded') as HTMLInputElement;
 
-// Reading the input folder is the one thing here that needs the File System
-// Access API, and that API is secure-context only: over plain http it exists
-// on localhost / 127.0.0.1 / [::1] and nowhere else. A local preview served as
-// http://[::]:8080 or http://<lan-ip>:8080 -- the URL `python -m http.server`
-// prints, among others -- is NOT a secure context, and the two entry points
-// fail there in different ways:
+// Browse... reads the folder through <input webkitdirectory>, which every
+// browser has in any context, and which browser automation can fill: CDP's
+// DOM.setFileInputFiles takes a directory there.
 //
-//   showDirectoryPicker            absent, so calling it throws TypeError
-//   DataTransferItem.getAsFileSystemHandle
-//                                  PRESENT, and calling it takes the tab down
-//                                  with it -- the browser process rejects the
-//                                  IPC and kills the renderer
-//                                  (RESULT_CODE_KILLED_BAD_MESSAGE)
-//
-// So the guard has to be the context, not the presence of the method: a
-// `typeof handle.getAsFileSystemHandle === 'function'` check passes and then
-// crashes the tab. Checked once here and consulted by both entry points.
-const canPickFolders =
+// A dropped folder is read through DataTransferItem.getAsFileSystemHandle, part
+// of the File System Access API, which is secure-context only: over plain http
+// it exists on localhost / 127.0.0.1 / [::1] and nowhere else. A local preview
+// served as http://[::]:8080 or http://<lan-ip>:8080 -- the URL `python -m
+// http.server` prints, among others -- is NOT a secure context, and there the
+// method is still PRESENT, and calling it takes the tab down with it: the
+// browser process rejects the IPC and kills the renderer
+// (RESULT_CODE_KILLED_BAD_MESSAGE). So the guard has to be the context, not the
+// presence of the method, with showDirectoryPicker -- absent outside a secure
+// context -- standing in for the API.
+const canReadDroppedFolders =
     window.isSecureContext &&
     typeof (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker === 'function';
 
-function logNoFolderAccess() {
-    if (!window.isSecureContext) {
-        log(
-            `Error: opening a folder needs a secure context, and this page is ${location.origin}. ` +
-            'Serve it over https, or open it as localhost / 127.0.0.1 / [::1].',
-        );
-    } else {
-        log(
-            'Error: this browser has no File System Access API, which this tool needs to read a ' +
-            'project folder. Chrome or Edge can do it.',
-        );
-    }
+function noDropReason(): string {
+    return window.isSecureContext
+        ? 'this browser cannot read a dropped folder (it has no File System Access API)'
+        : `reading a dropped folder needs a secure context, and this page is ${location.origin}`;
 }
 
 let isWasmReady = false;
-let inDirHandle: FileSystemDirectoryHandle | null = null;
+// The project folder, however it came in; `read` fills sourceFiles from it. A
+// dropped folder is a live handle, read again at conversion; Browse... hands
+// over the files as they were when picked.
+let inputFolder: { name: string; read: () => Promise<void> } | null = null;
 let sourceFiles: Map<string, File> = new Map();
 let currentSspjStem = '';
 let currentSspjDir: string[] = [];
@@ -164,11 +159,11 @@ function updateBadge(el: HTMLElement, text: string, type: 'pending' | 'active' |
 }
 
 function updateConvertButton() {
-    btnConvert.disabled = !(isWasmReady && inDirHandle);
+    btnConvert.disabled = !(isWasmReady && inputFolder);
 }
 
 function resetState() {
-    inDirHandle = null;
+    inputFolder = null;
     currentSspjStem = '';
     currentSspjDir = [];
     sourceFiles.clear();
@@ -222,16 +217,28 @@ async function readDirectoryRecursive(dirHandle: FileSystemDirectoryHandle, base
     }
 }
 
-async function handleInputDirectory(handle: FileSystemDirectoryHandle) {
-    inDirHandle = handle;
-    inDirDisplay.value = handle.name;
+// Each file's webkitRelativePath starts with the picked folder's own name, which
+// readDirectoryRecursive leaves out of its paths, so that segment is dropped.
+// Automation that hands in files rather than a folder leaves webkitRelativePath
+// empty; those files are taken as one folder with no subfolders.
+function readPickedFiles(files: File[]) {
+    for (const file of files) {
+        const segments = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(1) : [file.name];
+        if (segments.some((s) => s.startsWith('.'))) continue; // Ignore hidden files like .DS_Store
+        sourceFiles.set(segments.join('/'), file);
+    }
+}
+
+async function handleInputFolder(folder: { name: string; read: () => Promise<void> }) {
+    inputFolder = folder;
+    inDirDisplay.value = folder.name;
     sourceFiles.clear();
     currentSspjStem = '';
     currentSspjDir = [];
     
-    log(`Scanning folder: ${handle.name}...`);
+    log(`Scanning folder: ${folder.name}...`);
     try {
-        await readDirectoryRecursive(handle);
+        await folder.read();
 
         const { stem, dir } = locateProject(sourceFiles.keys());
         currentSspjStem = stem;
@@ -248,37 +255,37 @@ async function handleInputDirectory(handle: FileSystemDirectoryHandle) {
         updateConvertButton();
     } catch (e: any) {
         log(`Error: ${e.message || e}`);
-        inDirHandle = null;
+        inputFolder = null;
         inDirDisplay.value = '';
         outDirDisplay.value = '';
         updateConvertButton();
     }
 }
 
-btnSelectIn.addEventListener('click', async () => {
-    if (!canPickFolders) {
-        logNoFolderAccess();
+btnSelectIn.addEventListener('click', () => inDirPicker.click());
+
+inDirPicker.addEventListener('change', async () => {
+    const files = Array.from(inDirPicker.files ?? []);
+    // Cleared so that picking the same folder again fires `change` again.
+    inDirPicker.value = '';
+    if (files.length === 0) {
+        log('Error: The selected folder has no files.');
         return;
     }
-    try {
-        // @ts-ignore
-        const handle = await window.showDirectoryPicker({ mode: 'read' });
-        await handleInputDirectory(handle);
-    } catch (e: any) {
-        if (e.name !== 'AbortError') log(`Error: ${e.message || e}`);
-    }
+    const name = files[0].webkitRelativePath.split('/')[0] || 'Selected files';
+    await handleInputFolder({ name, read: async () => readPickedFiles(files) });
 });
 
 btnConvert.addEventListener('click', async () => {
-    if (!inDirHandle) return;
+    if (!inputFolder) return;
     
     try {
         btnConvert.disabled = true;
         btnSelectIn.disabled = true;
         
         updateBadge(convertStatus, 'Reading Files...', 'active');
-        log(`Reading folder: ${inDirHandle.name}`);
-        await readDirectoryRecursive(inDirHandle);
+        log(`Reading folder: ${inputFolder.name}`);
+        await inputFolder.read();
         log(`Found ${sourceFiles.size} files in folder.`);
         
         if (!currentSspjStem) {
@@ -372,8 +379,8 @@ dropZoneIn.addEventListener('drop', async (e) => {
     
     // Before touching the item: calling getAsFileSystemHandle() here on an
     // insecure origin kills the tab outright.
-    if (!canPickFolders) {
-        logNoFolderAccess();
+    if (!canReadDroppedFolders) {
+        log(`Error: ${noDropReason()}. Use Browse... to choose the folder.`);
         return;
     }
 
@@ -383,7 +390,8 @@ dropZoneIn.addEventListener('drop', async (e) => {
             // @ts-ignore
             const item = await items[0].getAsFileSystemHandle();
             if (item && item.kind === 'directory') {
-                await handleInputDirectory(item as FileSystemDirectoryHandle);
+                const handle = item as FileSystemDirectoryHandle;
+                await handleInputFolder({ name: handle.name, read: () => readDirectoryRecursive(handle) });
             } else {
                 log('Please drop a directory, not a file.');
             }
@@ -394,7 +402,7 @@ dropZoneIn.addEventListener('drop', async (e) => {
 });
 
 chkEmbedded.addEventListener('change', () => {
-    if (inDirHandle && currentSspjStem) {
+    if (inputFolder && currentSspjStem) {
         const timestamp = getTimestamp();
         if (chkEmbedded.checked) {
             outDirDisplay.value = `${currentSspjStem}_emb_${timestamp}.zip`;
@@ -420,13 +428,12 @@ btnClearLog.addEventListener('click', () => {
 });
 
 // Boot
-// Say it up front rather than on the first click: nothing here can read a
-// folder without the File System Access API, so a reader who cannot use it
-// should learn that before picking a project, not after.
-if (!canPickFolders) {
-    btnSelectIn.disabled = true;
+// Say it up front rather than on the first drop, so a reader whose drop cannot
+// work goes to Browse... instead.
+if (!canReadDroppedFolders) {
     dropZoneIn.classList.add('unavailable');
-    inDirDisplay.placeholder = 'Folder access unavailable — see the log below';
-    logNoFolderAccess();
+    dropHeading.textContent = '📥 Choose Project Folder';
+    inDirDisplay.placeholder = 'Click Browse... to choose a folder';
+    log(`Note: ${noDropReason()}. Use Browse... to choose the folder.`);
 }
 initWasm();

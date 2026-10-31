@@ -43,10 +43,10 @@ It is hosted beside these docs at
 <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>, so there is
 nothing to install. The bundled Node CLI is a developer tool.
 
-::: warning Supported browsers
-Folder selection uses the **File System Access API** (`showDirectoryPicker` /
-directory drag-and-drop), so a **Chromium-based browser (Chrome / Edge, etc.)** is
-required. It does not work in Firefox / Safari.
+::: info Dropping a folder
+Dropping a folder onto the drop zone uses the **File System Access API**, so it needs a
+**Chromium-based browser (Chrome / Edge, etc.)**. In other browsers, pick the folder with
+`Browse...`.
 :::
 
 ### Steps

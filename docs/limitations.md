@@ -54,10 +54,9 @@ SIMD support**. This applies to every package here except the RPG Maker MZ plugi
 no-SIMD build for MZ's NW.js. Treat SIMD support as a browser requirement for your distribution.
 :::
 
-The browser converter `ssconverter-web` additionally needs the **File System Access API**
-(`showDirectoryPicker` / directory drag-and-drop) for folder selection, so it requires a
-**Chromium-based browser** (Chrome / Edge, etc.) and does not work in Firefox or Safari. See
-[Preparing assets](/usage/assets).
+In the browser converter `ssconverter-web`, dropping a folder needs the **File System Access
+API**, so it works only in a **Chromium-based browser** (Chrome / Edge, etc.); in other browsers,
+pick the folder with `Browse...`. See [Preparing assets](/usage/assets).
 
 ## How each package is distributed
 

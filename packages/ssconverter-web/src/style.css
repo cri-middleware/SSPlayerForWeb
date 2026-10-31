@@ -82,11 +82,11 @@ body {
   background: rgba(79, 70, 229, 0.05);
 }
 
-/* No File System Access API here, so dropping a folder cannot work -- say so
-   by look as well as in the log, and stop the hover from promising otherwise. */
+/* No File System Access API here, so dropping a folder cannot work -- stop the
+   hover from promising otherwise. Browse... inside the zone still works, so the
+   zone is not dimmed. */
 .drop-zone.unavailable {
-  opacity: 0.55;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 .drop-zone.unavailable:hover {

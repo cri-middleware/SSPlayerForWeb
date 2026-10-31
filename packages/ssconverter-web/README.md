@@ -106,7 +106,7 @@ when you want a native app.
 Want to embed `.sspj → .ssab` conversion in your own app rather than run a tool?
 Depend on [`@spritestudio/ssconverter-core`](../ssconverter-core) directly — the
 environment-agnostic engine. Both interfaces here are thin **hosts** on top of it:
-this package supplies the I/O (browser: File System Access API + ZIP download; CLI:
+this package supplies the I/O (browser: folder picker and drop + ZIP download; CLI:
 filesystem), while the core does the conversion.
 
 ## License
