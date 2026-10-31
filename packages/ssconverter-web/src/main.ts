@@ -17,22 +17,22 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   
   <div class="panel">
     <div class="form-group drop-zone" id="dropZoneIn">
-      <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+      <div class="zone-head" style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 1.1rem; color: #818cf8;" id="dropHeading">📥 Drop Project Folder Here</span>
         <button class="btn" id="btnClear" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;">Clear Input</button>
-      </label>
+      </div>
       <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; margin-bottom: 0.25rem;">
         * Must contain exactly one .sspj file
       </div>
       <div class="input-row" style="margin-top: 0.5rem;">
-        <input type="text" id="inDirDisplay" readonly placeholder="Drag & Drop a folder, or click Browse...">
+        <input type="text" id="inDirDisplay" readonly aria-labelledby="dropHeading" placeholder="Drag & Drop a folder, or click Browse...">
         <button class="btn" id="btnSelectIn">Browse...</button>
         <input type="file" id="inDirPicker" webkitdirectory hidden>
       </div>
     </div>
     
     <div class="form-group" id="outGroup">
-      <label>Output ZIP File</label>
+      <label for="outDirDisplay">Output ZIP File</label>
       <div class="input-row">
         <input type="text" id="outDirDisplay" readonly placeholder="Automatically generated as .zip">
       </div>
@@ -46,11 +46,11 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </div>
 
     <div class="status-area">
-      <div class="status-item">
+      <div class="status-item" role="status" aria-atomic="true">
         <span class="status-title">WASM</span>
         <span class="status-badge badge-pending" id="wasmStatus">Initializing...</span>
       </div>
-      <div class="status-item">
+      <div class="status-item" role="status" aria-atomic="true">
         <span class="status-title">Status</span>
         <span class="status-badge badge-pending" id="convertStatus">Waiting</span>
       </div>
@@ -61,13 +61,13 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </button>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: -1rem;">
-      <span style="color: var(--text-muted); font-weight: 600;">Logs</span>
+      <span style="color: var(--text-muted); font-weight: 600;" id="logTitle">Logs</span>
       <div style="display: flex; gap: 0.5rem;">
         <button class="btn" id="btnCopyLog" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">Copy Logs</button>
         <button class="btn" id="btnClearLog" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;">Clear Logs</button>
       </div>
     </div>
-    <div class="log-area" id="logArea"></div>
+    <div class="log-area" id="logArea" role="log" aria-labelledby="logTitle"></div>
   </div>
 
   <div style="text-align: center; margin-top: 2rem; color: var(--text-muted); font-size: 0.85rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">

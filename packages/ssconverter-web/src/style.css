@@ -142,7 +142,8 @@ body {
   background: rgba(79, 70, 229, 0.05);
 }
 
-.form-group label {
+.form-group label,
+.form-group .zone-head {
   display: block;
   font-weight: 600;
   margin-bottom: 0.5rem;
