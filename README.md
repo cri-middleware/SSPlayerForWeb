@@ -2,9 +2,9 @@
 
 # SpriteStudio Player for Web
 
-**Professional 2D animation for the Web — one WebAssembly-powered core, rendered through modern PixiJS or a zero-dependency standalone WebGL engine.**
+**Professional 2D animation for the Web — authored by an artist, played in any page or app.**
 
-A high-performance player for **[SpriteStudio](https://www.webtech.co.jp/spritestudio/)** animations (`.ssab`) on the Web. Animate the sprite art you already have (PNG / WebP) in a dedicated editor, then play it back in the browser through the rendering engine of your choice — no video files, no re-authoring.
+A high-performance player for **[SpriteStudio](https://www.webtech.co.jp/spritestudio/)** animations (`.ssab`) on the Web.
 
 ## ✨ Why use SpriteStudio on the Web?
 
