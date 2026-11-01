@@ -15,28 +15,61 @@ tracking behave — is written once, in the SDK's
 
 ## Layers {#layers}
 
-The workspace has two sides, and the README's
-[diagram](https://github.com/cri-middleware/SSPlayerForWeb#monorepo-structure) shows which package
-builds on which.
+The workspace has two sides. A solid arrow is a call; the dotted ones are a test play running the
+importer, and a plugin folder carrying a runtime.
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TD
+    subgraph play ["Playback side"]
+        rmmz["ssplayer-rmmz"]
+        tyrano["ssplayer-tyranoscript"]
+        pixiui["ssplayer-pixi-ui"]
+        webgl["ssplayer-webgl"]
+        pixi["ssplayer-pixi"]
+        core["ssplayer-core"]
+        rmmz --> webgl
+        tyrano --> webgl
+        pixiui --> pixi
+        webgl --> core
+        pixi --> core
+    end
+    subgraph conv ["Conversion side"]
+        tb["ssplayer-tyranobuilder"]
+        cweb["ssconverter-web"]
+        importer["ssconverter-importer"]
+        ccore["ssconverter-core"]
+        tb --> importer --> ccore
+        cweb --> ccore
+    end
+    rt["libssruntime (WASM)"]
+    cv["libssconverter (WASM)"]
+    core --> rt
+    ccore --> cv
+    rmmz -. test play .-> importer
+    tb -. ships .-> tyrano
+```
 
 **The playback side** runs in a page or a game.
 
-- `ssplayer-core` wraps the runtime's WebAssembly build and turns each frame into draw data. It
-  knows no DOM and no engine.
+- `ssplayer-core` turns each frame of the runtime's WebAssembly build into draw data. It knows no
+  DOM and no engine.
 - `ssplayer-webgl` draws that data on raw WebGL and gives a page `<ss-player>`; `ssplayer-pixi`
-  draws it as a PixiJS display object. `ssplayer-pixi-ui` puts an `ssplayer-pixi` player inside a
-  `@pixi/ui` button; it is a package of its own because it brings `@pixi/ui` with it, which an app
-  that only plays animations should not have to install.
-- The host plugins are built on `ssplayer-webgl`. `ssplayer-rmmz` is the RPG Maker MZ plugin: an
-  animation belongs to a picture, so MZ moves it, scales it and saves it with the game, and the
-  plugin's commands drive it. `ssplayer-tyranoscript` is the `[ss_*]` tags, and is also the
-  runtime half of TyranoBuilder and TyranoStudio: each character is a `<div>` on a Tyrano layer,
-  and its state rides in the save.
+  draws it as a PixiJS display object. `ssplayer-pixi-ui` is a package of its own because it
+  brings `@pixi/ui` with it, which an app that only plays animations should not have to install.
+- `ssplayer-rmmz` is the RPG Maker MZ plugin: an animation belongs to a picture, so MZ moves it,
+  scales it and saves it with the game, and the plugin's commands drive it.
+  `ssplayer-tyranoscript` is the `[ss_*]` tags, and is also the runtime half of TyranoBuilder and
+  TyranoStudio: each character is a `<div>` on a Tyrano layer, and its state rides in the save.
 
 **The conversion side** turns `.sspj` into `.ssab`.
 
-- `ssconverter-core` is the converter's WebAssembly build: project bytes in, `.ssab` bytes out.
-- `ssconverter-web` is the converter page and its Node CLI.
+- `ssconverter-core` is the converter's WebAssembly build, and `ssconverter-web` the converter
+  page and its Node CLI.
 - `ssconverter-importer` is the auto importer the editor plugins share. It finds the projects that
   changed, converts them, records what each conversion wrote and logs what it did. TyranoBuilder
   runs it when a project opens, MZ when a test play starts. Its

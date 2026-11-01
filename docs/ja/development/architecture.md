@@ -10,18 +10,53 @@ SpriteStudio の Player に共通すること（再生・モーションブレ�
 
 ## 層 {#layers}
 
-ワークスペースは 2 つの側に分かれます。どのパッケージがどれの上に載っているかは、README の[構成図](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/README.ja.md#monorepo-構成)にあります。
+ワークスペースは 2 つの側に分かれます。実線の矢印は呼び出しで、点線はテストプレイがインポーターを走らせることと、プラグインフォルダがランタイムを運ぶことです。
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TD
+    subgraph play ["再生側"]
+        rmmz["ssplayer-rmmz"]
+        tyrano["ssplayer-tyranoscript"]
+        pixiui["ssplayer-pixi-ui"]
+        webgl["ssplayer-webgl"]
+        pixi["ssplayer-pixi"]
+        core["ssplayer-core"]
+        rmmz --> webgl
+        tyrano --> webgl
+        pixiui --> pixi
+        webgl --> core
+        pixi --> core
+    end
+    subgraph conv ["変換側"]
+        tb["ssplayer-tyranobuilder"]
+        cweb["ssconverter-web"]
+        importer["ssconverter-importer"]
+        ccore["ssconverter-core"]
+        tb --> importer --> ccore
+        cweb --> ccore
+    end
+    rt["libssruntime (WASM)"]
+    cv["libssconverter (WASM)"]
+    core --> rt
+    ccore --> cv
+    rmmz -. テストプレイ .-> importer
+    tb -. 同梱 .-> tyrano
+```
 
 **再生側**は、ページやゲームの中で動きます。
 
-- `ssplayer-core` はランタイムの WebAssembly 版を包み、各フレームを描画データに変えます。DOM にもエンジンにも依存しません。
-- `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。`ssplayer-pixi-ui` は `ssplayer-pixi` のプレイヤーを `@pixi/ui` のボタンに入れます。`@pixi/ui` を連れてくるので、アニメーションを再生するだけのアプリが入れずに済むよう、別のパッケージにしています。
-- ホスト向けのプラグインは `ssplayer-webgl` の上に載ります。`ssplayer-rmmz` は RPG ツクール MZ のプラグインです。アニメはピクチャに属するので、MZ が移動・拡大し、ゲームと一緒にセーブします。動かすのはプラグインコマンドです。`ssplayer-tyranoscript` は `[ss_*]` タグで、ティラノビルダーと TyranoStudio のランタイム側でもあります。各キャラクターは Tyrano のレイヤー上の `<div>` で、その状態はセーブに入ります。
+- `ssplayer-core` は、ランタイムの WebAssembly 版の各フレームを描画データに変えます。DOM にもエンジンにも依存しません。
+- `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。`ssplayer-pixi-ui` は `@pixi/ui` を連れてくるので、アニメーションを再生するだけのアプリが入れずに済むよう、別のパッケージにしています。
+- `ssplayer-rmmz` は RPG ツクール MZ のプラグインです。アニメはピクチャに属するので、MZ が移動・拡大し、ゲームと一緒にセーブします。動かすのはプラグインコマンドです。`ssplayer-tyranoscript` は `[ss_*]` タグで、ティラノビルダーと TyranoStudio のランタイム側でもあります。各キャラクターは Tyrano のレイヤー上の `<div>` で、その状態はセーブに入ります。
 
 **変換側**は、`.sspj` を `.ssab` に変えます。
 
-- `ssconverter-core` はコンバーターの WebAssembly 版です。プロジェクトのバイト列を受け取り、`.ssab` のバイト列を返します。
-- `ssconverter-web` は変換ページとその Node CLI です。
+- `ssconverter-core` はコンバーターの WebAssembly 版で、`ssconverter-web` は変換ページとその Node CLI です。
 - `ssconverter-importer` は、エディタ用のプラグインが共有する自動インポートです。変更されたプロジェクトを見つけて変換し、変換ごとに書いたものを記録し、したことをログに残します。ティラノビルダーはプロジェクトを開いたとき、MZ はテストプレイの開始時に走らせます。ホストが渡すものは [README](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssconverter-importer/README.ja.md) にあります。
 - `ssplayer-tyranobuilder` はティラノビルダーのエディタ側です。パレットのコンポーネント、プラグイン管理画面のパネル、ビルダーが走らせる形のインポーターから成ります。1 つのプラグインフォルダが、これを TyranoScript のランタイムと一緒に運びます。
 
