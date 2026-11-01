@@ -50,13 +50,13 @@ flowchart TD
 
 **再生側**は、ページやゲームの中で動きます。
 
-- `ssplayer-core` は、ランタイムの WebAssembly 版の各フレームを描画データに変えます。DOM にもエンジンにも依存しません。
+- `ssplayer-core` は、ランタイムの WebAssembly 版の各フレームを描画データに変えます。DOM にもエンジンにも依存しません。各レンダラーはその上の薄いバインディングなので、レンダラーを足しても変わるのはそのパッケージだけです。
 - `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。`ssplayer-pixi-ui` は `@pixi/ui` を連れてくるので、アニメーションを再生するだけのアプリが入れずに済むよう、別のパッケージにしています。
 - `ssplayer-rmmz` は RPG ツクール MZ のプラグインです。アニメはピクチャに属するので、MZ が移動・拡大し、ゲームと一緒にセーブします。動かすのはプラグインコマンドです。`ssplayer-tyranoscript` は `[ss_*]` タグで、ティラノビルダーと TyranoStudio のランタイム側でもあります。各キャラクターは Tyrano のレイヤー上の `<div>` で、その状態はセーブに入ります。
 
 **変換側**は、`.sspj` を `.ssab` に変えます。
 
-- `ssconverter-core` はコンバーターの WebAssembly 版で、`ssconverter-web` は変換ページとその Node CLI です。
+- `ssconverter-core` はコンバーターの WebAssembly 版です。プロジェクトのバイト列を受け取って `.ssab` のバイト列を返すので、ブラウザ・Node・Worker・エッジランタイムのどこでも同じ変換器が動きます。`ssconverter-web` は変換ページとその Node CLI です。
 - `ssconverter-importer` は、エディタ用のプラグインが共有する自動インポートです。変更されたプロジェクトを見つけて変換し、変換ごとに書いたものを記録し、したことをログに残します。ティラノビルダーはプロジェクトを開いたとき、MZ はテストプレイの開始時に走らせます。ホストが渡すものは [README](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssconverter-importer/README.ja.md) にあります。
 - `ssplayer-tyranobuilder` はティラノビルダーのエディタ側です。パレットのコンポーネント、プラグイン管理画面のパネル、ビルダーが走らせる形のインポーターから成ります。1 つのプラグインフォルダが、これを TyranoScript のランタイムと一緒に運びます。
 

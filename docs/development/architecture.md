@@ -57,7 +57,8 @@ flowchart TD
 **The playback side** runs in a page or a game.
 
 - `ssplayer-core` turns each frame of the runtime's WebAssembly build into draw data. It knows no
-  DOM and no engine.
+  DOM and no engine, and every renderer is a thin binding over it, so adding one touches only
+  that package.
 - `ssplayer-webgl` draws that data on raw WebGL and gives a page `<ss-player>`; `ssplayer-pixi`
   draws it as a PixiJS display object. `ssplayer-pixi-ui` is a package of its own because it
   brings `@pixi/ui` with it, which an app that only plays animations should not have to install.
@@ -68,8 +69,9 @@ flowchart TD
 
 **The conversion side** turns `.sspj` into `.ssab`.
 
-- `ssconverter-core` is the converter's WebAssembly build, and `ssconverter-web` the converter
-  page and its Node CLI.
+- `ssconverter-core` is the converter's WebAssembly build: project bytes in, `.ssab` bytes out, so
+  the same converter runs in a browser, Node, a Worker or an edge runtime. `ssconverter-web` is
+  the converter page and its Node CLI.
 - `ssconverter-importer` is the auto importer the editor plugins share. It finds the projects that
   changed, converts them, records what each conversion wrote and logs what it did. TyranoBuilder
   runs it when a project opens, MZ when a test play starts. Its
