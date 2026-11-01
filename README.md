@@ -6,6 +6,14 @@
 
 A high-performance player for **[SpriteStudio](https://www.webtech.co.jp/spritestudio/)** animations (`.ssab`) on the Web. Animate the sprite art you already have (PNG / WebP) in a dedicated editor, then play it back in the browser through the rendering engine of your choice — no video files, no re-authoring.
 
+## ✨ Why use SpriteStudio on the Web?
+
+- **Bring your sprites — and whole scenes — to life.** Breathing and blinking, swaying hair and clothes, flashy slash and magic effects: the motion is built visually in a dedicated editor (SpriteStudio) with bone rigs, mesh deformation and particles, and the browser just plays the exported `.ssab`. Combine characters, backgrounds, effects and UI on one timeline to play a banner, splash screen or cutscene as a single animation.
+- **A lighter, interactive alternative to `<video>`.** It animates the raster sprite art you already have (PNG / WebP), so painted characters move exactly as drawn. Unlike a `.gif` or an `.mp4`, it scales freely, loops seamlessly, reacts to user input, and renders with **sub-frame interpolation** (on by default) at the display's refresh rate rather than a baked-in frame rate.
+- **Fits your stack — from an HTML tag to PixiJS and game engines.** Drop a zero-dependency `<ss-player>` tag into any page, add an `SSPlayer` container that batches with your PixiJS v8 stage or a `@pixi/ui` button drawn by an animation, or set up a code-free plugin in a game engine's editor — the table below matches each environment to its package.
+- **Connected to your app or game logic.** Timeline keys placed by the artist (user data, signals, audio cues) arrive as callbacks, per-part overrides swap a part's colour, cell or visibility at runtime, and animations crossfade or layer across tracks.
+- **One WebAssembly core, zero-parse loading, and browser-side conversion.** `.ssab` is a FlatBuffers binary read in place, and poses come from the SDK's SIMD-optimised Rust core compiled to WebAssembly — the same core every official SpriteStudio player uses. And [`ssconverter-core`](./packages/ssconverter-core) (WASM) converts `.sspj` → `.ssab` right in the browser, Node, or an editor plugin — no native toolchain needed.
+
 ## 🌐 Try it live
 
 No install — these run entirely in your browser:
