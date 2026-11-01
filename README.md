@@ -24,6 +24,7 @@ No install — these run entirely in your browser:
 - ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (SpriteStudio pictures)
 - ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — a visual-novel scene driven by `[ss_*]` tags (beta)
 - 🎨 **[Part override example](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — swap a part's colour, cell or visibility at runtime (PixiJS)
+- 📂 **[.sspj preview](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)** — drop a `.sspj` folder to convert and play it in the same tab, with a seek bar and clickable event markers (WebGL or PixiJS)
 
 ## 📚 Documentation
 
@@ -64,56 +65,60 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 
 ## 🚀 Quick Start
 
-**Using it in your own project?** Read on. Everything after the first animation —
-events, per-part overrides, custom textures — is the same path further in, under
-[Customization](./docs/customize/events.md).
-**Working on SSPlayerForWeb itself?** [Running the examples from a checkout](#running-the-examples-from-a-checkout) below, then [CONTRIBUTING.md](./CONTRIBUTING.md). The [Build Guide](./docs/development/build.md) builds a changed version for your own app or game and checks it in RPG Maker MZ and the Tyrano hosts, and [How the Player Is Put Together](./docs/development/architecture.md) says how the packages fit together and why.
+**Using it in your own project?** Read on — install a renderer, convert your `.sspj`, play. Everything after the first animation (events, per-part overrides, custom textures) is the same path further in, under [Customization](./docs/customize/events.md).
+**Working on SSPlayerForWeb itself?** [CONTRIBUTING.md](./CONTRIBUTING.md), the [Build Guide](./docs/development/build.md) — which also builds a changed version for your own app or game and checks it in RPG Maker MZ and the Tyrano hosts — and [How the Player Is Put Together](./docs/development/architecture.md) for how the packages fit together and why.
 
-### Install it
+No Rust or WASM toolchain is needed — the WASM ships inside each renderer package, and projects are authored in **SpriteStudio 7.6 or later**. (For PixiJS, RPG Maker MZ, TyranoScript or TyranoBuilder, see that package's README in the tables above.)
 
-No Rust or WASM toolchain needed — the WASM ships inside each renderer package. Install the renderer for your environment (see the table above), convert your `.sspj` → `.ssab` (authored in **SpriteStudio 7.6 or later**), and play it in a few lines; in RPG Maker MZ, TyranoScript or TyranoBuilder, follow that plugin's README instead. The full walkthrough lives in the docs:
+1. **Install** the standalone renderer (or load it from a [CDN](./docs/usage/webgl.md#without-a-bundler-cdn) with no bundler):
 
-**[Installation](./docs/setup/install.md)** · **[Quick Start](./docs/setup/quickstart.md)** · **[Preparing assets (.sspj → .ssab)](./docs/usage/assets.md)**
+   ```bash
+   npm install @spritestudio/ssplayer-webgl
+   ```
 
-### Running the examples from a checkout
+2. **Convert** your `.sspj` folder in the browser with [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) (or the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI)), and extract the resulting folder into the directory your app serves as-is (such as `public/`):
 
-**Prerequisites:** [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) (this repo uses pnpm workspaces). The WASM core is downloaded pre-built from the SDK's Releases; building it from source instead needs **Rust** (via [rustup](https://rustup.rs/)) and **wasm-pack** (`cargo install wasm-pack`).
+   ```
+   public/
+   └── Ringo/            ← from the converter's output
+       ├── Ringo.ssab
+       └── Ringo.png
+   ```
+
+3. **Play** it with the `<ss-player>` element (or via the `SSSurface` / `SSPlayer` JS API):
+
+   ```ts
+   import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
+   defineSSPlayerElement();   // register <ss-player> once per app
+   ```
+
+   ```html
+   <ss-player src="/Ringo/Ringo.ssab" animation="wait1" autoplay style="width:640px;height:480px"></ss-player>
+   ```
+
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with, and [Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) a good one for effects.
+
+**Read next:** [Installation](./docs/setup/install.md) · [Quick Start](./docs/setup/quickstart.md) · [Preparing assets (`.sspj` → `.ssab`)](./docs/usage/assets.md) · [Limitations & Scope](./docs/limitations.md)
+
+## 🎬 Samples
+
+Ready-to-run example apps live under [`examples/`](./examples/) — one per renderer, each linked from the per-environment tables above, plus three that are not tied to one renderer: [`examples/sspj-preview`](./examples/sspj-preview) converts a `.sspj` folder you drop on it and plays the result in the same tab, with a seek bar and a strip of event markers you can click (`ssconverter-core` + `ssplayer-webgl` or `ssplayer-pixi`, switched on the page; no server and no build step), [`examples/part-follow`](./examples/part-follow) pins an HTML element to a part's live transform, and [`examples/cdn`](./examples/cdn) is three single-file pages that load the players straight from a CDN with no bundler and no `npm install`.
+
+From a checkout (requires [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/); pre-built WASM is downloaded automatically with no Rust toolchain needed):
 
 ```bash
 git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
 cd SSPlayerForWeb
-pnpm run example                         # every step below, then the <ss-player> demo in your browser
+pnpm run example                         # or: pnpm run example example=pixi (override / part-follow / sspj-preview too)
 ```
 
-`pnpm run example` runs each step below only when its output is missing, and `pnpm run example example=pixi` picks another example (`override`, `part-follow` and `sspj-preview` too). By hand:
-
-```bash
-git submodule update --init --recursive  # SpriteStudio-SDK (sample source + core)
-pnpm install                             # install deps & initialize the workspace
-pnpm run download:wasm                   # fetch the pre-built WASM (no Rust toolchain needed)
-pnpm run build                           # build all TypeScript packages
-pnpm run deploy-examples                 # generate the .ssab assets the examples load
-cd examples/webgl-example
-pnpm run dev                             # open the dev server and see the animation
-```
-The examples consume the **built** packages via workspace references — re-run `pnpm run build` whenever you change TypeScript under `packages/`, `pnpm run build:wasm` (in place of `download:wasm`) whenever you change the Rust core, and `pnpm run deploy-examples` if you edit the sample projects.
-
-Contributing the change back? [CONTRIBUTING.md](./CONTRIBUTING.md) covers the coding standards and WASM FFI rules.
-
-## 💡 Overview
-
-The packages are a `pnpm` workspace, with rendering kept apart from the animation logic.
-[How the Player Is Put Together](./docs/development/architecture.md) shows which package builds on
-which, and why. Each package's README, linked from the tables above, has its API and options.
-
-## 🎬 Samples
-
-Ready-to-run example apps live under [`examples/`](./examples/) — one per renderer, each linked from the per-environment tables above, plus three that are not tied to one renderer: [`examples/sspj-preview`](./examples/sspj-preview) converts a `.sspj` folder you drop on it and plays the result in the same tab, with a seek bar and a strip of event markers you can click (`ssconverter-core` + `ssplayer-webgl` or `ssplayer-pixi`, switched on the page; no server and no build step), [`examples/part-follow`](./examples/part-follow) pins an HTML element to a part's live transform, and [`examples/cdn`](./examples/cdn) is three single-file pages that load the players straight from a CDN with no bundler and no `npm install`. Build the packages first ([Quick Start](#running-the-examples-from-a-checkout)), then start any example's dev server. For the PixiJS and WebGL examples, you can drag and drop a folder containing an `.ssab` file (and its textures) or an embedded `.ssab` file directly into the browser to play your own assets.
+For the PixiJS and WebGL examples, you can drag and drop a folder containing an `.ssab` file (and its textures) or an embedded `.ssab` file directly into the browser to play your own assets.
 
 ## 🔗 Related Repositories
 
-- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — the core SDK providing `libssruntime` and `libssconverter`.
-- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — desktop GUI tool for converting `.sspj` to `.ssab`.
+- [SpriteStudio Docs](https://cri-middleware.github.io/SpriteStudio-Docs/) — the portal for the SDK and every official player
+- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — the core SDK providing `libssruntime` and `libssconverter`
+- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — desktop GUI tool for converting `.sspj` to `.ssab` without a player
 
 ## 📄 License
 

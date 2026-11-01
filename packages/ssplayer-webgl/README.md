@@ -17,7 +17,7 @@ page to play it.
 ## ✨ Why SpriteStudio with plain WebGL?
 
 - **Artist-made animation, no animation code.** Breathing characters, swaying hair, slash and magic effects — an artist builds them visually in a dedicated 2D editor (SpriteStudio), with bone rigs, mesh deformation and particles over the PNG / WebP art you already have. This player just plays the exported `.ssab`.
-- **One HTML tag.** `<ss-player src="chara.ssab" animation="idle" autoplay>` plays it with no build step and no JavaScript, in plain HTML or inside any framework. Prefer code? The `SSPlayer` class drives the same renderer.
+- **One HTML tag — or full control from JS.** `<ss-player src="chara.ssab" animation="idle" autoplay>` plays it with no build step and no JavaScript, in plain HTML or inside any framework. From code, `SSPlayer` drives the same renderer — with timeline event callbacks, per-part overrides at runtime, and crossfading or track layering between animations.
 - **Whole scenes — banners, splashes, cut-ins.** Characters, backgrounds, effects and UI composed on one timeline play back as a single animation from a single `.ssab`.
 - **A lighter alternative to `<video>`.** It scales freely, loops seamlessly and reacts to input, and **sub-frame interpolation** (on by default) renders at the display's refresh rate instead of a clip's baked frame rate.
 - **Fits tight embed slots.** Zero dependencies, a plain `<canvas>`, and one self-contained `.ssab` with its textures embedded. When bytes are the budget, the `./lite` build trims to Normal + blend, and the audio adapter loads only for an animation that has sound.

@@ -22,7 +22,7 @@ Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full 
 - **Pixi renders; SpriteStudio animates.** Past `AnimatedSprite` and spritesheets — bone rigs, mesh deformation, particle effects — you would be hand-building an animation system. SpriteStudio is a dedicated 2D editor where an artist builds that motion over the PNG / WebP art you already have, and this player drops the result onto your stage.
 - **Whole scenes, not just a character.** Characters, backgrounds, effects and UI composed on one timeline arrive on your stage as a single animation — a cutscene or a full-screen sequence.
 - **Just a Pixi `Container`.** `SSPlayer` drives itself from `Ticker.shared` — no per-frame `update()` to write — and draws through Pixi's own batching, alongside the rest of your scene.
-- **Game hooks on the timeline.** Events the artist placed arrive as callbacks (`onUserData` / `onSignal` / `onAudio`) that you wire straight into game logic.
+- **Game hooks, overrides and motion blending.** Events the artist placed arrive as callbacks (`onUserData` / `onSignal` / `onAudio`) that you wire straight into game logic, per-part overrides swap colour, cell or visibility at runtime, and animations crossfade or layer across tracks.
 - **Smooth at any refresh rate.** **Sub-frame interpolation** (on by default) renders each frame at its exact display time, so motion stays fluid on 120 Hz+ displays and in slow motion.
 
 ## Quick start
