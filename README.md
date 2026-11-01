@@ -102,43 +102,9 @@ Contributing the change back? [CONTRIBUTING.md](./CONTRIBUTING.md) covers the co
 
 ## 💡 Overview
 
-### Monorepo Structure
-
-This project uses `pnpm` workspaces, layered so that rendering stays fully decoupled from the animation logic:
-
-```mermaid
-flowchart TD
-    subgraph conv ["Conversion (author-time)"]
-        direction LR
-        sspj[".sspj"] --> convcore["ssconverter-core<br/>(WASM)"] --> ssab[".ssab"]
-        convweb["ssconverter-web<br/>browser UI + Node CLI"] -. wraps .-> convcore
-        importer["ssconverter-importer<br/>auto-import in editor plugins"] -. wraps .-> convcore
-        tyranob["ssplayer-tyranobuilder<br/>TyranoBuilder editor (beta)"] -. uses .-> importer
-    end
-
-    subgraph play ["Playback (run-time)"]
-        core["ssplayer-core<br/>(WASM, engine-agnostic)"]
-        webgl["ssplayer-webgl<br/>standalone WebGL + &lt;ss-player&gt;"]
-        pixi["ssplayer-pixi<br/>PixiJS v8"]
-        pixiui["ssplayer-pixi-ui<br/>@pixi/ui buttons"]
-        rmmz["ssplayer-rmmz<br/>RPG Maker MZ (beta)"]
-        tyrano["ssplayer-tyranoscript<br/>TyranoScript (beta)"]
-        core --> webgl
-        core --> pixi
-        pixi --> pixiui
-        webgl --> rmmz
-        webgl --> tyrano
-    end
-
-    tyranob -. ships .-> tyrano
-    rmmz -. test play .-> importer
-    ssab ==>|feeds| core
-```
-
-- **[`ssplayer-core`](./packages/ssplayer-core)** does the timeline and WASM work, then hands each frame to a renderer as plain draw data — no DOM, no engine assumptions. Every renderer is a thin binding on top of it, so adding one (see the [ROADMAP](./ROADMAP.md)) touches only that package; `ssplayer-rmmz` and `ssplayer-tyranoscript` further build on `ssplayer-webgl`, and `ssplayer-tyranobuilder` is author-time tooling that ships the TyranoScript runtime and converts `.sspj` inside the editor.
-- **[`ssconverter-core`](./packages/ssconverter-core)** is a separate WASM core (a build of the Rust `libssconverter`) with the same bytes-in / bytes-out design, so the same converter runs in the browser, Node, a Worker, or an edge runtime — the desktop [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) covers the same step outside a build. [`ssconverter-importer`](./packages/ssconverter-importer) runs it inside a host's editor, for the plugins that convert for their authors: TyranoBuilder when a project opens, RPG Maker MZ when a test play starts.
-
-Per-package details live in each package's README, linked from the tables above.
+The packages are a `pnpm` workspace, with rendering kept apart from the animation logic.
+[How the Player Is Put Together](./docs/development/architecture.md) shows which package builds on
+which, and why. Each package's README, linked from the tables above, has its API and options.
 
 ## 🎬 Samples
 
