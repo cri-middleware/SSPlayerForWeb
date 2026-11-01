@@ -24,6 +24,7 @@
 - ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（SpriteStudio ピクチャ）
 - ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン（beta）
 - 🎨 **[パーツ上書きサンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — パーツの色 / セル / 表示を実行時に差し替え（PixiJS）
+- 📂 **[.sspj プレビュー](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)** — `.sspj` フォルダをドロップして同じタブ内で変換・再生。シークバーとイベントマーカー付き（WebGL / PixiJS 切替可）
 
 ## 📚 ドキュメント
 
@@ -64,52 +65,60 @@
 
 ## 🚀 クイックスタート
 
-**自分のプロジェクトで使う場合**はこのまま下へ。最初の 1 体から先（イベント、パーツ単位の上書き、テクスチャ差し替え）も同じ道の続きで、[カスタマイズ](./docs/ja/customize/events.md)にあります。
-**SSPlayerForWeb 自体を開発する場合**は下の[チェックアウトからサンプルを動かす](#チェックアウトからサンプルを動かす)、その後 [CONTRIBUTING.md](./CONTRIBUTING.md) へ。変更した版を自分のアプリやゲームで使う方法と、RPG ツクール MZ と Tyrano 系のホストでの確かめ方は[ビルドガイド](./docs/ja/development/build.md)に、パッケージの組み合わせとその理由は[プレイヤーの構成](./docs/ja/development/architecture.md)にあります。
+**自分のプロジェクトで使う場合**はこのまま下へ。レンダラーを入れる → `.sspj` を変換する → 再生する、の順です。最初の 1 体から先（イベント、パーツ単位の上書き、テクスチャ差し替え）も同じ道の続きで、[カスタマイズ](./docs/ja/customize/events.md)にあります。
+**SSPlayerForWeb 自体を開発する場合**は [CONTRIBUTING.md](./CONTRIBUTING.md) と[ビルドガイド](./docs/ja/development/build.md)（変更した版を自分のアプリやゲームで使う方法と、RPG ツクール MZ・Tyrano 系のホストでの確かめ方を含む）へ。パッケージの組み合わせとその理由は[プレイヤーの構成](./docs/ja/development/architecture.md)にあります。
 
-### 導入する
+Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。対応するのは **SpriteStudio 7.6 以上**で作成されたプロジェクトです（PixiJS・RPG ツクール MZ・TyranoScript・ティラノビルダーをお使いの場合は、上の表から各パッケージの README のクイックスタートを参照してください）。
 
-Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパッケージに同梱）。環境に合ったレンダラーを入れて（上の表を参照）、`.sspj`（**SpriteStudio 7.6 以上**で作成されたもの）を `.ssab` に変換し、数行で再生できます。RPG ツクール MZ・TyranoScript・ティラノビルダーでは、代わりにそのプラグインの README の手順に従ってください。詳しい手順はドキュメントにあります:
+1. **導入**: 単体レンダラーをインストールします（バンドラーを使わない場合は [CDN](./docs/ja/usage/webgl.md#バンドラーを使わないcdn-without-a-bundler-cdn) から読み込めます）:
 
-**[インストール](./docs/ja/setup/install.md)** · **[クイックスタート](./docs/ja/setup/quickstart.md)** · **[アセットの準備（.sspj → .ssab）](./docs/ja/usage/assets.md)**
+   ```bash
+   npm install @spritestudio/ssplayer-webgl
+   ```
 
-### チェックアウトからサンプルを動かす
+2. **変換**: `.sspj` フォルダをブラウザ上の [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)（またはデスクトップの [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI)）で変換し、出力されたフォルダをアプリがそのまま配信するディレクトリ（`public/` など）に配置します:
 
-**前提条件:** [Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/)（本リポジトリは pnpm workspaces を使用します）。WASM コアは SDK の Releases からビルド済みのものをダウンロードします。ソースからビルドする場合は **Rust**（[rustup](https://rustup.rs/) 経由）と **wasm-pack**（`cargo install wasm-pack`）が必要です。
+   ```
+   public/
+   └── Ringo/            ← 変換ツールの出力フォルダ
+       ├── Ringo.ssab
+       └── Ringo.png
+   ```
+
+3. **再生**: `<ss-player>` 要素で配置します（`SSSurface` / `SSPlayer` の JS API からコードで操作することもできます）:
+
+   ```ts
+   import { defineSSPlayerElement } from '@spritestudio/ssplayer-webgl/element';
+   defineSSPlayerElement();   // <ss-player> タグを登録（アプリ全体で一度）
+   ```
+
+   ```html
+   <ss-player src="/Ringo/Ringo.ssab" animation="wait1" autoplay style="width:640px;height:480px"></ss-player>
+   ```
+
+SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。
+
+**次に読む:** [インストール](./docs/ja/setup/install.md) · [クイックスタート](./docs/ja/setup/quickstart.md) · [アセットの準備（`.sspj` → `.ssab`）](./docs/ja/usage/assets.md) · [制約と適用範囲](./docs/ja/limitations.md)
+
+## 🎬 サンプル
+
+すぐ動かせるサンプルアプリは [`examples/`](./examples/) にあります（レンダラーごとに1つ。上の環境別テーブルからリンクしています）。レンダラーに紐づかないものも 3 つあり、[`examples/sspj-preview`](./examples/sspj-preview) は `.sspj` のフォルダをドロップするとその場で変換して再生するサンプルで、シークバーとイベントのマーカー（クリックでその位置へシーク）付き（`ssconverter-core` + `ssplayer-webgl` または `ssplayer-pixi`、ページ上で切り替え。サーバもビルドも不要）、[`examples/part-follow`](./examples/part-follow) はパーツの実トランスフォームに HTML 要素を追従させるサンプル、[`examples/cdn`](./examples/cdn) はバンドラーも `npm install` も使わず CDN から直接読み込む 1 ファイル完結のページ 3 種です。
+
+チェックアウトから手元で動かす場合は（[Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/) が必要。ビルド済み WASM は自動取得されるため Rust ツールチェーンは不要）:
 
 ```bash
 git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
 cd SSPlayerForWeb
-pnpm run example                         # 下のすべての手順を実行し、<ss-player> のデモをブラウザで開く
+pnpm run example                         # 別サンプル: pnpm run example example=pixi（override / part-follow / sspj-preview も可）
 ```
 
-`pnpm run example` は、下の各手順を、その成果物が無いときだけ実行します。`pnpm run example example=pixi` で別のサンプル(`override`、`part-follow`、`sspj-preview` も選べます)を起動できます。手順を自分で実行する場合:
-
-```bash
-git submodule update --init --recursive  # SpriteStudio-SDK（サンプル素材＋コア）を取得
-pnpm install                             # 依存関係のインストール & ワークスペースの初期化
-pnpm run download:wasm                   # ビルド済みの WASM を取得（Rust ツールチェーン不要）
-pnpm run build                           # すべての TypeScript パッケージをビルド
-pnpm run deploy-examples                 # examples が読み込む .ssab アセットを生成
-cd examples/webgl-example
-pnpm run dev                             # 開発サーバを起動してアニメーションを確認
-```
-examples は **ビルド済み** のパッケージをワークスペース参照で利用します。`packages/` 配下の TypeScript を変更したら `pnpm run build` を、Rust コアを変更したら `download:wasm` の代わりに `pnpm run build:wasm` を、サンプルプロジェクトを編集したら `pnpm run deploy-examples` を再実行してください。
-
-変更を貢献する場合は、[CONTRIBUTING.md](./CONTRIBUTING.md) にコーディング規約と WASM FFI のルールがあります。
-
-## 💡 概要
-
-`pnpm` ワークスペースで構成し、描画をアニメーションロジックから分離しています。どのパッケージがどれの上に載っているかとその理由は[プレイヤーの構成](./docs/ja/development/architecture.md)にあります。各パッケージの API・オプションは、上の表からリンクした各 README を参照してください。
-
-## 🎬 サンプル
-
-すぐ動かせるサンプルアプリは [`examples/`](./examples/) にあります（レンダラーごとに1つ。上の環境別テーブルからリンクしています）。レンダラーに紐づかないものも 3 つあり、[`examples/sspj-preview`](./examples/sspj-preview) は `.sspj` のフォルダをドロップするとその場で変換して再生するサンプルで、シークバーとイベントのマーカー（クリックでその位置へシーク）付き（`ssconverter-core` + `ssplayer-webgl` または `ssplayer-pixi`、ページ上で切り替え。サーバもビルドも不要）、[`examples/part-follow`](./examples/part-follow) はパーツの実トランスフォームに HTML 要素を追従させるサンプル、[`examples/cdn`](./examples/cdn) はバンドラーも `npm install` も使わず CDN から直接読み込む 1 ファイル完結のページ 3 種です。先にパッケージをビルドし（[クイックスタート](#チェックアウトからサンプルを動かす)参照）、各サンプルの開発サーバを起動してください。PixiJS および WebGL のサンプルでは、`.ssab` ファイル（およびテクスチャ）を含むフォルダ、または embedded な `.ssab` ファイルをブラウザにドラッグ＆ドロップすることで、手元のアセットを再生できる機能が備わっています。
+PixiJS および WebGL のサンプルでは、`.ssab` ファイル（およびテクスチャ）を含むフォルダ、または embedded な `.ssab` ファイルをブラウザにドラッグ＆ドロップすることで、手元のアセットを再生できる機能が備わっています。
 
 ## 🔗 関連リポジトリ
 
-- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — `libssruntime` および `libssconverter` を提供するコア SDK です。
-- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — `.sspj` から `.ssab` へ変換するためのデスクトップ GUI ツールです。
+- [SpriteStudio Docs](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player のドキュメントポータル
+- [SpriteStudio-SDK](https://github.com/cri-middleware/SpriteStudio-SDK) — `libssruntime` および `libssconverter` を提供するコア SDK
+- [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI) — Player なしで `.sspj` から `.ssab` へ変換できるデスクトップ GUI ツール
 
 ## 📄 ライセンス
 
