@@ -13,9 +13,7 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 
 ::: tip 手元に `.sspj` がまだ無いときは
 [SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
-[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
-[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
-が手頃です。ダウンロードしたプロジェクトは、下のどのツールにもそのまま渡せます。
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)が手頃です。ダウンロードしたプロジェクトは、下のどのツールにもそのまま渡せます。
 :::
 
 | ツール | 向いている用途 | 導入 |

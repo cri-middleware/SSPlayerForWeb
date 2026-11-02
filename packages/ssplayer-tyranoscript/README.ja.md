@@ -13,8 +13,7 @@
 
 ## クイックスタート
 
-**シナリオを書く場合**はこのまま下へ。入れる → 変換する → 表示する、の順です。その先（全タグ、クロスフェードとトラック、シグナル、セーブ / ロード、音声）も同じ道の続きで、[TyranoScript ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano)にあります。
-**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
+**シナリオを書く場合**はこのまま下へ。入れる → 変換する → 表示する、の順です。その先（全タグ、クロスフェードとトラック、シグナル、セーブ / ロード、音声）も同じ道の続きで、[TyranoScript ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano)にあります。**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 TyranoScript のプロジェクトと、**SpriteStudio 7.6 以上**で作成したプロジェクトを用意してください。
 

@@ -11,9 +11,7 @@ PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う�
 
 ::: tip SpriteStudio のデータが手元に無くても始められます
 [公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
-[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
-[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
-が手頃です。
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)が手頃です。
 :::
 
 ## ssplayer-webgl（依存なし）

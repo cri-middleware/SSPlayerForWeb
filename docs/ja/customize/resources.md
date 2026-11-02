@@ -75,8 +75,7 @@ canvas は復帰せず白いままになります。
 テクスチャは通常 `.ssab` の兄弟ファイルとして解決されます。それ以外の場所から供給したい場合（インメモリのバンドル、エンジンが既に GPU 上に持っているアトラスなど）は、
 [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) を実装してコアを直接駆動するか、`loadBuffer(ssab, textures)` でパックを渡してください。第 2 引数でセルマップハッシュごとに URL・エンコード済みの画像バイト列・画像ソースのいずれかを指定でき、WebGL では `bindTextureSource()` による登録が代わりに行われます。パックを結びつける `load()` / `loadBuffer()` は最初にプレイヤーのテクスチャマネージャーをリセットするため、`load()` の前に `bindTextureSource()` で登録したテクスチャは失われます。
 
-読み込み*後*にテクスチャを差し替えたい場合（着せ替えや動的な表情差分など）は、名前をキーにした
-[テクスチャ差し替え（着せ替え）](/ja/customize/texture-replacement) の API を使ってください。セルマップ名の解決を代わりに行い、元テクスチャへの復元もできます。
+読み込み*後*にテクスチャを差し替えたい場合（着せ替えや動的な表情差分など）は、名前をキーにした[テクスチャ差し替え（着せ替え）](/ja/customize/texture-replacement) の API を使ってください。セルマップ名の解決を代わりに行い、元テクスチャへの復元もできます。
 
 URL で辿れないインスタンスパックも同様で、
 `player.internalPlayer.setInstancePackProvider(provider)` で、[`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md) 型の関数を、パックのリソースが準備される前（`load()` / `loadBuffer()` の前）に渡します。この場合コアはフェッチを行わなくなるため、そのパックのテクスチャ登録も利用側の責務になります。

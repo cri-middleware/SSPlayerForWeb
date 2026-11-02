@@ -128,8 +128,7 @@ player.getPartNames();          // 全パーツ名（インデックス順。個
 player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
 
-パーツ単位で色 / セル / 表示を実行時に上書きするには
-[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください（こちらは PixiJS・WebGL 共通です）。
+パーツ単位で色 / セル / 表示を実行時に上書きするには[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください（こちらは PixiJS・WebGL 共通です）。
 
 ---
 

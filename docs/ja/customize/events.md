@@ -40,8 +40,7 @@ off(); // 購読解除
 `onAnimationStarted` / `onAnimationFinished` / `onAnimationLooped` は引数を取りません。`<ss-player>` では、同じイベントが要素上の DOM イベント（`animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`）として届き、中身は `detail` にあります（[WebGL・Web Components で使う](/ja/usage/webgl)を参照）。`onFrame` などは `el.player` にあります。
 
 このほかに、オーサリングされたイベントではなく**フレームが進むたび**に発火する
-`onFrame` があります。そのフレームのパーツ変換が確定するタイミングです。詳しくは
-[パーツトラッキング](/ja/customize/part-following) を参照してください。
+`onFrame` があります。そのフレームのパーツ変換が確定するタイミングです。詳しくは[パーツトラッキング](/ja/customize/part-following) を参照してください。
 
 ## 複数のアニメーションを再生しているとき
 
