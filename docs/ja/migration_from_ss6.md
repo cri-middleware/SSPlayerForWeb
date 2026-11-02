@@ -150,9 +150,7 @@ player.findPartIndex('body');  // パーツ名 → インデックス（不明�
 `findPartIndex('body')` はランタイム側で同じ解決を行うもので、`part` 引数の内部処理でも使われます。上書きを頻繁に行う場合は、これでインデックスを取得して使い回してください。
 
 同じメソッドは `SSPlayer`（PixiJS・WebGL の両バックエンド）の両方にあります。ブレンド方法・
-priority・色のパック方法・注意点は [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください。コードを書かずに扱えるオーサリング手段は
-[RPG ツクール MZ で使う](/ja/usage/rmmz)・[TyranoScript で使う](/ja/usage/tyrano)・
-[ティラノビルダーで使う](/ja/usage/tyranobuilder) にあります。
+priority・色のパック方法・注意点は [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください。コードを書かずに扱えるオーサリング手段は[RPG ツクール MZ で使う](/ja/usage/rmmz)・[TyranoScript で使う](/ja/usage/tyrano)・[ティラノビルダーで使う](/ja/usage/tyranobuilder) にあります。
 
 ## 6. ⚠️ 現在は制限付きの機能
 

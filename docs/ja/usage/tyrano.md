@@ -22,6 +22,7 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。シ�
 | --- | --- |
 | TyranoScript | **V6** の **Ver603b**（サンプルが取得する `master` と同じ版）と **Ver602c**（TyranoStudio 6.03 が新規プロジェクトに使う版）で動作確認。自動セーブ復元のみ **V515 以降**が必要 |
 | 描画 | **WebGL1** 必須（WebGL2 があれば自動で昇格） |
+| SpriteStudio | **SpriteStudio 7.6 以上**で作成したプロジェクト |
 
 セーブデータからの復元は TyranoScript の `load-beforemaking` / `snapsave-start` イベントを使っており、これらは **V515 で追加された**ものです。**V514 以前**ではイベント機構が無いため自動復元が働かず、`data/scenario/make.ks` に `[ss_restore]` を書く必要があります（「6. セーブ /
 ロードとライフサイクル」参照）。それ以外のタグは影響を受けません。
@@ -45,7 +46,7 @@ data/others/plugin/ssplayer/
 
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。ブラウザーで <a href="../../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> を開き、`.sspj` の入ったフォルダをドロップ（または **Browse...** で選択）して **⚡ Convert & Download** を押し、ダウンロードされた ZIP を `data/others/ssdata/` に展開します。デスクトップでは SSConverter GUI で同じことができます。どちらも [アセットの準備](/ja/usage/assets) にあります。
 
 変換したものは、プロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。`.ssab` はアニメーションファイル（`.ssae`）1 つにつき 1 つ、同じ名前でできます。
 
@@ -130,10 +131,10 @@ data/others/ssdata/
 - `layer`: Tyrano のレイヤー番号（**大きいほど手前**、既定 `0`）。`page` は `fore`（既定）/ `back` です。
 - `scale`: 拡大率（既定 `1`）。
 - `anime`: `.ssab` 内のアニメ名。空にすると**先頭**のアニメになります。
-- `[ss_play]` の `start`: 開始フレーム（既定 `-1` = 現在のフレームから）。
+- `[ss_play]` の `start`: 開始フレーム（既定 `-1` = アニメーションの先頭から。`[ss_section]` で区間を設定している場合は区間の先頭から）。
 - `visible`: `false` にすると表示せずにロードだけ行います（[先読み・表示・非表示](#preload-show-hide) を参照）。
 - `zindex`: *同じレイヤーの中での*重なり順。指定しない場合、同じレイヤーのプレイヤーは作成順に重なります。
-- `time`: フェードの時間（ms）。既定は `[ss_show]` / `[ss_hide]` が `0`（即時）、`[ss_fadein]` / `[ss_fadeout]` が `1000`、`[ss_track_fade]` が `500` です。
+- `time`: 時間（ms）。フェード、`[ss_move]` では移動にかける時間です。既定は `[ss_show]` / `[ss_hide]` が `0`（即時）、`[ss_fadein]` / `[ss_fadeout]` が `1000`、`[ss_track_fade]` と `[ss_move]` が `500` です。
 - `wait`: `true` にすると演出が終わるまでシナリオを止めます。フェードでは既定で `true`、`[ss_move]` では既定で `false` です。
 
 そのほかの属性は、以下でタグごとに説明します。

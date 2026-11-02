@@ -9,8 +9,11 @@ a cut: a walk underneath, an aiming overlay on top, a one-shot reaction crossfad
 each authored by the artist as an animation of its own.
 
 The methods below are on `SSPlayer` in both the PixiJS and the WebGL packages, under the
-same names. RPG Maker MZ's `SSPlayer` has them too, for scripts; there is no plugin
-command for them.
+same names, and on RPG Maker MZ's `SSPlayer`. RPG Maker MZ also has plugin commands for tracks
+(**Set SS Track**, **Fade SS Track**, **Clear SS Track**) and a `Transition (ms)` on its animation
+commands that crossfades track 0 — see [RPG Maker MZ](/usage/rmmz). TyranoScript has `[ss_track]`,
+`[ss_track_fade]` and `[ss_track_clear]`, and `transition=` on `[ss_play]` — see
+[TyranoScript](/usage/tyrano). TyranoBuilder has no component for tracks.
 
 ## The model: a stack of tracks
 
@@ -31,7 +34,7 @@ flowchart BT
 **Track 0 is special.** It is what `setAnimation` establishes, and it carries the
 structure: the cells, visibility, part colors and draw order, the events, and the
 playback state. `currentAnimation`, `isFinished`, the frame read-outs, the events and
-`canvasRect` all follow track 0's animation. The tracks above it are overlays.
+(on WebGL) `canvasRect` all follow track 0's animation. The tracks above it are overlays.
 
 | Blend | What it does |
 |---|---|
@@ -89,7 +92,7 @@ The incoming animation takes track 0 over **when the fade begins**, not when it 
 - `currentAnimation` names the incoming animation from the call on. Calling
   `setAnimation` with the name the fade left behind therefore switches back to it
   rather than doing nothing, and naming the incoming one mid-fade leaves the fade
-  running. `canvasRect` follows too.
+  running. `canvasRect` (WebGL) follows too.
 - What cannot be blended — cells, visibility and the like — is the incoming
   animation's from the first frame of the fade. `isFinished` and `onAnimationFinished`
   report the incoming animation's playback; the outgoing one running out mid-fade does
@@ -132,7 +135,7 @@ player.setSourceWeight(run, t);
   `SSTrackSync.Start` before laying the run (next section) to start them in step, or
   seek one with `setSourceFrame`.
 - A handle is valid until its source is released — by a crossfade completing,
-  `clearTrack` or `setAnimation` — and is then reused, so drop it then.
+  `clearTrack`, `setTrackAnimation` on its track or `setAnimation` — and is then reused, so drop it then.
 
 ## Starting in step with track 0
 
@@ -186,11 +189,12 @@ track 0 changes hands.
 
 ```ts
 player.setTrackAnimation(2, 'hit_react');
-player.setTrackLoopCount(2, 1); // play once, then hold the last frame
+player.setTrackAlpha(2, 1);      // a track keeps the alpha its last fade left
+player.setTrackLoopCount(2, 1);  // play once, then hold the last frame
 
 // every frame
-if (player.isTrackFinished(2)) {
-  player.fadeTrack(2, 0, 120); // a finished track holds its last frame until you act
+if (player.isTrackFinished(2) && player.getTrackFadeProgress(2) === undefined && (player.getTrackAlpha(2) ?? 0) > 0) {
+  player.fadeTrack(2, 0, 120);   // once; a finished track holds its last frame until you act
 }
 ```
 
@@ -227,7 +231,7 @@ A common three-track layout for an in-game character:
 |---|---|---|---|
 | 0 | `idle` / `walk` / `run` | — | `crossfade(0, …, 200)` on a state change |
 | 1 | `aim_lr` | Additive, speed 0 | `setTrackFrame` from the aiming angle |
-| 2 | `hit_react` | Mix | `setTrackAnimation` + `setTrackLoopCount(2, 1)`, faded out once `isTrackFinished(2)` |
+| 2 | `hit_react` | Mix | `setTrackAnimation` + `setTrackAlpha(2, 1)` + `setTrackLoopCount(2, 1)`, faded out once after `isTrackFinished(2)` |
 
 `trackCount`, `getTrackAlpha(track)`, `getTrackBlend(track)`, `getTrackSync(track)`,
 `getTrackFrame(track)`, `getTrackSpeed(track)`, `getTrackLoopCount(track)` and the other

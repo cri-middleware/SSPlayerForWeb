@@ -10,7 +10,7 @@ parts.
 > **Who this is for:** apps on PixiJS v8 that want a button, a menu item or a toggle drawn by a
 > SpriteStudio animation.
 > **Install:** `npm install @spritestudio/ssplayer-pixi-ui @pixi/ui pixi.js` (`@pixi/ui@^2.4` and
-> `pixi.js@^8` are peer dependencies). It brings `@spritestudio/ssplayer-pixi` with it and
+> `pixi.js@^8.19` are peer dependencies). It brings `@spritestudio/ssplayer-pixi` with it and
 > re-exports it, so `SSPlayer` comes from here too.
 > **Not what you need?** → [ssplayer-pixi](../ssplayer-pixi/README.md) to play animations without
 > the button.
@@ -73,5 +73,6 @@ From the repo root, after the WASM is in place (see
 ```bash
 pnpm run build                                   # build all TS packages
 pnpm --filter @spritestudio/ssplayer-pixi-ui test
+pnpm run deploy-examples                         # once: the sample assets (not tracked in git)
 pnpm --filter pixi-example dev                   # then open /ui.html
 ```

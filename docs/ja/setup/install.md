@@ -51,8 +51,9 @@ npm install @spritestudio/ssplayer-pixi pixi.js
 
 ## 前提
 
-- ブラウザが **WebGL** に対応していること（`ssplayer-webgl` は WebGL 1 / 2、
-  `ssplayer-pixi` は WebGL 2 が必要）。加えて `ssplayer-pixi` は、PixiJS v8 のバックエンド優先順位に従い、WebGPU が利用可能ならそれを使い、なければ WebGL2 にフォールバックします。
+- ブラウザが **WebGL** に対応していること（`ssplayer-webgl` は WebGL 1 / 2、`ssplayer-pixi` は WebGL 2 が必要）。`ssplayer-pixi` は WebGPU でも動きます。PixiJS v8 は既定で WebGL を使うので、WebGPU を使うには `app.init()` に `preference: 'webgpu'` を渡します。WebGPU が無いブラウザでは WebGL にフォールバックします。
+- ブラウザが **WebAssembly SIMD** に対応していること（[制約と適用範囲](/ja/limitations#ブラウザ要件) を参照）。
+- プロジェクトは **SpriteStudio 7.6 以上**で作成されていること。
 - 再生には **`.ssab`（ランタイムバイナリ）** が必要です。SpriteStudio の `.sspj`
   からの変換方法は [アセットの準備](/ja/usage/assets) を参照してください。
 

@@ -29,14 +29,14 @@ Build a renderer binding on `core` and you inherit what every SpriteStudio Playe
 - **The motion is computed for you.** Bone matrices, mesh deformation and hierarchical colour / opacity are computed here and emitted as one draw plan. The PixiJS, standalone WebGL and RPG Maker MZ renderers all consume the same plan, so pose, deformation and draw order match across them. Your renderer draws; blend modes and part colours arrive as intent for it to reproduce with its engine.
 - **Zero-parse loading, zero-copy frames, SIMD.** `.ssab` is a FlatBuffers binary read in place. Each frame's transforms and geometry are `Float32Array` views onto WASM memory — no per-frame copies — computed by the Rust core with SIMD (f32x4).
 - **Referenced or embedded textures, both handled.** `core` loads a `.ssab` that references its texture files and one converted with `--embedded` that carries them inside — one request instead of one per texture, or none when you pass the bytes as an `ArrayBuffer`. Implement the optional `loadTextureFromBytes` to decode embedded textures; leave it out and loading falls back to URLs.
-- **Runs anywhere a browser does.** The core is the SDK's `#![no_std]` Rust compiled to WebAssembly, with no OS or DOM assumptions.
+- **Runs in any browser with WebAssembly SIMD** (Chrome / Edge 91+, Firefox 89+, Safari 16.4+). The core is the SDK's `#![no_std]` Rust compiled to WebAssembly, with no OS or DOM assumptions.
 
 ## What this package is
 
 `ssplayer-core` wraps the Rust/WASM `ssruntime` and exposes engine-agnostic
 playback logic — WASM initialization, time updates, and geometry / state
-extraction. It has **no dependency on any rendering engine or the DOM**, so it is
-the layer a renderer package sits on top of.
+extraction. Its main entry has **no dependency on any rendering engine or the DOM**
+(the optional `./audio` entry uses Web Audio), so it is the layer a renderer package sits on top of.
 
 ## Key exports
 

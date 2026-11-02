@@ -17,6 +17,7 @@ description: WebGL と PixiJS のプレイヤーに共通する再生制御 API�
 
 ```ts
 await player.load(ssabUrl); // テクスチャ・インスタンスパック・サウンドは .ssab と同じディレクトリから読み込まれます
+// または: await player.loadBuffer(ssabBytes, new Map()); // メモリ上の .ssab（ドロップ、インライン）。Map はセルマップのハッシュ別テクスチャで、embedded の .ssab なら空
 ```
 
 ```ts
@@ -27,8 +28,9 @@ player.currentAnimation;       // 現在のアニメーション名
 再生設定は引数ではなくプロパティです（[再生制御](#playback-control)）。これらはアニメーションではなく呼び出し側のものなので、`setAnimation` を跨いで保持されます。`loopCount = 3` は切り替え後も
 3 回のままです。
 
-`setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので
-`load()` で全て読み込まれ、切り替えはランタイムのリセットのみ — 待つべき読み込みはありません。
+`setAnimation` は同期です。`.ssab` が必要とするアセットはアニメーション単位ではなくパック単位なので`load()` で全て読み込まれ、切り替えはランタイムのリセットのみ — 待つべき読み込みはありません。
+
+すでに選んでいるアニメーションをもう一度選んでも何も起きません。再生位置・区間・上書きはそのままです。最初から再生し直すには `play()` を呼びます。区間と `isFinished` が戻るのは、実際に別のアニメーションへ切り替えたときだけです。
 
 ## 再生制御 {#playback-control}
 
@@ -63,7 +65,7 @@ player.subFrameEnabled;     // サブフレーム補間（既定 on。スロー�
 
 ```ts
 player.setAnimationSection(startFrame, endFrame);      // 再生区間を限定
-player.setPlaybackDirection(direction, style);         // 方向 / スタイル
+player.setPlaybackDirection(WebPlaybackDirection.Backward, WebPlaybackStyle.PingPong);  // 方向（Forward | Backward）/ スタイル（Normal | PingPong）
 player.frameSkipEnabled = false;                       // フレームスキップを止める（サブフレームも off にしないとタイミングが崩れる）
 ```
 
@@ -78,7 +80,7 @@ player.setAnimation('attack');
 player.setAnimationSectionByLabel('windup', 'hit', 0, -1); // `hit` の 1 フレーム手前まで
 ```
 
-`_start` と `_end` は SpriteStudio と同じくアニメーションの最初と最後のフレームを指します。アニメーションに無いラベルを渡したときと、ラベルとオフセットから出たフレームが `setAnimationSection` の受け付けない区間になったときは、`false` を返してコンソールに 1 度だけ知らせ、区間はそのままにします。`setAnimationSection` と同じく再生は始めず、`setAnimation` で消えます。
+`_start` と `_end` は SpriteStudio と同じくアニメーションの最初と最後のフレームを指します。アニメーションに無いラベルを渡したときと、ラベルとオフセットから出たフレームが `setAnimationSection` の受け付けない区間になったときは、`false` を返してコンソールに 1 度だけ知らせ、区間はそのままにします。`setAnimationSection` と同じく再生は始めず、別のアニメーションに切り替えると消えます。
 
 ## 反転とオフセット {#flip-and-offset}
 
@@ -126,8 +128,7 @@ player.getPartNames();          // 全パーツ名（インデックス順。個
 player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
 
-パーツ単位で色 / セル / 表示を実行時に上書きするには
-[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください（こちらは PixiJS・WebGL 共通です）。
+パーツ単位で色 / セル / 表示を実行時に上書きするには[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください（こちらは PixiJS・WebGL 共通です）。
 
 ---
 

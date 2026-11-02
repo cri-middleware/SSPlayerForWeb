@@ -40,8 +40,12 @@ const player = surface.createPlayer();
 ```
 
 ```html
-<ss-player src="/assets/Effect.ssab" animation="fire" background="#000000"></ss-player>
+<ss-player src="/assets/Effect.ssab" animation="fire" standalone background="#000000"></ss-player>
 ```
+
+`background` configures the element's own context, so it takes effect on a `standalone` element only.
+An element on the shared overlay (the default) has no opaque backdrop to read; give its player one
+with `el.player.backdrop = 0x000000` (any player on a shared surface has `player.backdrop`).
 
 ::: warning Transparent canvas + additive
 With `backgroundColor` omitted, the canvas is cleared **fully transparent** so it can sit as an

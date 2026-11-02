@@ -46,8 +46,8 @@
  *   enter "SpriteStudio_Source,ssconverter_bg.wasm" in [Exclude files/folders].
  *   The game needs neither to play.
  *
- *   Trade-off: MZ's "Encrypt Image Files" option is also limited to img/ and
- *   audio/, so SS textures outside img/ ship unencrypted. If you want them
+ *   Trade-off: MZ's "Encrypt Image Files" option is also limited to img/, so SS
+ *   textures outside img/ ship unencrypted. If you want them
  *   encrypted, move the WHOLE spritestudio folder back under img/
  *   (img/spritestudio/) — never split the .ssab from its textures. The .ssab
  *   isn't an image so it stays plain, while the textures beside it get
@@ -558,7 +558,7 @@
  * @help ssplayer-rpgmakermz.js
  *
  * SpriteStudio（.ssab）アニメを MZ の PixiJS v5 レンダラへ直接描画し、キャラや
- * ピクチャと正しい前後関係（Zオーダー）で表示します。
+ * ピクチャと正しい前後関係（Z 順）で表示します。
  *
  * 導入手順
  *   1. プラグイン ZIP の 3 ファイル（本ファイル・"ssruntime_bg.wasm"・
@@ -598,7 +598,7 @@
  *   ため、［除外するファイル/フォルダ］に「SpriteStudio_Source,ssconverter_bg.wasm」
  *   を入力します。どちらもゲームの実行には不要です。
  *
- *   トレードオフ：暗号化（画像ファイル）も img/・audio/ だけが対象のため、img/ の
+ *   トレードオフ：画像ファイルの暗号化も img/ だけが対象のため、img/ の
  *   外に置いたテクスチャは暗号化されません。テクスチャを暗号化したい場合は、.ssab と
  *   テクスチャを分けるのではなく、spritestudio フォルダごと img/ の下
  *   （img/spritestudio/）へ戻してください。.ssab は画像ではないので暗号化されません

@@ -67,7 +67,7 @@ export interface TyranoVariable {
 
 /**
  * TyranoScript's layer manager. `getLayer` is the canonical way to reach a
- * layer element (used by the official Spine plugin) — it returns the layer as a
+ * layer element (used by TyranoScript's own character plugins) — it returns the layer as a
  * jQuery object, handling the `<number>_<fore|back>` naming and `base`
  * internally, so callers never build (invalid) `.0_fore` selectors themselves.
  */

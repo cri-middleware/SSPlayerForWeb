@@ -6,7 +6,7 @@ description: Swapping the texture a cell map binds to from code, without touchin
 
 Swap the texture a cell map binds **from your code**, without touching the `.ssab` — colour variations, costume changes, dynamic facial expressions. It keys by **cell-map name**, so one call reaches every part that draws from that cell map.
 
-This is a Player-side responsibility, and is **not** the [Part control](/customize/part-overrides) (Override Layer) API: that replaces the cell one *part* draws; this replaces the whole *texture* a cell map is bound to.
+This is a Player-side responsibility, and is **not** the [Part control](/customize/part-overrides) API: that replaces the cell one *part* draws; this replaces the whole *texture* a cell map is bound to.
 
 The same method names are available on `SSPlayer` (both the PixiJS and WebGL backends) and on RPG Maker MZ — each takes its own engine's texture object.
 
@@ -58,7 +58,7 @@ They read alike but do different things — do not reach for one when you mean t
 | Unit | A whole **cell map** (texture) | **One part** |
 | Effect | Every part drawing from that cell map | Only that part |
 | Replaces | The **texture object** bound to the name | The **cell** (rect + texture) the part draws |
-| Belongs to | This page (a Player-side texture swap) | [Part control](/customize/part-overrides) (the Override Layer) |
+| Belongs to | This page (a Player-side texture swap) | [Part control](/customize/part-overrides) |
 
 Reach for `setCellmapTexture` to re-skin (a costume, a palette swap); reach for `setPartCellOverride` to make one part show a different picture from the same atlas.
 
@@ -78,7 +78,7 @@ The `texture` argument is engine-native: a `Texture` on PixiJS, an image source 
 - **A frame under a TextureChange binds a different name.** On the frames an authored `TCHG` applies, the part binds through the texture *file*-name hash, not the cell-map name — so replacing the cell-map name has no effect there. To re-skin those frames too, replace that file name (the `xxx.png` entries `getReplaceableTextureNames()` lists).
 - **Restoring does not reload.** An override *shadows* the loaded texture rather than replacing it, so `null` just drops the shadow and the original reappears — no fetch, and it works for embedded (`--embedded`) textures too.
 - **Ownership.** A `Texture` (PixiJS) or an `SSTextureEntry` (WebGL) you pass is yours — the player never frees it. A raw image source (WebGL) or `Bitmap` (MZ) is uploaded into a GPU texture the *player* owns and frees on restore, replacement, or teardown.
-- **Instance children share this player's textures**, so replacing a name a child's sub-animation also uses re-skins the child too — unlike the Override Layer, whose overrides stop at an instance boundary.
+- **Instance children share this player's textures**, so replacing a name a child's sub-animation also uses re-skins the child too — unlike part overrides, which stop at an instance boundary.
 - **Binding a different `.ssab` clears every override** (its cell-map hashes belong to the old pack).
 - **WebGL context loss drops overrides.** The originals are re-uploaded automatically (see [Resources & lifecycle](/customize/resources)), but a runtime override is not — re-apply it if the context is lost.
 
@@ -89,7 +89,7 @@ Like a part override, a texture swap changes the output **without changing the f
 | Player | Behaviour |
 |---|---|
 | `SSPlayer` (PixiJS) | Its ticker early-returns while stopped, so a swap automatically re-renders the current frame, the same as an override |
-| `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself do you need to call `draw()` |
+| `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself (`autoStart: false`) do you need to call `surface.draw()` |
 | RPG Maker MZ | MZ redraws every game frame, so it just shows |
 
 ## Using it from a Web Component

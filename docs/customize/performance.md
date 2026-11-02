@@ -21,7 +21,7 @@ nearly 90%.
 ```ts
 const surface = new SSSurface(canvas, { maxDPR: 1.5 });
 const player = surface.createPlayer();
-player.resize(cssWidth, cssHeight);       // recomputes the buffer under the cap
+surface.resize(cssWidth, cssHeight);      // recomputes the buffer under the cap
 ```
 
 ```html
@@ -30,7 +30,8 @@ player.resize(cssWidth, cssHeight);       // recomputes the buffer under the cap
 
 `max-dpr` configures the element's own context, so it takes effect on a `standalone` element. Elements
 share one overlay canvas by default, and that canvas is set up once, by
-`SSOverlay.getOrCreate(id, { maxDPR: 1.5 })`, before the first element connects.
+`SSOverlay.getOrCreate('default', { maxDPR: 1.5 })` (`'default'` is the overlay every `<ss-player>`
+shares), before the first element connects.
 
 **PixiJS** — the drawing buffer belongs to the `Application`, so cap it there:
 
@@ -52,7 +53,7 @@ at draw calls and the per-frame options below.
 `pauseWhenHidden` is **on by default** in `ssplayer-webgl`. It wires an `IntersectionObserver` that
 halts the ticker when the canvas scrolls off-screen, plus a `visibilitychange` listener that halts
 it when the tab is backgrounded. Leave it on unless a player needs to keep advancing while
-invisible; opt out explicitly with `pause-when-hidden="false"`.
+invisible; opt out with `pauseWhenHidden: false` on `SSSurface`, or `pause-when-hidden="false"` on a `standalone` element.
 
 ## Playback options
 
@@ -67,8 +68,9 @@ player.subFrameEnabled = false;  // disable sub-frame interpolation (on by defau
   rendering can't keep up — no action needed for performance.
 
 ::: warning
-`subFrameEnabled` and `frameSkipEnabled` work as a pair. If you turn one off, turn off the
-other too — disabling only one leaves playback timing inconsistent.
+Turn `subFrameEnabled` off on its own, as above, and leave `frameSkipEnabled` on. The reverse is the
+pair: `frameSkipEnabled = false` should come with `subFrameEnabled = false`, or the timing drifts
+(see [Basic playback](/usage/basic)).
 :::
 
 ## What breaks batching
@@ -94,16 +96,18 @@ animation costs far more than another with a similar part count.
 
 You get these without doing anything:
 
-- **Direct Drawing (batched rendering)**: draw operations are batched, so many characters are drawn
-  with few draw calls.
+- **Batched drawing**: within one character, parts that share a texture and blend mode are drawn
+  together, so a character costs a few draw calls rather than one per part. Characters are drawn one
+  after another, so the count still grows with the number of players.
 - **Zero-Copy**: transforms and geometry are passed as `Float32Array` views that
   reference WASM memory directly, avoiding a per-frame copy.
 - **Texture sharing**: atlases are cached by URL — in Pixi's global `Assets` cache on PixiJS, and
   per `SSSurface` on WebGL — so many players of the same character share one GPU texture.
 
-What is **not** shared is the parsed `.ssab`: each `load()` allocates its own WASM-side copy. On
-WebGL the GL context belongs to the `SSSurface`, so only players on the same surface share
-textures: put a crowd of the same character on one surface. See
+Players that `load()` the same `.ssab` URL also share one parsed pack; each keeps only its own
+playback state (a pack bound with `loadBuffer()` has no URL and is not shared). On WebGL the GL
+context belongs to the `SSSurface`, so only players on the same surface share textures: put a crowd
+of the same character on one surface. See
 [Resources & lifecycle](/customize/resources).
 
 ## Measurement tips

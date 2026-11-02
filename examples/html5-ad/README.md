@@ -10,7 +10,7 @@ script as base64, is on the docs page
 From the repository root:
 
 ```bash
-pnpm run build:wasm && pnpm run build   # the player bundle and the runtime the script packs
+pnpm run download:wasm && pnpm run build   # the player bundle and the runtime the script packs (pnpm run build:wasm compiles the runtime instead; needs Rust and wasm-pack)
 pnpm run deploy-examples                # converts the sample assets, Ringo_embedded.ssab among them
 node examples/html5-ad/build.mjs ssab=examples/pixi-example/public/Ringo/Ringo_embedded.ssab animation=wait1
 ```

@@ -4,7 +4,7 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 
 # ティラノビルダーで使う
 
-**SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。動作確認は **TyranoBuilder Ver 3.00** で行っています。
+**SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。動作確認は **TyranoBuilder Ver 3.00** で行っています。**SpriteStudio 7.6 以上**で作成したプロジェクトが必要です。
 
 シナリオを手書きする場合は [TyranoScript で使う](/ja/usage/tyrano) を参照してください。同じアニメを
 `[ss_*]` タグで扱えます。
@@ -17,7 +17,7 @@ TyranoScript 版のサンプルシーンです。ランタイムは同じなの�
 
 ## 1. インストール
 
-1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。必要なのはこのファイルだけです（TyranoScript 用プラグイン ZIP の中身も入っています）。
+1. [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。必要なのはこのファイルだけです（TyranoScript 用プラグインの `init.ks`・`main.js`・`ssruntime_bg.wasm` も入っています）。
 2. ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。
 
 **ファイル名は `ssplayer.tbp` のまま使います。** ティラノビルダーはファイル名からプラグインを探すので、`ssplayer-1.2.0.tbp` のように名前が変わると何もインストールされません。版は Release の名前で分かります。
@@ -60,7 +60,7 @@ graph LR
 
 ### 基本の使い方
 
-1. SpriteStudio のプロジェクトを、**`.sspj` とそのフォルダ一式**（アニメは複数ファイルで構成されるため）でプロジェクトフォルダ内の **`SpriteStudio_Source/`** に置きます。このフォルダは初回起動時にプラグインが作成するので、すでに用意されています。
+1. SpriteStudio のプロジェクトを、**`.sspj` とそのフォルダ一式**（アニメは複数ファイルで構成されるため）でプロジェクトフォルダ内の **`SpriteStudio_Source/`** に置きます。このフォルダは初回起動時にプラグインが作成するので、すでに用意されています。**プロジェクト → プラグイン** → **SpriteStudio** の **SpriteStudio_Source を開く** で、そのフォルダが開きます。
 2. ティラノビルダーでプロジェクトを開きます。
 3. 変換の結果がメッセージで表示されます。アニメは **SpriteStudio 表示** コンポーネントのプルダウンから選べる状態になっています。変換に失敗したときは、理由がダイアログで表示されます。
 
@@ -171,8 +171,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 - **次に再生** は再生終了後に別のアニメーションへ引き継ぎます（登場アニメから待機ループへ、など）。「ループ再生する」をオフにする必要があります。ループするアニメは終わらないためです。
 - **パーツ**・**セルマップ**・**セル** は、その管理名のアニメデータに含まれるものが並びます。**パーツ**には変更できるものだけが出ます（色は通常パーツ、画像は通常パーツとマスクパーツ）。
 
-各コンポーネントは対応する `[ss_*]` タグをそのまま書き出すので、動作は
-[タグ一覧](/ja/usage/tyrano#_4-tags) の説明どおりです。
+各コンポーネントは対応する `[ss_*]` タグをそのまま書き出すので、動作は[タグ一覧](/ja/usage/tyrano#_4-tags) の説明どおりです。トラック（`[ss_track]`・`[ss_track_fade]`・`[ss_track_clear]`）にはコンポーネントがありません。TyranoScript のシナリオで使う機能です。
 
 ## うまくいかないとき {#troubleshooting}
 

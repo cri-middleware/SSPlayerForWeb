@@ -25,20 +25,26 @@ off(); // 購読解除
 
 イベントの配信中に（別のリスナーの中から）追加したリスナーは、配信中のイベントではなく次のイベントから受け取ります。配信中に解除したリスナーは、そのイベントでは呼ばれません。DOM の `EventTarget` と同じ動作で、1 つの待ちを終えたコールバックの中から次の待ちを始められるのはこのためです。
 
-`onAnimationStarted` は再生が **head-out** したときに発火します。自分のコードからの `play()` に限らず、`autoplay` 属性やホスト側スクリプトが呼んだものも含みます。`resume()` では発火しません —
-一時停止の解除は続行であって開始ではないからです。
+`onAnimationStarted` は再生が頭出しされた（先頭から始まった）ときに発火します。自分のコードからの `play()` に限らず、`autoplay` 属性やホスト側スクリプトが呼んだものも含みます。`resume()` では発火しません。一時停止の解除は続行であって開始ではないからです。
 
 `onAnimationFinished` は**エッジ**で、再生が完了したティックに 1 回だけ発火します。状態のほうが欲しい場合は `player.isFinished` を読んでください。完了時に latch され、次の `play()` / `setAnimation()`（またはトラック 0 への `crossfade`）まで貼り付くので、エッジが過ぎた後に接続した呼び出し側でも「終わったか」を問えます。どちらも `stop()` では立たず、そこが `!isPlaying` との違いです。
 
-この 3 つはいずれも `partIndex` / `partName` と **`frameNo`** を持ちます。`frameNo` はキーが *置かれている* フレームであって、検出されたフレームとは限りません。1 ティックで複数フレームをまたぐことがあり、その間のキーはすべてそのティックで発火するため、プレイヤーの現在フレームとキーの位置は一致しません。また、発火したアニメーションのハンドルである **`source`** も持ちます（下の説明を参照）。
+ユーザーデータ・シグナル・サウンドの各イベントは、いずれも `partIndex` / `partName` と **`frameNo`** を持ちます。`frameNo` はキーが *置かれている* フレームであって、検出されたフレームとは限りません。1 ティックで複数フレームをまたぐことがあり、その間のキーはすべてそのティックで発火するため、プレイヤーの現在フレームとキーの位置は一致しません。また、発火したアニメーションのハンドルである **`source`** も持ちます（下の説明を参照）。残りの中身は種類によって違います。
+
+| イベント | ほかに持つもの |
+|---|---|
+| `onUserData` | 設定されている値: `integer`・`str`・`rect`（`left`・`top`・`right`・`bottom`）・`point`（`x`・`y`） |
+| `onSignal` | `commandId` と `params`（パラメータ ID から真偽値・数値・文字列への対応）。有効なシグナルだけが届きます |
+| `onAudio` | `soundName`・`soundNameHash`・`soundListNameHash`・`loopNum`（再生回数） |
+
+`onAnimationStarted` / `onAnimationFinished` / `onAnimationLooped` は引数を取りません。`<ss-player>` では、同じイベントが要素上の DOM イベント（`animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`）として届き、中身は `detail` にあります（[WebGL・Web Components で使う](/ja/usage/webgl)を参照）。`onFrame` などは `el.player` にあります。
 
 このほかに、オーサリングされたイベントではなく**フレームが進むたび**に発火する
-`onFrame` があります。そのフレームのパーツ変換が確定するタイミングです。詳しくは
-[パーツトラッキング](/ja/customize/part-following) を参照してください。
+`onFrame` があります。そのフレームのパーツ変換が確定するタイミングです。詳しくは[パーツトラッキング](/ja/customize/part-following) を参照してください。
 
 ## 複数のアニメーションを再生しているとき
 
-[モーションブレンド](/ja/customize/motion-blending)では 1 つのプレーヤーで複数のアニメーションを同時に再生できますが、既定では**トラック 0 の主アニメーションだけがイベントを発火します**。ほかのトラックのオーバーレイや、トラックに混ぜたもう 1 本のアニメーションは、しきい値をその weight 以下に下げたときだけ発火します。
+[モーションブレンド](/ja/customize/motion-blending)では 1 つのプレイヤーで複数のアニメーションを同時に再生できますが、既定では**トラック 0 の主アニメーションだけがイベントを発火します**。ほかのトラックのオーバーレイや、トラックに混ぜたもう 1 本のアニメーションは、しきい値をその weight 以下に下げたときだけ発火します。
 
 ```ts
 const run = player.addTrackSource(0, 'run', 0.3);
@@ -51,13 +57,13 @@ player.setSourceEventThreshold(run, 0.3); // weight が 0.3 以上のあいだ�
 player.setTrackOutgoingEventThreshold(0, 0.5); // 出ていく側はフェードの前半だけ発火する
 ```
 
-ユーザーデータ・シグナル・サウンドのイベントは、どれも発火したアニメーションのハンドル **`source`** を持ちます。`getTrackMainSource(track)` や `addTrackSource` の戻り値と比べると、トラック 0 のアニメーションか、オーバーレイか、クロスフェードの出ていく側かを区別できます。中身は発火したアニメーションの表から読むので、クロスフェードの後に発火したイベントは入ってくる側のイベントです。
+ユーザーデータ・シグナル・サウンドのイベントは、どれも発火したアニメーションのハンドル **`source`** を持ちます。`getTrackMainSource(track)` や `addTrackSource` の戻り値と比べると、トラック 0 のアニメーションか、オーバーレイか、クロスフェードの出ていく側かを区別できます。クロスフェードの開始後に発火したイベントは、入ってくる側のアニメーション自身のイベントです。
 
 ## サウンドの再生
 
 ランタイムは**音を鳴らしません**。`onAudio` はサウンドの参照を渡すだけです。鳴らすのはプレイヤーで、既定で鳴ります。読み込んだ `.ssab` に音があり、`player.audioManager` が設定されていなければ、`load()` が `SSWebAudioManager` を付けて Web Audio で鳴らします。`onAudio` はどちらの場合も発火します。`ssplayer-webgl` は、このアダプターを音のあるパックのときだけ別チャンクとして取得します。
 
-自前のオーディオエンジンで鳴らすには、`IAudioManager` を実装して `load()` より**前に**割り当てます（既定のものは、何も設定されていないときだけ付きます）。`ssplayer-webgl` では、`surface.createPlayer({ autoAudio: false })` で既定のものを付けないようにできます。
+自前のオーディオエンジンで鳴らすには、自前の `IAudioManager` を `load()` より**前に**割り当て（既定のものは、何も設定されていないときだけ付きます）、鳴らす処理は `onAudio` で自分で書きます。`IAudioManager` が担うのは事前読み込み（`preload(sounds)`）と停止（`stopAll`）だけで、サウンドキーは受け取りません。`ssplayer-webgl` では、`surface.createPlayer({ autoAudio: false })` で既定のものを付けないようにできます。
 
 ```ts
 player.audioManager = myAudioManager; // IAudioManager 実装（load() の前に）

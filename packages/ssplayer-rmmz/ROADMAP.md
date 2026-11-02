@@ -8,10 +8,6 @@ This file lists unfinished work that is specific to the RPG Maker MZ plugin; wor
 - [ ] **Signal command ID as a game variable** — `signalSwitch` turns one switch ON for any signal and never OFF. Filter by command ID and store it in a variable, as `[ss_wait_signal command= var=]` does in `ssplayer-tyranoscript`; parameters stay out, as there.
 - [ ] **One texture upload per image URL** — Each picture builds its own `RMMZResourceManager`, so two pictures of one `.ssab` upload the atlas twice. Share one `SSWebGLTextureCache` per GL context, keyed by URL and not refcounted, as in `ssplayer-webgl`. The manager loads through MZ's `ImageManager`, so it has to route through the cache.
 
-## Distribution & verification
-
-- [ ] **Check blend modes, PartsColor, mask parts and the SS shaders in a real MZ** — The renderer is `ssplayer-webgl`'s, and the MZ-side GL state around it has not been checked for these. A manual check; the blend-mode mappings themselves are in the [root ROADMAP](../../ROADMAP.md).
-
 ## Backlog
 
 - [ ] **Battlers** — Play an animation in place of an enemy's image, in front and side view, and of a side-view actor's sheet, named in the database note field. Their selection flash, whiten and collapse are a `ColorFilter` on the battler's sprite, so **Keep the animation in place under a sprite's PIXI filter** comes first, and a troop that repeats an enemy wants **One texture upload per image URL**. Touch targeting reads the sprite's width and height, which the authored canvas (`getCanvasRect()`) can supply. It needs foot-origin handling, and how MZ's picture origin and anchor map onto the animation's own origin should be checked in MZ and documented first. An actor's motions map to animation names and switch with a crossfade. Battle-system plugins that replace these sprites are out of scope.

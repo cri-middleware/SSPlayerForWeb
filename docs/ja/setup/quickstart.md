@@ -7,11 +7,11 @@ description: ssplayer-webgl または ssplayer-pixi で .ssab を再生する最
 `.ssab` を再生する最小コードです。依存の要らない `ssplayer-webgl` と、
 PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う環境に合う方を選んでください。
 
+以下の import はバンドラー（Vite、webpack など）を使う前提です。バンドラーを使わない場合は CDN 版を使います。[WebGL](/ja/usage/webgl#without-a-bundler-cdn)、[PixiJS](/ja/usage/pixi#without-a-bundler-cdn) を参照してください。
+
 ::: tip SpriteStudio のデータが手元に無くても始められます
 [公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
-[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
-[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
-が手頃です。
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)が手頃です。
 :::
 
 ## ssplayer-webgl（依存なし）
@@ -34,7 +34,7 @@ PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う�
 </ss-player>
 ```
 
-Canvas を自分で用意して制御したい場合は `SSPlayer` を使います。
+Canvas を自分で用意して制御したい場合は、`SSSurface` と、そこから作る `SSPlayer` を使います。
 
 ```ts
 import { SSSurface } from '@spritestudio/ssplayer-webgl';

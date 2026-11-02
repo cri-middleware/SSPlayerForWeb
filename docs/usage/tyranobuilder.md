@@ -7,7 +7,7 @@ description: "The ssplayer-tyranobuilder plugin for TyranoBuilder: the auto impo
 Place **SpriteStudio** animations from TyranoBuilder's component palette, with no scenario
 code to write. Drop a SpriteStudio project into a folder in your game and the editor converts
 it for you — when the project opens, and again whenever you ask.
-Verified on **TyranoBuilder Ver 3.00**.
+Verified on **TyranoBuilder Ver 3.00**. You need a project made in **SpriteStudio 7.6 or later**.
 
 Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
 animations as `[ss_*]` tags.
@@ -25,7 +25,7 @@ what the components place is what you see here.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true): open the Release named
    `@spritestudio/ssplayer-tyranobuilder <version>` and take the file under **Assets**, not
    the *Source code* archives. It is the only download you need: it already holds the
-   TyranoScript plugin ZIP's contents.
+   TyranoScript plugin (`init.ks`, `main.js`, `ssruntime_bg.wasm`).
 2. In TyranoBuilder, open **Project → Plugins**, press **Add New** and pick that file.
 
 **Keep the file named `ssplayer.tbp`.** TyranoBuilder finds the plugin by its file name, so
@@ -38,7 +38,8 @@ Nothing else to set up — no plugin tag to write, no runtime to initialise.
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the game
 actually plays. This plugin converts the SpriteStudio projects you put in your game's folder
-into `.ssab`, inside the editor.
+into `.ssab`, inside the editor. Each project becomes one *animation pack* — its `.ssab` files and
+their textures — and the component dropdowns list packs.
 
 ```mermaid
 graph LR
@@ -75,7 +76,8 @@ dropdowns list both (see [Bringing in a pack you converted yourself](#bringing-i
 
 1. Put your SpriteStudio project — the `.sspj` **and the rest of its folder**, since an
    animation is several files — into **`SpriteStudio_Source/`** in your project folder. The
-   plugin creates that folder on first run, so it is already there waiting.
+   plugin creates that folder on first run, so it is already there waiting, and **Open the source
+   folder** (**Project → Plugins** → **SpriteStudio**) opens it.
 2. Open the project in TyranoBuilder.
 3. A message tells you what was converted. The animation is now in the **SpriteStudio: show**
    component's dropdowns. A conversion that fails says why in a dialog.
@@ -182,7 +184,7 @@ if the plugin does not seem to be doing anything.
 
 ## The components
 
-Under **Plugin** in the palette:
+Under **Plugins** in the palette:
 
 | | |
 | --- | --- |
@@ -219,7 +221,8 @@ A few things the fields do that are worth knowing:
   the parts the change applies to: a colour takes normal parts, an image normal and mask parts.
 
 Each component writes the matching `[ss_*]` tag verbatim, so the
-[tag reference](/usage/tyrano#_4-tags) describes exactly what they do.
+[tag reference](/usage/tyrano#_4-tags) describes exactly what they do. There is no component for
+tracks (`[ss_track]`, `[ss_track_fade]`, `[ss_track_clear]`); those are for TyranoScript scenarios.
 
 ## Troubleshooting
 

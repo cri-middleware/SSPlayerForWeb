@@ -14,17 +14,16 @@ installed. Everything else hangs off it.
 
 | Your setup | Class | Package |
 |---|---|---|
-| Frameworkless / drop-in | [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
+| Frameworkless / drop-in | [`SSSurface`](/api/@spritestudio/ssplayer-webgl/classes/SSSurface.md), whose `createPlayer()` returns an [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
 | Plain HTML, no JS wiring | `<ss-player>` (see [WebGL & Web Components](/usage/webgl)) | `ssplayer-webgl` |
 | PixiJS v8 app | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
 | A button in a PixiJS v8 app (see [UI buttons](/usage/pixi-ui)) | [`SSButton`](/api/@spritestudio/ssplayer-pixi-ui/classes/SSButton.md) | `ssplayer-pixi-ui` |
 | Your own renderer | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
 
-Both player classes must be initialized once before any instance is constructed, because the WASM
-runtime is a module-level singleton:
+The WASM runtime is a module-level singleton, so initialize it once before creating any player:
 
 ```ts
-await SSSurface.initialize();  // or SSPlayer.initialize()
+await SSSurface.initialize();  // WebGL; on PixiJS: await SSPlayer.initialize();
 ```
 
 ::: tip The same symbol appears four times

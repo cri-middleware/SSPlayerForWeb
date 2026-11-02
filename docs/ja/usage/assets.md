@@ -13,9 +13,7 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 
 ::: tip 手元に `.sspj` がまだ無いときは
 [SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
-[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら
-[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)
-が手頃です。ダウンロードしたプロジェクトは、下のどのツールにもそのまま渡せます。
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)が手頃です。ダウンロードしたプロジェクトは、下のどのツールにもそのまま渡せます。
 :::
 
 | ツール | 向いている用途 | 導入 |
@@ -212,10 +210,9 @@ TTL が違う——が典型的な踏み方です。バンドラや CDN が画�
 ::: warning embedded は差分配信には向きません
 埋め込むと、**大きくてめったに変わらないアトラス**が、**小さくて頻繁に変わるキーフレーム**と同じファイルに溶接されます。アニメを 1 フレーム直しただけでもアトラスごと再ダウンロードになり、差分配信でやりたいことのちょうど逆になります。
 
-共有も効きません。埋め込みテクスチャは意図的に共有キャッシュの外に置かれ、`SSPlayer` ごとにデコードされます（[リソースとライフサイクル](/ja/customize/resources)）。同じアトラスを使うキャラクターが 5 体いる場合、reference ならダウンロード 1 回・GPU テクスチャ 1 枚で済むところが、
-embedded では 5 回・5 枚になります。
+共有も効きません。埋め込みテクスチャは意図的に共有キャッシュの外に置かれ、`SSPlayer` ごとにデコードされます（[リソースとライフサイクル](/ja/customize/resources)）。同じアトラスを使うキャラクターが 5 体いる場合、テクスチャを別ファイルにした通常モードならダウンロード 1 回・GPU テクスチャ 1 枚で済むところが、embedded では 5 回・5 枚になります。
 
-単発のバナーやアトラスを共有しない 1 体には向きますが、**アトラスを共有する複数キャラを継続的に更新する**なら reference のままセット単位でバージョンを切ってください。
+単発のバナーやアトラスを共有しない 1 体には向きますが、**アトラスを共有する複数キャラを継続的に更新する**なら、テクスチャを別ファイルのままにして、セット単位でバージョンを切ってください。
 :::
 
 なお embedded が埋め込むのは**テクスチャだけ**です。Instance パーツが再生する参照先パックは

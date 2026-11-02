@@ -14,12 +14,11 @@
 
 ## クイックスタート
 
-**ゲームを作る場合**はこのまま下へ。入れる → 追加する → 配置する、の順で、シナリオは書きません。その先（編集の取り込み、全コンポーネント、うまくいかないとき）も同じ道の続きで、[ティラノビルダーガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder)にあります。
-**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
+**ゲームを作る場合**はこのまま下へ。入れる → 追加する → 配置する、の順で、シナリオは書きません。その先（編集の取り込み、全コンポーネント、うまくいかないとき）も同じ道の続きで、[ティラノビルダーガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder)にあります。**プラグイン自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 ティラノビルダーと、**SpriteStudio 7.6 以上**で作成したプロジェクトを用意してください。
 
-1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。ティラノビルダーはファイル名からプラグイン名を決めるので、`ssplayer.tbp` の名前は変えないでください。必要なのはこのファイルだけです（TyranoScript 用プラグイン ZIP の中身も入っています）。
+1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranobuilder&expanded=true) から `ssplayer.tbp` をダウンロードします。`@spritestudio/ssplayer-tyranobuilder <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。ティラノビルダーでメニューの **プロジェクト → プラグイン** を開き、**プラグインを追加** でそのファイルを選びます。ティラノビルダーはファイル名からプラグイン名を決めるので、`ssplayer.tbp` の名前は変えないでください。必要なのはこのファイルだけです（TyranoScript 用プラグインの `init.ks`・`main.js`・`ssruntime_bg.wasm` も入っています）。
 2. **アニメを追加**: SpriteStudio のプロジェクトを `.sspj` だけでなくフォルダごと、ゲームのフォルダの `SpriteStudio_Source/` にコピーし（初めてプロジェクトを開いたときにプラグインが作ります）、プロジェクトを開くか開き直します。開くときに変換され、メッセージで知らせます。
 
    ```

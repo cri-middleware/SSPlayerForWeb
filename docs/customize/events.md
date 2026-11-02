@@ -43,11 +43,22 @@ completion and stays true until the next `play()` / `setAnimation()` (or a
 can still ask whether the run is over. Neither is raised by `stop()`, which is what
 separates them from `!isPlaying`.
 
-Each of those three carries `partIndex`, `partName` and **`frameNo`** — the frame
+Each user-data, signal and sound event carries `partIndex`, `partName` and **`frameNo`** — the frame
 its key is *authored* on, which is not necessarily the frame it was noticed on.
 One tick can step across several frames and fires every key in between, so the
 player's current frame is not where the key sits. They also carry **`source`**,
-the handle of the animation that fired it — see below.
+the handle of the animation that fired it — see below. The rest depends on the kind:
+
+| Event | Also carries |
+|---|---|
+| `onUserData` | the authored values that exist: `integer`, `str`, `rect` (`left`, `top`, `right`, `bottom`), `point` (`x`, `y`) |
+| `onSignal` | `commandId` and `params` (parameter id to boolean, number or string); only active signals are delivered |
+| `onAudio` | `soundName`, `soundNameHash`, `soundListNameHash` and `loopNum` (the number of times to play) |
+
+`onAnimationStarted`, `onAnimationFinished` and `onAnimationLooped` take no argument. On `<ss-player>` the
+same events arrive as DOM events on the element — `animationstarted`, `animationfinished`,
+`animationlooped`, `userdata`, `signal`, `audio` — with the payload in `detail` (see
+[WebGL & Web Components](/usage/webgl)); `onFrame` and the rest are on `el.player`.
 
 There is one more hook, `onFrame`, which fires on every advanced frame rather than
 on an authored event — it is the point at which a part's transform is final for
@@ -78,9 +89,8 @@ player.setTrackOutgoingEventThreshold(0, 0.5); // the outgoing side fires for th
 Every user-data, signal and sound event carries **`source`**, the handle of the
 animation that fired it. Compare it with `getTrackMainSource(track)` or with what
 `addTrackSource` returned to tell track 0's animation from an overlay or from the
-outgoing side of a crossfade. The payload is read from the table of the animation
-that fired it, so an event fired after a crossfade is the incoming animation's
-event.
+outgoing side of a crossfade. An event fired after a crossfade began is the incoming
+animation's own.
 
 ## Sound playback
 
@@ -89,8 +99,9 @@ do, by default: when a loaded `.ssab` has sounds and no `player.audioManager` is
 attaches a `SSWebAudioManager` that plays them through Web Audio. `onAudio` fires either way.
 `ssplayer-webgl` fetches that adapter as a separate chunk, only for a pack with sound.
 
-To play the sounds through your own audio engine, implement `IAudioManager` and assign it
-**before** `load()` — the default is attached only when none is set. On `ssplayer-webgl`,
+To play the sounds through your own audio engine, assign your own `IAudioManager` **before**
+`load()` (the default is attached only when none is set) and play from `onAudio` yourself: an
+`IAudioManager` only preloads (`preload(sounds)`) and stops (`stopAll`); it does not receive the sound keys. On `ssplayer-webgl`,
 `surface.createPlayer({ autoAudio: false })` turns the default off altogether.
 
 ```ts

@@ -35,8 +35,10 @@ const player = surface.createPlayer();
 ```
 
 ```html
-<ss-player src="/assets/Effect.ssab" animation="fire" background="#000000"></ss-player>
+<ss-player src="/assets/Effect.ssab" animation="fire" standalone background="#000000"></ss-player>
 ```
+
+`background` は要素自身のコンテキストを設定するため、効くのは `standalone` の要素だけです。共有オーバーレイ（既定）上の要素には読み取れる不透明な背景がないので、その要素のプレイヤーに `el.player.backdrop = 0x000000` で背景を与えてください（Surface を共有しているプレイヤーなら、どれでも `player.backdrop` で同様に指定できます）。
 
 ::: warning 透明な canvas と加算合成
 `backgroundColor` を省略すると、オーバーレイとして重ねられるように canvas は**完全な透明**でクリアされます。この状態では加算スプライトに加算する相手が存在しないため、不透明な黒の上で焼き込まれたグローのテクスチャは、その黒がそのまま不透明なブロックとして描画されます。これは乗算済みアルファ合成の性質によるもので、`ssplayer-pixi` も同じく不透明な `backgroundColor` の上に描くことで回避しています。

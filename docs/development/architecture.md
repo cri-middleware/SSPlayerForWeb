@@ -61,7 +61,7 @@ flowchart TD
   that package.
 - `ssplayer-webgl` draws that data on raw WebGL and gives a page `<ss-player>`; `ssplayer-pixi`
   draws it as a PixiJS display object. `ssplayer-pixi-ui` is a package of its own because it
-  brings `@pixi/ui` with it, which an app that only plays animations should not have to install.
+  needs `@pixi/ui` (a peer dependency), which an app that only plays animations should not have to install.
 - `ssplayer-rmmz` is the RPG Maker MZ plugin: an animation belongs to a picture, so MZ moves it,
   scales it and saves it with the game, and the plugin's commands drive it.
   `ssplayer-tyranoscript` is the `[ss_*]` tags, and is also the runtime half of TyranoBuilder and
@@ -86,8 +86,8 @@ flowchart TD
 Each reason here spans packages; the code it concerns carries the detail in its comments.
 
 **Each host's plugin draws on the host's own GL context.** The MZ plugin registers a renderer with
-MZ's PixiJS and brackets its raw draw with the same state save and restore MZ's own Effekseer
-sprite uses, so animations sort with MZ's sprites and no canvas sits on top. The TyranoScript
+MZ's PixiJS and brackets its raw draw with the same state save and restore MZ's own animation-effect
+sprite (`Sprite_Animation`) uses, so animations sort with MZ's sprites and no canvas sits on top. The TyranoScript
 plugin keeps one canvas per Tyrano layer and positions each character from its `<div>`: a browser
 allows only about 8 to 16 WebGL contexts, and the `<div>` is what `[anim]` and `[kanim]` find by
 name.

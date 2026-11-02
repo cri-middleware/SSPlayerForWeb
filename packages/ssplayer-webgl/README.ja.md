@@ -22,8 +22,7 @@
 
 ## クイックスタート
 
-**アプリで使う場合**はこのまま下へ。入れる → 変換する → 再生する、の順です。その先（イベント、パーツ単位の上書き、テクスチャ）も同じ道の続きで、[WebGL ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/webgl)にあります。
-**レンダラー自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
+**アプリで使う場合**はこのまま下へ。入れる → 変換する → 再生する、の順です。その先（イベント、パーツ単位の上書き、テクスチャ）も同じ道の続きで、[WebGL ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/webgl)にあります。**レンダラー自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 1. **導入**: `npm install @spritestudio/ssplayer-webgl`。バンドラーを使わない場合は CDN から読み込めます（[スニペット](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/webgl#without-a-bundler-cdn)）。
 2. **変換**: `.sspj`（SpriteStudio 7.6 以上）をブラウザ上の [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) で変換します。プロジェクトのフォルダをドロップし、ダウンロードされた ZIP を、アプリがそのまま配信するフォルダ（Vite の `public/` など）に展開します。`.ssab` はテクスチャを隣から読み込みます。**Embedded Assets** にチェックを入れて変換すれば、テクスチャは `.ssab` の中に入ります（[アセットの準備](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/assets)）。
@@ -89,8 +88,11 @@ pnpm run build           # build all TS packages
 同梱の WebGL サンプルを実行して、レンダラー(および `<ss-player>` 要素)の動作を確認してください — ソースをカスタマイズしたり、修正を検証したりする際に便利です:
 
 ```bash
+pnpm run deploy-examples   # 初回のみ: SDK のサンプルプロジェクトを examples/*/public に変換（git 管理外）
 cd examples/webgl-example
 pnpm run dev             # start the dev server
 ```
+
+（`pnpm run example` は、ここまでの手順もまとめて実行します。）
 
 サンプルはワークスペース参照を通じて **ビルド済み** のパッケージを利用するため、ここで `src/` を編集した後はリポジトリのルートから `pnpm run build` を再実行してください。

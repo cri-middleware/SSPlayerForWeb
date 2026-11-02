@@ -4,7 +4,7 @@
 
 **SpriteStudio** プレイヤー向けの PixiJS v8 レンダラー。Rust/WebAssembly コアが駆動する高性能な**ダイレクト描画**（バッチ化メッシュ）を提供します。
 
-> **対象読者:** すでに PixiJS v8 でアプリを構築していて、SpriteStudio の `.ssab` アニメーションを組み込みたい開発者です。**インストール:** `npm install @spritestudio/ssplayer-pixi pixi.js`（`pixi.js@^8` を peer 依存として必要とします）**目的が違う場合:** → Pixi を使っていないなら [ssplayer-webgl](../ssplayer-webgl/README.ja.md)、自作レンダラーを組むなら [ssplayer-core](../ssplayer-core/README.ja.md) をどうぞ。
+> **対象読者:** すでに PixiJS v8 でアプリを構築していて、SpriteStudio の `.ssab` アニメーションを組み込みたい開発者です。**インストール:** `npm install @spritestudio/ssplayer-pixi pixi.js`（`pixi.js@^8.19` を peer 依存として必要とします）**目的が違う場合:** → Pixi を使っていないなら [ssplayer-webgl](../ssplayer-webgl/README.ja.md)、自作レンダラーを組むなら [ssplayer-core](../ssplayer-core/README.ja.md) をどうぞ。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
 `.ssab` を再生する PixiJS v8 アプリ。手元のファイルをドラッグ&ドロップして再生できます。
@@ -24,8 +24,7 @@
 
 ## クイックスタート
 
-**アプリで使う場合**はこのまま下へ。入れる → 変換する → 再生する、の順です。その先（イベント、パーツ単位の上書き、テクスチャ）も同じ道の続きで、[PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi)にあります。
-**レンダラー自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
+**アプリで使う場合**はこのまま下へ。入れる → 変換する → 再生する、の順です。その先（イベント、パーツ単位の上書き、テクスチャ）も同じ道の続きで、[PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi)にあります。**レンダラー自体を変更する場合**は下の[コントリビューター向け](#コントリビューター向け--ソースからビルド)、その後 [CONTRIBUTING.md](../../CONTRIBUTING.md) へ。
 
 1. **導入**: `npm install @spritestudio/ssplayer-pixi pixi.js`。`pixi.js` v8 は peer dependency です。バンドラーを使わない場合は、どちらも CDN から読み込めます（[スニペット](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi#without-a-bundler-cdn)）。
 2. **変換**: `.sspj`（SpriteStudio 7.6 以上）をブラウザ上の [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) で変換します。プロジェクトのフォルダをドロップし、ダウンロードされた ZIP を、アプリがそのまま配信するフォルダ（Vite の `public/` など）に展開します。`.ssab` はテクスチャを隣から読み込みます。**Embedded Assets** にチェックを入れて変換すれば、テクスチャは `.ssab` の中に入ります（[アセットの準備](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/assets)）。
@@ -87,8 +86,11 @@ pnpm run build           # build all TS packages
 バンドルされた PixiJS のサンプルを実行して、レンダラーの動作を確認できます。ソースをカスタマイズしたり修正を検証したりする際に便利です。
 
 ```bash
+pnpm run deploy-examples   # 初回のみ: SDK のサンプルプロジェクトを examples/*/public に変換（git 管理外）
 cd examples/pixi-example
 pnpm run dev             # start the dev server
 ```
+
+（`pnpm run example` は、ここまでの手順もまとめて実行します。）
 
 このサンプルは、ワークスペース参照を通じて**ビルド済み**パッケージを利用します。そのため、ここで `src/` を編集した後は、リポジトリのルートから `pnpm run build` を再実行してください。

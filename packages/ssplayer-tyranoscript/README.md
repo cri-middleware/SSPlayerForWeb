@@ -31,8 +31,8 @@ You need a TyranoScript project, and a project made in **SpriteStudio 7.6 or lat
    `ssplayer/` folder inside into your project's `data/others/plugin/`, keeping its name —
    `[plugin name="ssplayer"]` looks for it there.
 2. **Convert**: Open [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)
-   in your browser, drop the folder holding your `.sspj` onto it, and download the ZIP.
-   Extract it into `data/others/ssdata/`; it holds a folder named after your project, with
+   in your browser, drop the folder holding your `.sspj` onto it (or pick it with **Browse...**),
+   press **⚡ Convert & Download**, and extract the ZIP into `data/others/ssdata/`; it holds a folder named after your project, with
    the `.ssab` and its textures inside. On the desktop,
    [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) does the same.
 
@@ -146,7 +146,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run pack    # dist/pack/ssplay
 
 `pack` zips `ssplayer/{init.ks, main.js, ssruntime_bg.wasm, readme.txt}`, the archive the package's
 **GitHub Release** carries; users extract `ssplayer/` into `data/others/plugin/`. The distribution
-template lives in [`plugin/`](./plugin/README.md).
+template lives in [`plugin/`](./plugin/README.md) (its README is in Japanese).
 
 ### API (ESM)
 
@@ -166,9 +166,10 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run test    # vitest (mock TYR
 pnpm --filter tyranoscript-example run sync:plugin             # copy the built plugin + wasm into the example
 ```
 
-TyranoScript itself is not bundled: the example commits only the authored scenario, the
-plugin loader and the `.ssab` files, and you place a TyranoScript runtime yourself during
-development. The docs site's
+TyranoScript itself is not bundled: the example commits only the authored scenario files
+(`first.ks` and `make.ks`) and its helper scripts. `sync:plugin` copies the plugin in,
+`deploy-examples` the `.ssab` files, and you place a TyranoScript runtime yourself during
+development (`fetch:engine` fetches one). The docs site's
 [Build Guide](https://cri-middleware.github.io/SSPlayerForWeb/development/build) says how to drive
 the example in a real engine from a script.
 

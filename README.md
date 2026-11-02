@@ -122,6 +122,6 @@ For the PixiJS and WebGL examples, you can drag and drop a folder containing an 
 
 ## 📄 License
 
-This project is licensed under the BSD-3-Clause License. See [LICENSE.md](./LICENSE.md) for details.
+This project is licensed under the BSD-3-Clause License. See [LICENSE.md](./LICENSE.md) for details; a Japanese reference translation is in [LICENSE.ja.md](./LICENSE.ja.md).
 
 For the licenses of the bundled `SpriteStudio-SDK` and other third-party libraries, see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). Need help? See [SUPPORT.md](./SUPPORT.md); participation is governed by our [Code of Conduct](./CODE_OF_CONDUCT.md).

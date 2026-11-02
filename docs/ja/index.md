@@ -92,8 +92,7 @@ graph LR
     class WEB,UNZIP,GUI,CLI tool;
 ```
 
-図の 3 経路（SSConverter GUI / `ssconverter-web` / `ssconverter-cli`）の詳しい使い方は
-[アセットの準備](/ja/usage/assets) を参照してください。
+図の 3 経路（SSConverter GUI / `ssconverter-web` / `ssconverter-cli`）の詳しい使い方は[アセットの準備](/ja/usage/assets) を参照してください。
 
 ## パッケージ
 

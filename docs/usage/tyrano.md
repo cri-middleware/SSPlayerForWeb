@@ -27,6 +27,7 @@ reference on this page still applies — the components write these tags.
 | --- | --- |
 | TyranoScript | Verified on **V6**: **Ver603b**, the same build as the `master` the example fetches, and **Ver602c**, the build TyranoStudio 6.03 creates new projects with. Only automatic save restore needs **V515 or later** |
 | Rendering | **WebGL1** required (auto-upgrades to WebGL2 when available) |
+| SpriteStudio | Projects made in **SpriteStudio 7.6 or later** |
 
 Restoring players from a save uses TyranoScript's `load-beforemaking` and `snapsave-start`
 events, which were **added in V515**. On **V514 and earlier** there is no event system, so the
@@ -40,7 +41,7 @@ automatic restore does not run and you must write `[ss_restore]` into `data/scen
    `@spritestudio/ssplayer-tyranoscript <version>` and take the file under **Assets**, not
    the *Source code* archives. Unzip it — it contains an `ssplayer/` folder holding
    `init.ks` (the loader), `main.js` (the plugin), `ssruntime_bg.wasm` (the runtime), and
-   `readme.txt` (the version and a quick start).
+   `readme.txt` (the version and a quick start, in Japanese).
 2. Copy that `ssplayer/` folder into your Tyrano project at `data/others/plugin/`.
 3. Load it from your scenario with `[plugin name="ssplayer"]`.
 
@@ -60,7 +61,11 @@ nothing. The paths inside `init.ks` are written against that location too.
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. See [Preparing assets](/usage/assets) for how to convert.
+plugin actually plays. Convert it in your browser with
+<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>: drop the folder holding your `.sspj`
+onto it (or pick it with **Browse...**), press **⚡ Convert & Download**, and extract the ZIP into
+`data/others/ssdata/`. On the desktop, SSConverter GUI does the same; [Preparing assets](/usage/assets)
+covers both.
 
 Put what you convert under `data/others/ssdata/`, one folder per project. The ZIP from
 ssconverter-web already holds that folder, named after the project, so extracting it there
@@ -158,13 +163,13 @@ What the shared attributes take:
   (default) / `back`.
 - `scale`: a scale factor (default `1`).
 - `anime`: an animation name inside the `.ssab`; empty picks the **first** animation.
-- `[ss_play]`'s `start`: the start frame (default `-1` = from the current frame).
+- `[ss_play]`'s `start`: the frame to start from (default `-1` = from the beginning of the animation, or of its `[ss_section]`).
 - `visible`: `false` loads the player without showing it — see
   [Preload, show, hide](#preload-show-hide).
 - `zindex`: stacking order *within one layer*. Without it, players on the same layer stack
   in creation order.
-- `time`: a fade in ms. `[ss_show]` / `[ss_hide]` default to `0` (instant),
-  `[ss_fadein]` / `[ss_fadeout]` to `1000`, `[ss_track_fade]` to `500`.
+- `time`: a duration in ms — a fade, or for `[ss_move]` the travel time. `[ss_show]` / `[ss_hide]`
+  default to `0` (instant), `[ss_fadein]` / `[ss_fadeout]` to `1000`, `[ss_track_fade]` and `[ss_move]` to `500`.
 - `wait`: `true` holds the scenario until the effect finishes — the default for the fades,
   not for `[ss_move]`.
 
