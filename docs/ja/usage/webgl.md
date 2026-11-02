@@ -22,7 +22,7 @@ pnpm add @spritestudio/ssplayer-webgl
 
 ## ポイント
 
-- **依存なし**: PixiJS や Three.js などの外部ライブラリを必要とせず、単体で動作します。
+- **依存なし**: PixiJS などの外部ライブラリを必要とせず、単体で動作します。
 - **Web Components 対応**: JavaScript を書かずに、HTML へ `<ss-player>` を記述するだけで利用できる Custom Element を内包しています。
 - 描画と更新を自動で行う `SSSurface` と `SSPlayer`、独自のレンダリングループへ組み込める `SSWebGLRenderer` を提供します。
 
@@ -32,8 +32,8 @@ pnpm add @spritestudio/ssplayer-webgl
 
 | Import | 内容 |
 |---|---|
-| `@spritestudio/ssplayer-webgl` | フルレンダラー。すべてのブレンドモードと、音のあるパックのときだけ取得する Web Audio アダプター。 |
-| `@spritestudio/ssplayer-webgl/lite` | Normal と blend だけの、最も小さいバンドル。 |
+| `@spritestudio/ssplayer-webgl` | すべて。`SSOverlay`、共有テクスチャキャッシュ、音のあるパックのときだけ取得する Web Audio アダプターを含みます。 |
+| `@spritestudio/ssplayer-webgl/lite` | 同じ `SSSurface`・`SSPlayer`・`SSWebGLRenderer` を、`SSOverlay`・`SSWebGLTextureCache`・`SSWebAudioManager` を除いて export します。 |
 | `@spritestudio/ssplayer-webgl/element` | `<ss-player>` カスタム要素。 |
 
 `/element` を import してもタグは登録されません（副作用になるため）。`defineSSPlayerElement()` を一度呼んでください。import しないアプリには含まれません。
@@ -73,17 +73,17 @@ pnpm add @spritestudio/ssplayer-webgl
 | `standalone` | 要素自身のキャンバスと WebGL コンテキストに描画します。下記を参照してください。 |
 | `max-dpr`、`power-preference`、`antialias`、`background`、`pause-when-hidden` | `standalone` の要素のコンテキストを設定します。接続時に一度だけ読み取られます。 |
 
-`src`、`animation`、`speed-scale`、`fit`、`align`、`flip-x`、`flip-y` は変更に反応します。`hidden` 属性を持つ要素は表示されません。`pause-when-hidden` は既定で有効で、キャンバスが画面外にある間やタブが裏にある間は再生を止めます。`pause-when-hidden="false"` で止めずに動かし続けます。
+`src`、`animation`、`speed-scale`、`fit`、`align`、`flip-x`、`flip-y` は変更に反応します。`hidden` 属性を持つ要素は表示されません。`standalone` の要素では `pause-when-hidden` が既定で有効で、キャンバスが画面外にある間やタブが裏にある間は再生を止め、`pause-when-hidden="false"` で止めずに動かし続けます。オーバーレイの要素は、要素が画面外にある間はつねに止まります。
 
 **大きさとフィット。** アニメーションを合わせる箱は、パックを読み込んだときのアニメーションのオーサリング上のキャンバス(SpriteStudio で設定したキャンバスサイズ)です。`animation` を切り替えても箱は変わらないので、同じパックのアニメーション間でキャラクターの大きさは変わりません。ページが大きさを指定していない要素は、そのキャンバスと同じ大きさになります(キャンバスの 1 単位が CSS の 1px)。幅だけを指定した場合は、高さがキャンバスの縦横比で決まります。
 
 読み込みの失敗 — 読み込めない `src`、パックに存在しない `animation`、起動しないランタイム — は要素の `error` イベント(`detail` がエラー)として発火され、`console.error` にも出力されます。
 
-プレイヤーのイベントは要素の DOM `CustomEvent` として発火されるので、`addEventListener` で受け取れます。名前は `animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`（中身は `detail`）で、ほかにパックの設定が済むと `load` が届きます。どれもファミリー共通の名前を小文字にしたもので、`<ss-player-webgpu>` と同じです。
+プレイヤーのイベントは要素の DOM `CustomEvent` として発火されるので、`addEventListener` で受け取れます。名前は `animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`（中身は `detail`）で、ほかにパックの設定が済むと `load` が届きます。どれもプレイヤーの `onAnimationStarted`・`onUserData` などの名前を小文字にしたものです。
 
-**オーバーレイか standalone か。** ブラウザはページが持てる WebGL コンテキストの数に上限を設けているため、既定ではすべての `<ss-player>` がページに重ねた **1 枚のオーバーレイキャンバス** を共有し、要素はアニメーションを描く箱でしかありません。これで何個並べても軽く済みますが、要素自身の CSS はアニメーションの形に影響しません。要素の `transform`、`filter`、`clip-path`、`border-radius` は届かず、重なり順も要素のものとは別です。`standalone` を付けると要素が自前のキャンバスを持ち、これらがすべて効きます。CSS の効果や不透明な背景、独自の重なり順が必要な要素向けの指定です。上の表のコンテキスト用オプションはこの専用コンテキストの設定なので、オーバーレイの要素には効きません。共有オーバーレイのオプションは `SSOverlay.getOrCreate(id, options)` で渡します。
+**オーバーレイか standalone か。** ブラウザはページが持てる WebGL コンテキストの数に上限を設けているため、既定ではすべての `<ss-player>` がページに重ねた **1 枚のオーバーレイキャンバス** を共有し、要素はアニメーションを描く箱でしかありません。これで何個並べても軽く済みますが、要素自身の CSS はアニメーションの形に影響しません。要素の `transform`、`filter`、`clip-path`、`border-radius` は届かず、重なり順も要素のものとは別です。`standalone` を付けると要素が自前のキャンバスを持ち、これらがすべて効きます。CSS の効果や不透明な背景、独自の重なり順が必要な要素向けの指定です。上の表のコンテキスト用オプションはこの専用コンテキストの設定なので、オーバーレイの要素には効きません。共有オーバーレイのオプションは `SSOverlay.getOrCreate('default', options)` で渡します（`SSOverlay` は `@spritestudio/ssplayer-webgl` から import できます）。最初の `<ss-player>` が接続する前に呼んでください。最初に接続した要素が、オプションなしでオーバーレイを作るためです。要素の `overlay="<id>"` 属性で別のオーバーレイを指定できますが、WebGL コンテキストが 1 つ増えます。
 
-JavaScript から制御する場合は、対象の DOM 要素を取得して `play()` や `stop()` を呼び出します。詳細な API は [基本的な再生](/ja/usage/basic) を参照してください。
+JavaScript から制御するには、`await el.ready` のあとで、要素の `play()`・`pause()`・`resume()`・`stop()`・`setAnimation(name)` を呼びます。[基本的な再生](/ja/usage/basic) にあるそれ以外の再生 API は、下層の `SSPlayer` である `el.player` にあります。
 
 この要素は意図的に再生系の動詞だけを持つ薄い皮です。それ以外 — パーツ単位の上書きを含む — は、下層の `SSPlayer` である `el.player` 経由で呼び出します:
 
@@ -110,7 +110,7 @@ async function main() {
   canvas.height = 480;
   document.body.appendChild(canvas);
 
-  // オプションで自動再生や WebGL コンテキストの設定が可能です
+  // autoStart はサーフェスの描画ループを回します（アニメーションの再生は下の play()）。ほかのオプションは WebGL コンテキストの設定です
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
   await player.load('/assets/Ringo.ssab');
@@ -134,7 +134,7 @@ player.setTransform({ x: 8 });                          // フィットの後に
 player.setPlacement(null);                              // オーサリングされた大きさに戻す
 ```
 
-合わせる箱は、再生中のアニメーションのオーサリング上のキャンバスなので、アニメーションごとにそのキャンバスで合わせます。パック全体で 1 つの倍率にしたいときは、最初の `setAnimation` の後で `player.canvasRect` を一度読み、`frame` として渡します: `player.setPlacement({ frame: player.canvasRect })`。
+合わせる箱は、再生中のアニメーションのオーサリング上のキャンバスなので、アニメーションごとにそのキャンバスで合わせます。パック全体で 1 つの倍率にしたいときは、最初の `setAnimation` の後で `player.canvasRect` を一度読み、`frame` として渡します: `const frame = player.canvasRect; if (frame) player.setPlacement({ frame });`（`canvasRect` はアニメーションを設定するまで `null` です）。
 
 ## バンドラーを使わない（CDN） {#without-a-bundler-cdn}
 
@@ -156,11 +156,11 @@ player.setPlacement(null);                              // オーサリングさ
 <ss-player src="boss.ssab"  animation="idle" autoplay style="width:640px;height:480px"></ss-player>
 ```
 
-WASM の URL の渡し方は 3 通りあり、要素ごとに最初に見つかったものが使われます。
+WASM の URL の渡し方は 3 通りあります。ランタイムはページごとに 1 回だけ起動し、最初に接続した `<ss-player>` が見つけた URL を使います。その要素自身の `wasm="…"` があればそれ、なければ 1 か 2 で決めたページの既定値です（後から呼んだ方が前のものを置き換えます）。あとから接続する要素は、`wasm` に何と書いてあっても起動済みのランタイムを使います。
 
-1. **script タグの `data-wasm`** — ページに 1 回（上の例）。
-2. **`SSWebGLPlayerElement.setSSPlayerWasmUrl(url)`** — 要素が接続される前に JavaScript で 1 回。
-3. **1 つの `<ss-player>` の `wasm="…"`** — その要素だけ。
+1. **script タグの `data-wasm`** — ページの既定値を 1 回（上の例）。
+2. **`SSWebGLPlayerElement.setSSPlayerWasmUrl(url)`** — ページの既定値を、要素が接続される前に JavaScript で 1 回。
+3. **`<ss-player>` の `wasm="…"`** — その要素が最初に接続するときだけ、ページの既定値より優先されます。
 
 渡し忘れると何も描画されませんが、黙ってはいません。コンソールに `[ss-player] WebAssembly runtime failed to initialise` と、必要な URL が出ます。バンドラーを使う場合はこのバンドルは要りません。`/element` を import して `defineSSPlayerElement()` を呼んでください。
 

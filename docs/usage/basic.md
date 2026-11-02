@@ -17,6 +17,7 @@ running player, one per backend; both play a `.ssab` dropped onto the page.
 
 ```ts
 await player.load(ssabUrl); // textures, instance packs and sounds load from the .ssab's own directory
+// or: await player.loadBuffer(ssabBytes, new Map()); // a .ssab already in memory (drag-and-drop, inlined); the Map holds textures by cell-map hash, empty for an embedded .ssab
 ```
 
 ```ts
@@ -30,6 +31,10 @@ hold across a `setAnimation`: a `loopCount` of 3 still means three cycles after 
 
 `setAnimation` is synchronous: `load()` brings in everything the `.ssab` needs — those assets belong to
 the pack, not to one animation — so switching is only a runtime reset, with no loading to wait for.
+
+Selecting the animation that is already selected does nothing at all — the playhead, section and
+overrides stay. To restart it, call `play()`. Only a real switch to another animation resets the
+section and `isFinished`.
 
 ## Playback control
 
@@ -68,7 +73,7 @@ when you turn it back on. Every sibling Player reports it the same way.
 
 ```ts
 player.setAnimationSection(startFrame, endFrame);      // limit the playback range
-player.setPlaybackDirection(direction, style);         // direction / style
+player.setPlaybackDirection(WebPlaybackDirection.Backward, WebPlaybackStyle.PingPong);  // Forward | Backward, Normal | PingPong
 player.frameSkipEnabled = false;                       // stop skipping frames; also turn sub-frame off, or timing drifts
 ```
 
@@ -89,7 +94,7 @@ player.setAnimationSectionByLabel('windup', 'hit', 0, -1); // up to the frame be
 `_start` and `_end` name the animation's first and last frame, as they do in SpriteStudio. A label the
 animation does not have, or labels and offsets that land on a section `setAnimationSection` refuses,
 return `false`, say so once in the console, and leave the section as it was. Like
-`setAnimationSection`, it does not play, and `setAnimation` wipes it.
+`setAnimationSection`, it does not play, and switching to another animation wipes it.
 
 ## Flip and offset
 

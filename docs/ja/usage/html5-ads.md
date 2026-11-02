@@ -9,10 +9,11 @@ Google 広告の HTML5 広告は、HTML・CSS・JavaScript・画像を入れた 
 ## バンドルを作る
 
 1. テクスチャを埋め込んで変換します。[アセットの準備](/ja/usage/assets)にある変換ツールの **Embedded** オプション、コマンドラインなら `--embedded` です。
-2. パッケージをビルドし、リポジトリのルートでスクリプトを実行します。
+2. リポジトリのルートでインストールとビルドをし、スクリプトを実行します。ランタイムは `pnpm run download:wasm`（ビルド済みを取得）か `pnpm run build:wasm`（ソースからビルド。Rust と wasm-pack が必要）で用意します。
 
    ```bash
-   pnpm run build:wasm && pnpm run build
+   pnpm install
+   pnpm run download:wasm && pnpm run build
    node examples/html5-ad/build.mjs ssab=path/to/chara.ssab animation=idle size=300x250
    ```
 

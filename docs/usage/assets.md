@@ -249,11 +249,12 @@ what a differential update is for.
 
 Sharing stops working too. Embedded textures are deliberately kept out of the shared cache and are
 decoded per `SSPlayer` ([Resources and lifecycle](/customize/resources)). Five characters using one
-atlas cost one download and one GPU texture in reference mode, and five of each when embedded.
+atlas cost one download and one GPU texture with separate texture files (Normal mode), and five of each
+when embedded.
 
 It is a good fit for a one-off banner, or a single character that shares its atlas with nothing. For
-**a set of characters sharing an atlas that you keep updating**, stay on reference textures and
-version the folder instead.
+**a set of characters sharing an atlas that you keep updating**, keep the textures as separate files
+and version the folder instead.
 :::
 
 Note that embedding covers **textures only**. The packs an Instance part plays are still fetched

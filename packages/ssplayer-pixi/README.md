@@ -5,7 +5,7 @@
 PixiJS v8 renderer for the **SpriteStudio** player. High-performance **direct drawing** (batched meshes) driven by a Rust/WebAssembly core.
 
 > **Who this is for:** app developers already building on PixiJS v8 who want to play SpriteStudio `.ssab` animations in their app.
-> **Install:** `npm install @spritestudio/ssplayer-pixi pixi.js` (needs `pixi.js@^8` as a peer dependency)
+> **Install:** `npm install @spritestudio/ssplayer-pixi pixi.js` (needs `pixi.js@^8.19` as a peer dependency)
 > **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) if you're not on Pixi, or [ssplayer-core](../ssplayer-core/README.md) to build your own renderer.
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — a

@@ -7,6 +7,9 @@ description: The minimum code to play a .ssab with ssplayer-webgl or ssplayer-pi
 Here is the minimum code to play a `.ssab`. Both the dependency-free `ssplayer-webgl`
 and the PixiJS v8 `ssplayer-pixi` paths are shown — pick the one that fits your setup.
 
+The imports below assume a bundler (Vite, webpack, …). With no bundler, use the CDN builds:
+[WebGL](/usage/webgl#without-a-bundler-cdn) or [PixiJS](/usage/pixi#without-a-bundler-cdn).
+
 ::: tip No SpriteStudio data of your own yet?
 The [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
 works as-is — that page is Japanese only, but the downloads themselves are
@@ -37,7 +40,7 @@ JavaScript.
 </ss-player>
 ```
 
-To supply your own canvas and drive playback yourself, use `SSPlayer`.
+To supply your own canvas and drive playback yourself, use `SSSurface` and the `SSPlayer` it creates.
 
 ```ts
 import { SSSurface } from '@spritestudio/ssplayer-webgl';

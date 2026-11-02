@@ -57,9 +57,11 @@ No bundler? Both load straight from a CDN — see
 ## Prerequisites
 
 - The browser must support **WebGL** (version 1 or 2 for `ssplayer-webgl`,
-  version 2 for `ssplayer-pixi`). On top of that, `ssplayer-pixi` uses **WebGPU**
-  when the browser provides it and falls back to WebGL2 otherwise, matching the
-  backend preference of PixiJS v8.
+  version 2 for `ssplayer-pixi`). `ssplayer-pixi` also runs on **WebGPU**: PixiJS v8
+  uses WebGL unless you pass `preference: 'webgpu'` to `app.init()`, and then falls
+  back to WebGL where the browser has no WebGPU.
+- The browser must support **WebAssembly SIMD** (see [Limitations & Scope](/limitations#browser-requirements)).
+- Projects must be authored in **SpriteStudio 7.6 or later**.
 - Playback needs a **`.ssab` (runtime binary)**. See [Preparing assets](/usage/assets)
   for how to convert a SpriteStudio `.sspj`.
 

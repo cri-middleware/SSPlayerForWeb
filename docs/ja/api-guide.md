@@ -12,16 +12,16 @@ description: どのクラスから始めるか、その下に何があるか、�
 
 | 環境 | クラス | パッケージ |
 |---|---|---|
-| フレームワーク非依存 / ドロップイン | [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) | `ssplayer-webgl` |
+| フレームワーク非依存 / ドロップイン | [`SSSurface`](/api/@spritestudio/ssplayer-webgl/classes/SSSurface.md)（`createPlayer()` が [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) を返す） | `ssplayer-webgl` |
 | HTML だけで済ませたい | `<ss-player>`（[WebGL・Web Components で使う](/ja/usage/webgl)） | `ssplayer-webgl` |
 | PixiJS v8 アプリ | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
 | PixiJS v8 アプリのボタン（[UI ボタン](/ja/usage/pixi-ui) を参照） | [`SSButton`](/api/@spritestudio/ssplayer-pixi-ui/classes/SSButton.md) | `ssplayer-pixi-ui` |
 | レンダラーを自作する | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
 
-WASM ランタイムはモジュールレベルのシングルトンなので、どちらのプレイヤークラスもインスタンスを作る前に一度だけ初期化が必要です。
+WASM ランタイムはモジュールレベルのシングルトンなので、プレイヤーを作る前に一度だけ初期化します。
 
 ```ts
-await SSSurface.initialize();  // または SSPlayer.initialize()
+await SSSurface.initialize();  // WebGL。PixiJS は SSPlayer.initialize()
 ```
 
 ::: tip 同じシンボルが 4 回出てくる理由

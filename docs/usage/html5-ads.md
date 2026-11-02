@@ -15,10 +15,12 @@ builds that ZIP from one `.ssab`, and the result passes Google's
 
 1. Convert the project with its textures embedded: the **Embedded** option of the converters in
    [Preparing assets](/usage/assets), `--embedded` on the command line.
-2. Build the packages and run the script from the repository root:
+2. From the repository root, install and build, then run the script. Get the runtime with
+   `pnpm run download:wasm` (prebuilt) or `pnpm run build:wasm` (from source; needs Rust and wasm-pack):
 
    ```bash
-   pnpm run build:wasm && pnpm run build
+   pnpm install
+   pnpm run download:wasm && pnpm run build
    node examples/html5-ad/build.mjs ssab=path/to/chara.ssab animation=idle size=300x250
    ```
 
