@@ -1,171 +1,195 @@
-# tyranoscript-example — ssplayer-tyranoscript 手書きシナリオ最小確認
+# tyranoscript-example — a minimal hand-written scenario for ssplayer-tyranoscript
 
-`@spritestudio/ssplayer-tyranoscript` の `[ss_*]` カスタムタグを、実際の **TyranoScript**
-プロジェクト上で表示・再生する最小サンプルです。
+[日本語](./README.ja.md)
 
-> **TyranoScript 本体はこのリポジトリに含まれません。**
-> ライセンス上、本体の再配布は控えています（フリー・商用可のエンジンですが、プラグインとして自作物を配る方針）。本体は**開発時に各自で配置**します。このサンプルがコミットしているのは *authored* な部分だけです:
-> `data/scenario/first.ks` / `data/scenario/make.ks` と、`scripts/` の補助スクリプト。プラグイン（`init.ks` を含む）は `sync:plugin`、
-> `data/others/ssdata/` のアセットは `deploy-examples` が配置します。
+A minimal sample that shows and plays `@spritestudio/ssplayer-tyranoscript`'s `[ss_*]` custom
+tags in a real **TyranoScript** project.
 
-## このサンプルに含まれるもの
+> **TyranoScript itself is not in this repository.**
+> The engine is free and allows commercial use, but this repository distributes only its own work,
+> as a plugin, so you **place the engine yourself during development**. The sample commits only
+> the *authored* parts: `data/scenario/first.ks` / `data/scenario/make.ks` and the helper scripts in
+> `scripts/`. `sync:plugin` places the plugin (including `init.ks`), and `deploy-examples` the
+> assets under `data/others/ssdata/`.
+
+## What the sample contains
 
 ```
 examples/tyranoscript-example/
   data/
-    scenario/first.ks                     # [plugin]/[ss_new]/[ss_play] を使うシナリオ
-    scenario/make.ks                      # ロード時に TyranoScript が call するファイル
+    scenario/first.ks                     # the scenario using [plugin]/[ss_new]/[ss_play]
+    scenario/make.ks                      # the file TyranoScript calls on load
     others/
-      plugin/ssplayer/init.ks             # ← sync:plugin がプラグインのテンプレートからコピー
-      plugin/ssplayer/main.js             # ← 生成物 (sync:plugin, .gitignore)
-      plugin/ssplayer/ssruntime_bg.wasm   # ← 生成物 (sync:plugin, .gitignore)
-      ssdata/Ringo/…                      # ← 生成アセット (deploy-examples, .gitignore)
-  scripts/fetch-tyrano.mjs                # TyranoScript 本体を取得 (fetch:engine)
-  scripts/sync-plugin.mjs                 # ビルド成果物を plugin/ へコピー
-  scripts/serve.mjs                       # 依存ゼロの静的サーバ (wasm MIME 対応)
+      plugin/ssplayer/init.ks             # ← copied from the plugin template by sync:plugin
+      plugin/ssplayer/main.js             # ← generated (sync:plugin, .gitignore)
+      plugin/ssplayer/ssruntime_bg.wasm   # ← generated (sync:plugin, .gitignore)
+      ssdata/Ringo/…                      # ← generated assets (deploy-examples, .gitignore)
+  scripts/fetch-tyrano.mjs                # fetches the TyranoScript engine (fetch:engine)
+  scripts/sync-plugin.mjs                 # copies the build output into plugin/
+  scripts/serve.mjs                       # a dependency-free static server (serves the wasm MIME type)
 ```
 
-## セットアップと実行
+## Setup and running
 
-### 1. TyranoScript 本体を取得する（dev-time、1 回だけ）
+### 1. Fetch the TyranoScript engine (development only, once)
 
-公式リポジトリ [ShikemokuMK/tyranoscript](https://github.com/ShikemokuMK/tyranoscript)
-（**ブラウザ対応版**）を自動取得します。取得先の ref は `TYRANO_VERSION.txt`
-（既定 `master`、タグ例 `v514` も可）。なお上流はタグ運用を停止しており、最新タグ `v514` は master より大幅に古いため、既定の `master` を推奨します。
+This fetches the official repository [ShikemokuMK/tyranoscript](https://github.com/ShikemokuMK/tyranoscript)
+(**the browser version**). The ref it fetches is in `TYRANO_VERSION.txt` (default `master`; a tag
+such as `v514` works too). Upstream no longer tags releases, and the newest tag, `v514`, is far older
+than `master`, so the default `master` is recommended.
 
 ```bash
 pnpm --filter tyranoscript-example run fetch:engine
-# 任意: ref 指定 →  pnpm --filter tyranoscript-example run fetch:engine v514
+# optional, a ref:  pnpm --filter tyranoscript-example run fetch:engine v514
 ```
 
-これで `index.html` / `tyrano/` / `data/system/` を配置し（すべて .gitignore 済み）、
-`Config.tjs` に **`configSave = webstorage`** と一意の **`projectID`** を自動設定します（下記トラブルシュート参照）。本サンプルの `data/scenario/first.ks` ・
-`others/plugin/ssplayer` ・ `others/ssdata` は保持されます。
+This places `index.html`, `tyrano/` and `data/system/` (all in .gitignore) and sets
+**`configSave = webstorage`** and a unique **`projectID`** in `Config.tjs` (see Troubleshooting
+below). The sample's own `data/scenario/first.ks`, `others/plugin/ssplayer` and `others/ssdata`
+are kept.
 
-> **なぜ手動コピーでなく取得か**: TyranoScript の**デスクトップ（nw.js）書き出し**は
-> `configSave = file`（`require('fs')` 依存）で動くため、**ブラウザで開くと起動時にクラッシュ**します（`init_game` が `_system_config_bgm_volume` を null から読む）。公式リポジトリはブラウザ版で、本スクリプトが `webstorage` を強制するので確実です。
+> **Why fetch rather than copy by hand**: TyranoScript's **desktop (nw.js) export** runs with
+> `configSave = file` (which depends on `require('fs')`), so it **crashes at startup when opened in a
+> browser** (`init_game` reads `_system_config_bgm_volume` from null). The official repository is the
+> browser version, and the script forces `webstorage`, so this always works.
 
-> 必要ツール: `curl` と `tar`（macOS/Linux・Windows 10+ に同梱）。手動配置したい場合は上記 3 つを `examples/tyranoscript-example/` 直下に置き、Config.tjs に
-> `;configSave = webstorage;` と一意の `projectID` を設定してください（Config.tjs は行頭が `;` の行だけを設定として読みます）。
+> Tools needed: `curl` and `tar` (included in macOS / Linux and Windows 10+). To place the engine by
+> hand, put the three items above directly under `examples/tyranoscript-example/` and set
+> `;configSave = webstorage;` and a unique `projectID` in Config.tjs (Config.tjs reads only the
+> lines that start with `;` as settings).
 
-配置後のイメージ（`index.html` / `tyrano/` / `data/system/` は .gitignore 済み）:
+The layout once placed (`index.html`, `tyrano/` and `data/system/` are in .gitignore):
 
 ```
 examples/tyranoscript-example/
-  index.html        ← fetch:engine が取得（コミットしない）
-  tyrano/           ← 本体エンジン（コミットしない）
-  TYRANO_VERSION.txt        ← 取得 ref のピン（コミット）
+  index.html        ← fetched by fetch:engine (not committed)
+  tyrano/           ← the engine (not committed)
+  TYRANO_VERSION.txt        ← the pinned ref to fetch (committed)
   data/
-    system/ …       ← 取得＋自動パッチ（コミットしない）
-    scenario/first.ks, make.ks  ← 本サンプル
-    others/plugin/ssplayer/…    ← 生成物（sync:plugin、コミットしない）
-    others/ssdata/Ringo/…       ← 生成アセット（deploy-examples、コミットしない）
+    system/ …       ← fetched and patched automatically (not committed)
+    scenario/first.ks, make.ks  ← this sample
+    others/plugin/ssplayer/…    ← generated (sync:plugin, not committed)
+    others/ssdata/Ringo/…       ← generated assets (deploy-examples, not committed)
 ```
 
-> 画面解像度は TyranoScript 既定の **1280×720** を想定しています（`first.ks` の `x=640 y=480` はこの論理座標）。`data/system/Config.tjs` の
-> `scWidth` / `scHeight` を変えた場合は座標も合わせてください。
+> The sample assumes TyranoScript's default resolution, **1280×720** (`x=640 y=480` in `first.ks` are
+> logical coordinates in it). If you change `scWidth` / `scHeight` in `data/system/Config.tjs`,
+> change the coordinates to match.
 
-### 2. プラグインと SS アセットを用意する
+### 2. Prepare the plugin and the SpriteStudio assets
 
 ```bash
-# 1) パッケージをビルド（dist/browser/main.js を生成）
+# 1) build the package (produces dist/browser/main.js)
 pnpm --filter @spritestudio/ssplayer-tyranoscript run build
 
-# 2) 生成物（main.js + wasm）を data/others/plugin/ssplayer/ へ同期
-#    ★ パッケージを編集したら毎回これを回すのが基本ループ
+# 2) sync the output (main.js + wasm) into data/others/plugin/ssplayer/
+#    ★ run this after every change to the package: it is the basic loop
 pnpm --filter tyranoscript-example run sync:plugin
 
-# 3) SS アセット（reference Ringo.ssab + Ringo.png）を data/others/ssdata/Ringo/ へ
-#    ※ リポジトリ直下の deploy-examples が SS-SDK/tests を変換し、各 example へ配布する
-#      （tyrano の ssdata へのコピーも含む。アセット配布は deploy-examples に一本化）
+# 3) the SpriteStudio assets (Ringo.ssab with separate textures + Ringo.png) into data/others/ssdata/Ringo/
+#    deploy-examples at the repository root converts SpriteStudio-SDK/tests and hands the result
+#    to every example (including the copy into this sample's ssdata: assets come only from it)
 pnpm deploy-examples
 ```
 
-### 3. 起動して確認する
+### 3. Start it and check
 
 ```bash
 pnpm --filter tyranoscript-example run dev
-# → http://localhost:5847/ を開く（他 tyrano プロジェクトと origin を分離するため独自ポート）
+# → open http://localhost:5847/ (a port of its own, to keep its origin apart from other Tyrano projects)
 ```
 
-`[ss_new]` で Ringo アニメがレイヤー 0 に表示され、ループ再生されれば成功です。**見た目の正解合わせ**は SpriteStudio エディタ／`examples/webgl-example` と並べて突き合わせてください（webgl 版と同一レンダラなので一致するはず）。
+It works when `[ss_new]` shows the Ringo animation on layer 0 and loops it. To check that it
+**looks right**, compare it side by side with the SpriteStudio editor or `examples/webgl-example`
+(they share one renderer, so they should match).
 
-## 開発イテレーション（まとめ）
+## The development loop
 
 ```
-packages/ssplayer-tyranoscript/src/* を編集
+edit packages/ssplayer-tyranoscript/src/*
   → pnpm --filter @spritestudio/ssplayer-tyranoscript run build
   → pnpm --filter tyranoscript-example run sync:plugin
-  → dev サーバをリロード（サーバ再起動は不要。ブラウザ強制リロードでキャッシュ回避）
+  → reload the dev server's page (no server restart needed; force-reload to skip the cache)
 ```
 
-ロジックの速い内側ループは、実エンジン不要の vitest モックで回せます:
+The fast inner loop on the logic runs on vitest mocks, with no real engine:
 
 ```bash
 pnpm --filter @spritestudio/ssplayer-tyranoscript run test
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### 起動時 `Cannot read properties of null (reading '_system_config_bgm_volume')`
+### `Cannot read properties of null (reading '_system_config_bgm_volume')` at startup
 
-TyranoScript 本体の `init_game` が、localStorage の `<projectID>_sf`（システム変数）を
-`JSON.parse` した結果が `null`（文字列 `"null"` が保存されている）だと落ちます。
-`projectID` を **未指定のままにすると既定値 `tyranoproject` に集約**され、同一ドメイン（`localhost`）上の別の TyranoScript プロジェクトと localStorage が衝突してこのゴミが混入します。
+The engine's `init_game` fails when parsing `<projectID>_sf` (the system variables) from
+localStorage with `JSON.parse` gives `null` (the string `"null"` is stored). **Left unset, `projectID`
+falls back to `tyranoproject`**, so its localStorage collides with that of any other TyranoScript
+project on the same domain (`localhost`), and the leftovers get in.
 
-**対策**（このサンプルは実施済み・二重に隔離）:
+**What prevents it** (done in this sample, two ways):
 
-1. **独自ポート `5847` で配信**（`serve.mjs`）。localStorage / Service Worker は
-   **origin（scheme+host+port）単位**なので、共通ポート（3000/8000）上の別 tyrano
-   プロジェクトの残骸から完全に隔離される。
-2. `data/system/Config.tjs` に**一意の `projectID`** を設定（`ssplayer_tyrano_example`）。
+1. **Served on a port of its own, `5847`** (`serve.mjs`). localStorage and service workers are per
+   **origin (scheme + host + port)**, so this isolates it from what other Tyrano projects left on a
+   shared port (3000 / 8000).
+2. A **unique `projectID`** in `data/system/Config.tjs` (`ssplayer_tyrano_example`).
 
 ```tjs
 ;projectID = ssplayer_tyrano_example;
 ```
 
-> それでも直らない場合（過去に同一 origin で起動して localStorage が汚れている等）は、**シークレット/プライベートウィンドウで開く**のが確実（localStorage・SW・キャッシュ・拡張が全てクリーン）。または DevTools ▸ Application ▸ **Clear site data** → リロード。
+> If it still fails (localStorage dirtied by an earlier run on the same origin, say), **open it in a
+> private window**: localStorage, service workers, caches and extensions are all clean there. Or use
+> DevTools ▸ Application ▸ **Clear site data**, then reload.
 >
-> なお `polyfills.js` / `vendor-3rdparty.js` の `Failed to fetch` は**ブラウザ拡張**が出しているもので本サンプルとは無関係（シークレットウィンドウでは消えます）。
+> `Failed to fetch` for `polyfills.js` / `vendor-3rdparty.js` comes from **browser extensions** and
+> has nothing to do with the sample (it disappears in a private window).
 >
-> `Config.tjs` はエンジン付属＝git 管理外。本体を各自配置したら**必ず一意の
-> `projectID` を設定**してください。
+> `Config.tjs` comes with the engine and is not tracked in git. After placing the engine yourself,
+> **always set a unique `projectID`**.
 
-## 使用しているタグ
+## The tags used
 
-| タグ | 役割 |
+| Tag | Role |
 | --- | --- |
-| `[plugin name="ssplayer"]` | プラグイン読み込み + ランタイム起動（シナリオに書くのはこの 1 行だけ） |
-| `[ss_init audio= sounddir= soundext= sevolume=]` | 音声設定（ランタイムは `[plugin]` が起動済み） |
-| `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | プレイヤー生成 → ssab ロード → レイヤーへ要素（`<div>`）追加 → 再生 |
-| `[ss_play name= anime= loop= start=]` | 再生 / アニメ切替 |
-| `[ss_stop]` / `[ss_pause]` / `[ss_resume]` `name=` | 個別の停止 / 一時停止 / 再開 |
-| `[ss_stop_audio name=]` | そのプレイヤーが鳴らした音をすぐ止める |
-| `[ss_wait name=]` | アニメ終了（ループ時は1周）まで待つ |
-| `[ss_pos name= x= y= scale=]` / `[ss_move name= x= y= scale= time=]` | 内部 transform で瞬間/補間移動（アンカー基準・絶対） |
-| `[ss_free name=]` / `[ss_free_all]` | 解放（`destroy()` + 要素除去） |
-| `[ss_pause_all]` / `[ss_resume_all]` | 全体一時停止 / 再開（メニュー等） |
-| `[ss_restore]` | セーブから再構築（**通常は不要** — ロード時に自動復元されます） |
+| `[plugin name="ssplayer"]` | Loads the plugin and starts the runtime (the only line a scenario needs) |
+| `[ss_init audio= sounddir= soundext= sevolume=]` | Sound settings (`[plugin]` has already started the runtime) |
+| `[ss_new name= storage= layer= page= x= y= scale= loop= anime=]` | Create a player → load the ssab → add an element (`<div>`) to the layer → play |
+| `[ss_play name= anime= loop= start=]` | Play / switch the animation |
+| `[ss_stop]` / `[ss_pause]` / `[ss_resume]` `name=` | Stop / pause / resume one player |
+| `[ss_stop_audio name=]` | Stop at once the sounds that player started |
+| `[ss_wait name=]` | Wait until the animation ends (one cycle when it loops) |
+| `[ss_pos name= x= y= scale=]` / `[ss_move name= x= y= scale= time=]` | Move instantly / over time with the internal transform (anchor-based, absolute) |
+| `[ss_free name=]` / `[ss_free_all]` | Release (`destroy()` + remove the element) |
+| `[ss_pause_all]` / `[ss_resume_all]` | Pause / resume everything (for menus and the like) |
+| `[ss_restore]` | Rebuild from a save (**normally not needed** — restored automatically on load) |
 
-### セーブ / ロード復元
+### Save / load restore
 
-`[ss_new]` 等は各プレイヤーの復元情報を `stat.f.__ssplayers`（セーブ対象）へ随時ミラーします。ロード時はエンジンの `load-beforemaking` イベント（セーブ変数が戻り、シナリオが再開する直前＝TyranoScript が **`data/scenario/make.ks`** を call するのと同じ隙間）でプラグインが自動的に再構築します。**`make.ks` への記述は不要**です。
+`[ss_new]` and the others mirror each player's restore information into `stat.f.__ssplayers` (which
+is saved) as they go. On load, the plugin rebuilds them on the engine's `load-beforemaking` event
+(after the save variables come back and just before the scenario resumes — the same gap in which
+TyranoScript calls **`data/scenario/make.ks`**). **Nothing needs writing in `make.ks`.**
 
-動作確認: 起動 → Ringo 表示中にメニューからセーブ → タイトルへ戻る → ロード。
-Ringo がセーブした時点のフレームから再開すれば成功です。
+To check it: start, save from the menu while Ringo shows, go back to the title, and load. It works
+when Ringo resumes from the frame it was saved on.
 
-> ⚠️ **表示テキスト内に `[ss_xxx]` のような角括弧のタグ記法を書かないこと**。
-> TyranoScript はテキスト内の `[...]` もタグとして実行してしまいます（`ss_play` のように角括弧なしで書く）。
+> ⚠️ **Do not write bracketed tag syntax such as `[ss_xxx]` in the displayed text.**
+> TyranoScript runs a `[...]` in text as a tag too (write `ss_play` without brackets).
 
-### 移動・エフェクトは標準タグで
+### Movement and effects use the standard tags
 
-キャラクターの要素（`<div>`）にはプレイヤー名が CSS クラスとして付くので、**フェードや単純移動は
-TyranoScript 標準の `[anim]` / `[kanim]` がそのまま使えます**（本サンプルは
-`[anim ... opacity=]` でフェードを実演）。**アンカー基準・絶対座標**の移動/スケールは内部 `setTransform` を叩く **`[ss_pos]`（瞬間）/ `[ss_move]`（補間）**を使います（本サンプルで実演）。詳細はパッケージ README を参照。
+A character's element (`<div>`) carries the player's name as a CSS class, so **fades and simple
+movement work with TyranoScript's own `[anim]` / `[kanim]`** (the sample shows a fade with
+`[anim ... opacity=]`). For **anchor-based, absolute** movement and scaling, use **`[ss_pos]`
+(instant) / `[ss_move]` (over time)**, which drive the internal `setTransform` (the sample shows them).
+See the package README for details.
 
-### 音声
+### Sound
 
-SS の音声イベントは TyranoScript 同梱の howler で再生されます。音声ファイルは
-`data/sound/` に置き、SS のサウンド名 → `data/sound/<name>.ogg` に解決されます（`[ss_init sounddir= soundext= sevolume=]` で調整、`audio="false"` で無効化）。本サンプルの Ringo には音声が無いため鳴りません。
+SpriteStudio's sound events play through the howler bundled with TyranoScript. Put the sound files
+in `data/sound/`; a SpriteStudio sound name resolves to `data/sound/<name>.ogg` (adjust with
+`[ss_init sounddir= soundext= sevolume=]`, turn it off with `audio="false"`). The sample's Ringo has
+no sound, so nothing plays.
 
-ティラノビルダー `.tbp` には [ssplayer-tyranobuilder](../../packages/ssplayer-tyranobuilder/README.ja.md) で対応しています。
+TyranoBuilder's `.tbp` is covered by [ssplayer-tyranobuilder](../../packages/ssplayer-tyranobuilder/README.md).
