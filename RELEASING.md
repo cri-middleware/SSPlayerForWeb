@@ -79,9 +79,21 @@ git switch main && git pull --ff-only &&
 
 ### 4. Run the release
 
+Run the block that fits. npm cannot stage a package it does not have yet, so a run that releases one — the first release is one — adds `-f publish_npm=false`, and step 6 publishes it by hand.
+
+For packages npm already has:
+
 ```bash
 VERSIONS=<versions>                               # the pairs from step 1, in quotes
 RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
+gh run watch "${RUN:?}" --exit-status
+```
+
+For a run that releases a package npm does not have yet:
+
+```bash
+VERSIONS=<versions>                               # the pairs from step 1, in quotes
+RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" -f publish_npm=false | sed 's|.*/||')
 gh run watch "${RUN:?}" --exit-status
 ```
 
@@ -93,7 +105,7 @@ git log --oneline -1 origin/main                  # chore(release): <the version
 gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'   # its drafts
 ```
 
-`-f release_plugins=false` leaves the plugins out. A package npm does not have yet cannot be staged, so a run that releases one — the first release is one — adds `-f publish_npm=false`, and step 6 publishes it by hand.
+`-f release_plugins=false` leaves the plugins out.
 
 ### 5. Check the drafts
 
@@ -315,9 +327,21 @@ git switch main && git pull --ff-only &&
 
 ### 4. リリースを実行する
 
+当てはまる方のブロックを実行します。npm はまだ無いパッケージを stage できないので、それを出す run（初回のリリースがそうです）には `-f publish_npm=false` を足し、手順 6 で手作業で publish します。
+
+npm にすでにあるパッケージだけを出すとき:
+
 ```bash
 VERSIONS=<versions>                               # 手順 1 の組を引用符で囲む
 RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" | sed 's|.*/||')
+gh run watch "${RUN:?}" --exit-status
+```
+
+npm にまだ無いパッケージを出すとき:
+
+```bash
+VERSIONS=<versions>                               # 手順 1 の組を引用符で囲む
+RUN=$(gh workflow run release.yml --ref main -f versions="${VERSIONS:?}" -f publish_npm=false | sed 's|.*/||')
 gh run watch "${RUN:?}" --exit-status
 ```
 
@@ -329,7 +353,7 @@ git log --oneline -1 origin/main                  # chore(release): <指定し�
 gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName'   # できた下書き
 ```
 
-`-f release_plugins=false` でプラグインを外せます。npm にまだ無いパッケージは stage できないので、それを出す run（初回のリリースがそうです）には `-f publish_npm=false` を足し、手順 6 で手作業で publish します。
+`-f release_plugins=false` でプラグインを外せます。
 
 ### 5. 下書きを確かめる
 
