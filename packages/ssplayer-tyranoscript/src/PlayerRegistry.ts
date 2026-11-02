@@ -10,7 +10,7 @@ import { cancelElementFade } from './LayerCanvas.js';
 import type { TyranoAudioManager } from './TyranoAudioManager.js';
 
 /**
- * A queued follow-up animation armed by `[ss_play next=]` — the Spine plugin's
+ * A queued follow-up animation armed by `[ss_play next=]` — the character plugins'
  * `next_motion` / `in_frame_next_motion`. Lets an author write "entrance, then
  * idle" WITHOUT blocking the scenario the way `[ss_wait]` does.
  */

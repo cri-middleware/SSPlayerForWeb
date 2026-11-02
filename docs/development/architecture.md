@@ -86,8 +86,8 @@ flowchart TD
 Each reason here spans packages; the code it concerns carries the detail in its comments.
 
 **Each host's plugin draws on the host's own GL context.** The MZ plugin registers a renderer with
-MZ's PixiJS and brackets its raw draw with the same state save and restore MZ's own Effekseer
-sprite uses, so animations sort with MZ's sprites and no canvas sits on top. The TyranoScript
+MZ's PixiJS and brackets its raw draw with the same state save and restore MZ's own animation-effect
+sprite (`Sprite_Animation`) uses, so animations sort with MZ's sprites and no canvas sits on top. The TyranoScript
 plugin keeps one canvas per Tyrano layer and positions each character from its `<div>`: a browser
 allows only about 8 to 16 WebGL contexts, and the `<div>` is what `[anim]` and `[kanim]` find by
 name.

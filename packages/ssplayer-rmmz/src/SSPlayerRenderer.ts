@@ -3,9 +3,9 @@
 // against MZ's shared WebGL context.
 //
 // One instance exists per PixiJS Renderer, so it also owns the single shared
-// SSWebGLRenderer (mirroring how MZ keeps one Effekseer context). Around the raw
-// GL draw it applies the EXACT WebGL-state protection MZ's own Effekseer sprite
-// uses (Sprite_Animation.onBeforeRender / onAfterRender in rmmz_sprites.js), so
+// SSWebGLRenderer (mirroring how MZ keeps one context for its animation effects). Around the
+// raw GL draw it applies the EXACT WebGL-state protection MZ's own animation-effect
+// sprite uses (Sprite_Animation.onBeforeRender / onAfterRender in rmmz_sprites.js), so
 // MZ's batched sprites, filters and tilemap keep rendering correctly afterwards.
 
 import { SSWebGLRenderer } from '@spritestudio/ssplayer-webgl';
@@ -60,7 +60,7 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
       this._gl = gl;
     }
 
-    // --- MZ Effekseer-style: flush the pending batch before raw GL ---
+    // --- as Sprite_Animation does: flush the pending batch before raw GL ---
     renderer.batch.flush();
     renderer.geometry.reset();
 
@@ -105,7 +105,7 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
 
     this.ssRenderer.render(ip, player.resourceManager, t, intoFramebuffer, tint);
 
-    // --- MZ Effekseer-style: restore Pixi's cached GL state ---
+    // --- as Sprite_Animation does: restore Pixi's cached GL state ---
     renderer.texture.reset();
     renderer.geometry.reset();
     renderer.state.reset();

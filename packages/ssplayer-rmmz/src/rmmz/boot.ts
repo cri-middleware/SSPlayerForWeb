@@ -3,7 +3,7 @@
 // ssplayer-core needs its WASM runtime initialised once before any SSPlayer is
 // used. We kick that off the moment the plugin loads and hold the promise, then
 // hook Scene_Boot.isReady so MZ's "Now Loading" screen stays up until the WASM
-// is compiled — exactly how the bundled Effekseer plugin gates boot. By the time
+// is compiled — exactly how MZ's main.js gates boot on its animation-effect runtime. By the time
 // the title screen appears, the runtime is guaranteed ready.
 
 import { SSPlayer } from '../SSPlayer.js';

@@ -24,8 +24,8 @@ You need RPG Maker MZ, and a project made in **SpriteStudio 7.6 or later**.
    [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-rmmz&expanded=true):
    open the Release named `@spritestudio/ssplayer-rmmz <version>` and take the file under
    **Assets**, not the *Source code* archives. Extract its three files —
-   `ssplayer-rpgmakermz.js`, `ssruntime_bg.wasm` and `ssconverter_bg.wasm` — flat into your
-   game's `js/plugins/`, and turn **ssplayer-rpgmakermz** ON in **Tools → Plugin Manager**.
+   `ssplayer-rpgmakermz.js`, `ssruntime_bg.wasm` and `ssconverter_bg.wasm` — themselves, not a
+   folder around them, into your game's `js/plugins/`, and turn **ssplayer-rpgmakermz** ON in **Tools → Plugin Manager**.
 2. **Convert**: Make a `SpriteStudio_Source/` folder at your game's root, copy your
    SpriteStudio project into it — the whole folder, not the `.sspj` alone — and start a
    test play. Before the title appears, the project is converted into
@@ -79,7 +79,7 @@ the internals:
   registered `PIXI.ObjectRenderer` (`'ssplayer'`) that reuses
   [`@spritestudio/ssplayer-webgl`](../ssplayer-webgl)'s `SSWebGLRenderer` against MZ's
   shared `gl`. Raw-GL draws are bracketed with the exact WebGL-state save/restore MZ's
-  Effekseer sprite uses. It keeps no timer: playback advances only from the picture
+  animation-effect sprite (`Sprite_Animation`) uses. It keeps no timer: playback advances only from the picture
   sprite's `update()`.
 - **Layer 4 (plugin).** A drop-in IIFE that gates boot on WASM init
   (`Scene_Boot.isReady`) — the no-SIMD (scalar) build, since MZ's bundled NW.js is a

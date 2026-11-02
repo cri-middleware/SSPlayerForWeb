@@ -7,7 +7,7 @@ import type { TyranoKag } from './tyranoTypes.js';
  * TyranoScript renders by stacking absolutely-positioned layer divs
  * (`<number>_<fore|back>`, e.g. `.0_fore`, with `base` for the background). We
  * reach the layer through Tyrano's own `kag.layer.getLayer(layer, page)` — the
- * same API the official Spine plugin uses (it handles the class naming and
+ * same API TyranoScript's own character plugins use (it handles the class naming and
  * avoids building an invalid `.0_fore` selector by hand).
  *
  * **Each character is a `<div>`, not a canvas.** One `SSOverlay` per
@@ -41,7 +41,7 @@ export type LayerPage = 'fore' | 'back';
 /**
  * Resolve a Tyrano layer to its DOM element via `kag.layer.getLayer`. `layer` is
  * a numbered layer (`"0"`, `"1"`) or `"base"` for the background; `page` selects
- * the fore/back sub-layer. Shows the layer (matching the Spine plugin) and
+ * the fore/back sub-layer. Shows the layer (matching the character plugins) and
  * returns its element, or `null` when the layer isn't on the page yet.
  */
 export function getLayerElement(

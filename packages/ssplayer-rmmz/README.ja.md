@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-rmmz
 
-**SpriteStudio**（`.ssab`）アニメーションを **RPG ツクール MZ** で再生するプラグインです。キャラやピクチャと正しい前後関係（Zオーダー）で表示されます。
+**SpriteStudio**（`.ssab`）アニメーションを **RPG ツクール MZ** で再生するプラグインです。キャラやピクチャと正しい前後関係（Z 順）で表示されます。
 
 > **対象読者:** RPG ツクール MZ でゲームを作る人。プラグインコマンドで SpriteStudio アニメを追加します（コード不要）。
 > **ステータス:** beta。
@@ -59,7 +59,7 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 - **Layer 3（レンダラ）**：`SSPlayer` は `PIXI.Container`、`SSPlayerRenderer` は登録済みの
   `PIXI.ObjectRenderer`（`'ssplayer'`）で、[`@spritestudio/ssplayer-webgl`](../ssplayer-webgl)
-  の `SSWebGLRenderer` を MZ の共有 `gl` 上で駆動します。生 GL 描画の前後は、MZ の Effekseer スプライトと同一の WebGL ステート退避／復元で挟んでいます。独自のタイマーは持たず、再生はピクチャのスプライトの `update()` からだけ進みます。
+  の `SSWebGLRenderer` を MZ の共有 `gl` 上で駆動します。生 GL 描画の前後は、MZ のアニメーション効果のスプライト（`Sprite_Animation`）と同一の WebGL ステート退避／復元で挟んでいます。独自のタイマーは持たず、再生はピクチャのスプライトの `update()` からだけ進みます。
 - **Layer 4（プラグイン）**：ドロップイン型の IIFE です。`Scene_Boot.isReady` で WASM の初期化を待ちます。WASM は非 SIMD（スカラー）版で、MZ 同梱の NW.js が WebAssembly SIMD 非対応の Chromium だからです。Game_Picture ↔ Sprite_Picture ブリッジでアニメをピクチャにアタッチします（MZ の移動・拡大が適用され、セーブ／ロードで状態が復元されます）。テクスチャは `ImageManager`、音声は
   `AudioManager` に委譲します。
 

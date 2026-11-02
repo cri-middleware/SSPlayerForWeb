@@ -19,7 +19,7 @@
 TyranoScript のプロジェクトと、**SpriteStudio 7.6 以上**で作成したプロジェクトを用意してください。
 
 1. **導入**: [GitHub Releases](https://github.com/cri-middleware/SSPlayerForWeb/releases?q=ssplayer-tyranoscript&expanded=true) から `ssplayer-tyranoscript-plugin-<version>.zip` をダウンロードします。`@spritestudio/ssplayer-tyranoscript <version>` という名前の Release を開き、**Assets** にあるファイルを取ってください（*Source code* のアーカイブではありません）。解凍し、中の `ssplayer/` フォルダを名前を変えずにプロジェクトの `data/others/plugin/` へコピーします。`[plugin name="ssplayer"]` はそこを探します。
-2. **変換**: ブラウザで [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) を開き、`.sspj` の入ったフォルダをドロップして ZIP をダウンロードします。ZIP を `data/others/ssdata/` に展開すると、プロジェクト名のフォルダの中に `.ssab` とテクスチャが入っています。デスクトップでは [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) で同じことができます。
+2. **変換**: ブラウザで [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) を開き、`.sspj` の入ったフォルダをドロップ（または **Browse...** で選択）して **⚡ Convert & Download** を押し、ダウンロードされた ZIP を `data/others/ssdata/` に展開すると、プロジェクト名のフォルダの中に `.ssab` とテクスチャが入っています。デスクトップでは [SSConverterGUI](https://github.com/cri-middleware/SSConverterGUI/releases) で同じことができます。
 
    ```
    mygame/
@@ -126,7 +126,7 @@ pnpm --filter @spritestudio/ssplayer-tyranoscript run test    # vitest (モッ�
 pnpm --filter tyranoscript-example run sync:plugin             # ビルド済みプラグイン + wasm をサンプルへコピー
 ```
 
-TyranoScript 本体は同梱していません。サンプルがコミットしているのは、作成したシナリオ・プラグインローダ・`.ssab` ファイルだけです。TyranoScript 本体は開発時に各自で配置してください。サンプルを本物のエンジンでスクリプトから動かす方法は、ドキュメントサイトの[ビルドガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/development/build)にあります。
+TyranoScript 本体は同梱していません。サンプルがコミットしているのは、作成したシナリオ（`first.ks` と `make.ks`）と補助スクリプトだけです。プラグインは `sync:plugin`、`.ssab` ファイルは `deploy-examples` が配置し、TyranoScript 本体は開発時に各自で配置します（`fetch:engine` で取得できます）。サンプルを本物のエンジンでスクリプトから動かす方法は、ドキュメントサイトの[ビルドガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/development/build)にあります。
 
 ## ライセンス
 

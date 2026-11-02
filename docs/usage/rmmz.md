@@ -9,7 +9,8 @@ description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, plugi
 
 This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**, driven by
 plugin commands with no code to write. An animation rides on a picture and sits in the
-correct Z-order with your characters and pictures.
+correct Z-order with your characters and pictures. You need a project made in
+**SpriteStudio 7.6 or later**.
 
 ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">Live demo</a>** — run
 the bundled sample MZ project in your browser.
@@ -21,8 +22,8 @@ the bundled sample MZ project in your browser.
    `@spritestudio/ssplayer-rmmz <version>` and take the file under **Assets**, not the
    *Source code* archives. It holds `ssplayer-rpgmakermz.js`, `ssruntime_bg.wasm` and
    `ssconverter_bg.wasm`.
-2. Extract all three into your project's `js/plugins/`, flat (the WASM files must sit next to the
-   `.js`).
+2. Unzip it and copy the three files themselves — not a folder around them — into your project's
+   `js/plugins/` (the WASM files must sit next to the `.js`).
 3. Turn **ssplayer-rpgmakermz** ON in **Tools → Plugin Manager**. There are no parameters — the
    WASM files are auto-loaded from the same folder as the plugin `.js`.
 
@@ -32,8 +33,9 @@ the bundled sample MZ project in your browser.
 plugin actually plays. Test play does the converting, with the `ssconverter_bg.wasm` in
 `js/plugins/`:
 
-1. Put your SpriteStudio project under `SpriteStudio_Source/` at your project root — the
-   `.sspj` **and its folder**, since an animation is several files. Subfolders are fine.
+1. Create a `SpriteStudio_Source/` folder at your project root (beside `js/` and `img/`) and put your
+   SpriteStudio project in it — the `.sspj` **and its folder**, since an animation is several files.
+   Subfolders are fine.
 2. Start a test play. Before the title, every project that changed since it was last
    converted is converted into `spritestudio/<project>/`.
 3. After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and
@@ -100,7 +102,10 @@ the internal command ID.
 - **Show SS** (`showSS`) — create a picture and attach an animation in one step. Its
   arguments are `Picture Id`, `SSAB File` (e.g. `spritestudio/Ringo/Ringo.ssab`),
   `Animation Name`, `X`, `Y`, `Scale (%)`, `Loop Count`, `Signal -> Switch` and
-  `Wait for Completion`.
+  `Wait for Completion`. `Loop Count` is `-1` (or `0`) to loop forever, `1` to play once, or the number
+  of plays (default `-1`). `Signal -> Switch` is a game switch that turns ON when the animation fires a
+  signal — a marker placed on a frame in SpriteStudio — and does not turn OFF by itself; `0` means none.
+  Use a `Loop Count` of `1` or more with `Wait for Completion`: an endless animation never finishes.
 - **Set SS As Picture** (`setSSAsPicture`) — attach SS to a picture you have **already**
   shown with the native *Show Picture* command. From there, position and erase it with
   the standard *Move / Erase Picture* commands. Don't drive one picture id with both a
@@ -180,8 +185,9 @@ Making a display object of your own follow a part has **no plugin command**. Get
   and the `Idle Animation` otherwise.
 - **Clear SS Talk** (`clearSSTalk`) — unbind it (do this when the conversation ends).
 
-Leaving `Animation Name` empty auto-picks the first; a wrong name warns in the console and
-lists the real names (the MZ editor can't read a `.ssab` to build a dropdown).
+Leave `Animation Name` empty in *Show SS* and *Set SS As Picture* to play the first animation in the
+`.ssab`; in *Change SS Animation* it keeps the current one, and *Play SS Once*, *Play SS Sequence* and
+*Set SS Track* need a name. A name that is not in the `.ssab` warns in the console and lists the real names (the MZ editor can't read a `.ssab` to build a dropdown).
 
 ## 4. Deployment
 
@@ -235,8 +241,8 @@ MZ in `dlc/BasicResources/plugins/official/`, beside the PluginCommonBase.js it 
 
 ## How it works
 
-- Animations are drawn straight into MZ's own screen (the same approach as MZ's tilemap and
-  the bundled Effekseer). Nothing is layered on top, so they render in correct Z-order with
+- Animations are drawn straight into MZ's own screen, the way MZ draws its tilemap and its
+  built-in animation effects. Nothing is layered on top, so they render in correct Z-order with
   characters and pictures.
 - Masks, effects, SpriteStudio's integration shaders (all 13) and instance parts draw as
   they do in the browser WebGL player.

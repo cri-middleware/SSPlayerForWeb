@@ -471,7 +471,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 }
 
 // ---------------------------------------------------------------------------
-// Follow-up animations (`[ss_play next=]`) — the Spine plugin's `next_motion`.
+// Follow-up animations (`[ss_play next=]`) — the character plugins' `next_motion`.
 // ---------------------------------------------------------------------------
 
 /**
@@ -910,7 +910,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // (re)play, optionally switching animation: cutting to it, or crossfading
   // over `transition=` ms. `next=` queues a follow-up animation that
   // starts when this one ends (or at `atframe=`) WITHOUT blocking the scenario
-  // — the Spine plugin's `next_motion` / `in_frame_next_motion`. Use it for
+  // — the character plugins' `next_motion` / `in_frame_next_motion`. Use it for
   // "entrance, then idle loop" while the text keeps flowing; use [ss_wait] when
   // you do want the scenario to hold.
   ftag.master_tag['ss_play'] = {

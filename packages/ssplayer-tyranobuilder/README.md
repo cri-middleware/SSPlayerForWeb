@@ -30,7 +30,7 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.6 or later**.
    file under **Assets**, not the *Source code* archives. In TyranoBuilder, open
    **Project → Plugins**, press **Add New** and pick that file. Keep the name `ssplayer.tbp` —
    TyranoBuilder takes the plugin's name from it. It is the only download you need: it
-   already holds the TyranoScript plugin ZIP's contents.
+   already holds the TyranoScript plugin (`init.ks`, `main.js`, `ssruntime_bg.wasm`).
 2. **Add an animation**: Copy your SpriteStudio project — the whole folder, not the `.sspj`
    alone — into `SpriteStudio_Source/` in your game's folder (the plugin creates it the
    first time the project opens), then open or reopen the project. It is converted as the
@@ -49,7 +49,7 @@ You need TyranoBuilder, and a project made in **SpriteStudio 7.6 or later**.
            └── Ringo.png
    ```
 
-3. **Place it**: From **Plugin** in the component palette, place **SpriteStudio: show** and
+3. **Place it**: From **Plugins** in the component palette, place **SpriteStudio: show** and
    pick your animation from its dropdowns.
 
 After editing in SpriteStudio, press **Reconvert now** on that component — nothing
