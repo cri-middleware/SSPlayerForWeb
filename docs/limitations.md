@@ -72,7 +72,7 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssconverter-core` | npm |
 | `@spritestudio/ssplayer-rmmz` | plugin ZIP, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.md#for-contributors--building-from-source) |
 | `@spritestudio/ssplayer-tyranoscript` | plugin ZIP, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranoscript/README.md#for-contributors--building-from-source) |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.md#for-contributors) |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.md#for-contributors--building-from-source) |
 | `@spritestudio/ssconverter-web` | hosted on GitHub Pages at `/ssconverter/`, plus a Node CLI in the repo |
 
 ## RPG Maker MZ (beta)
@@ -117,6 +117,7 @@ every official player too, so the full explanations — and the rest of the shar
   `Signal` / `Audio` events fire.
 - **No reverse audio.** Sounds are skipped whenever the effective direction is backward (a
   reverse direction, or a ping-pong return leg). A negative speed is not one of those cases: speed is a multiplier, and a negative one stops the playhead rather than turning it around, as does `0`.
-- **The runtime does not play audio.** `onAudio` hands you the sound reference and the timing;
-  playing it is your app's job — except in the framework integrations, which wire it up for you.
+- **The runtime does not play audio.** `onAudio` hands you the sound reference and the timing.
+  The players play it for you through Web Audio unless you set your own `audioManager`
+  ([Sound playback](/customize/events#sound-playback)).
 :::

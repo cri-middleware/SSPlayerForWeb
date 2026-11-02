@@ -100,9 +100,12 @@ Run the bundled PixiJS example to see the renderer in action — handy when
 customising the source or verifying a fix:
 
 ```bash
+pnpm run deploy-examples   # once: converts the SDK's sample projects into examples/*/public (not tracked in git)
 cd examples/pixi-example
 pnpm run dev             # start the dev server
 ```
+
+(`pnpm run example` does this and every earlier step for you.)
 
 The example consumes the **built** package via a workspace reference, so re-run
 `pnpm run build` from the repo root after editing `src/` here.

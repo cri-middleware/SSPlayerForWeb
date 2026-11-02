@@ -22,7 +22,7 @@ registers itself, then plays straight from markup. A classic `<script>` has no
 <ss-player src="boss.ssab"  animation="idle" autoplay></ss-player>
 ```
 
-Three ways to point at the WASM (first match wins per element):
+Three ways to point at the WASM (a `wasm` attribute on an element wins over the page-wide default that 1 or 2 sets):
 
 1. **`data-wasm` on the script tag** — once for the page (above). Simplest, no JS.
 2. **`SSWebGLPlayerElement.setSSPlayerWasmUrl(url)`** — once in JS, before the elements connect.
@@ -54,6 +54,7 @@ file directly (`file://`) will fail on CORS.
    file, no sibling PNGs). Convert your own with `--embedded`, or reuse a sample asset:
 
    ```bash
+   pnpm run download:wasm && pnpm run build   # once: deploy-examples runs the converter CLI
    pnpm run deploy-examples   # populates examples/*/public with converted assets
    cp examples/pixi-example/public/Ringo/Ringo_embedded.ssab examples/cdn/
    ```
@@ -62,7 +63,7 @@ file directly (`file://`) will fail on CORS.
 
    ```bash
    npx serve examples/cdn        # or: python3 -m http.server -d examples/cdn 8080
-   # then open http://localhost:3000/pixi.html  (or webgl.html, ss-player.html)
+   # then open http://localhost:3000/pixi.html  (or webgl.html, ss-player.html; :8080 with the python server)
    ```
 
 Override the asset or animation via query string:
@@ -86,7 +87,7 @@ yet, say:
    | In the page | Change from | Change to |
    | --- | --- | --- |
    | `ss-player.html` `<script src>` | `…/npm/@spritestudio/ssplayer-webgl@…/dist/browser/ss-player.element.min.js` | `../../packages/ssplayer-webgl/dist/browser/ss-player.element.min.js` |
-   | `ss-player.html` `wasm` attribute | `…/npm/@spritestudio/ssplayer-core@…/wasm/ssruntime_bg.wasm` | `../../packages/ssplayer-core/wasm/ssruntime_bg.wasm` |
+   | `ss-player.html` `data-wasm` attribute on the `<script>` | `…/npm/@spritestudio/ssplayer-core@…/wasm/ssruntime_bg.wasm` | `../../packages/ssplayer-core/wasm/ssruntime_bg.wasm` |
    | pixi `<script src>` | `…/npm/@spritestudio/ssplayer-pixi@…/dist/browser/ssplayer-pixi.browser.min.js` | `../../packages/ssplayer-pixi/dist/browser/ssplayer-pixi.browser.min.js` |
    | webgl `<script src>` | `…/npm/@spritestudio/ssplayer-webgl@…/dist/browser/ssplayer-webgl.browser.min.js` | `../../packages/ssplayer-webgl/dist/browser/ssplayer-webgl.browser.min.js` |
    | `pixi.html` / `webgl.html` `WASM_URL` | `…/npm/@spritestudio/ssplayer-core@…/wasm/ssruntime_bg.wasm` | `../../packages/ssplayer-core/wasm/ssruntime_bg.wasm` |

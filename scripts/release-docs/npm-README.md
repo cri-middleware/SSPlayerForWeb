@@ -22,4 +22,4 @@ Every npm package of SpriteStudio Player for Web carries these same pages.
 | What is not supported | [limitations.md](limitations.md) |
 | How a program written for SS6Player for Web maps onto this one | [migration_from_ss6.md](migration_from_ss6.md) |
 
-The other pages cover texture replacement, shaders and blend modes, resources and their lifecycle, performance, and the RPG Maker MZ and TyranoScript / TyranoBuilder plugins. Links between the pages work offline. Links to the API reference pages and the live demos go to the online documentation, <https://cri-middleware.github.io/SSPlayerForWeb/> (Japanese: <https://cri-middleware.github.io/SSPlayerForWeb/ja/>).
+The other pages cover texture replacement, shaders and blend modes, HTML5 ads (Google Ads), resources and their lifecycle, performance, and the RPG Maker MZ and TyranoScript / TyranoBuilder plugins. Links between the pages work offline. Links to the API reference pages and the live demos go to the online documentation, <https://cri-middleware.github.io/SSPlayerForWeb/> (Japanese: <https://cri-middleware.github.io/SSPlayerForWeb/ja/>).

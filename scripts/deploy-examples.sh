@@ -6,7 +6,7 @@ usage () {
     cat <<USAGE
 Usage: ${HELP_APP} [--help]
   Compile the SDK's bundled test projects into the examples' asset directories,
-  both reference and embedded. Needs node and the built ssconverter-web package.
+  both reference and embedded. Needs node and the built ssconverter-core package.
 USAGE
 }
 

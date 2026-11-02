@@ -61,7 +61,7 @@ flowchart TD
   that package.
 - `ssplayer-webgl` draws that data on raw WebGL and gives a page `<ss-player>`; `ssplayer-pixi`
   draws it as a PixiJS display object. `ssplayer-pixi-ui` is a package of its own because it
-  brings `@pixi/ui` with it, which an app that only plays animations should not have to install.
+  needs `@pixi/ui` (a peer dependency), which an app that only plays animations should not have to install.
 - `ssplayer-rmmz` is the RPG Maker MZ plugin: an animation belongs to a picture, so MZ moves it,
   scales it and saves it with the game, and the plugin's commands drive it.
   `ssplayer-tyranoscript` is the `[ss_*]` tags, and is also the runtime half of TyranoBuilder and

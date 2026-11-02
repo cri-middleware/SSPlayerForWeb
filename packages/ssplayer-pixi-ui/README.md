@@ -73,5 +73,6 @@ From the repo root, after the WASM is in place (see
 ```bash
 pnpm run build                                   # build all TS packages
 pnpm --filter @spritestudio/ssplayer-pixi-ui test
+pnpm run deploy-examples                         # once: the sample assets (not tracked in git)
 pnpm --filter pixi-example dev                   # then open /ui.html
 ```

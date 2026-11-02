@@ -4,7 +4,7 @@ $HelpApp = Split-Path -Leaf $PSCommandPath
 function Show-Usage {
     Write-Host "Usage: ${HelpApp} [--help]"
     Write-Host "  Compile the SDK's bundled test projects into the examples' asset directories,"
-    Write-Host "  both reference and embedded. Needs node and the built ssconverter-web package."
+    Write-Host "  both reference and embedded. Needs node and the built ssconverter-core package."
 }
 
 foreach ($arg in $args) {

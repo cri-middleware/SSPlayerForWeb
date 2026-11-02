@@ -34,10 +34,10 @@ git clone https://github.com/cri-middleware/SSPlayerForWeb.git
 cd SSPlayerForWeb
 pnpm install
 pnpm run download:wasm   # ビルド済みの変換 WASM を取得（ツールチェーン不要）
+pnpm run build           # CLI と開発サーバーが読み込む @spritestudio/ssconverter-core をビルド
 ```
 
-`download:wasm` は、**git で管理されていない**
-`@spritestudio/ssconverter-core` の `wasm/ssconverter_bg.wasm` を取得します。一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリルートで実行します）。
+`download:wasm` は、**git で管理されていない** `@spritestudio/ssconverter-core` の `wasm/ssconverter_bg.wasm` を取得し、`build` は CLI と開発サーバーの両方が読み込むそのパッケージをビルドします。この 2 つを一度実行すれば、以下のどちらのモードも使えます（すべてのコマンドはリポジトリルートで実行します）。
 
 ## ブラウザツール
 
@@ -107,5 +107,4 @@ Rust / wasm-pack ツールチェーンが必要です。
 pnpm run build:wasm   # ソースから WASM をビルド（Rust / wasm-pack が必要）
 ```
 
-ツールチェーンのセットアップ全体は
-[リポジトリ README](../../README.ja.md#-クイックスタート) を参照してください。
+ツールチェーンのセットアップ全体は [CONTRIBUTING の「開発環境のセットアップ」](../../CONTRIBUTING.md#開発環境のセットアップ) を参照してください。

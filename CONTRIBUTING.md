@@ -45,7 +45,7 @@ If you find a bug, please open an issue including:
 - Expected vs. actual behavior.
 
 *Note: if reproducing a bug requires proprietary `.sspj` project data, please do
-not attach it to a public issue — contact the maintainers privately instead.*
+not attach it to a public issue — send it privately through the channels in [SUPPORT.md](./SUPPORT.md).*
 
 ### Pull Requests
 1. Fork the repository and create your branch from `main`.
@@ -76,20 +76,22 @@ see [RELEASING.md](./RELEASING.md).
 
 ## Development Environment
 
-Prerequisites (Node.js, pnpm, and — only for building the WASM — Rust / wasm-pack)
-and the full build steps live in the **[Quick Start](./README.md#-quick-start)**
-section of the README. In short, from the repo root:
+Prerequisites: Node.js 24 or later, pnpm (the version in `packageManager`), and — only to
+compile the WASM yourself — Rust and wasm-pack. Clone with
+`git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git` (in an existing
+clone: `git submodule update --init`) so the `SpriteStudio-SDK` submodule is present. In short,
+from the repo root:
 
 ```bash
 pnpm install
-pnpm run build:wasm   # builds the Rust core to WASM (needs Rust + wasm-pack)
+pnpm run download:wasm   # pre-built WASM, no Rust needed (or: pnpm run build:wasm — compiles it from the submodule; needs Rust + wasm-pack)
 pnpm run build
 pnpm test             # every workspace's vitest suite
 pnpm run typecheck    # tsc --noEmit in every package and TypeScript example
 ```
 
 The generated WASM binaries are **not tracked in git**, so a fresh checkout must
-build them first. `pnpm test` needs both builds: the core's tests import
+fetch or build them first. `pnpm test` needs both builds: the core's tests import
 the built WASM, and `examples/sspj-preview` imports the other packages' `dist/`.
 `pnpm run typecheck` needs `pnpm run build` too, since the packages read each
 other's types from `dist/`; neither the build nor the tests catch a type error.
@@ -135,7 +137,7 @@ scripts/prepare-docs.sh    # pnpm install + the SDK wasm
 scripts/build-docs.sh      # TypeDoc, then VitePress -> docs/.vitepress/dist
 ```
 
-`pages.yml` runs `build-docs.sh` too, so CI and a local build cannot drift. Two options earn their
+`pages.yml` runs `build-pages.sh`, whose `docs` stage is `build-docs.sh`, so CI and a local build cannot drift. Two options earn their
 keep: `api=no` skips TypeDoc when only prose changed, and `base=/SSPlayerForWeb/` sets `DOCS_BASE`
 the way the project site needs it. CI builds the docs on a pull request that
 touches them and the whole site weekly, and a dead link fails the build, VitePress checking by default. This is
@@ -236,7 +238,7 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 - 利用環境 (ブラウザ / Node.js のバージョン、レンダリングエンジンとそのバージョン、OS)
 - 期待される動作と実際の動作
 
-*注: バグ再現のために非公開の `.sspj` プロジェクトデータが必要な場合は、公開 Issue には添付せず、メンテナへ個別にご連絡ください。*
+*注: バグ再現のために非公開の `.sspj` プロジェクトデータが必要な場合は、公開 Issue には添付せず、[SUPPORT.md](./SUPPORT.md) の窓口から非公開でお送りください。*
 
 ### プルリクエスト
 1. リポジトリをフォークし、`main` ブランチから作業用ブランチを作成してください。
@@ -253,18 +255,17 @@ Web の各レンダリングエンジン間で高速かつ移植性の高いプ�
 
 ## 開発環境のセットアップ
 
-前提条件（Node.js・pnpm、および WASM を再ビルドする場合のみ Rust / wasm-pack）と完全なビルド手順は、README の **[クイックスタート](./README.ja.md#-クイックスタート)**
-に記載しています。リポジトリのルートで手短には:
+前提条件: Node.js 24 以上、pnpm（`packageManager` のバージョン）、そして WASM を自分でコンパイルする場合のみ Rust と wasm-pack。`SpriteStudio-SDK` サブモジュールが必要なので、`git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git` で取得してください（クローン済みなら `git submodule update --init`）。リポジトリのルートで手短には:
 
 ```bash
 pnpm install
-pnpm run build:wasm   # Rust コアを WASM へビルド（Rust / wasm-pack が必要）
+pnpm run download:wasm   # ビルド済み WASM を取得（Rust 不要）。ソースからコンパイルするなら pnpm run build:wasm（Rust / wasm-pack が必要）
 pnpm run build
 pnpm test             # 全ワークスペースの vitest スイート
 pnpm run typecheck    # 全パッケージと TypeScript のサンプルで tsc --noEmit
 ```
 
-生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまずビルドが必要です。`pnpm test` には 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。`pnpm run typecheck` にも `pnpm run build` が要ります。パッケージは互いの型を `dist/` から読むためです。型のエラーはビルドでもテストでも見つかりません。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。新規チェックアウトでは `pnpm run example`（別のサンプルは `pnpm run example example=pixi`）が、不足している手順をすべて実行してサンプルを起動します（[`scripts/run-example.sh`](./scripts/run-example.sh) とその `.ps1` の片割れ）。
+生成される WASM バイナリは **git で管理されていません**。新規チェックアウト時はまず WASM の取得かビルドが必要です。`pnpm test` には 2 つのビルドが両方要ります。core のテストはビルド済みの WASM を import し、`examples/sspj-preview` は他パッケージの `dist/` を import するためです。`pnpm run typecheck` にも `pnpm run build` が要ります。パッケージは互いの型を `dist/` から読むためです。型のエラーはビルドでもテストでも見つかりません。コンバーターの WASM か `SpriteStudio-SDK` サブモジュールが無いと、変換のスイートは成功ではなく **skipped** として報告されます。最後の集計行を読んでください。examples は **ビルド済み** のパッケージをワークスペース参照で利用するため、`packages/` 配下の TypeScript を変更したら `pnpm run build` を再実行し、触ったレンダラーのサンプルで確認してください。core と WebGL は `examples/webgl-example`、PixiJS は `examples/pixi-example` で、どちらも `pnpm run dev` で起動します。新規チェックアウトでは `pnpm run example`（別のサンプルは `pnpm run example example=pixi`）が、不足している手順をすべて実行してサンプルを起動します（[`scripts/run-example.sh`](./scripts/run-example.sh) とその `.ps1` の片割れ）。
 
 RPG ツクール MZ・TyranoScript・ティラノビルダーの連携を開発するとき、または自分のビルドを自分のゲームで使うときは、ドキュメントサイトの[ビルドガイド](./docs/ja/development/build.md)を参照してください。リリースと同じ成果物のビルドと、実際のホストでの確かめ方があります。パッケージの組み合わせとその理由は[プレイヤーの構成](./docs/ja/development/architecture.md)にあります。
 
@@ -293,7 +294,7 @@ scripts/prepare-docs.sh    # pnpm install と SDK の wasm
 scripts/build-docs.sh      # TypeDoc のあと VitePress -> docs/.vitepress/dist
 ```
 
-`pages.yml` も `build-docs.sh` を実行するので、CI と手元のビルドがずれません。役に立つオプションは
+`pages.yml` は `build-pages.sh` を実行し、その `docs` 段が `build-docs.sh` なので、CI と手元のビルドがずれません。役に立つオプションは
 2 つです。文章だけを直したときに TypeDoc を飛ばす `api=no` と、プロジェクトサイトに必要な
 `DOCS_BASE` を設定する `base=/SSPlayerForWeb/` です。CI も、docs に触れるプルリクエストで docs を、週次の実行でサイト全体をビルドします。リンク切れはビルドを失敗させます（VitePress の既定の挙動）。VitePress が
 `docs/ja` を自分で解決するため、これは両ロケールを**一度に**ビルドします。Zensical の Player 群の

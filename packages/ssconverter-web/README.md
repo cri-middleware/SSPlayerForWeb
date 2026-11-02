@@ -38,11 +38,13 @@ git clone https://github.com/cri-middleware/SSPlayerForWeb.git
 cd SSPlayerForWeb
 pnpm install
 pnpm run download:wasm   # fetch the pre-built converter WASM (no toolchain needed)
+pnpm run build           # builds @spritestudio/ssconverter-core, which the CLI and the dev server import
 ```
 
 `download:wasm` fetches `@spritestudio/ssconverter-core`'s
-`wasm/ssconverter_bg.wasm`, which is **not tracked in git**. Run it once; then use either
-mode below (all commands are run from the repo root).
+`wasm/ssconverter_bg.wasm`, which is **not tracked in git**, and `build` builds that package,
+which both the CLI and the dev server import. Run the two once; then use either mode below
+(all commands are run from the repo root).
 
 ## Browser tool
 
@@ -126,4 +128,4 @@ developers) needs the Rust / wasm-pack toolchain:
 pnpm run build:wasm   # build the WASM from source (requires Rust / wasm-pack)
 ```
 
-See the [repo README](../../README.md#-quick-start) for the full toolchain setup.
+See [Development Environment](../../CONTRIBUTING.md#development-environment) in CONTRIBUTING for the full toolchain setup.

@@ -51,7 +51,7 @@ flowchart TD
 **再生側**は、ページやゲームの中で動きます。
 
 - `ssplayer-core` は、ランタイムの WebAssembly 版の各フレームを描画データに変えます。DOM にもエンジンにも依存しません。各レンダラーはその上の薄いバインディングなので、レンダラーを足しても変わるのはそのパッケージだけです。
-- `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。`ssplayer-pixi-ui` は `@pixi/ui` を連れてくるので、アニメーションを再生するだけのアプリが入れずに済むよう、別のパッケージにしています。
+- `ssplayer-webgl` はその描画データを素の WebGL で描き、ページに `<ss-player>` を提供します。`ssplayer-pixi` は PixiJS の表示オブジェクトとして描きます。`ssplayer-pixi-ui` は `@pixi/ui`（peer 依存）を必要とするので、アニメーションを再生するだけのアプリが入れずに済むよう、別のパッケージにしています。
 - `ssplayer-rmmz` は RPG ツクール MZ のプラグインです。アニメはピクチャに属するので、MZ が移動・拡大し、ゲームと一緒にセーブします。動かすのはプラグインコマンドです。`ssplayer-tyranoscript` は `[ss_*]` タグで、ティラノビルダーと TyranoStudio のランタイム側でもあります。各キャラクターは Tyrano のレイヤー上の `<div>` で、その状態はセーブに入ります。
 
 **変換側**は、`.sspj` を `.ssab` に変えます。

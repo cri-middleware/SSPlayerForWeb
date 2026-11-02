@@ -50,7 +50,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssconverter-core` | npm |
 | `@spritestudio/ssplayer-rmmz` | プラグイン ZIP、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-rmmz/README.ja.md#コントリビューター向け--ソースからビルド) |
 | `@spritestudio/ssplayer-tyranoscript` | プラグイン ZIP、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranoscript/README.ja.md#コントリビューター向け--ソースからビルド) |
-| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.ja.md#開発者向け) |
+| `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.ja.md#コントリビューター向け--ソースからビルド) |
 | `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI |
 
 ## RPG ツクール MZ（beta） {#rpg-maker-mz-beta}
@@ -69,8 +69,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 
 ## TyranoScript / ティラノビルダー {#tyranoscript-tyranobuilder}
 
-どちらも **beta** です。[TyranoScript で使う](/ja/usage/tyrano) および
-[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
+どちらも **beta** です。[TyranoScript で使う](/ja/usage/tyrano) および[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
 ::: warning ティラノビルダー
 - **スタンダード版が読み込めるプラグインは 2 つまで**で、本プラグインはその 1 つを消費します。
@@ -88,5 +87,5 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 - **シークは通過したフレームのイベントを発火しません。** 発火するのは移動先フレームの
   `UserData` / `Signal` / `Audio` のみです。
 - **オーディオは逆再生できません。** 実質的な進行方向が逆向き（逆再生、ピンポンの復路）の場合、サウンドはスキップされます。負の再生速度はこれに該当しません。速度は倍率であり、負値は再生ヘッドの向きを変えるのではなく停止させます（`0` も同様）。
-- **ランタイムは音声を再生しません。** `onAudio` はサウンドの参照とタイミングを通知するのみで、実際の再生はアプリ側の責務です（フレームワーク連携では各プラグインが実装済みです）。
+- **ランタイムは音声を再生しません。** `onAudio` はサウンドの参照とタイミングを通知します。プレイヤーは、自前の `audioManager` を設定しない限り、Web Audio での再生までしてくれます（[サウンドの再生](/ja/customize/events#サウンドの再生)）。
 :::

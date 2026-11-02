@@ -52,5 +52,6 @@ WASM を用意したあと（[ssplayer-pixi](../ssplayer-pixi/README.ja.md#ソ�
 ```bash
 pnpm run build                                   # build all TS packages
 pnpm --filter @spritestudio/ssplayer-pixi-ui test
+pnpm run deploy-examples                         # 初回のみ: サンプルのアセット（git 管理外）
 pnpm --filter pixi-example dev                   # then open /ui.html
 ```
