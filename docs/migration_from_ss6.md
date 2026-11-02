@@ -167,11 +167,11 @@ priority modes, colour packing and the caveats — and for the authoring surface
 
 ## 6. ⚠️ Currently limited features
 
-The following existed in SS6Player and is **not yet available**, pending API work in the **`SpriteStudio-SDK`** (Rust core). Track progress in [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
+The following existed in SS6Player and is **not available** in this version: it depends on API in the **`SpriteStudio-SDK`** (Rust core). See [ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md).
 
 | SS6Player | Status | Dependency |
 |---|---|---|
-| `ChangeInstanceAnime` (dynamic instance swap) | **Not yet (planned)** | Instance Lifecycle API (SDK Phase 3) |
+| `ChangeInstanceAnime` (dynamic instance swap) | **Not available** | The SDK's Instance Lifecycle API |
 
 ## 7. Other differences
 

@@ -12,4 +12,4 @@ This file lists unfinished work that is specific to the TyranoScript plugin; wor
 
 ## Deliberate non-goals
 
-- **Spine and Live2D tags with no SpriteStudio counterpart** — `skin=` and `[live2d_expression]` are covered by `[ss_part_*]`; `lip_time`, `lip_sound_level` and `breath` are parameter-rig specifics (`[ss_chara]` swaps a whole animation instead); `bgimage` is Tyrano's own background layer.
+- **Character-plugin tags with no SpriteStudio counterpart** — `skin=` and expression switching are covered by `[ss_part_*]`; `lip_time`, `lip_sound_level` and `breath` are parameter-rig specifics (`[ss_chara]` swaps a whole animation instead); `bgimage` is Tyrano's own background layer.

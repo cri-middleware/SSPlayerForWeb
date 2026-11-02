@@ -3,7 +3,7 @@ import type { TyranoKag, TyranoMasterTag } from './tyranoTypes.js';
 /**
  * "Who is talking, and are they talking right now?" — the hook `[ss_chara]`
  * needs to swap a player between its talk and idle animations, mirroring the
- * Live2D plugin's `jname` + `lip="text"` behaviour.
+ * `jname` + `lip="text"` behaviour of TyranoScript's character plugins.
  *
  * TyranoScript already brackets character-by-character text output with a pair
  * of lip-sync calls on its built-in `[text]` tag (`startLipSyncWithText` /

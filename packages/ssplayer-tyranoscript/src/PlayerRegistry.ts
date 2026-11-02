@@ -39,7 +39,7 @@ export interface SSSection {
 }
 
 /**
- * A speaker binding made by `[ss_chara]` — the Live2D plugin's `jname` + `lip`.
+ * A speaker binding made by `[ss_chara]` — the character plugins' `jname` + `lip`.
  * While the bound character is the one talking, the player shows `talk`; when
  * the text finishes it goes back to `idle`.
  */

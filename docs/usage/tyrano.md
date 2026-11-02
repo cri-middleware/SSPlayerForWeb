@@ -285,7 +285,7 @@ Signal parameters are not passed on.
 ### Speaker-linked talk animations
 
 `[ss_chara]` plays a talk animation while the bound character's line is being typed
-out, and returns to idle when it ends — the Live2D plugin's `jname` idea, expressed as
+out, and returns to idle when it ends — the `jname` idea of TyranoScript's character plugins, expressed as
 whole SpriteStudio animations rather than a mouth parameter:
 
 ```
