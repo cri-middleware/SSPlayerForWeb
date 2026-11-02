@@ -13,7 +13,7 @@ import type { TyranoKag } from './tyranoTypes.js';
 // reconstruction data into the SAVE TARGET (`stat`), and on load rebuild the
 // live players from it (see the `[ss_restore]` tag, which the author places in
 // `make.ks` — the special .ks TyranoScript `call`s on load). This mirrors the
-// official Spine plugin's `stat.spine_models` + `[spine_restore]` pattern.
+// official character plugins' `stat.*_models` + `[*_restore]` pattern.
 //
 // We namespace under `stat.f` (the game-variable save target) with a
 // `__`-prefixed key so it never collides with an author's own `f` variables.

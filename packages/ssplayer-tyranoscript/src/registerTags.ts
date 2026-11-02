@@ -575,8 +575,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
   /**
    * Tag work whose tail is a visual effect: `wait="true"` advances the
-   * scenario only once the effect has finished (the `[spine_fadein wait=]` /
-   * `[live2d_fadein wait=]` convention), `wait="false"` advances at once and
+   * scenario only once the effect has finished (the character plugins'
+   * `[*_fadein wait=]` convention), `wait="false"` advances at once and
    * lets it play out behind the following tags.
    *
    * `work` does the tag's own work synchronously and returns the effect, so a
@@ -738,7 +738,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     } else if (nextAnime && !hasAtframe) {
       // `next=` means "play this, then that", and the end of an infinite loop
       // never arrives — so an unstated loop plays once here, matching the
-      // Spine plugin's [spine_anim], whose `loop` also defaults to false.
+      // character plugins' [*_anim], whose `loop` also defaults to false.
       meta.loop = 1;
     } else {
       // The default, never the previous tag's value: that can be the `1` a
@@ -875,8 +875,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
   // [ss_new name= storage= anime= layer= page= x= y= scale= loop= visible= zindex=]
   // — create a player, load the ssab, mount its canvas on the layer, set
-  // animation, play. `visible="false"` loads WITHOUT displaying (the Spine /
-  // Live2D plugins' `[*_new]` + `[*_show]` split), so a heavy .ssab can be
+  // animation, play. `visible="false"` loads WITHOUT displaying (the character
+  // plugins' `[*_new]` + `[*_show]` split), so a heavy .ssab can be
   // preloaded during a quiet moment and revealed instantly later with [ss_show].
   ftag.master_tag['ss_new'] = {
     vital: ['name', 'storage'],
@@ -927,7 +927,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // [ss_show name= x= y= scale= zindex= anime= loop= next= time= wait=] — reveal
   // a player created with `visible="false"` (or hidden by [ss_hide]), optionally
   // repositioning and playing an entrance animation as it appears. Mirrors
-  // [spine_show] / [live2d_show].
+  // the character plugins' [*_show].
   ftag.master_tag['ss_show'] = {
     vital: ['name'],
     pm: {
@@ -957,7 +957,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   };
 
   // [ss_hide name= time= wait=] — take a player off screen WITHOUT destroying
-  // it ([spine_hide] / [live2d_hide]). The .ssab stays loaded, so [ss_show]
+  // it (the character plugins' [*_hide]). The .ssab stays loaded, so [ss_show]
   // brings it back instantly; the renderer's own off-screen gating stops the
   // GPU work meanwhile. Use [ss_free] when you are done with it for good.
   ftag.master_tag['ss_hide'] = {
@@ -974,7 +974,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   };
 
   // [ss_fadein] / [ss_fadeout] time= wait= — fade every SS player at once, e.g.
-  // around a scene change ([spine_fadein] / [live2d_fadeout]). The blanket flag
+  // around a scene change (the character plugins' [*_fadein] / [*_fadeout]). The blanket flag
   // is kept apart from each player's own `visible`, so a fade-in brings back
   // exactly the players that were on screen before the fade-out.
   ftag.master_tag['ss_fadeout'] = {
@@ -1003,7 +1003,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // [ss_chara name= jname= talk= idle= transition=] — link a player to a
   // speaker so it plays `talk` while that character's text is being typed out
   // and returns to `idle` when the line ends, crossfading over `transition=` ms
-  // when given. The Live2D plugin's `jname` + `lip="text"`,
+  // when given. The character plugins' `jname` + `lip="text"`,
   // expressed the way SpriteStudio works: a whole animation, not a mouth
   // parameter. `jname` accepts either the `#name` display name or the Tyrano
   // chara id, and defaults to the player's own name. `talk=""` unbinds.
@@ -1677,7 +1677,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
   // A TyranoScript save holds variables and a scenario position, not the screen,
   // so anything built imperatively — including our canvases — has to be
   // re-created on load. The engine's window for that is `make.ks`, which it
-  // `call`s just before resuming, and which is why the Spine and Live2D plugins
+  // `call`s just before resuming, and which is why the character plugins
   // make authors write a `[*_restore]` there by hand.
   //
   // It also fires `load-beforemaking` immediately before that call, with the

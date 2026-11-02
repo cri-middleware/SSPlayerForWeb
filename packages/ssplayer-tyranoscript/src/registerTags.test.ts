@@ -1180,9 +1180,8 @@ describe('registerSSTags', () => {
 
   // --- show / hide / fade, z-order, chained animations, speaker link --
   //
-  // Parity with the official Spine ([spine_new]/[spine_show]/[spine_hide]/
-  // [spine_fadein]/[spine_anim next_motion]) and Live2D ([live2d_new jname=])
-  // plugins. The through-line: a player can exist without being on screen, and
+  // Parity with TyranoScript's official character plugins ([*_new]/[*_show]/
+  // [*_hide]/[*_fadein]/next_motion, and jname=). The through-line: a player can exist without being on screen, and
   // animation follow-ups must not block the scenario the way [ss_wait] does.
 
   /**
