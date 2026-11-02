@@ -39,8 +39,12 @@ Step 4 takes the decision in place of its `<versions>`, in quotes, as in `"sspla
 
 For each package being released, write what it gained under `## [Unreleased]` in `packages/<dir>/CHANGELOG.md`, in Keep a Changelog's sections (`### Added`, `### Changed`, `### Fixed`, `### Removed`), and merge it into `main` with a pull request. If a dependency the packages bundle changed, bring `THIRD_PARTY_NOTICES.md` up to date in the same pull request. The release turns each `## [Unreleased]` into `## [<version>] - <date>`, and stops before building anything when a package it releases has nothing there.
 
+On the same branch, bring the dependencies up to date first, in a commit of its own: `pnpm update -r` moves every workspace package to the newest versions its ranges allow, the ones a user's install resolves and the bundles take in, so it comes before `THIRD_PARTY_NOTICES.md`. A new major version changes code, and goes in an ordinary pull request of its own rather than here.
+
 ```bash
 git switch -c release-notes origin/main
+pnpm update -r                                    # the newest versions the ranges allow
+git commit -m "chore(deps): update within their ranges" -- pnpm-lock.yaml pnpm-workspace.yaml '*package.json'   # nothing to commit when nothing moved
 # write under ## [Unreleased] in packages/<dir>/CHANGELOG.md
 git add packages/*/CHANGELOG.md THIRD_PARTY_NOTICES.md
 git commit -m "docs: changelog for the next release"
@@ -271,8 +275,12 @@ ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.
 
 リリースするパッケージごとに、得たものを `packages/<dir>/CHANGELOG.md` の `## [Unreleased]` の下に、Keep a Changelog の節（`### Added`・`### Changed`・`### Fixed`・`### Removed`）で書き、プルリクエストで `main` にマージします。パッケージが同梱する依存が変わっていれば、同じプルリクエストで `THIRD_PARTY_NOTICES.md` も更新します。リリースは各 `## [Unreleased]` を `## [<version>] - <date>` に書き換えます。リリースするパッケージの `## [Unreleased]` が空なら、何もビルドせずに止まります。
 
+同じブランチで、先に依存を最新にして単独のコミットにします。`pnpm update -r` は、ワークスペースの各パッケージを、範囲が許すいちばん新しい版に上げます。利用者のインストールが解決する版で、バンドルが取り込む版でもあるので、`THIRD_PARTY_NOTICES.md` より先に行います。メジャーバージョンを上げるのはコードの変更なので、ここではなく通常のプルリクエストで行います。
+
 ```bash
 git switch -c release-notes origin/main
+pnpm update -r                                    # 範囲が許すいちばん新しい版
+git commit -m "chore(deps): update within their ranges" -- pnpm-lock.yaml pnpm-workspace.yaml '*package.json'   # 何も動かなければコミットするものは無い
 # packages/<dir>/CHANGELOG.md の ## [Unreleased] の下に書く
 git add packages/*/CHANGELOG.md THIRD_PARTY_NOTICES.md
 git commit -m "docs: changelog for the next release"
