@@ -1,12 +1,12 @@
 ---
-description: ランタイムのトラックスタックで、1 つのプレーヤーに複数のアニメーションを重ね、クロスフェードで切り替える方法。
+description: ランタイムのトラックスタックで、1 つのプレイヤーに複数のアニメーションを重ね、クロスフェードで切り替える方法。
 ---
 
 # モーションブレンド
 
 1 体のキャラクターで複数のアニメーションを同時に再生し、カットせずに移り変わります。下地に歩き、その上に照準のオーバーレイ、さらに一回きりのリアクションをクロスフェードで — どれもアーティストが別々のアニメーションとして作ったものです。
 
-以下のメソッドは、PixiJS と WebGL の両パッケージの `SSPlayer` に同じ名前であります。RPG ツクール MZ の `SSPlayer` にもあり、スクリプトから使えます。プラグインコマンドはありません。
+以下のメソッドは、PixiJS と WebGL の両パッケージの `SSPlayer` に同じ名前であります。RPG ツクール MZ の `SSPlayer` にもあります。RPG ツクール MZ にはトラック用のプラグインコマンド（**SSトラック設定**・**SSトラックフェード**・**SSトラック解除**）もあり、アニメーションを切り替えるコマンドの `クロスフェード時間（ミリ秒）` でトラック 0 をクロスフェードできます。[RPG ツクール MZ で使う](/ja/usage/rmmz)を参照してください。TyranoScript には `[ss_track]`・`[ss_track_fade]`・`[ss_track_clear]` タグと、`[ss_play]` の `transition=` があります。[TyranoScript で使う](/ja/usage/tyrano)を参照してください。ティラノビルダーにトラック用のコンポーネントはありません。
 
 ## モデル：トラックのスタック
 
@@ -23,7 +23,7 @@ flowchart BT
     setup --> t0 --> t1 --> t2 --> out
 ```
 
-**トラック 0 は特別です。** `setAnimation` が確立するのがこれで、構造を担います。セル・表示・パーツカラー・描画順、イベント、再生状態はトラック 0 から来ます。`currentAnimation`・`isFinished`・フレームの読み出し・イベント・`canvasRect` は、すべてトラック 0 のアニメーションに従います。その上のトラックはオーバーレイです。
+**トラック 0 は特別です。** `setAnimation` が確立するのがこれで、構造を担います。セル・表示・パーツカラー・描画順、イベント、再生状態はトラック 0 から来ます。`currentAnimation`・`isFinished`・フレームの読み出し・イベント・（WebGL では）`canvasRect` は、すべてトラック 0 のアニメーションに従います。その上のトラックはオーバーレイです。
 
 | ブレンド | 内容 |
 |---|---|
@@ -56,7 +56,7 @@ player.clearTrack(1);
 
 ## カットではなくフェードする
 
-どちらのフェードも、プレーヤー自身の更新で進みます。開始したら、あとは描き続けるだけです。
+どちらのフェードも、プレイヤー自身の更新で進みます。開始したら、あとは描き続けるだけです。
 
 ```ts
 // トラックの再生内容を、いまの状態から 400 ms かけて差し替える。
@@ -74,10 +74,10 @@ player.cancelTrackFade(1);
 
 入ってくるアニメーションは、フェードが終わったときではなく、**フェードを始めたとき**にトラック 0 を引き継ぎます。
 
-- 呼んだ直後から、`currentAnimation` は入ってくる側の名前を返します。そのため、フェードで出ていった名前で `setAnimation` を呼ぶと、何もしないのではなく、そちらへ戻ります。フェード中に入ってくる側の名前を指定した場合は、何もせずフェードが続きます。`canvasRect` もこれに従います。
-- セルや表示・非表示など、ブレンドできない値は、フェードの最初のフレームから入ってくる側のものになります。`isFinished` と `onAnimationFinished` が報告するのも入ってくる側の再生状態です。フェード中に出ていく側が終わっても、プレーヤーは終了になりません。
+- 呼んだ直後から、`currentAnimation` は入ってくる側の名前を返します。そのため、フェードで出ていった名前で `setAnimation` を呼ぶと、何もしないのではなく、そちらへ戻ります。フェード中に入ってくる側の名前を指定した場合は、何もせずフェードが続きます。`canvasRect`（WebGL）もこれに従います。
+- セルや表示・非表示など、ブレンドできない値は、フェードの最初のフレームから入ってくる側のものになります。`isFinished` と `onAnimationFinished` が報告するのも入ってくる側の再生状態です。フェード中に出ていく側が終わっても、プレイヤーは終了になりません。
 - イベントはフェードの開始から入ってくる側のものが発火し、出ていく側は止まります（[イベント](/ja/customize/events)を参照）。
-- 入ってくる側は、`setAnimation` で切り替えたときと同じく、プレーヤーに設定した再生設定（`speedScale`・`frameRate`・`frameSkipEnabled`・方向・`loopCount`）で再生されます。再生区間は、そのアニメーションの全体です。
+- 入ってくる側は、`setAnimation` で切り替えたときと同じく、プレイヤーに設定した再生設定（`speedScale`・`frameRate`・`frameSkipEnabled`・方向・`loopCount`）で再生されます。再生区間は、そのアニメーションの全体です。
 
 トラックで再生していたものは、比率を保ったまままとめてフェードアウトします。フェード中にもう一度 `crossfade` すると、進行中のフェードをその時点の状態のまま引き取るので、姿勢は飛びません。`cancelTrackFade` の後や、複数のアニメーションを混ぜているトラックからの `crossfade` でも同じです。
 
@@ -102,7 +102,7 @@ player.setSourceWeight(run, t);
 
 - weight は**トラックの中での比率**です。`(0.7, 0.3)` と `(7, 3)` は同じ混ざり方になります。トラックの強さは、引き続き alpha で決めます。
 - 尺の違う歩きと走りは、だんだんずれていきます。トラックの同期を `SSTrackSync.Start` にしてから走りを載せる（次の節）と、歩調をそろえて始められます。または `setSourceFrame` でシークしてください。
-- ハンドルは、そのソースが解放されるまで有効です。解放されるのは、クロスフェードの完了、`clearTrack`、`setAnimation` のときで、その後は番号が使い回されるので、持ち続けないでください。
+- ハンドルは、そのソースが解放されるまで有効です。解放されるのは、クロスフェードの完了、`clearTrack`、そのトラックへの `setTrackAnimation`、`setAnimation` のときで、その後は番号が使い回されるので、持ち続けないでください。
 
 ## トラック 0 と歩調をそろえて始める
 
@@ -137,19 +137,20 @@ player.setTrackFrameSkipEnabled(1, false);
 player.setTrackPlaybackDirection(1, WebPlaybackDirection.Forward, WebPlaybackStyle.PingPong);
 ```
 
-トラック 0 の設定は、再生設定そのものです（`speedScale` がトラック 0 の `setTrackSpeed`、ほかも同様）。**ループ回数**だけはトラックではなくアニメーションの設定です。アニメーションを載せると無限ループに戻るので、載せた後で指定し、トラックが終わるのを見張ります。トラック 0 のループ回数は `loopCount` で、`setTrackLoopCount(0, …)` も同じ値を書きます。プレーヤーは、トラック 0 が替わるたびにその値をかけ直します。
+トラック 0 の設定は、再生設定そのものです（`speedScale` がトラック 0 の `setTrackSpeed`、ほかも同様）。**ループ回数**だけはトラックではなくアニメーションの設定です。アニメーションを載せると無限ループに戻るので、載せた後で指定し、トラックが終わるのを見張ります。トラック 0 のループ回数は `loopCount` で、`setTrackLoopCount(0, …)` も同じ値を書きます。プレイヤーは、トラック 0 が替わるたびにその値をかけ直します。
 
 ```ts
 player.setTrackAnimation(2, 'hit_react');
-player.setTrackLoopCount(2, 1); // 1 回再生して、最後のフレームで止まる
+player.setTrackAlpha(2, 1);      // トラックは直前のフェードが残した alpha を保持する
+player.setTrackLoopCount(2, 1);  // 1 回再生して、最後のフレームで止まる
 
 // 毎フレーム
-if (player.isTrackFinished(2)) {
-  player.fadeTrack(2, 0, 120); // 終わったトラックは、何かするまで最後のフレームのまま
+if (player.isTrackFinished(2) && player.getTrackFadeProgress(2) === undefined && (player.getTrackAlpha(2) ?? 0) > 0) {
+  player.fadeTrack(2, 0, 120);   // 1 回だけ。終わったトラックは、何かするまで最後のフレームのまま
 }
 ```
 
-`trackJustLooped(track)` は更新ごとのパルスで、トラック 0 の `justLooped` にあたります。トラック 1 以降の終了やループを、プレーヤーがリスナーで知らせることはありません。`onAnimationFinished` が発火するのは、トラック 0 の終了だけです。
+`trackJustLooped(track)` は更新ごとのパルスで、トラック 0 の `justLooped` にあたります。トラック 1 以降の終了やループを、プレイヤーがリスナーで知らせることはありません。`onAnimationFinished` が発火するのは、トラック 0 の終了だけです。
 
 **トラック 0 が終わっても、キャラクターの時計は止まりません。** その上のトラックとフェードは進み続け、`isFinished` は通常どおり true になります。`stop()` はそのすべてを止めます。`pause()` と `resume()` も、そのすべてを止めて再開します。ただし `isPlaying` と `isPausing` はトラック 0 の状態を表すので、トラック 0 が終わった後は、一時停止中も両方 false のままです。
 
@@ -174,7 +175,7 @@ player.setTrackFrame(1, headYawFrame);    // ... あなたが動かす
 |---|---|---|---|
 | 0 | `idle` / `walk` / `run` | — | 状態が変わったら `crossfade(0, …, 200)` |
 | 1 | `aim_lr` | Additive、speed 0 | 照準角から `setTrackFrame` |
-| 2 | `hit_react` | Mix | `setTrackAnimation` ＋ `setTrackLoopCount(2, 1)`、`isTrackFinished(2)` になったらフェードアウト |
+| 2 | `hit_react` | Mix | `setTrackAnimation` ＋ `setTrackAlpha(2, 1)` ＋ `setTrackLoopCount(2, 1)`、`isTrackFinished(2)` になったら 1 回だけフェードアウト |
 
 いま何が載っているかは、`trackCount`・`getTrackAlpha(track)`・`getTrackBlend(track)`・`getTrackSync(track)`・`getTrackFrame(track)`・`getTrackSpeed(track)`・`getTrackLoopCount(track)` などの `getTrack*` の読み出しで確認できます。無いトラックやソースを読むと `undefined` が返り、無いものへの命令は、呼び出しを名指しした `Error` を投げます。
 

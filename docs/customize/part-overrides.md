@@ -107,9 +107,9 @@ Colour and cell overrides conflict with the animation, so they take a `priority`
 - Colours are interpreted in the same 8-bit sRGB space as an authored Parts Color. Pass the authored colour as-is; do not gamma/linear-convert it yourself.
 - A cell override is resolved when it is set, so an unknown cell-map or cell name fails immediately (returns `false`). No per-frame lookup happens.
 - If the replacement cell lives on a different texture, that part is split into a different `DrawBatch`. It still draws correctly, but watch out if you have written your own optimisation that assumes a fixed batch count.
-- The runtime owns the overrides and their lifecycle. **You never have to re-apply one after an animation change** — do not write code that re-sets them every frame. Pick the priority mode that matches your intent instead.
+- The runtime owns the overrides and their lifecycle: **do not re-apply them every frame**. Whether one outlives an animation change is the priority mode's job — `Permanent` survives it and the other two are cleared by it — so pick the mode that matches your intent instead of re-setting after a switch. A `crossfade` or `setTrackAnimation` on track 0 clears nothing; only a `setAnimation` to a different animation does.
 - Binding a different `.ssab` clears every override, since part identity is lost.
-- Overrides do not reach **inside** an instance part: its child animation runs as its own player. Call the child player if you need to override a part in there.
+- Overrides do not reach **inside** an instance part: its child animation runs as its own player.
 
 ## When the change reaches the screen
 
@@ -118,7 +118,7 @@ An override changes the output **without changing the frame number**, so an impl
 | Player | Behaviour |
 |---|---|
 | `SSPlayer` (PixiJS) | Its ticker early-returns while stopped, so a successful override automatically re-renders the current frame |
-| `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself do you need to call `draw()` |
+| `SSPlayer` (WebGL) | The built-in RAF loop calls `draw()` unconditionally every frame, so it just shows. Only if you drive frames yourself (`autoStart: false`) do you need to call `surface.draw()` |
 | RPG Maker MZ | MZ redraws every game frame, so it just shows |
 
 ## Using it from each host
@@ -127,7 +127,7 @@ Hosts whose authors don't write code get an authoring surface in their own idiom
 
 - **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so overrides are reached through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
 - **RPG Maker MZ** — drive it from an event's **plugin commands** (Set SS Part Color / Visibility / Cell, Clear SS Part Overrides). The settings are stored on the picture, so they **survive save/load**. See [RPG Maker MZ](/usage/rmmz).
-- **TyranoScript** — write `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` in a scenario. The settings are part of the save and are restored by `[ss_restore]`. See [TyranoScript](/usage/tyrano).
+- **TyranoScript** — write `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` in a scenario. The settings are part of the save and are restored on load. See [TyranoScript](/usage/tyrano).
 - **TyranoBuilder** — the palette's **SpriteStudio: part colour / hide part / part image** and **SpriteStudio: reset parts** components write the same four tags. See [TyranoBuilder](/usage/tyranobuilder).
 
 ## What this feature is not for

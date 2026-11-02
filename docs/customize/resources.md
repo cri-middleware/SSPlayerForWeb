@@ -15,11 +15,12 @@ before putting many players on one page, or when teardown leaks or blanks someth
 | Textures (PixiJS) | **Shared across every `SSPlayer`** | Registered in Pixi's global `Assets` cache, keyed by URL — not by cell-map hash, which is only unique within one `.ssab` — so two players using the same atlas reuse one GPU texture. |
 | Textures (WebGL) | **Shared across the surface** | A `WebGLTexture` belongs to the context that created it, so the surface owns them. Keyed by URL — not by cell-map hash, which is only unique within one `.ssab` — so two players using the same atlas reuse one upload. |
 | Embedded textures (`--embedded`) | **Per player** | Decoded from the `.ssab`'s own bytes, deliberately kept out of any shared cache, and freed in `destroy()`. |
-| Parsed `.ssab` (WASM) | **Per player** | Each `load()` builds its own `SSABResource`. The HTTP fetch may be served from the browser cache, but the parsed WASM-side copy is not shared between players. |
-| Instance packs | **Per player tree** | Packs referenced by Instance parts are deduped by pack hash and shared with that player's instance children. |
+| Parsed `.ssab` (WASM) | **Shared by URL** | Players that `load()` the same URL and get identical bytes share one parsed pack; each keeps only its own playback state. A pack bound with `loadBuffer()` has no URL and is not shared, nor is a file that changed under the same URL. |
+| Instance packs | **Shared by URL** | A pack an Instance part references is fetched as a sibling `.ssab` and shared the same way; within one player's tree it is also deduped by pack hash. Bytes from an `InstancePackProvider` are not shared. |
 
-The practical consequence: **N players of the same character cost N parsed `.ssab` copies** — but
-one set of textures, on either backend.
+The practical consequence: **N players of the same character loaded from one URL cost one parsed
+`.ssab` plus N small playback states** — and one set of textures, on either backend. Packs bound with
+`loadBuffer()` are the exception: each costs a full copy.
 
 ## Many instances of the same animation
 
@@ -94,15 +95,18 @@ blank.
 Textures normally resolve as siblings of the `.ssab`. To serve them from somewhere else — an
 in-memory bundle, an atlas your engine already has on the GPU — implement
 [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) and drive
-the core directly, or on WebGL register the texture under its cell-map hash with
-`bindTextureSource()` — before `load()`, since that is where the pack's textures are resolved.
-`loadBuffer()` takes the same textures as its second argument and registers them for you.
+the core directly, or bind the pack with `loadBuffer(ssab, textures)`, whose second argument maps each
+cell-map hash to a URL, encoded image bytes or an image source (on WebGL it is registered with
+`bindTextureSource()` for you). Binding a pack — `load()` or `loadBuffer()` — resets the player's
+texture manager first, so a texture registered with `bindTextureSource()` before `load()` is dropped.
 
 To swap a texture *after* load — a costume change or dynamic expression — use the name-keyed
 [runtime texture replacement](/customize/texture-replacement) API instead; it resolves the
 cell-map name for you and can restore the original.
 
 The same applies to Instance parts whose packs are not URL-addressable: hand the bytes over with
-[`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md).
+`player.internalPlayer.setInstancePackProvider(provider)` — a function of type
+[`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md) —
+before the pack's resources are prepared (`load()` / `loadBuffer()`).
 When you do, the core stops fetching for you — registering that pack's textures becomes your job
 too.

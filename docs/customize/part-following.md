@@ -118,7 +118,7 @@ Following is driven after that frame's world matrices are final, so the target u
 
 Following rides on the playback drive.
 
-- **Stopped (`stop()`)** — `SSPlayer` (PixiJS / MZ) early-returns out of `update()`, so **both the following and `onFrame` stop**. Seeking with `player.frameNo` while stopped does not update the following either.
+- **Stopped (`stop()`)** — `SSPlayer` (PixiJS / MZ) returns early out of `update()`, so `onFrame` stops and nothing advances. On PixiJS a seek with `player.frameNo` (or a flip or an animation change) still redraws the frame and moves the followers with it, without firing `onFrame`; on MZ followers are driven only from `update()`, so they stay put.
 - **Paused (`pause()`)** — `SSPlayer` (PixiJS / MZ) keeps both the following and `onFrame` running. `SSPlayer` (WebGL) does not fire `onFrame`.
 
 ## Following by hand (the pull API)
@@ -177,7 +177,7 @@ To make an animation a button that takes the pointer only on some of its parts, 
 
 ## Building a follow-target picker
 
-If you build UI that lets someone choose which part to follow, mirror what the SpriteStudio, Unity and Godot editors do: **list every part, but keep skinned mesh parts out of reach** so they can't be chosen by accident — while still accepting a name typed by hand, since following one is occasionally deliberate.
+If you build UI that lets someone choose which part to follow, **list every part, but keep skinned mesh parts out of reach** so they can't be chosen by accident — while still accepting a name typed by hand, since following one is occasionally deliberate.
 
 ```ts
 const select = document.querySelector('select')!;
@@ -192,7 +192,7 @@ for (const name of player.getPartNames()) {
 }
 ```
 
-Keep it a **soft** filter, not a hard block: a name typed by hand (or set from code) should still go through, exactly as the Unity and Godot inspectors allow. When one does, flag it rather than refuse it — `isPartSkinnedMesh()` is the same test, so a warning beside the field is enough.
+Keep it a **soft** filter, not a hard block: a name typed by hand (or set from code) should still go through. When one does, flag it rather than refuse it — `isPartSkinnedMesh()` is the same test, so a warning beside the field is enough.
 
 The `examples/part-follow` demo does exactly this: the Ringo character's skinned parts (`hand_r`, `hand_l`, the legs, ears and tail) are dimmed in the dropdown, and typing one in by hand shows the non-blocking warning.
 
@@ -224,4 +224,4 @@ These are easy to confuse with part tracking, but belong elsewhere.
 |---|---|
 | Changing a part's own colour / cell / visibility | The override API in [Part control (visibility / cell / color)](/customize/part-overrides) |
 | Following a part in screen coordinates | Compose the player's display transform yourself (no API returns the screen transform) |
-| Following a part inside an Instance part | Its child animation runs as its own player — get the child player and target the part there |
+| Following a part inside an Instance part | Not available: part names resolve only against the player's own animation. Follow the Instance part itself, or add a NULL part at that spot in the parent animation |

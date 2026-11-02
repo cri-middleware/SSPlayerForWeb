@@ -15,14 +15,14 @@ SpriteStudio のコンテンツはたいてい CPU ではなく **フィルレ�
 ```ts
 const surface = new SSSurface(canvas, { maxDPR: 1.5 });
 const player = surface.createPlayer();
-player.resize(cssWidth, cssHeight);       // 上限を反映してバッファを再計算します
+surface.resize(cssWidth, cssHeight);      // 上限を反映してバッファを再計算します
 ```
 
 ```html
 <ss-player src="/assets/Ringo.ssab" animation="run" standalone max-dpr="1.5"></ss-player>
 ```
 
-`max-dpr` は要素自身のコンテキストを設定するので、効くのは `standalone` の要素です。要素は既定で 1 枚のオーバーレイキャンバスを共有し、そのキャンバスは最初の要素が接続する前に `SSOverlay.getOrCreate(id, { maxDPR: 1.5 })` で一度だけ設定します。
+`max-dpr` は要素自身のコンテキストを設定するので、効くのは `standalone` の要素です。要素は既定で 1 枚のオーバーレイキャンバスを共有し、そのキャンバスは最初の要素が接続する前に `SSOverlay.getOrCreate('default', { maxDPR: 1.5 })` で一度だけ設定します（`'default'` はすべての `<ss-player>` が共有するオーバーレイです）。
 
 **PixiJS** — 描画バッファは `Application` のものなので、そちらで上限をかけます。
 
@@ -39,7 +39,7 @@ canvas を面積で 1/4 に縮めて、フレーム時間がおおむね比例�
 
 ## そもそも描画しない
 
-`ssplayer-webgl` の `pauseWhenHidden` は **既定でオン**です。`IntersectionObserver` で canvas が画面外にスクロールしたときにティッカーを止め、`visibilitychange` でタブがバックグラウンドに回ったときにも止めます。見えていない間も再生を進めたいという要件がなければ、オンのままにしてください。切る場合は `pause-when-hidden="false"` で明示的に指定します。
+`ssplayer-webgl` の `pauseWhenHidden` は **既定でオン**です。`IntersectionObserver` で canvas が画面外にスクロールしたときにティッカーを止め、`visibilitychange` でタブがバックグラウンドに回ったときにも止めます。見えていない間も再生を進めたいという要件がなければ、オンのままにしてください。切る場合は、`SSSurface` の `pauseWhenHidden: false`、または `standalone` の要素の `pause-when-hidden="false"` で明示的に指定します。
 
 ## 再生オプション
 
@@ -51,8 +51,7 @@ player.subFrameEnabled = false;  // サブフレーム補間を無効化（既�
 - **`frameSkipEnabled`**: **既定でオン**。描画が間に合わないときはフレームをスキップして再生タイミングを維持します。パフォーマンス目的での設定は不要です。
 
 ::: warning
-`subFrameEnabled` と `frameSkipEnabled` はセットで動作します。片方を off にする場合はもう片方も
-off にしてください。片方だけ無効にすると再生タイミングが崩れます。
+上のように `subFrameEnabled` だけを off にする場合、`frameSkipEnabled` は on のままにしてください。セットで扱うのは逆向きで、`frameSkipEnabled = false` にするときは `subFrameEnabled = false` も合わせないと再生タイミングが崩れます（[基本的な再生](/ja/usage/basic)を参照）。
 :::
 
 ## バッチが分割される要因 {#what-breaks-batching}
@@ -70,14 +69,13 @@ off にしてください。片方だけ無効にすると再生タイミング�
 
 以下は何もしなくても効いています。
 
-- **Direct Drawing（バッチ描画）**: 描画をバッチ化し、多数のキャラクターを少ないドローコールで描きます。
+- **バッチ描画**: 1 体のキャラクターの中で、テクスチャとブレンドモードが同じパーツはまとめて描かれるので、パーツごとではなく少ないドローコールで済みます。キャラクター同士は順に描かれるため、プレイヤーの数に応じてドローコールは増えます。
 - **Zero-Copy**: トランスフォームやジオメトリは WASM メモリを直接参照する
   `Float32Array` ビューで受け渡し、毎フレームのコピーを避けます。
 - **テクスチャ共有**: アトラスは URL をキーにキャッシュされます（PixiJS では Pixi のグローバル
   `Assets` キャッシュ、WebGL では `SSSurface` ごと）。同じキャラクターを多数出しても GPU テクスチャは 1 つです。
 
-一方、**パース済みの `.ssab` は共有されません**。`load()` のたびに WASM 側のコピーが確保されます。
-WebGL では GL コンテキストを持つのは `SSSurface` なので、テクスチャを共有するのは同じサーフェス上のプレイヤーどうしです。同じキャラクターを大量に出すなら、1 つのサーフェスにまとめてください。[リソースとライフサイクル](/ja/customize/resources)を参照してください。
+同じ `.ssab` の URL を `load()` したプレイヤー同士は、パース済みのパックも 1 つ共有し、プレイヤーごとに持つのは再生状態だけです（`loadBuffer()` で渡したパックは URL を持たないため共有されません）。WebGL では GL コンテキストを持つのは `SSSurface` なので、テクスチャを共有するのは同じサーフェス上のプレイヤーどうしです。同じキャラクターを大量に出すなら、1 つのサーフェスにまとめてください。[リソースとライフサイクル](/ja/customize/resources)を参照してください。
 
 ## 計測のヒント
 
