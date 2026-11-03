@@ -114,7 +114,7 @@ every official player too, so the full explanations — and the rest of the shar
 - **`independent = true` parts (Instance / Effect) do not reverse or seek correctly.** Only
   forward playback (including forward frame-skips) is correct.
 - **Seeking does not fire the events it skips over.** Only the destination frame's `UserData` /
-  `Signal` / `Audio` events fire.
+  `Signal` / `Audio` events fire, and its audio keys are not sounded.
 - **No reverse audio.** Sounds are skipped whenever the effective direction is backward (a
   reverse direction, or a ping-pong return leg). A negative speed is not one of those cases: speed is a multiplier, and a negative one stops the playhead rather than turning it around, as does `0`.
 - **The runtime does not play audio.** `onAudio` hands you the sound reference and the timing.

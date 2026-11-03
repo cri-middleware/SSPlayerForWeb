@@ -48,6 +48,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // `loopCount = 3` back into looping forever.
     private _loopCount: number = -1;
     private _prevFinished: boolean = false;
+
+    // A seek lands on a frame without crossing its keys, yet the next update
+    // reports them, playing or not. `_seekPending` is where the last seek landed
+    // until that update runs; `_seekLanding` is that frame during the update that
+    // reports it, so an audio gate can leave its keys unsounded. -1 is none.
+    private _seekPending = -1;
+    private _seekLanding = -1;
     private _resourceManager: IResourceManager | null = null;
     private _ssabUrl: string = '';
     private _assetBaseUrl: string = '';
@@ -444,6 +451,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         if (animationName === this._animationName) return;
         try {
             this.runtimeManager.setupAnimation(animationName);
+            this._seekPending = -1;
         } catch (cause) {
             // The wasm boundary throws the Brain's error enum as a bare string —
             // "AnimationNotFound", naming neither the pack nor what was asked of
@@ -668,6 +676,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * @param startFrame The frame to start playing from. -1 means from the start of the section.
      */
     public play(startFrame: number = -1) {
+        // play() starts from its own frame, whose keys do sound, so a seek made before it is dropped.
+        this._seekPending = -1;
         if (startFrame >= 0) {
             this.runtimeManager.context.play_with_start_frame(startFrame);
         } else {
@@ -809,6 +819,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     public update(deltaMs: number) {
         this._ran = false;
         this._childrenMoved = false;
+        this._seekLanding = -1;
         if (!this.isTicking) return;
         const deltaSeconds = deltaMs / 1000.0;
 
@@ -825,6 +836,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         const before = ctx.get_frame_no();
         this.runtimeManager.update(deltaMs);
         this._ran = true;
+        this._seekLanding = this._seekPending;
+        this._seekPending = -1;
         const effects = this.stepEffectSlots(deltaSeconds, ctx.just_looped());
         const instances = this.stepInstanceSlots(deltaSeconds, ctx.just_looped());
         // A synced slot follows the playhead, which moves between the frames a
@@ -834,6 +847,15 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     }
 
     private _childrenMoved = false;
+
+    /**
+     * @internal Whether an audio key on `frameNo`, reported by the update that
+     * just ran, is where a seek landed rather than a key the playhead crossed.
+     * Audio gates leave such keys unsounded.
+     */
+    public isSeekLanding(frameNo: number): boolean {
+        return frameNo === this._seekLanding;
+    }
 
     /**
      * Whether the last {@link update} moved an effect or instance child — one
@@ -1001,6 +1023,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      */
     public setFrameNo(frameNo: number) {
         this.runtimeManager.context.set_frame_no(frameNo);
+        this._seekPending = Math.floor(this.runtimeManager.context.get_frame_no());
         this.stepEffectSlots(0, false);
         this.stepInstanceSlots(0, false);
     }
@@ -1076,6 +1099,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private applySection(startFrame: number, endFrame: number, given: string): boolean {
         try {
             this.runtimeManager.context.set_animation_section(startFrame, endFrame);
+            // The section moves the playhead to its own start, which is not a seek.
+            this._seekPending = -1;
             return true;
         } catch (cause) {
             const animation = this._animationName;
@@ -1287,6 +1312,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /** Seek `track`'s animation — how a continuous-control axis is driven, with its speed at 0. */
     public setTrackFrame(track: number, frame: number): void {
         this.trackCommand(`setTrackFrame(${track}, ${frame})`, ctx => ctx.set_track_frame(track, frame));
+        // Track 0's playhead is the character's, so moving it is a seek.
+        if (track === 0) this._seekPending = Math.floor(this.runtimeManager.context.get_frame_no());
     }
 
     public getTrackFrame(track: number): number | undefined {

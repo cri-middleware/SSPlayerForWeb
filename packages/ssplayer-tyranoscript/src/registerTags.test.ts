@@ -106,6 +106,8 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     get isPlaying() { return this._playing; }
     get isPausing() { return this._pausing; }
     get isPlayingForward() { return this._playingForward; }
+    _seekLanding = -1;
+    isSeekLanding(frameNo: number) { return frameNo === this._seekLanding; }
     onAnimationFinished(cb: () => void) { this._endListeners.add(cb); return () => this._endListeners.delete(cb); }
     onAnimationLooped(cb: () => void) { this._loopListeners.add(cb); return () => this._loopListeners.delete(cb); }
     onFrame(cb: (frame: number) => void) { this._frameListeners.add(cb); return () => this._frameListeners.delete(cb); }
@@ -937,6 +939,13 @@ describe('registerSSTags', () => {
     p._fireAudio({ soundName: 'attack_se', loopNum: 1 });
     expect(played).toHaveLength(2);
     p._playingForward = true;
+
+    // A seek's landing frame: reported, not crossed, so not sounded either.
+    p._seekLanding = 10;
+    p._fireAudio({ soundName: 'attack_se', loopNum: 1, frameNo: 10 });
+    expect(played).toHaveLength(2);
+    p._fireAudio({ soundName: 'attack_se', loopNum: 1, frameNo: 11 });
+    expect(played).toHaveLength(3);
 
     vi.unstubAllGlobals();
   });

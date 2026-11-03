@@ -835,6 +835,11 @@ export class SSPlayer extends Container {
         return this.internalPlayer.isPlayingForward;
     }
 
+    /** @internal Whether `frameNo` is the frame a seek landed on, which the update that just ran reported though the playhead crossed none of its keys; the audio managers leave such keys unsounded. */
+    public isSeekLanding(frameNo: number): boolean {
+        return this.internalPlayer.isSeekLanding(frameNo);
+    }
+
     /**
      * Limits playback to `[startFrame, endFrame]`, both ends included; an end
      * outside the animation (`-1`) is its edge on that side. Returns false, and
