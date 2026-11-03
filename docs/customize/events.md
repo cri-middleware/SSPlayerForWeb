@@ -120,5 +120,8 @@ Call `player.audioManager?.stopAll?.()` yourself wherever you do want silence.
 ## Behavior when seeking
 
 Seeking does not fire the events it skips over — only the destination frame's user data, signals
-and sounds fire. To receive every key in a span, let playback pass through it instead of seeking
+and audio keys are reported. Those audio keys are not sounded, since the playhead crossed none of
+them, though `onAudio` still reports them. That holds for `frameNo` and for `setTrackFrame(0, …)`,
+playing or paused. If you play sounds yourself from `onAudio`, skip the destination frame's keys
+that the first update after a seek reports. To receive every key in a span, let playback pass through it instead of seeking
 (`setAnimationSection` in [Basic playback](/usage/basic)).
