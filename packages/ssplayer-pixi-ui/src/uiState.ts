@@ -71,8 +71,8 @@ export function labelSectionOf(table: SSLabelTable, label: string): { startFrame
  * Null when `tableOf` knows no `animation`.
  *
  * Under `reducedMotion` the section is held, except where it came from
- * `normal` and `animation` has a `reduced_motion` label: that label's section
- * plays instead.
+ * `normal` (or the whole animation `normal` falls back to) and `animation` has a
+ * `reduced_motion` label: that label's section plays instead.
  *
  * A clip that names an animation or a label the pack does not have is handed
  * to `onMissingClip`, and the state goes on as if it had none.
@@ -117,7 +117,7 @@ export function resolveUiSection(
         }
     }
     range ??= { startFrame: base.startFrame, endFrame: base.endFrame };
-    if (reducedMotion && source === 'normal') {
+    if (reducedMotion && (source === 'normal' || source === null)) {
         const calm = labelSectionOf(base, REDUCED_MOTION_LABEL);
         if (calm) return { animation, ...calm, hold: false };
     }
@@ -130,8 +130,8 @@ export function resolveUiSection(
  * {@link show} switches at once and plays the new section from its first
  * frame, looping; the section that was playing is dropped. Under reduced
  * motion it holds the section's first frame instead, stopped, so no event
- * fires — except that `normal` plays the `reduced_motion` label's section when
- * the animation has one.
+ * fires — except that `normal`, and the states that fall back to it, play the
+ * `reduced_motion` label's section when the animation has one.
  *
  * It takes the player's playback over: it selects animations, sets sections
  * and the loop count, and plays and stops.

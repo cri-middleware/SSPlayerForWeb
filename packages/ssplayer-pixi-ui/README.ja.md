@@ -33,7 +33,7 @@ PixiJS v8 のアプリで、**SpriteStudio** のアニメーションを [`@pixi
    app.stage.addChild(start);
    ```
 
-`prefers-reduced-motion` のときは各状態が区間の最初のフレームで止まり、アニメーションに `reduced_motion` ラベルがあれば `normal` だけは代わりにその区間を再生します。`accessibleTitle` を渡さなければ、スクリーンリーダーには装飾として扱われます。
+`prefers-reduced-motion` のときは各状態が区間の最初のフレームで止まり、アニメーションに `reduced_motion` ラベルがあれば、`normal` と `normal` に落ちてくる状態は代わりにその区間を再生します。`accessibleTitle` を渡さなければ、スクリーンリーダーには装飾として扱われます。
 
 **次に読む:** [UI ボタン](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi-ui) · [PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi)
 

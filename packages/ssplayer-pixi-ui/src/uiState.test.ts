@@ -18,6 +18,7 @@ const TABLES: Record<string, SSLabelTable> = {
     with_hover: table(49, { normal: 0, hover: 25 }),
     plain: table(29, {}),
     glow: table(39, { calm: 5 }),
+    calm_only: table(59, { pressed: 20, reduced_motion: 40 }),
     caps: table(9, { Normal: 0, HOVER: 5 }),
 };
 
@@ -109,6 +110,13 @@ describe('the UI state rule', () => {
             // focused has no label of its own and falls back to normal, so it
             // plays the calm loop too.
             expect(resolve('focused', 'button', { reducedMotion: true })).toEqual(['button', 80, 99, false]);
+        });
+
+        it('plays reduced_motion where normal falls back to the whole animation', () => {
+            expect(resolve('normal', 'calm_only', { reducedMotion: true })).toEqual(['calm_only', 40, 59, false]);
+            expect(resolve('hover', 'calm_only', { reducedMotion: true })).toEqual(['calm_only', 40, 59, false]);
+            // A state with a label of its own still holds it.
+            expect(resolve('pressed', 'calm_only', { reducedMotion: true })).toEqual(['calm_only', 20, 39, true]);
         });
 
         it('holds normal where there is none', () => {
