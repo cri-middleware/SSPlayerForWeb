@@ -32,6 +32,8 @@ export interface AudioBindablePlayer {
     audioManager: IAudioManager | null;
     onAudio(listener: (e: SSAudioKey) => void): () => void;
     readonly isPlayingForward: boolean;
+    /** @internal Whether a key on `frameNo` is where a seek landed; such a key is not sounded. */
+    isSeekLanding?(frameNo: number): boolean;
 }
 
 /**
@@ -137,11 +139,12 @@ export class SSWebAudioManager implements IAudioManager {
      * a backward or ping-pong-return leg crosses would be a different sound
      * from the one that was authored. The player still reports every key it
      * crosses — the gate belongs here, on the playing, not on the reporting.
+     * Nor does a key on the frame a seek landed on: the playhead did not cross it.
      */
     public bindToPlayer(player: AudioBindablePlayer): () => void {
         player.audioManager = this;
         return player.onAudio((e: SSAudioKey) => {
-            if (e.soundName && player.isPlayingForward) {
+            if (e.soundName && player.isPlayingForward && !player.isSeekLanding?.(e.frameNo)) {
                 this.play(e.soundName, e.loopNum, e.partIndex);
             }
         });

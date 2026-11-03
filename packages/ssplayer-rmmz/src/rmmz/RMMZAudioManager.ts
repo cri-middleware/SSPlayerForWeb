@@ -130,11 +130,12 @@ export class RMMZAudioManager implements IAudioManager {
    * Sounds only while the playhead walks **forwards**: SpriteStudio has no
    * reverse audio. The player reports
    * every key it crosses either way — the gate belongs here, on the playing.
+   * Nor does a key on the frame a seek landed on: the playhead did not cross it.
    */
   public bindToPlayer(player: SSPlayer): Unsubscribe {
     player.audioManager = this;
     return player.onAudio((e: SSAudioEvent) => {
-      if (e.soundName && player.isPlayingForward) this.play(e.soundName, e.loopNum);
+      if (e.soundName && player.isPlayingForward && !player.isSeekLanding(e.frameNo)) this.play(e.soundName, e.loopNum);
     });
   }
 }

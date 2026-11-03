@@ -550,6 +550,9 @@ export class SSPlayer {
    */
   public get isPlayingForward(): boolean { return this.internalPlayer.isPlayingForward; }
 
+  /** @internal Whether `frameNo` is the frame a seek landed on, which the update that just ran reported though the playhead crossed none of its keys; the audio managers leave such keys unsounded. */
+  public isSeekLanding(frameNo: number): boolean { return this.internalPlayer.isSeekLanding(frameNo); }
+
   public get speedScale(): number { return this.internalPlayer.getSpeedScale(); }
   public set speedScale(v: number) { this.internalPlayer.setSpeedScale(v); }
 
