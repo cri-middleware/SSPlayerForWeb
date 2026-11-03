@@ -50,8 +50,8 @@ an Agent Skill.
    app.stage.addChild(start);
    ```
 
-Under `prefers-reduced-motion` each state holds its first frame, and `normal` plays a
-`reduced_motion` label instead when the animation has one. Without `accessibleTitle` the button is
+Under `prefers-reduced-motion` each state holds its first frame; `normal`, and the states that fall back
+to it, play a `reduced_motion` label instead when the animation has one. Without `accessibleTitle` the button is
 decoration to a screen reader.
 
 **Read next:** [UI buttons](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi-ui) ·
