@@ -123,7 +123,7 @@ ls -R "$dir"                                      # one file each: a .tgz for np
 
 ### 6. Approve on npm
 
-**A person runs this step**: approving, like publishing by hand, asks for a 2FA code. A version the run staged stays out of sight on npm until a maintainer approves it, and approving applies the dist-tag it was staged under. Approve before any Release is published, so that by the time a Release announces a version, `npm install` and the CDN snippets in the READMEs find it; and in dependency order — `ssplayer-core` and `ssconverter-core`, then `ssplayer-webgl` and `ssplayer-pixi` — so that no version is public before one it depends on. Approve on npmjs.com, or here:
+**A person runs this step**: approving, like publishing by hand, asks for a 2FA code. A version the run staged stays out of sight on npm until a maintainer approves it, and approving applies the dist-tag it was staged under. Approve before any Release is published, so that by the time a Release announces a version, `npm install` and the CDN snippets in the READMEs find it; and in dependency order — `ssplayer-core` and `ssconverter-core`, then `ssplayer-webgl` and `ssplayer-pixi`, then `ssplayer-pixi-ui` — so that no version is public before one it depends on. Approve on npmjs.com, or here:
 
 ```bash
 npm login                                         # once
@@ -371,7 +371,7 @@ npm の tarball の中身は `tar -tzf <file>.tgz`、プラグインのアーカ
 
 ### 6. npm で承認する
 
-**この手順は人が行います。** 承認も、手作業の publish も、2FA のコードを求められるためです。run が stage したバージョンは、maintainer が承認するまで npm 上で見えないままで、承認すると stage したときの dist-tag が付きます。どの Release を公開するよりも先に承認し、Release がバージョンを告知する時点で、`npm install` と README の CDN スニペットがそのバージョンを見つけられるようにします。順番は依存の順で、`ssplayer-core` と `ssconverter-core`、続けて `ssplayer-webgl` と `ssplayer-pixi` です。依存先より先に公開されるバージョンが無いようにするためです。承認は npmjs.com でも、次のコマンドでもできます。
+**この手順は人が行います。** 承認も、手作業の publish も、2FA のコードを求められるためです。run が stage したバージョンは、maintainer が承認するまで npm 上で見えないままで、承認すると stage したときの dist-tag が付きます。どの Release を公開するよりも先に承認し、Release がバージョンを告知する時点で、`npm install` と README の CDN スニペットがそのバージョンを見つけられるようにします。順番は依存の順で、`ssplayer-core` と `ssconverter-core`、続けて `ssplayer-webgl` と `ssplayer-pixi`、最後に `ssplayer-pixi-ui` です。依存先より先に公開されるバージョンが無いようにするためです。承認は npmjs.com でも、次のコマンドでもできます。
 
 ```bash
 npm login                                         # 最初に一度
