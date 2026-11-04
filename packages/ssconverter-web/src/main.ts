@@ -5,37 +5,36 @@ import {
   locateProject,
   version,
   ssabSchemaVersion,
+  ssqbSchemaVersion,
 } from '@spritestudio/ssconverter-core';
 import * as fflate from 'fflate';
+import { parseThemeChoice, nextThemeChoice, resolveTheme, resultText } from './utils';
+import type { ThemeChoice, RunTone } from './utils';
 import './style.css';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div class="header">
     <h1>SSConverter Web</h1>
-    <p>Convert SpriteStudio project (.sspj) to binaries (.ssab)</p>
+    <p>Convert SpriteStudio projects (.sspj) to binaries (.ssab / .ssqb)</p>
   </div>
-  
+
   <div class="panel">
     <div class="form-group drop-zone" id="dropZoneIn">
-      <div class="zone-head" style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 1.1rem; color: #818cf8;" id="dropHeading">📥 Drop Project Folder Here</span>
-        <button class="btn" id="btnClear" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;">Clear Input</button>
+      <div class="zone-label">
+        <span class="zone-title" id="dropHeading">📥 Drop Project Folder Here</span>
       </div>
-      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; margin-bottom: 0.25rem;">
-        * Must contain exactly one .sspj file
-      </div>
-      <div class="input-row" style="margin-top: 0.5rem;">
+      <div class="zone-note">* Must contain exactly one .sspj file</div>
+      <div class="input-row">
         <input type="text" id="inDirDisplay" readonly aria-labelledby="dropHeading" placeholder="Drag & Drop a folder, or click Browse...">
         <button class="btn" id="btnSelectIn">Browse...</button>
+        <button class="btn btn-secondary btn-small" id="btnClearIn" aria-label="Clear input folder" hidden>Clear</button>
         <input type="file" id="inDirPicker" webkitdirectory hidden>
       </div>
     </div>
-    
-    <div class="form-group" id="outGroup">
-      <label for="outDirDisplay">Output ZIP File</label>
-      <div class="input-row">
-        <input type="text" id="outDirDisplay" readonly placeholder="Automatically generated as .zip">
-      </div>
+
+    <div class="input-row output-row">
+      <span class="output-label">📤 Output</span>
+      <input type="text" id="outDirDisplay" readonly aria-label="Output ZIP file" placeholder="Automatically generated as .zip">
     </div>
 
     <div class="options-group">
@@ -45,39 +44,50 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       </label>
     </div>
 
-    <div class="status-area">
-      <div class="status-item" role="status" aria-atomic="true">
-        <span class="status-title">WASM</span>
-        <span class="status-badge badge-pending" id="wasmStatus">Initializing...</span>
-      </div>
-      <div class="status-item" role="status" aria-atomic="true">
-        <span class="status-title">Status</span>
-        <span class="status-badge badge-pending" id="convertStatus">Waiting</span>
+    <div class="action-row">
+      <button class="btn btn-success btn-full" id="btnConvert" disabled>
+        ⚡ Convert & Download
+      </button>
+      <span class="status-badge badge-pending" id="convertStatus" role="status" aria-atomic="true">Loading converter...</span>
+    </div>
+
+    <div class="panes">
+      <div class="pane">
+        <div class="pane-head">
+          <h2 class="pane-title" id="logTitle">Logs</h2>
+          <div class="pane-actions">
+            <button class="btn btn-secondary btn-small" id="btnCopyLog">Copy Logs</button>
+            <button class="btn btn-secondary btn-small" id="btnClearLog">Clear Logs</button>
+          </div>
+        </div>
+        <div class="log-area log-area-fill" id="logArea" role="log" aria-labelledby="logTitle"></div>
       </div>
     </div>
-    
-    <button class="btn btn-success btn-full" id="btnConvert" disabled>
-      ⚡ Convert & Download
-    </button>
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: -1rem;">
-      <span style="color: var(--text-muted); font-weight: 600;" id="logTitle">Logs</span>
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn" id="btnCopyLog" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">Copy Logs</button>
-        <button class="btn" id="btnClearLog" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;">Clear Logs</button>
-      </div>
-    </div>
-    <div class="log-area" id="logArea" role="log" aria-labelledby="logTitle"></div>
   </div>
 
-  <div style="text-align: center; margin-top: 2rem; color: var(--text-muted); font-size: 0.85rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+  <div class="app-footer">
     <span id="versionDisplay">Converter Version: Loading...</span>
-    <button class="btn" id="btnCopyVersion" style="margin-top: 0.25rem; padding: 0.1rem 0.4rem; font-size: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); display: none;" title="Copy Version">Copy Version</button>
+    <button class="btn btn-secondary btn-tiny" id="btnCopyVersion" hidden title="Copy Version">Copy Version</button>
   </div>
+
+  <dialog id="resultModal" class="modal" aria-labelledby="modalTitleText" tabindex="-1">
+    <h3 class="modal-title">
+      <span id="modalIcon" aria-hidden="true"></span>
+      <span id="modalTitleText"></span>
+    </h3>
+    <div class="result-output" id="resultOutput" hidden></div>
+    <div class="result-issues" id="resultIssues" hidden></div>
+    <div class="result-actions">
+      <button class="btn btn-secondary" id="btnResultCopy" title="Copy the result as text">Copy</button>
+      <button class="btn" id="btnResultClose">Close</button>
+    </div>
+  </dialog>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme" title="Toggle Theme">☀️</button>
 `;
 
 const dropZoneIn = document.getElementById('dropZoneIn')!;
-const btnClear = document.getElementById('btnClear') as HTMLButtonElement;
+const btnClearIn = document.getElementById('btnClearIn') as HTMLButtonElement;
 const outDirDisplay = document.getElementById('outDirDisplay') as HTMLInputElement;
 const btnSelectIn = document.getElementById('btnSelectIn') as HTMLButtonElement;
 const inDirPicker = document.getElementById('inDirPicker') as HTMLInputElement;
@@ -87,12 +97,65 @@ const btnCopyLog = document.getElementById('btnCopyLog') as HTMLButtonElement;
 const btnClearLog = document.getElementById('btnClearLog') as HTMLButtonElement;
 const btnCopyVersion = document.getElementById('btnCopyVersion') as HTMLButtonElement;
 const inDirDisplay = document.getElementById('inDirDisplay') as HTMLInputElement;
-const wasmStatus = document.getElementById('wasmStatus')!;
 const convertStatus = document.getElementById('convertStatus')!;
 const logArea = document.getElementById('logArea')!;
 const versionDisplay = document.getElementById('versionDisplay')!;
-
 const chkEmbedded = document.getElementById('chkEmbedded') as HTMLInputElement;
+const resultModal = document.getElementById('resultModal') as HTMLDialogElement;
+const modalIcon = document.getElementById('modalIcon')!;
+const modalTitleText = document.getElementById('modalTitleText')!;
+const resultOutput = document.getElementById('resultOutput')!;
+const resultIssues = document.getElementById('resultIssues')!;
+const btnResultCopy = document.getElementById('btnResultCopy') as HTMLButtonElement;
+const btnResultClose = document.getElementById('btnResultClose') as HTMLButtonElement;
+const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
+
+const THEME_ICON: Record<ThemeChoice, string> = { auto: '🖥️', light: '☀️', dark: '🌙' };
+const THEME_LABEL: Record<ThemeChoice, string> = {
+    auto: 'Theme: follow system',
+    light: 'Theme: light',
+    dark: 'Theme: dark',
+};
+
+function readStoredTheme(): string | null {
+    try {
+        return localStorage.getItem('theme');
+    } catch {
+        return null;
+    }
+}
+
+function storeTheme(choice: ThemeChoice) {
+    try {
+        if (choice === 'auto') {
+            localStorage.removeItem('theme');
+        } else {
+            localStorage.setItem('theme', choice);
+        }
+    } catch {
+    }
+}
+
+const systemPrefersLight = window.matchMedia('(prefers-color-scheme: light)');
+let themeChoice = parseThemeChoice(readStoredTheme());
+function applyTheme() {
+    if (resolveTheme(themeChoice, systemPrefersLight.matches) === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+    const label = `${THEME_LABEL[themeChoice]} (click to change)`;
+    themeToggle.textContent = THEME_ICON[themeChoice];
+    themeToggle.title = label;
+    themeToggle.setAttribute('aria-label', label);
+}
+themeToggle.addEventListener('click', () => {
+    themeChoice = nextThemeChoice(themeChoice);
+    storeTheme(themeChoice);
+    applyTheme();
+});
+systemPrefersLight.addEventListener('change', applyTheme);
+applyTheme();
 
 // Browse... reads the folder through <input webkitdirectory>, which every
 // browser has in any context, and which browser automation can fill: CDP's
@@ -119,6 +182,7 @@ function noDropReason(): string {
 }
 
 let isWasmReady = false;
+let isConverting = false;
 // The project folder, however it came in; `read` fills sourceFiles from it. A
 // dropped folder is a live handle, read again at conversion; Browse... hands
 // over the files as they were when picked.
@@ -126,6 +190,7 @@ let inputFolder: { name: string; read: () => Promise<void> } | null = null;
 let sourceFiles: Map<string, File> = new Map();
 let currentSspjStem = '';
 let currentSspjDir: string[] = [];
+let versionsText: string | null = null;
 
 function getTimestamp(): string {
     const now = new Date();
@@ -133,33 +198,43 @@ function getTimestamp(): string {
     return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 }
 
-function log(msg: string, type: 'info' | 'error' | 'warning' | 'success' = 'info') {
+type LogType = 'info' | 'error' | 'success' | 'warning';
+
+const MAX_LOG_LINES = 500;
+
+function log(msg: string, type: LogType = 'info') {
     console.log(msg);
-    if (type === 'info') {
-        if (msg.startsWith('Error') || msg.startsWith('Failed to') || msg.includes('Error:')) {
-            type = 'error';
-        } else if (msg.includes('successfully') || msg.startsWith('Success')) {
-            type = 'success';
-        } else if (msg.startsWith('WARNING')) {
-            type = 'warning';
-        }
-    }
     const div = document.createElement('div');
     div.textContent = msg;
     if (type !== 'info') {
         div.className = `log-${type}`;
     }
     logArea.appendChild(div);
+    while (logArea.children.length > MAX_LOG_LINES) {
+        logArea.firstElementChild!.remove();
+    }
     logArea.scrollTop = logArea.scrollHeight;
 }
 
-function updateBadge(el: HTMLElement, text: string, type: 'pending' | 'active' | 'success' | 'error') {
+function updateBadge(el: HTMLElement, text: string, type: 'pending' | 'active' | 'success' | 'error' | 'warning') {
     el.textContent = text;
     el.className = `status-badge badge-${type}`;
 }
 
 function updateConvertButton() {
-    btnConvert.disabled = !(isWasmReady && inputFolder);
+    btnConvert.disabled = isConverting || !(isWasmReady && inputFolder);
+}
+
+function setBusy(busy: boolean) {
+    isConverting = busy;
+    btnSelectIn.disabled = busy;
+    btnClearIn.disabled = busy;
+    chkEmbedded.disabled = busy;
+    updateConvertButton();
+}
+
+function zipName(): string {
+    return `${currentSspjStem}${chkEmbedded.checked ? '_emb' : ''}_${getTimestamp()}.zip`;
 }
 
 function resetState() {
@@ -169,36 +244,97 @@ function resetState() {
     sourceFiles.clear();
     inDirDisplay.value = '';
     outDirDisplay.value = '';
-    updateBadge(convertStatus, 'Waiting', 'pending');
+    btnClearIn.hidden = true;
+    if (isWasmReady) updateBadge(convertStatus, 'Waiting', 'pending');
     updateConvertButton();
 }
+
+const TONE_ICON: Record<RunTone, string> = { success: '✅', warning: '⚠️', error: '❌' };
+
+interface ResultIssue {
+    label?: string;
+    detail: string;
+    tone: 'warning' | 'error';
+}
+
+interface ResultView {
+    tone: RunTone;
+    headline: string;
+    output: string | null;
+    issues: ResultIssue[];
+}
+
+let shownResult: ResultView | null = null;
+
+function renderIssue(issue: ResultIssue): HTMLElement {
+    const row = document.createElement('div');
+    row.className = `result-issue result-issue-${issue.tone}`;
+    if (issue.label) {
+        const label = document.createElement('div');
+        label.className = 'result-issue-label';
+        label.textContent = issue.label;
+        row.appendChild(label);
+    }
+    const detail = document.createElement('div');
+    detail.className = 'result-issue-detail';
+    detail.textContent = issue.detail;
+    row.appendChild(detail);
+    return row;
+}
+
+function showResult(view: ResultView) {
+    shownResult = view;
+    modalIcon.textContent = TONE_ICON[view.tone];
+    modalTitleText.textContent = view.headline;
+    resultOutput.textContent = view.output ?? '';
+    resultOutput.hidden = !view.output;
+    resultIssues.replaceChildren(...view.issues.map(renderIssue));
+    resultIssues.hidden = view.issues.length === 0;
+    resultModal.showModal();
+    btnResultClose.focus();
+}
+
+btnResultClose.addEventListener('click', () => resultModal.close());
+resultModal.addEventListener('close', () => btnConvert.focus());
+
+btnResultCopy.addEventListener('click', async () => {
+    if (!shownResult) return;
+    try {
+        await navigator.clipboard.writeText(resultText(shownResult, versionsText));
+        const orig = btnResultCopy.textContent;
+        btnResultCopy.textContent = 'Copied!';
+        setTimeout(() => { btnResultCopy.textContent = orig; }, 2000);
+    } catch (e) {
+        log('Failed to copy the result.', 'error');
+    }
+});
 
 async function initWasm() {
     try {
         log('Initializing WebAssembly runtime...');
         await init(wasmUrl);
-        const ver = version();
-        const ssabSchemaVer = ssabSchemaVersion();
-        versionDisplay.textContent = `Converter Version: ${ver} (ssab v${ssabSchemaVer})`;
-        btnCopyVersion.style.display = 'inline-flex';
+        const versions = `Converter Version: ${version()} (ssab v${ssabSchemaVersion()}, ssqb v${ssqbSchemaVersion()})`;
+        versionsText = versions;
+        versionDisplay.textContent = versions;
+        btnCopyVersion.hidden = false;
         btnCopyVersion.onclick = async () => {
             try {
-                const textToCopy = `Converter Version: ${ver} (ssab v${ssabSchemaVer})`;
-                await navigator.clipboard.writeText(textToCopy);
+                await navigator.clipboard.writeText(versions);
                 const orig = btnCopyVersion.textContent;
                 btnCopyVersion.textContent = 'Copied!';
                 setTimeout(() => { btnCopyVersion.textContent = orig; }, 2000);
             } catch (e) {
-                log('Failed to copy version.');
+                log('Failed to copy version.', 'error');
             }
         };
-        log(`WASM Runtime loaded. Converter version: ${ver} (ssab v${ssabSchemaVer})`);
-        updateBadge(wasmStatus, 'Ready', 'success');
+        log(`WASM Runtime loaded. ${versions}`);
+        updateBadge(convertStatus, 'Waiting', 'pending');
         isWasmReady = true;
         updateConvertButton();
     } catch (e) {
-        log(`Failed to load WASM: ${e}`);
-        updateBadge(wasmStatus, 'Error', 'error');
+        log(`Failed to load WASM: ${e}`, 'error');
+        versionDisplay.textContent = 'Converter Version: unavailable';
+        updateBadge(convertStatus, 'Load failed', 'error');
     }
 }
 
@@ -206,7 +342,7 @@ async function readDirectoryRecursive(dirHandle: FileSystemDirectoryHandle, base
     // @ts-ignore
     for await (const entry of dirHandle.values()) {
         if (entry.name.startsWith('.')) continue; // Ignore hidden files like .DS_Store
-        
+
         const path = basePath ? `${basePath}/${entry.name}` : entry.name;
         if (entry.kind === 'file') {
             const file = await entry.getFile();
@@ -232,10 +368,11 @@ function readPickedFiles(files: File[]) {
 async function handleInputFolder(folder: { name: string; read: () => Promise<void> }) {
     inputFolder = folder;
     inDirDisplay.value = folder.name;
+    btnClearIn.hidden = false;
     sourceFiles.clear();
     currentSspjStem = '';
     currentSspjDir = [];
-    
+
     log(`Scanning folder: ${folder.name}...`);
     try {
         await folder.read();
@@ -245,20 +382,12 @@ async function handleInputFolder(folder: { name: string; read: () => Promise<voi
         currentSspjDir = dir;
 
         log(`Found project: ${currentSspjStem}`);
-        const timestamp = getTimestamp();
-        if (chkEmbedded.checked) {
-            outDirDisplay.value = `${currentSspjStem}_emb_${timestamp}.zip`;
-        } else {
-            outDirDisplay.value = `${currentSspjStem}_${timestamp}.zip`;
-        }
-        
+        outDirDisplay.value = zipName();
         updateConvertButton();
+        btnConvert.focus();
     } catch (e: any) {
-        log(`Error: ${e.message || e}`);
-        inputFolder = null;
-        inDirDisplay.value = '';
-        outDirDisplay.value = '';
-        updateConvertButton();
+        log(`Error: ${e.message || e}`, 'error');
+        resetState();
     }
 }
 
@@ -269,32 +398,35 @@ inDirPicker.addEventListener('change', async () => {
     // Cleared so that picking the same folder again fires `change` again.
     inDirPicker.value = '';
     if (files.length === 0) {
-        log('Error: The selected folder has no files.');
+        log('Error: The selected folder has no files.', 'error');
         return;
     }
     const name = files[0].webkitRelativePath.split('/')[0] || 'Selected files';
     await handleInputFolder({ name, read: async () => readPickedFiles(files) });
 });
 
-btnConvert.addEventListener('click', async () => {
-    if (!inputFolder) return;
-    
+async function runConversion() {
+    if (!inputFolder || isConverting) return;
+
+    const folder = inputFolder;
+    const embedded = chkEmbedded.checked;
+    const zipFileName = outDirDisplay.value || zipName();
+
     try {
-        btnConvert.disabled = true;
-        btnSelectIn.disabled = true;
-        
+        setBusy(true);
+
         updateBadge(convertStatus, 'Reading Files...', 'active');
-        log(`Reading folder: ${inputFolder.name}`);
-        await inputFolder.read();
+        log(`Reading folder: ${folder.name}`);
+        await folder.read();
         log(`Found ${sourceFiles.size} files in folder.`);
-        
+
         if (!currentSspjStem) {
             throw new Error('No .sspj file found in the selected input folder.');
         }
 
         updateBadge(convertStatus, 'Converting...', 'active');
         log('Starting WASM conversion...');
-        
+
         const filesMap = new Map<string, Uint8Array>();
         const prefix = currentSspjDir.length > 0 ? currentSspjDir.join('/') + '/' : '';
         for (const [path, file] of sourceFiles.entries()) {
@@ -302,25 +434,23 @@ btnConvert.addEventListener('click', async () => {
                 filesMap.set(path, new Uint8Array(await file.arrayBuffer()));
             }
         }
-        
+
         const startTime = performance.now();
-        const result = convertProject(filesMap, { embedded: chkEmbedded.checked });
+        const result = convertProject(filesMap, { embedded });
         const endTime = performance.now();
         log(`Conversion completed in ${(endTime - startTime).toFixed(2)} ms.`);
-        
-        // Output phase
+
         updateBadge(convertStatus, 'Generating ZIP...', 'active');
-        const rootDirName = chkEmbedded.checked ? `${currentSspjStem}_emb` : currentSspjStem;
+        const rootDirName = embedded ? `${currentSspjStem}_emb` : currentSspjStem;
         const zipData: Record<string, Uint8Array> = {};
-        
-        // Write generated files
+
         for (const [filename, data] of result.output.entries()) {
             log(`Adding ${filename} to zip...`);
             zipData[`${rootDirName}/${filename}`] = data;
         }
-        
-        // Write referenced assets
-        if (!chkEmbedded.checked && result.assets && result.assets.size > 0) {
+
+        const missing: string[] = [];
+        if (!embedded && result.assets && result.assets.size > 0) {
             log('Copying referenced assets...');
             for (const [destPath, srcPath] of result.assets.entries()) {
                 const fullSrcPath = currentSspjDir.length > 0 ? `${currentSspjDir.join('/')}/${srcPath}` : srcPath;
@@ -330,85 +460,112 @@ btnConvert.addEventListener('click', async () => {
                     const buffer = await srcFile.arrayBuffer();
                     zipData[`${rootDirName}/${destPath}`] = new Uint8Array(buffer);
                 } else {
-                    log(`WARNING: Source asset not found: ${fullSrcPath}`);
+                    log(`WARNING: Source asset not found: ${fullSrcPath}`, 'warning');
+                    missing.push(fullSrcPath);
                 }
             }
         }
-        
+
         log('Generating ZIP file...');
         const zippedBuffer = fflate.zipSync(zipData, { level: 6 });
         const zipBlob = new Blob([zippedBuffer], { type: 'application/zip' });
-        
+
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = url;
-        const zipFileName = outDirDisplay.value || `${rootDirName}_${getTimestamp()}.zip`;
         a.download = zipFileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        updateBadge(convertStatus, 'Success', 'success');
-        log(`Successfully downloaded ${zipFileName}`, 'success');
+
+        if (missing.length > 0) {
+            const headline = `Downloaded ${zipFileName}, but ${missing.length} referenced asset${missing.length === 1 ? ' was' : 's were'} not found.`;
+            updateBadge(convertStatus, 'Missing assets', 'warning');
+            log(headline, 'warning');
+            showResult({
+                tone: 'warning',
+                headline,
+                output: `Output: ${zipFileName}`,
+                issues: missing.map((path) => ({ label: path, detail: 'Source asset not found', tone: 'warning' as const })),
+            });
+        } else {
+            updateBadge(convertStatus, 'Success', 'success');
+            log(`Successfully downloaded ${zipFileName}`, 'success');
+        }
     } catch (e: any) {
-        log(`Error: ${e.message || e}`);
+        const message = `${e.message || e}`;
+        log(`Error: ${message}`, 'error');
         updateBadge(convertStatus, 'Failed', 'error');
+        showResult({
+            tone: 'error',
+            headline: 'Conversion failed.',
+            output: null,
+            issues: [{ detail: message, tone: 'error' }],
+        });
     } finally {
-        updateConvertButton();
-        btnSelectIn.disabled = false;
+        setBusy(false);
+        if (!resultModal.open) btnConvert.focus();
     }
-});
+}
 
-// Clear state and UI manually
-btnClear.addEventListener('click', resetState);
+btnConvert.addEventListener('click', runConversion);
 
-// Drag & Drop logic for Input zone
-dropZoneIn.addEventListener('dragover', (e) => {
+btnClearIn.addEventListener('click', resetState);
+
+// A drop anywhere in the page goes to the input. Every drop is cancelled, or the
+// browser opens the dropped item in place of the page.
+function dropAccepted(): boolean {
+    return canReadDroppedFolders && isWasmReady && !isConverting && !resultModal.open;
+}
+
+window.addEventListener('dragover', (e) => {
     e.preventDefault();
-    dropZoneIn.classList.add('dragover');
+    dropZoneIn.classList.toggle('dragover', dropAccepted());
 });
-dropZoneIn.addEventListener('dragleave', (e) => {
+window.addEventListener('dragleave', (e) => {
+    if (e.relatedTarget === null) dropZoneIn.classList.remove('dragover');
+});
+window.addEventListener('drop', async (e) => {
     e.preventDefault();
     dropZoneIn.classList.remove('dragover');
-});
-dropZoneIn.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    dropZoneIn.classList.remove('dragover');
-    if (!isWasmReady) return;
-    
-    // Before touching the item: calling getAsFileSystemHandle() here on an
-    // insecure origin kills the tab outright.
-    if (!canReadDroppedFolders) {
-        log(`Error: ${noDropReason()}. Use Browse... to choose the folder.`);
+    if (!isWasmReady || resultModal.open) return;
+    if (isConverting) {
+        log('A conversion is already running — dropped item ignored.', 'warning');
         return;
     }
 
-    const items = e.dataTransfer?.items;
-    if (items && items.length > 0) {
-        try {
-            // @ts-ignore
-            const item = await items[0].getAsFileSystemHandle();
-            if (item && item.kind === 'directory') {
-                const handle = item as FileSystemDirectoryHandle;
-                await handleInputFolder({ name: handle.name, read: () => readDirectoryRecursive(handle) });
-            } else {
-                log('Please drop a directory, not a file.');
-            }
-        } catch (e: any) {
-            log(`Error: ${e.message || e}`);
+    // Before touching the item: calling getAsFileSystemHandle() here on an
+    // insecure origin kills the tab outright.
+    if (!canReadDroppedFolders) {
+        log(`Error: ${noDropReason()}. Use Browse... to choose the folder.`, 'error');
+        return;
+    }
+
+    const items = Array.from(e.dataTransfer?.items ?? []).filter((item) => item.kind === 'file');
+    if (items.length === 0) return;
+    if (items.length > 1) {
+        log(`Dropped ${items.length} items; using only the first. Drop one folder at a time.`, 'warning');
+    }
+    try {
+        // Called before any await: the items are unreadable once the drop
+        // handler has returned.
+        // @ts-ignore
+        const item = await items[0].getAsFileSystemHandle();
+        if (item && item.kind === 'directory') {
+            const handle = item as FileSystemDirectoryHandle;
+            await handleInputFolder({ name: handle.name, read: () => readDirectoryRecursive(handle) });
+        } else {
+            log('Please drop a directory, not a file.', 'error');
         }
+    } catch (e: any) {
+        log(`Error: ${e.message || e}`, 'error');
     }
 });
 
 chkEmbedded.addEventListener('change', () => {
     if (inputFolder && currentSspjStem) {
-        const timestamp = getTimestamp();
-        if (chkEmbedded.checked) {
-            outDirDisplay.value = `${currentSspjStem}_emb_${timestamp}.zip`;
-        } else {
-            outDirDisplay.value = `${currentSspjStem}_${timestamp}.zip`;
-        }
+        outDirDisplay.value = zipName();
     }
 });
 
@@ -424,10 +581,9 @@ btnCopyLog.addEventListener('click', async () => {
 });
 
 btnClearLog.addEventListener('click', () => {
-    logArea.textContent = '';
+    logArea.replaceChildren();
 });
 
-// Boot
 // Say it up front rather than on the first drop, so a reader whose drop cannot
 // work goes to Browse... instead.
 if (!canReadDroppedFolders) {
