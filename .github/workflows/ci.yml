@@ -1,10 +1,10 @@
 name: CI
 
-# Two tiers, as in SpriteStudio-SDK. Every pull request runs
-# scripts/build-release.sh with sdk=build: the wasm compiled from the SDK
-# submodule, every package built, type-checked and tested, and the npm tarballs
-# and plugin archives packed and checked, as release.yml does with the pinned
-# SDK release.
+# Two tiers, as in SpriteStudio-SDK. Every pull request compiles the wasm from
+# the SDK submodule, or restores the weekly run's build when that run last built
+# the same submodule commit, then runs scripts/build-release.sh on it: every
+# package built, type-checked and tested, and the npm tarballs and plugin
+# archives packed and checked, as release.yml does with the pinned SDK release.
 # The weekly run and a dispatch also build the Pages site the way pages.yml does.
 # main takes every pull request and a release is dispatched from it, so there is
 # no release PR to run the weekly tier on.
@@ -53,9 +53,35 @@ jobs:
           node-version: 26
           cache: pnpm
 
+      # The SDK wasm build depends on nothing but the submodule commit, the script
+      # that drives it, this workflow and the runner image, so its key is made
+      # of those, and only an exact match counts. The weekly run always builds,
+      # which keeps proving the submodule builds with the current toolchain and
+      # keeps the Rust cache seeded, and saves the wasm when no build is saved
+      # under that key yet. A pull request whose key matches restores it and
+      # skips Rust altogether; one that bumps the submodule, or changes any of
+      # the rest, misses and builds as before.
+      - name: Name the SDK wasm build
+        id: wasm
+        run: echo "key=wasm-${ImageOS}-release-$(git rev-parse HEAD:SpriteStudio-SDK)-${{ hashFiles('scripts/build-runtime.sh', '.github/workflows/ci.yml') }}" >> "$GITHUB_OUTPUT"
+
+      # The three directories build-runtime.sh fills, all gitignored.
+      - name: Restore the SDK wasm build
+        id: wasm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            packages/ssplayer-core/wasm
+            packages/ssplayer-core/wasm-nosimd
+            packages/ssconverter-core/wasm
+          key: ${{ steps.wasm.outputs.key }}
+          # The weekly run builds regardless; it only asks whether a build is saved.
+          lookup-only: ${{ github.event_name != 'pull_request' }}
+
       # build-runtime.sh runs the SDK's release-web.sh, which needs the wasm
       # target and wasm-pack.
       - name: Setup Rust toolchain
+        if: github.event_name != 'pull_request' || steps.wasm-cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           # Pinned by SHA, so the channel must be named explicitly here.
@@ -63,6 +89,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Setup Rust cache
+        if: github.event_name != 'pull_request' || steps.wasm-cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: SpriteStudio-SDK
@@ -72,15 +99,34 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install wasm-pack
+        if: github.event_name != 'pull_request' || steps.wasm-cache.outputs.cache-hit != 'true'
         uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
         with:
           tool: wasm-pack
 
+      # What build-release.sh's sdk=build runs, in a step of its own so the
+      # result can be saved before the packages are built.
+      - name: Build the SDK wasm
+        if: github.event_name != 'pull_request' || steps.wasm-cache.outputs.cache-hit != 'true'
+        run: ./scripts/build-runtime.sh build=release
+
+      - name: Save the SDK wasm build
+        if: github.ref == 'refs/heads/main' && steps.wasm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            packages/ssplayer-core/wasm
+            packages/ssplayer-core/wasm-nosimd
+            packages/ssconverter-core/wasm
+          key: ${{ steps.wasm.outputs.key }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # sdk=skip takes the wasm the steps above built or restored, and still
+      # fails if any of it is missing.
       - name: Build, test and check the release
-        run: ./scripts/build-release.sh skip=install sdk=build out=release-dist verify=yes clean=yes
+        run: ./scripts/build-release.sh skip=install sdk=skip out=release-dist verify=yes clean=yes
 
   # docs.yml, the site pages.yml publishes, built the same way. A pull request
   # that touches the docs runs it on its own, for the docs alone.
