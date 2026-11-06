@@ -85,7 +85,7 @@
   },
   "license": "BSD-3-Clause",
   "devDependencies": {
-    "jsdom": "^30.1.3",
+    "jsdom": "^31.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }
