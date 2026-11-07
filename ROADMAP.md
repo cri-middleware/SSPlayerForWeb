@@ -4,7 +4,7 @@ This file lists unfinished work only. Technical constraints live in [Limitations
 
 ## Before 7.0.0
 
-- [ ] **Take the SDK's base-folder and error fixes** — The SDK is resolving a project's base folders in the in-memory converter and throwing JavaScript `Error`s from WebAssembly. Bump the submodule, then drop the `Error` wrapping in `SSABResource` and `convertProject`.
+- [ ] **Take the SDK's base-folder and error fixes** — The SDK's in-memory converter now resolves a project's base folders, and its WebAssembly throws JavaScript `Error`s. Bump the submodule, then drop the `Error` wrapping in `SSABResource` and `convertProject`.
 - [ ] **Release the GL context with a `standalone` surface** — `SSSurface.destroy()` keeps the context, because `<ss-player>` reuses its canvas on reconnect, so a page that mounts and unmounts standalone elements runs into the browser's context limit and loses the oldest one. Lose the context on destroy and give a reconnect a fresh canvas.
 - [ ] **Drop `engines` from the published packages** — `"node": ">=24"` is the requirement for working on this repository, but it ships in the five npm packages, so an app built on an older Node gets an `EBADENGINE` warning and yarn classic refuses the install.
 - [ ] **Say when `setCellmapTexture` matches nothing** — An unknown name is a silent no-op, so a typo reads as a texture that did not change. Warn when the pack has no such cell map.
