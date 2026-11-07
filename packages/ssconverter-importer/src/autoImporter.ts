@@ -225,21 +225,8 @@ export class AutoImporter {
         // Unreadable state costs one reconversion, nothing worse.
       }
     }
-    const migrated = this.migrateState(state);
-    this.state = migrated.state;
-    // Written back now rather than left for the first conversion to carry: a
-    // pass that skips everything never saves, and the file would keep a shape
-    // nothing writes any more for as long as the project stayed unchanged.
-    if (migrated.changed) this.saveState();
+    this.state = state;
     return this.state;
-  }
-
-  /**
-   * Bring a state file an older build of the host wrote up to date, before
-   * anything reads it. Nothing to do unless the host has had an older shape.
-   */
-  protected migrateState(state: ImportState): { state: ImportState; changed: boolean } {
-    return { state, changed: false };
   }
 
   protected saveState(): void {
@@ -463,8 +450,6 @@ export class AutoImporter {
       const sourceProjectDir = this.fs.path.dirname(job.sspj);
       const latest = mtimes.get(sourceProjectDir) ?? 0;
 
-      // Unconditional, so a host that migrates an older marker here does so
-      // even when the output around it is gone.
       const previous = this.readMarker(outDir);
       if (
         !opts.force &&

@@ -1,7 +1,6 @@
 // The TyranoBuilder half of the importer, against a real SpriteStudio project
-// from the SDK submodule: the pickers, `Reconvert`, and the state shapes older
-// builds of this plugin wrote. The pass itself — freshness, the converter, the
-// bridge fallback — is covered in `@spritestudio/ssconverter-importer`.
+// from the SDK submodule: the pickers and `Reconvert`. The pass itself — freshness,
+// the converter, the bridge fallback — is covered in `@spritestudio/ssconverter-importer`.
 
 import {
   cpSync,
@@ -170,32 +169,6 @@ describe.skipIf(!haveFixtures)('BuilderImporter', () => {
     expect(count.readdir).toBeGreaterThan(walked);
   });
 
-  it('migrates the old in-output marker out of data/, without reconverting', async () => {
-    const root = makeProject();
-    const fs = withApi();
-    const importer = importerFor(root, fs);
-    await importer.runOnce();
-
-    // Recreate a pre-move project: marker inside the pack folder, no state file.
-    const outDir = nodePath.join(root, 'data/others/ssdata/Ringo');
-    const state = JSON.parse(readFileSync(nodePath.join(root, '.ss_import_state.json'), 'utf8'));
-    writeFileSync(
-      nodePath.join(outDir, '.ss_import_ok'),
-      JSON.stringify(state.packs[packKey('Ringo')]),
-      'utf8',
-    );
-    rmSync(nodePath.join(root, '.ss_import_state.json'));
-
-    const fresh = importerFor(root, fs);
-    const run = await fresh.runOnce();
-
-    // The old marker is trusted, so nothing is rebuilt...
-    expect(run.skipped).toEqual(['Ringo']);
-    // ...and it is gone from data/, carried over to the project root.
-    expect(existsSync(nodePath.join(outDir, '.ss_import_ok'))).toBe(false);
-    expect(existsSync(nodePath.join(root, '.ss_import_state.json'))).toBe(true);
-  });
-
   it('rebuilds the one pack a Reconvert names, fresh marker or not', async () => {
     const root = makeProject();
     const importer = importerFor(root, withApi());
@@ -309,29 +282,6 @@ describe.skipIf(!haveFixtures)('BuilderImporter', () => {
     const run = await importer.reconvertPack('image/hero/Ringo.ssab');
     expect(run?.converted.map((c) => c.name)).toEqual(['Ringo']);
     expect(existsSync(nodePath.join(copy, 'Ringo.ssab'))).toBe(true);
-  });
-
-  it('carries over a record written when the key was the .sspj stem', async () => {
-    const root = makeProject();
-    const fs = withApi();
-    await importerFor(root, fs).runOnce();
-
-    const statePath = nodePath.join(root, '.ss_import_state.json');
-    const state = JSON.parse(readFileSync(statePath, 'utf8'));
-    // What the file looked like before the key described a folder.
-    writeFileSync(
-      statePath,
-      JSON.stringify({ packs: { Ringo: state.packs[packKey('Ringo')] } }),
-      'utf8',
-    );
-
-    const fresh = importerFor(root, fs);
-    expect(fresh.hasImported()).toBe(true);
-    // Re-keyed, not re-converted: the record still describes what is on disk.
-    expect((await fresh.runOnce()).skipped).toEqual(['Ringo']);
-    expect(Object.keys(JSON.parse(readFileSync(statePath, 'utf8')).packs)).toEqual([
-      packKey('Ringo'),
-    ]);
   });
 
 });

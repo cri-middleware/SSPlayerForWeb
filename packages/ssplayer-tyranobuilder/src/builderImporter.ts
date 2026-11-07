@@ -22,8 +22,6 @@ import {
   AutoImporter,
   type AutoImporterOptions,
   type ImportRunResult,
-  type ImportState,
-  type PackState,
   type PlannedJob,
 } from '@spritestudio/ssconverter-importer';
 
@@ -34,16 +32,6 @@ import { EMPTY_PACK, readPackContents, type PackContents } from './packContents.
  * See `packages/ssplayer-tyranoscript/README.md`.
  */
 export const DEFAULT_OUT_DIR = 'data/others/ssdata';
-
-/**
- * The old per-output-folder marker. Migrated and deleted when found.
- *
- * TyranoBuilder's exporter has no build filter of the kind Ren'Py uses for its
- * own `.ss_import_ok` — it is three `copySync` calls, one of which takes the
- * whole of `data/` — so a marker under `data/` shipped inside the game. The
- * state lives at the project root instead, where an export cannot reach it.
- */
-const LEGACY_MARKER = '.ss_import_ok';
 
 export type BuilderImporterOptions = Omit<AutoImporterOptions, 'outDirName'> & {
   outDirName?: string;
@@ -171,56 +159,6 @@ export class BuilderImporter extends AutoImporter {
     if (rel.startsWith('data/')) return p.join(this.projectRoot, rel);
     if (rel.startsWith('./')) return p.join(this.projectRoot, rel.slice(2));
     return p.join(this.dataDir, rel);
-  }
-
-  /**
-   * Records written when the key was the `.sspj` stem, re-keyed onto the folder
-   * they describe. Nothing else changes: an entry keeps its mtime, so a
-   * migrated project is not reconverted for the sake of it.
-   *
-   * The key was the stem until a record had to describe a folder outside
-   * `outRoot` (a pack the author copied elsewhere under `data/`, reconverted
-   * where it lies). A key with no `/` in it is one of those older records.
-   */
-  protected override migrateState(state: ImportState): { state: ImportState; changed: boolean } {
-    const packs: Record<string, PackState> = {};
-    let changed = false;
-    for (const [key, entry] of Object.entries(state.packs)) {
-      const moved = key.includes('/') ? key : this.outKey(this.fs.path.join(this.outRoot, key));
-      if (moved !== key) changed = true;
-      packs[moved] = entry;
-    }
-    return { state: { packs }, changed };
-  }
-
-  /**
-   * Carries over — and then removes — the old in-output marker before the
-   * record is read. That marker sat under `data/`, so every export shipped it
-   * inside the game; a project that predates this move gets cleaned up the
-   * first time it is opened.
-   */
-  protected override readMarker(outDir: string): PackState | null {
-    const state = this.loadState();
-    const key = this.outKey(outDir);
-    const legacy = this.fs.path.join(outDir, LEGACY_MARKER);
-
-    if (this.fs.exists(legacy)) {
-      if (!state.packs[key]) {
-        try {
-          const parsed = JSON.parse(this.fs.readText(legacy)) as PackState;
-          if (typeof parsed?.source_mtime === 'number') {
-            state.packs[key] = parsed;
-            this.saveState();
-          }
-        } catch {
-          // Fall through: an unreadable marker just means one reconversion.
-        }
-      }
-      this.fs.remove(legacy);
-      this.log(`removed ${LEGACY_MARKER} from ${outDir} (import state moved out of data/)`);
-    }
-
-    return super.readMarker(outDir);
   }
 
   /**
