@@ -43,6 +43,27 @@ describe('SSWebAudioManager', () => {
         expect(Array.from(new Uint8Array(decodeAudioData.mock.calls[0][0]))).toEqual([1, 2, 3]);
     });
 
+    it('decodes rather than fetches a sound asked for again while it decodes', async () => {
+        const decodeAudioData = vi.fn(async () => ({ duration: 1 }));
+        vi.stubGlobal('window', {
+            AudioContext: class {
+                state = 'running';
+                decodeAudioData = decodeAudioData;
+            },
+        });
+        const fetch = vi.fn();
+        vi.stubGlobal('fetch', fetch);
+        const manager = new SSWebAudioManager();
+
+        const preload = manager.preload([{ name: 'hit', path: 'a/hit.mp3', bytes: new Uint8Array([1]) }]);
+        // What a key the playhead crosses during the decode does, through play().
+        const again = (manager as unknown as { loadSound(name: string): Promise<void> }).loadSound('hit');
+        await Promise.all([preload, again]);
+
+        expect(fetch).not.toHaveBeenCalled();
+        expect(decodeAudioData).toHaveBeenCalledTimes(2);
+    });
+
     it('keeps no bytes once a sound is decoded, failed, or already in memory', async () => {
         const decodeAudioData = vi.fn(async () => ({ duration: 1 }));
         vi.stubGlobal('window', {

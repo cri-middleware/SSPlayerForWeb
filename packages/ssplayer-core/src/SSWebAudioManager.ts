@@ -121,7 +121,6 @@ export class SSWebAudioManager implements IAudioManager {
 
         try {
             const bytes = this.soundBytes.get(soundName);
-            this.soundBytes.delete(soundName);
             let arrayBuffer: ArrayBuffer;
             if (bytes) {
                 // A copy of exactly these bytes: decodeAudioData detaches what it is given.
@@ -136,6 +135,9 @@ export class SSWebAudioManager implements IAudioManager {
             this.buffers.set(soundName, audioBuffer);
         } catch (e) {
             console.error(`[SSWebAudioManager] Failed to load sound: ${soundName}`, e);
+        } finally {
+            // After the decode: a key the playhead crosses during it asks for the sound again.
+            this.soundBytes.delete(soundName);
         }
     }
 
