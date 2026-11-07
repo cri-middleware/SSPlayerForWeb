@@ -61,6 +61,7 @@ vi.mock('@spritestudio/ssplayer-core', async () => ({
     runtimeManager = {
       context: { set_render_mode: vi.fn(), set_coordinate_system: vi.fn() },
       getSounds: () => [],
+      capturePassedEvents: () => [],
     };
     update = vi.fn();
     destroy = vi.fn();
@@ -515,6 +516,41 @@ describe('SSPlayer onAnimationStarted', () => {
   });
 });
 
+describe('event listeners', () => {
+  it('hear what the update reported though the first of them sets up an animation', () => {
+    const surface = new SSSurface(makeCanvas());
+    const player = surface.createPlayer();
+    const order: string[] = [];
+    const ip = player.internalPlayer as unknown as {
+      pollPlaybackEvents: () => { looped: boolean; finished: boolean };
+      runtimeManager: { capturePassedEvents: () => unknown[]; getEventsOf: () => unknown; getPartName: () => string };
+    };
+    ip.pollPlaybackEvents = () => ({ looped: true, finished: true });
+    ip.runtimeManager.capturePassedEvents = () => {
+      order.push('read');
+      return [{ source: 3 }];
+    };
+    ip.runtimeManager.getPartName = () => 'part';
+    ip.runtimeManager.getEventsOf = () => ({
+      frameIndex: () => 5,
+      usersLength: () => 1,
+      users: () => ({
+        partIndex: () => 0,
+        value: () => ({ integer: () => null, str: () => 'key', rect: () => null, point: () => null }),
+      }),
+      signalsLength: () => 0,
+      audiosLength: () => 0,
+    });
+    player.onAnimationFinished(() => order.push('finished'));
+    player.onAnimationLooped(() => order.push('looped'));
+    player.onUserData((event) => order.push(`user data ${event.str} from ${event.source}`));
+
+    (player as unknown as { pollEvents(): void }).pollEvents();
+
+    expect(order).toEqual(['read', 'finished', 'looped', 'user data key from 3']);
+  });
+});
+
 describe('onFrame', () => {
   // The Surface updates every player and then draws them, and the draw is what
   // evaluates a frame. A listener that ran before it read the world matrices of
@@ -530,13 +566,11 @@ describe('onFrame', () => {
       isHeld: boolean;
       update: () => void;
       evaluateDrawFrame: ReturnType<typeof vi.fn>;
-      runtimeManager: { context: { get_passed_event_count: () => number } };
     };
     ip.isPlaying = true;
     ip.isTicking = true;
     ip.update = () => order.push('update');
     ip.evaluateDrawFrame = vi.fn(() => order.push('evaluate'));
-    ip.runtimeManager.context.get_passed_event_count = () => 0;
     return { surface, player, ip, order };
   }
 

@@ -168,6 +168,20 @@ export class SSABResource {
     }
 }
 
+/**
+ * One event the last update reported, as {@link SSRuntimeManager.capturePassedEvents}
+ * took it. It names the entry rather than holding it, since the entry is a view
+ * into WASM memory; {@link SSRuntimeManager.getEventsOf} reads it.
+ */
+export interface SSPassedEvent {
+    readonly source: number;
+    readonly animationIndex: number;
+    readonly eventIndex: number;
+    readonly resource: SSABResource;
+}
+
+const NO_PASSED_EVENTS: readonly SSPassedEvent[] = Object.freeze([]);
+
 
 
 /** The context calls that change nothing a frame evaluates to. */
@@ -434,25 +448,43 @@ export class SSRuntimeManager {
     }
 
     /**
-     * The per-frame events entry the `index`-th passed event of the last update
-     * points at, or null.
+     * The events the last update reported. Take them before any listener runs:
+     * setting up an animation clears them in the runtime, and its source handles
+     * then name the new animation.
      *
-     * Looked up in the table of **the animation whose source fired it**, not the
-     * one set up: once a crossfade on track 0 hands the track to another
-     * animation, or an overlay is let fire, the index belongs to that animation's
-     * table, and reading it from the set-up one reports a different event or none.
+     * Each one remembers **the animation whose source fired it**, not the one set
+     * up: once a crossfade on track 0 hands the track to another animation, or an
+     * overlay is let fire, the index belongs to that animation's table, and reading
+     * it from the set-up one reports a different event or none.
      */
-    public getPassedEvents(index: number): EventsPerFrame | null {
-        if (!this.resource) return null;
-        const source = this.context.get_passed_event_source_handle(index);
-        const animationIndex = this.context.get_source_animation_index(source);
-        if (animationIndex === undefined) return null;
+    public capturePassedEvents(): readonly SSPassedEvent[] {
+        const resource = this.resource;
+        if (!resource) return NO_PASSED_EVENTS;
+        const count = this.context.get_passed_event_count();
+        if (count === 0) return NO_PASSED_EVENTS;
+        const passed: SSPassedEvent[] = [];
+        for (let i = 0; i < count; i++) {
+            const source = this.context.get_passed_event_source_handle(i);
+            const animationIndex = this.context.get_source_animation_index(source);
+            if (animationIndex === undefined) continue;
+            passed.push({ source, animationIndex, eventIndex: this.context.get_passed_event_index(i), resource });
+        }
+        return passed;
+    }
+
+    /**
+     * The per-frame events entry a captured event names, or null once a listener
+     * has bound another pack. The view is made here, because a listener can grow
+     * WASM memory, which detaches an older one.
+     */
+    public getEventsOf(event: SSPassedEvent): EventsPerFrame | null {
+        if (event.resource !== this.resource) return null;
         const ptr = this.context.get_ssab_buf();
         const len = this.context.get_ssab_len();
         if (ptr === 0 || len === 0) return null;
         const buf = new Uint8Array(getWasmMemory().buffer, ptr, len);
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(new flatbuffers.ByteBuffer(buf));
-        return ssab.animations(animationIndex)?.events(this.context.get_passed_event_index(index)) ?? null;
+        return ssab.animations(event.animationIndex)?.events(event.eventIndex) ?? null;
     }
 
     public getEffectParts(): { partIndex: number, hash: number, seed: number }[] {

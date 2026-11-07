@@ -366,14 +366,14 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
                 player.crossfade(0, anim, 4000);
                 const incoming = player.getTrackMainSource(0)!;
 
-                const ctx = player.runtimeManager.context;
+                const manager = player.runtimeManager;
                 const sources = new Set<number>();
                 let read = 0;
                 for (let i = 0; i < 119; i++) {
                     player.update(1000 / 30);
-                    for (let e = 0; e < ctx.get_passed_event_count(); e++) {
-                        sources.add(ctx.get_passed_event_source_handle(e));
-                        if (player.runtimeManager.getPassedEvents(e)) read++;
+                    for (const event of manager.capturePassedEvents()) {
+                        sources.add(event.source);
+                        if (manager.getEventsOf(event)) read++;
                     }
                 }
                 expect(sources.has(incoming)).toBe(true);

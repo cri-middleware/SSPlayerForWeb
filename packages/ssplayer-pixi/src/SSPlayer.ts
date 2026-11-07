@@ -1375,12 +1375,14 @@ export class SSPlayer extends Container {
      * Called from the ticker right after `internalPlayer.update()`, while the
      * runtime's passed-event buffer is still valid. Reads each event's payload
      * from the table of the animation whose source fired it (see
-     * SSRuntimeManager.getPassedEvents). Safe with no listeners / no animation.
+     * SSRuntimeManager.capturePassedEvents). Safe with no listeners / no animation.
      */
     private pollEvents(): void {
-        const ctx = this.internalPlayer.runtimeManager.context;
+        const mgr = this.internalPlayer.runtimeManager;
 
         const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
+        // Before any listener runs: one that sets up an animation clears them.
+        const passed = mgr.capturePassedEvents();
         if (finished && this._animFinishedListeners.size > 0) {
             this._animFinishedListeners.emit();
         }
@@ -1388,14 +1390,13 @@ export class SSPlayer extends Container {
             this._animLoopedListeners.emit();
         }
 
-        const count = ctx.get_passed_event_count();
-        if (count <= 0) return;
+        if (passed.length === 0) return;
         if (this._userDataListeners.size === 0 && this._signalListeners.size === 0 && this._audioListeners.size === 0) return;
 
-        for (let i = 0; i < count; i++) {
-            const events = this.internalPlayer.runtimeManager.getPassedEvents(i);
+        for (const event of passed) {
+            const events = mgr.getEventsOf(event);
             if (!events) continue;
-            const source = ctx.get_passed_event_source_handle(i);
+            const { source } = event;
             if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
             if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
 
