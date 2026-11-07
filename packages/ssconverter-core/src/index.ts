@@ -49,7 +49,16 @@ export function convertProject(
   options: ConvertOptions = {},
 ): ConvertResult {
   const { embedded = false, debug = false, split = false, optimize = true } = options;
-  return convert(files, embedded, debug, split, optimize);
+  // The converter matches names byte for byte, and a disk can hold in NFD a name
+  // the project's own files write in NFC.
+  const normalized = new Map<string, Uint8Array>();
+  for (const [path, bytes] of files) normalized.set(path.normalize('NFC'), bytes);
+  try {
+    return convert(normalized, embedded, debug, split, optimize);
+  } catch (e) {
+    // wasm-bindgen hands a conversion failure over as a bare string.
+    throw e instanceof Error ? e : new Error(String(e));
+  }
 }
 
 /** Converter build version string (`CARGO_PKG_VERSION` + short git sha). */
