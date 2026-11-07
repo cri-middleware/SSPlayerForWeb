@@ -73,7 +73,7 @@ pnpm add @spritestudio/ssplayer-webgl
 | `standalone` | 要素自身のキャンバスと WebGL コンテキストに描画します。下記を参照してください。 |
 | `max-dpr`、`power-preference`、`antialias`、`background`、`pause-when-hidden` | `standalone` の要素のコンテキストを設定します。接続時に一度だけ読み取られます。 |
 
-`src`、`animation`、`speed-scale`、`fit`、`align`、`flip-x`、`flip-y` は変更に反応します。`hidden` 属性を持つ要素は表示されません。`standalone` の要素では `pause-when-hidden` が既定で有効で、キャンバスが画面外にある間やタブが裏にある間は再生を止め、`pause-when-hidden="false"` で止めずに動かし続けます。オーバーレイの要素は、要素が画面外にある間はつねに止まります。
+`src`、`animation`、`speed-scale`、`fit`、`align`、`flip-x`、`flip-y` は変更に反応します。`hidden` 属性を持つ要素は表示されません。`standalone` の要素では `pause-when-hidden` が既定で有効で、キャンバスが画面外にある間やタブが裏にある間は再生を止め、`pause-when-hidden="false"` で止めずに動かし続けます。オーバーレイの要素は、要素が画面外にある間やタブが裏にある間はつねに止まります。
 
 **大きさとフィット。** アニメーションを合わせる箱は、パックを読み込んだときのアニメーションのオーサリング上のキャンバス(SpriteStudio で設定したキャンバスサイズ)です。`animation` を切り替えても箱は変わらないので、同じパックのアニメーション間でキャラクターの大きさは変わりません。ページが大きさを指定していない要素は、そのキャンバスと同じ大きさになります(キャンバスの 1 単位が CSS の 1px)。幅だけを指定した場合は、高さがキャンバスの縦横比で決まります。
 

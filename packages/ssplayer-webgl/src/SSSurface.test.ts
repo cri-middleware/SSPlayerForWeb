@@ -603,3 +603,19 @@ describe('onFrame', () => {
     expect(order).toEqual(['update']);
   });
 });
+
+describe('SSSurface.update', () => {
+  it('still ticks the next player when a listener destroys the one before it', () => {
+    const surface = Object.create(SSSurface.prototype) as SSSurface;
+    const players: { update: ReturnType<typeof vi.fn> }[] = [];
+    const first = { update: vi.fn(() => { players.splice(0, 1); }) };
+    const second = { update: vi.fn() };
+    players.push(first, second);
+    (surface as unknown as { players: unknown[] }).players = players;
+
+    surface.update(16);
+
+    expect(first.update).toHaveBeenCalledTimes(1);
+    expect(second.update).toHaveBeenCalledWith(16);
+  });
+});

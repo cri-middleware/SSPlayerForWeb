@@ -120,10 +120,41 @@ describe('<ss-player>', () => {
   it('logs a bad `animation` attribute set after load', async () => {
     const { el, errors } = await mount({ src: 'chara.ssab' });
     el.setAttribute('animation', 'nope');
+    await settle();
     expect(errors).toHaveLength(1);
     expect(consoleError).toHaveBeenCalledTimes(1);
     el.setAttribute('animation', 'run');
     expect(player.current).toBe('run');
+  });
+
+  it('takes `animation` from the pack a `src` set with it brings, in either order', async () => {
+    const { el, errors } = await mount({ src: 'chara.ssab' });
+
+    player.load.mockImplementation(async () => { player.names = ['anime_1']; });
+    el.setAttribute('src', 'other.ssab');
+    el.setAttribute('animation', 'anime_1');
+    await settle();
+    expect(errors).toEqual([]);
+    expect(player.current).toBe('anime_1');
+
+    player.load.mockImplementation(async () => { player.names = ['walk']; });
+    el.setAttribute('animation', 'walk');
+    el.setAttribute('src', 'third.ssab');
+    await settle();
+    expect(errors).toEqual([]);
+    expect(player.current).toBe('walk');
+  });
+
+  it('does not report a load that fails after the element is removed', async () => {
+    const { el, errors } = await mount({});
+    let fail!: (reason: unknown) => void;
+    player.load.mockImplementation(() => new Promise((_, reject) => { fail = reject; }));
+    el.setAttribute('src', 'chara.ssab');
+    el.remove();
+    fail(new TypeError('late'));
+    await settle();
+    expect(errors).toEqual([]);
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
   it('reports a failed wasm init once, and rejects `ready`', async () => {

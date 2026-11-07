@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, resolvePlacement, ssFormat, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, WebPlaybackDirection, WebPlaybackStyle, type SSAlign, type SSFit, type SSPartQuad, type SSPlacementBox } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, resolvePlacement, ssFormat, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, WebPlaybackDirection, WebPlaybackStyle, type SSPassedEvent, type SSAlign, type SSFit, type SSPartQuad, type SSPlacementBox } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 import type { SSTextureEntry } from './SSWebGLTextureCache.js';
 import type { SSSurface } from './SSSurface.js';
@@ -379,6 +379,7 @@ export class SSPlayer {
 
   public async load(ssabUrl: string): Promise<void> {
     await this.internalPlayer.load(ssabUrl);
+    if (this.internalPlayer.destroyed) return;
     this.configureContext();
     await this.ensureAutoAudio();
   }
@@ -901,6 +902,7 @@ export class SSPlayer {
     // still valid. Must run on the same tick that advanced — including the tick a
     // non-looping animation finishes on.
     this.pollEvents();
+    if (this.internalPlayer.destroyed) return;
 
     // Notify per-frame listeners, the point getPartTransform is valid for the new
     // frame. The update above only moved the playhead, and the Surface draws —
@@ -1168,7 +1170,7 @@ export class SSPlayer {
     if (finished && this._animFinishedListeners.size > 0) {
       this._animFinishedListeners.emit();
     }
-    if (looped && this._animLoopedListeners.size > 0) {
+    if (looped && this._animLoopedListeners.size > 0 && !this.internalPlayer.destroyed) {
       this._animLoopedListeners.emit();
     }
 
@@ -1178,23 +1180,25 @@ export class SSPlayer {
     for (const event of passed) {
       // Read from the table of the animation whose source fired it, which is
       // not the set-up one after a crossfade on track 0 or for an overlay.
-      const events = mgr.getEventsOf(event);
-      if (!events) continue;
-      const { source } = event;
-      if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
-      if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
+      if (this._userDataListeners.size > 0) this.dispatchUserData(event);
+      if (this._signalListeners.size > 0) this.dispatchSignals(event);
       // Audio keys are reported whichever way the playhead is walking — the
       // observation channel is not the playback. SpriteStudio has no reverse
       // audio, so it is the backend that gates on {@link isPlayingForward}
       // (SSWebAudioManager.bindToPlayer does).
-      if (this._audioListeners.size > 0) this.dispatchAudios(events, source);
+      if (this._audioListeners.size > 0) this.dispatchAudios(event);
     }
   }
 
-  private dispatchUserData(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchUserData(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.usersLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.usersLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      // Asked for afresh each time: a listener may have grown WASM memory, which
+      // detaches the view, bound another pack, or destroyed the player.
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const user = events.users(j);
       const val = user?.value();
       if (!user || !val) continue;
@@ -1212,10 +1216,13 @@ export class SSPlayer {
     }
   }
 
-  private dispatchSignals(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchSignals(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.signalsLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.signalsLength() ?? 0;
     for (let i = 0; i < n; i++) {
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const sig = events.signals(i);
       const val = sig?.value();
       if (!sig || !val) continue;
@@ -1260,10 +1267,13 @@ export class SSPlayer {
     }
   }
 
-  private dispatchAudios(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchAudios(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.audiosLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.audiosLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const audio = events.audios(j);
       const val = audio?.value();
       if (!audio || !val) continue;

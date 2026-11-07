@@ -233,7 +233,12 @@ export class SSSurface {
 
   /** Advance every player's timeline. Owned surfaces call this from their ticker. */
   public update(deltaMs: number): void {
-    for (const player of this.players) player.update(deltaMs);
+    // By index: a listener may destroy its own player, which takes it off this list.
+    for (let i = 0; i < this.players.length; i++) {
+      const player = this.players[i];
+      player.update(deltaMs);
+      if (this.players[i] !== player) i--;
+    }
   }
 
   /**

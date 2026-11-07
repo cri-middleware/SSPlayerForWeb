@@ -78,6 +78,8 @@ export class SSPlayerElement extends HTMLElement {
   // continuations (fetch, setAnimation) compare against it and bail if a newer
   // load started or the element was torn down — prevents races and use-after-destroy.
   private _loadToken = 0;
+  // A `src` load is out; it takes the `animation` attribute when it lands.
+  private _srcLoading = false;
 
   // Settles once the player is constructed (wasm ready), and REJECTS if that
   // never happens. Re-created on each connect so imperative callers can
@@ -161,7 +163,7 @@ export class SSPlayerElement extends HTMLElement {
       // A no-op once `ready` has resolved (a later loadSrc failure only reports
       // it); before that it reports the failure to the awaiter.
       readyReject(err);
-      this.fail(err);
+      if (token === this._loadToken) this.fail(err);
     }
   }
 
@@ -201,13 +203,24 @@ export class SSPlayerElement extends HTMLElement {
 
     switch (name) {
       case 'src':
-        if (newValue) this.loadSrc(newValue, ++this._loadToken).catch((err) => this.fail(err));
+        if (newValue) {
+          const token = ++this._loadToken;
+          this.loadSrc(newValue, token).catch((err) => {
+            if (token === this._loadToken) this.fail(err);
+          });
+        }
         break;
       case 'animation':
         // Reflected onto the player synchronously, so an unknown name throws right
-        // here — report it like the async paths do.
-        if (newValue && newValue !== player.currentAnimation) {
-          try { this.applyAnimation(newValue); } catch (err) { this.fail(err); }
+        // here — report it like the async paths do. While a pack loads, loadSrc
+        // takes the attribute from it; and a name this pack lacks may be for the
+        // pack a `src` set right after brings, so that one waits out this task.
+        if (newValue && newValue !== player.currentAnimation && !this._srcLoading) {
+          const apply = (): void => {
+            try { this.applyAnimation(newValue); } catch (err) { this.fail(err); }
+          };
+          if (player.getAnimationNames().includes(newValue)) apply();
+          else queueMicrotask(() => { if (this._player === player && !this._srcLoading) apply(); });
         }
         break;
       case 'speed-scale':
@@ -330,7 +343,12 @@ export class SSPlayerElement extends HTMLElement {
     const player = this._player;
     if (!player) return;
     // URL path: the facade fetches the ssab + its textures relative to the URL.
-    await player.load(src);
+    this._srcLoading = true;
+    try {
+      await player.load(src);
+    } finally {
+      if (token === this._loadToken) this._srcLoading = false;
+    }
     if (token !== this._loadToken) return;
 
     const anim = this.getAttribute('animation') ?? player.getAnimationNames()[0];

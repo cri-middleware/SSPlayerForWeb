@@ -83,7 +83,7 @@ The Custom Element is the quickest way to get started.
 `src`, `animation`, `speed-scale`, `fit`, `align`, `flip-x` and `flip-y` react when they change. An
 element with the `hidden` attribute is not displayed. A `standalone` element has `pause-when-hidden` on by default:
 playback stops while its canvas is off-screen or the tab is in the background, and
-`pause-when-hidden="false"` keeps it running. An overlay element always stops while it is off-screen.
+`pause-when-hidden="false"` keeps it running. An overlay element always stops while it is off-screen or the tab is in the background.
 
 **Size and fit.** The box the animation is fitted to is its authored canvas — the canvas size set in
 SpriteStudio — of the animation the pack was loaded on. It stays when `animation` changes, so a character
