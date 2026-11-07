@@ -42,4 +42,29 @@ describe('SSWebAudioManager', () => {
         expect(decodeAudioData).toHaveBeenCalledTimes(1);
         expect(Array.from(new Uint8Array(decodeAudioData.mock.calls[0][0]))).toEqual([1, 2, 3]);
     });
+
+    it('keeps no bytes once a sound is decoded, failed, or already in memory', async () => {
+        const decodeAudioData = vi.fn(async () => ({ duration: 1 }));
+        vi.stubGlobal('window', {
+            AudioContext: class {
+                state = 'running';
+                decodeAudioData = decodeAudioData;
+            },
+        });
+        const manager = new SSWebAudioManager();
+        const held = () => (manager as unknown as { soundBytes: Map<string, Uint8Array> }).soundBytes.size;
+        const hit = { name: 'hit', path: 'a/hit.mp3', bytes: new Uint8Array([1]) };
+
+        await manager.preload([hit]);
+        expect(held()).toBe(0);
+        await manager.preload([hit]);
+        expect(held()).toBe(0);
+        expect(decodeAudioData).toHaveBeenCalledTimes(1);
+
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+        decodeAudioData.mockRejectedValueOnce(new Error('bad data'));
+        await manager.preload([{ name: 'bad', path: 'a/bad.mp3', bytes: new Uint8Array([2]) }]);
+        expect(held()).toBe(0);
+        error.mockRestore();
+    });
 });

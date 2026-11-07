@@ -32,6 +32,9 @@ hold across a `setAnimation`: a `loopCount` of 3 still means three cycles after 
 `setAnimation` is synchronous: `load()` brings in everything the `.ssab` needs — those assets belong to
 the pack, not to one animation — so switching is only a runtime reset, with no loading to wait for.
 
+Only the last `load()` counts. One overtaken by another resolves without binding anything, so a page
+that switches packs quickly compares `player.internalPlayer.ssabUrl` with the URL it asked for before going on.
+
 Selecting the animation that is already selected does nothing at all — the playhead, section and
 overrides stay. To restart it, call `play()`. Only a real switch to another animation resets the
 section and `isFinished`.

@@ -107,7 +107,7 @@ export class SSWebAudioManager implements IAudioManager {
         // Build the lookup map
         for (const asset of sounds) {
             this.soundPaths.set(asset.name, asset.path);
-            if (asset.bytes) this.soundBytes.set(asset.name, asset.bytes);
+            if (asset.bytes && !this.buffers.has(asset.name)) this.soundBytes.set(asset.name, asset.bytes);
         }
         const promises = sounds.map(asset => this.loadSound(asset.name));
         await Promise.all(promises);
@@ -121,6 +121,7 @@ export class SSWebAudioManager implements IAudioManager {
 
         try {
             const bytes = this.soundBytes.get(soundName);
+            this.soundBytes.delete(soundName);
             let arrayBuffer: ArrayBuffer;
             if (bytes) {
                 // A copy of exactly these bytes: decodeAudioData detaches what it is given.
@@ -133,7 +134,6 @@ export class SSWebAudioManager implements IAudioManager {
             }
             const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
             this.buffers.set(soundName, audioBuffer);
-            this.soundBytes.delete(soundName);
         } catch (e) {
             console.error(`[SSWebAudioManager] Failed to load sound: ${soundName}`, e);
         }

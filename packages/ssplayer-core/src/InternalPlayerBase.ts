@@ -141,6 +141,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * instance packs always resolve relative to the SSAB's own location (the
      * structure that ssconverter emits) — there is no separate asset-base
      * override.
+     *
+     * Only the last `load()` or bind counts. One overtaken by another, or by
+     * {@link destroy}, resolves without binding anything, so compare
+     * {@link ssabUrl} before going on from it.
      * @param ssabUrl The URL of the SSAB file.
      */
     public async load(ssabUrl: string) {
