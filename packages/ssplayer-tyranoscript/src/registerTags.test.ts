@@ -682,6 +682,32 @@ describe('registerSSTags', () => {
     expect(clone.querySelector('.ss-player')).toBeNull();
   });
 
+  it('keeps a player whose layer was only moved', async () => {
+    const h = await withPlayer();
+    const [live] = FakeSSPlayer.instances;
+    const layer = live.element.parentElement!;
+
+    layer.parentElement!.append(layer);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getRegistry().names()).toEqual(['chr']);
+    expect(live.element.isConnected).toBe(true);
+    expect(layer.querySelector('canvas')).not.toBeNull();
+    expect(h.error).not.toHaveBeenCalled();
+  });
+
+  it('keeps the div of a player still loading on a layer that came back', async () => {
+    const h = await withPlayer();
+    const layer = FakeSSPlayer.instances[0].element.parentElement!;
+
+    // What a load does: the layer goes back in, and the restore mounts on it at once.
+    layer.parentElement!.append(layer);
+    h.fire('load-beforemaking');
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual(['chr']));
+
+    expect(FakeSSPlayer.instances.at(-1)!.element.isConnected).toBe(true);
+  });
+
   it('still restores through ss_restore on an engine with no event bus', async () => {
     const h = makeTyrano();
     delete (h.tyrano.kag as { on?: unknown }).on;

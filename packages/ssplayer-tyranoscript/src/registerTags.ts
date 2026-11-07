@@ -259,6 +259,13 @@ function gameResolution(kag: TyranoKag): { w: number; h: number } {
  */
 const overlays = new Map<string, SSOverlay>();
 
+/**
+ * The character divs and overlay canvases built here, as against the copies of them
+ * the engine makes of a layer's DOM for a save or a `[backlay]`. Not the registry:
+ * a player joins that only once its pack has loaded.
+ */
+const ownElements = new WeakSet<Element>();
+
 /** Get (or lazily create) the overlay that draws `layer`/`page`. */
 function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: number): SSOverlay {
   const key = `${layer}_${page}`;
@@ -276,6 +283,7 @@ function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: n
     maxDPR: Math.min(dpr, 2),
   });
   overlay.canvas.classList.add('ss-overlay');
+  ownElements.add(overlay.canvas);
   // A placement is stored in logical pixels but pushed to the renderer in
   // drawing-buffer pixels, and a resize changes the ratio between them. Without
   // this, every character on the layer drifts the first time the window is
@@ -386,6 +394,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio ?? 1;
 
   const element = createCharacterElement(layerEl, w, h, opts.name);
+  ownElements.add(element);
   // Apply visibility before the (awaited) load so a preloading `[ss_new
   // visible="false"]` never flashes on screen for a frame.
   void setElementVisible(element, opts.visible && !state.layerHidden, 0);
@@ -1589,12 +1598,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
     state.detachObserver = new MutationObserver((records) => {
       for (const record of records) {
-        // A layer the engine put in place is a clone, whose character divs and
+        // A layer the engine put in place may be a clone, whose character divs and
         // canvases draw nothing and would answer `[anim name=]`.
         for (const added of record.addedNodes) {
-          (added as Element).querySelectorAll?.('.ss-player, canvas.ss-overlay').forEach((el) => el.remove());
+          (added as Element).querySelectorAll?.('.ss-player, canvas.ss-overlay').forEach((el) => {
+            if (!ownElements.has(el)) el.remove();
+          });
         }
         for (const removed of record.removedNodes) {
+          // Moved rather than removed: it is back in the page by now.
+          if (removed.isConnected) continue;
           for (const name of registry.names()) {
             const entry = registry.get(name);
             if (!entry) continue;
