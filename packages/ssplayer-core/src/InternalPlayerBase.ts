@@ -82,6 +82,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // this, so the work of a pack no longer bound never marks the new one
     // ready or adds packs to its registry.
     private _bindGeneration: number = 0;
+    private _loadGeneration: number = 0;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
     private readonly _partState = new PartState();
@@ -143,7 +144,12 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * @param ssabUrl The URL of the SSAB file.
      */
     public async load(ssabUrl: string) {
+        // The last pack asked for wins, whichever answer arrives first, and a
+        // destroyed player binds nothing.
+        const generation = ++this._loadGeneration;
+        const superseded = (): boolean => generation !== this._loadGeneration || this._destroyed;
         const response = await fetch(ssabUrl);
+        if (superseded()) return;
         if (!response.ok) {
             // Name the URL that was asked for. Without it a 404 reads "Failed to
             // load SSAB: Not Found", which does not say *what* was not found —
@@ -153,6 +159,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             );
         }
         const buffer = await response.arrayBuffer();
+        if (superseded()) return;
 
         this.bindResource(new Uint8Array(buffer), ssabUrl);
         await this.prepareResources();
@@ -186,6 +193,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // bytes that are not a pack: a refused bind leaves the bound pack, and
         // the instances and effects set up on it, as they were.
         const resource = shared ? shared.resource : new SSABResource(buffer);
+        this._loadGeneration++;
         // Recorded on this path too, not just in load(): a host that fetches
         // the bytes itself (ssplayer-rmmz does, for a better error message)
         // would otherwise leave `ssabUrl` empty for a pack that plainly has
@@ -404,7 +412,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
             const base = this._assetBaseUrl;
             const prefix = base && !base.endsWith('/') ? base + '/' : base;
-            await audio.preload(sounds.map(s => ({ name: s.name, path: prefix + s.path })));
+            // Embedded bytes are views over WASM memory, so they are copied before the
+            // awaited decode: a grow on any context would detach them.
+            await audio.preload(sounds.map(s => ({
+                name: s.name,
+                path: prefix + s.path,
+                ...(s.bytes ? { bytes: s.bytes.slice() } : {}),
+            })));
         } catch (e) {
             // Retryable: forget the attempt rather than pinning this manager
             // to a preload that never completed.
@@ -2216,6 +2230,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     protected abstract createChildPlayer(resourceManager?: IResourceManager): T;
 
     private _destroyed = false;
+
+    /** @internal Whether {@link destroy} has run; a listener may have called it mid-tick. */
+    public get destroyed(): boolean {
+        return this._destroyed;
+    }
 
     public destroy() {
         // Idempotent: a second destroy() would re-enter stop() after

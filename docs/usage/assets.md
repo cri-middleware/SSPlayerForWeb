@@ -61,7 +61,7 @@ Dropping a folder onto the drop zone uses the **File System Access API**, so it 
 2. Drag and drop a **project folder** onto the drop zone, or pick one with `Browse...`.
    - The folder must contain **exactly one** `.sspj` (zero or multiple is an error).
    - Hidden files such as `.DS_Store` are ignored.
-3. Check **Embedded Assets** if needed (embed textures into the `.ssab`; see below).
+3. Check **Embedded Assets** if needed (embed textures and sounds into the `.ssab`; see below).
 4. Press **⚡ Convert & Download** to convert and auto-download the ZIP.
 
 WASM initialization and conversion progress show up in the status badge, with details
@@ -72,7 +72,7 @@ in the log pane (which also reports the converter version and ssab schema versio
 | Mode | ZIP name | Root folder | Contents |
 |---|---|---|---|
 | Normal | `<name>_<timestamp>.zip` | `<name>/` | `.ssab` (+ `.ssqb`) + referenced textures |
-| Embedded | `<name>_emb_<timestamp>.zip` | `<name>_emb/` | textures embedded in the `.ssab` (no separate files) |
+| Embedded | `<name>_emb_<timestamp>.zip` | `<name>_emb/` | textures and sounds embedded in the `.ssab` (no separate files) |
 
 Extract the downloaded ZIP and place the `.ssab` (and, in Normal mode, its textures)
 where you serve them ([Placement and texture resolution](#placement-and-texture-resolution)).
@@ -215,7 +215,7 @@ old source rectangles in place and the artwork shifts.
 
 - Place the generated `.ssab` and the texture images output alongside it somewhere your web server can serve as the application's static assets.
 - Texture images are loaded from the same directory as the `.ssab` (the structure ssconverter emits). Keep them next to the `.ssab`, or in a subdirectory the `.ssab` references — there is no option to point them at an unrelated directory.
-- An `.ssab` converted in **Embedded** mode contains its textures inside the file, so no separate image placement is needed. Having everything in a single file makes the asset convenient to manage.
+- An `.ssab` converted in **Embedded** mode contains its textures and sounds inside the file, so no separate placement is needed. Having everything in a single file makes the asset convenient to manage.
 
 ### Caching and replacement
 
@@ -257,7 +257,7 @@ It is a good fit for a one-off banner, or a single character that shares its atl
 and version the folder instead.
 :::
 
-Note that embedding covers **textures only**. The packs an Instance part plays are still fetched
+Note that embedding does not cover other packs. The packs an Instance part plays are still fetched
 separately, as `<base URL>/<pack name>.ssab`, so embedding does not reduce the request to one — ship
 a parent and its referenced packs as a set. The choice is also made per *texture*, not per pack: any
 texture without embedded bytes is still fetched by URL, so in a partly embedded pack everything in

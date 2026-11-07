@@ -26,13 +26,14 @@ const converted = new Map<string, Promise<Map<string, Uint8Array>>>();
  * project for the whole suite, since conversion is the slow part, so read the
  * packs and never change them.
  */
-export function convert(project: string): Promise<Map<string, Uint8Array>> {
-    let packs = converted.get(project);
-    if (!packs) converted.set(project, packs = convertNow(project));
+export function convert(project: string, options: { embedded?: boolean } = {}): Promise<Map<string, Uint8Array>> {
+    const key = `${project}|${options.embedded ?? false}`;
+    let packs = converted.get(key);
+    if (!packs) converted.set(key, packs = convertNow(project, options));
     return packs;
 }
 
-async function convertNow(project: string): Promise<Map<string, Uint8Array>> {
+async function convertNow(project: string, options: { embedded?: boolean }): Promise<Map<string, Uint8Array>> {
     await initConverter(readFileSync(CONVERTER_WASM));
     const files = new Map<string, Uint8Array>();
     // Recursive: overall keeps its fonts in a folder of their own.
@@ -44,7 +45,7 @@ async function convertNow(project: string): Promise<Map<string, Uint8Array>> {
         }
     };
     walk(project, nodePath.basename(project));
-    const result = convertProject(files);
+    const result = convertProject(files, options);
     try {
         return new Map(result.output as Map<string, Uint8Array>);
     } finally {

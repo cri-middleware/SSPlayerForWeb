@@ -146,7 +146,12 @@ export class SSABResource {
                 `(got ${data.length} bytes). The .ssab may be truncated, the wrong file, or a different format.`,
             );
         }
-        this.raw = new SSRuntimeResource(data);
+        try {
+            this.raw = new SSRuntimeResource(data);
+        } catch (e) {
+            // wasm-bindgen hands a refusal (the schema version, say) over as a bare string.
+            throw e instanceof Error ? e : new Error(`[SSPlayer] ${String(e)}`);
+        }
         // 3rd arg is the unregister token; without it destroy()'s unregister(this)
         // is a no-op and the GC finalizer would double-free the raw handle.
         finalizationRegistry.register(this, this.raw, this);
@@ -474,11 +479,12 @@ export class SSRuntimeManager {
 
     /**
      * The per-frame events entry a captured event names, or null once a listener
-     * has bound another pack. The view is made here, because a listener can grow
-     * WASM memory, which detaches an older one.
+     * has bound another pack or destroyed the player. Read it before calling the
+     * next listener and ask again after: a listener can grow WASM memory, which
+     * detaches this view.
      */
     public getEventsOf(event: SSPassedEvent): EventsPerFrame | null {
-        if (event.resource !== this.resource) return null;
+        if (!this.context || event.resource !== this.resource) return null;
         const ptr = this.context.get_ssab_buf();
         const len = this.context.get_ssab_len();
         if (ptr === 0 || len === 0) return null;
@@ -1025,12 +1031,22 @@ export class SSRuntimeManager {
     /**
      * Parse the SSAB buffer and list all referenced sound assets (name and path).
      * Useful for preloading audio files via the Web Audio API.
+     *
+     * A sound the `.ssab` embeds also carries its `bytes`, as a view over
+     * `ssabBuffer` — consume or copy it before that buffer is detached or freed.
      */
     public static extractSounds(ssabBuffer: Uint8Array): SoundAsset[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
         // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
         if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const embedded = new Map<number, Uint8Array>();
+        for (let i = 0; i < ssab.embeddedAssetsLength(); i++) {
+            const asset = ssab.embeddedAssets(i);
+            const data = asset?.dataArray();
+            if (asset && data) embedded.set(asset.nameHash() >>> 0, data);
+        }
+
         const seen = new Set<string>();
         const out: SoundAsset[] = [];
         for (let i = 0; i < ssab.soundListsLength(); i++) {
@@ -1042,7 +1058,8 @@ export class SSRuntimeManager {
                 const path = soundFile?.filePath();
                 if (name && path && !seen.has(name)) {
                     seen.add(name);
-                    out.push({ name, path });
+                    const bytes = embedded.get(soundFile!.filePathHash() >>> 0);
+                    out.push(bytes ? { name, path, bytes } : { name, path });
                 }
             }
         }
