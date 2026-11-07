@@ -17,7 +17,7 @@ import {
  * outright: the instance part and the sub-animation part are combined, with
  * AND for mask_influence and OR for visible_inside_mask. And only the instance
  * part directly above takes part — what it inherited itself does not chain
- * down (SpriteStudio 7.5). The tests cover the combinations where a "callee
+ * down (SpriteStudio 7.6). The tests cover the combinations where a "callee
  * wins" fallback, or a chained composition, would disagree.
  */
 
