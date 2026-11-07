@@ -7,7 +7,7 @@
 //
 // Only the instance part DIRECTLY above takes part, and it always does, whether
 // or not anything above it masks. What that instance part itself inherited from
-// further up does not chain down: SpriteStudio 7.5 draws a mask_influence == 0
+// further up does not chain down: SpriteStudio 7.6 draws a mask_influence == 0
 // instance's own parts unmasked while the parts of the instances inside it are
 // still judged on their own instance parts. Chaining the composed value down
 // (AND- / OR-absorbing through every level) disagrees with that, and so does a

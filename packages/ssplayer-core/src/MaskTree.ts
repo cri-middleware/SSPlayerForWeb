@@ -36,7 +36,7 @@ interface ChildSnapshot<T> {
 }
 
 /**
- * One mask set for a whole instance tree. SpriteStudio 7.5 masks as if every
+ * One mask set for a whole instance tree. SpriteStudio 7.6 masks as if every
  * draw of the tree went through one stencil, in one sequence: a sub-animation is
  * drawn in its instance part's place. So each writer holds over an open interval
  * of that sequence:

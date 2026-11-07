@@ -10,7 +10,7 @@ import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPart
  * These are source assertions — neither shader can be executed here, so they
  * pin the structure rather than the pixels. What they do catch is the exact
  * regression the split fixes: someone collapsing the two accumulators back into
- * one. Actual coverage still has to be confirmed against SpriteStudio 7.5 with
+ * one. Actual coverage still has to be confirmed against SpriteStudio 7.6 with
  * three overlapping writers (two only ever agree).
  */
 
