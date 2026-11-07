@@ -54,8 +54,7 @@ export interface MaskPlanSource {
  * draw rank, packed bit, OP (increment/invert), clipping flag, cutout texture
  * hash + threshold, geometry kind, and the replay `meta`. The renderer owns the
  * GPU-specific parts (offscreen target, shaders, vertex buffers); this owns the
- * selection/classification logic, which is identical across engines (cf. Unity
- * `SpriteStudioMaskPlanner`).
+ * selection/classification logic, which is identical across engines.
  *
  * Output is reusable SoA, valid until the next `plan()` call. `bit === index`,
  * so writer `w`'s coverage bit is `w`.

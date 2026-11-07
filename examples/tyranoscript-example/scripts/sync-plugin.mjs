@@ -10,10 +10,7 @@
 //
 // `init.ks` is synced — not hand-maintained here — because it is the plugin's
 // canonical loader, and this example exists to demonstrate exactly what a real
-// project gets. When it was maintained by hand it silently drifted: the copy
-// here lost the `[ss_init]` line, so the runtime was never started and every
-// `[ss_new]` failed with "call [ss_init] before creating players". Syncing it
-// makes that class of drift impossible.
+// project gets.
 import { copyFile, mkdir, access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

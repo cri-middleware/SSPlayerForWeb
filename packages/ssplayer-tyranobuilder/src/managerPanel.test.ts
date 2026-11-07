@@ -44,8 +44,7 @@ describe('panelHtml', () => {
   });
 
   it('shows the build line once the converter has reported it', () => {
-    // The line an author copies into a bug report — both formats, as
-    // SSConverterGUI's footer does.
+    // The line an author copies into a bug report: both formats.
     const html = panelHtml(identity, content({ version: 'converter 7.0.0 (ssab v1, ssqb v1)' }));
     expect(html).toContain('converter 7.0.0 (ssab v1, ssqb v1)');
   });

@@ -284,8 +284,7 @@ describe('SSPlayer box', () => {
     const player = surface.createPlayer();
 
     const m = player.renderTransform();
-    // [m00, m01, m10, m11, tx, ty] — centred means tx/ty are the box centre, which
-    // is what removed the manual half-canvas maths every host used to carry.
+    // [m00, m01, m10, m11, tx, ty] — centred means tx/ty are the box centre.
     expect(m[4]).toBe(400);
     expect(m[5]).toBe(300);
   });

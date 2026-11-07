@@ -77,8 +77,6 @@ async function main(): Promise<void> {
   let player = mounted.player;
   backendNote.textContent = mounted.backend;
 
-  // The seek bar, the marker strip and the event list, ported from
-  // SSPlayerForWgpu's preview shell so both previews read the same way.
   const timeline = new Timeline(player, {
     playPause: $<HTMLButtonElement>('playPause'),
     restart: $<HTMLButtonElement>('restart'),

@@ -189,7 +189,6 @@ $manifestData = Get-Content $MANIFEST -Raw | ConvertFrom-Json
 $LATEST = $manifestData.latest
 
 New-Item -ItemType Directory -Force -Path (Join-Path $OUT "ssconverter") | Out-Null
-# Expose the manifest to the site so the app can render a version switcher.
 Copy-Item $MANIFEST (Join-Path $OUT "ssconverter/versions.json") -Force
 
 try {

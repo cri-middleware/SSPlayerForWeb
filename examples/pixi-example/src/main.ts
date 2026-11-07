@@ -36,7 +36,7 @@ async function main() {
     // 1. Setup PixiJS Application
     const app = new Application();
     // Opaque background. The SpriteStudio backdrop-reading blend modes (Screen /
-    // Exclusion / Invert) are now real fixed-function GPU blends that read the live
+    // Exclusion / Invert) are real fixed-function GPU blends that read the live
     // framebuffer, so this background IS the backdrop they composite against — e.g.
     // Invert/Exclusion over this blue invert it toward yellow, matching the editor.
     await app.init({ width: 1280, height: 960, backgroundColor: 0x1a1a2e, preference: 'webgpu' });

@@ -2,9 +2,9 @@
 // runs on project open (`@spritestudio/ssconverter-importer`), run where RPG
 // Maker MZ gives a plugin a filesystem — the NW.js of a test play.
 //
-// The MZ editor is a native application a plugin cannot reach, so the moment
-// Ren'Py's developer-mode launch stands for is the start of a test play (event
-// and battle tests included). One pass there converts every project under
+// The MZ editor is a native application a plugin cannot reach, so conversion
+// happens at the start of a test play (event and battle tests included). One pass
+// there converts every project under
 // `SpriteStudio_Source/` that changed since its last successful import into
 // `spritestudio/<stem>/`, the folder the plugin commands already load from,
 // and holds the boot screen until it is done. F5 restarts the game, so saving

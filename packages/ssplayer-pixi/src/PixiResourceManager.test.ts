@@ -32,8 +32,8 @@ vi.mock('pixi.js', () => ({
       assetsState.cache.set(url, tex);
       return tex;
     },
-    // Present so that a regression reintroducing the unload-on-destroy bug fails
-    // on the assertion about shared state, not on a missing mock method.
+    // Present so that unloading on destroy fails on the assertion about shared
+    // state, not on a missing mock method.
     unload: async (url: string) => { assetsState.cache.delete(url); },
   },
   Texture: class {
@@ -89,8 +89,7 @@ describe('URL-loaded textures live in the shared Assets cache', () => {
 
     a.destroy();
 
-    // The regression this guards: destroy() used to Assets.unload() the hash,
-    // blanking out every other player that had loaded the same atlas.
+    // Assets.unload() here would blank every other player on the same atlas.
     expect(b.getTexture(0x1111)).toBe(shared);
     expect((shared as unknown as FakeTexture).destroyed).toBe(false);
   });

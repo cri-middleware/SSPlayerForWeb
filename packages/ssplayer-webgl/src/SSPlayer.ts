@@ -8,7 +8,7 @@ import type { SSSurface } from './SSSurface.js';
 // SSAB events table for the current animation via the runtime manager's
 // introspection accessors, parses the FlatBuffer payloads, and dispatches typed
 // callbacks. Driven once per frame from update() (see pollEvents). Mirrors
-// ssplayer-pixi/src/SSPlayer.ts (memory: events-handled-in-pixi-not-core).
+// ssplayer-pixi/src/SSPlayer.ts.
 
 /**
  * A user-data event fired by a part on the frame it was authored. Optional
@@ -40,7 +40,7 @@ export interface SSUserDataEvent {
 /**
  * A signal event fired by a part. `params` maps each command parameter id to
  * its authored value (bool / int / float / string). Only **active** signals are
- * dispatched (mirroring the Godot / Unity players).
+ * dispatched.
  */
 export interface SSSignalEvent {
   partIndex: number;
@@ -449,8 +449,7 @@ export class SSPlayer {
   // Four distinct verbs, passed straight through to the core (and so to the
   // runtime, which owns the state machine). Nothing is mirrored on this object:
   // a copy of "am I playing" is exactly what drifts from the runtime the first
-  // time a call is a no-op there — `resume()` on a stopped animation being the
-  // one that used to leave this player reporting itself as playing forever.
+  // time a call is a no-op there, such as `resume()` on a stopped animation.
 
   /** Head-out: rewinds to the section start (or `startFrame`) and re-arms the loop count. */
   public play(startFrame?: number): void {
@@ -545,8 +544,8 @@ export class SSPlayer {
    * {@link getPlaybackDirection} still reads Forward.
    *
    * Gate an audio backend on this: SpriteStudio has no reverse audio, so
-   * {@link onAudio} still reports every key it crosses (as the Godot and Unity
-   * players do) and it is the *playing* that has to be suppressed.
+   * {@link onAudio} still reports every key it crosses and it is the *playing*
+   * that has to be suppressed.
    */
   public get isPlayingForward(): boolean { return this.internalPlayer.isPlayingForward; }
 
@@ -629,7 +628,7 @@ export class SSPlayer {
   // the stack back to track 0, so lay the tracks again after it. Nothing needs
   // repainting: the Surface draws every frame.
 
-  /** Number of tracks, empty ones included; 0 before an animation is set up. */
+  /** Number of tracks, empty ones included; always at least 1. */
   public get trackCount(): number { return this.internalPlayer.trackCount; }
 
   /** Put an animation on `track` with no fade. On track 0 it becomes {@link currentAnimation} at once. */
@@ -1187,9 +1186,7 @@ export class SSPlayer {
       // Audio keys are reported whichever way the playhead is walking — the
       // observation channel is not the playback. SpriteStudio has no reverse
       // audio, so it is the backend that gates on {@link isPlayingForward}
-      // (SSWebAudioManager.bindToPlayer does), exactly as the Godot and Unity
-      // players do. Suppressing the event instead used to hide the key from
-      // hosts doing something other than playing a sound with it.
+      // (SSWebAudioManager.bindToPlayer does).
       if (this._audioListeners.size > 0) this.dispatchAudios(events, source);
     }
   }
@@ -1222,7 +1219,6 @@ export class SSPlayer {
       const sig = events.signals(i);
       const val = sig?.value();
       if (!sig || !val) continue;
-      // Only active signals are dispatched (mirrors the Godot / Unity players).
       if (!val.active()) continue;
 
       const params: Record<string, boolean | number | string> = {};

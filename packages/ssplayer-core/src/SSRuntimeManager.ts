@@ -523,8 +523,7 @@ export class SSRuntimeManager {
      * effect particle slots. Shared by playback `update()` and `seekTo()`.
      */
     /**
-     * Jump the playhead and re-evaluate effects for that frame, mirroring the
-     * Godot player's `_seek_and_redraw(frame, delta=0, parent_looped=false)`.
+     * Jump the playhead and re-evaluate effects for that frame.
      * Effect slots are otherwise only advanced during playback `update()`, so
      * without this a seek would leave particles frozen at their last frame.
      * delta_seconds = 0 means dependent effects snap deterministically to the
@@ -1050,12 +1049,6 @@ export class SSRuntimeManager {
         return out;
     }
 
-    // NOTE: Sequence (.ssqb / SsSequenceBinary) introspection is intentionally
-    // not provided here yet (deferred). When added, mirror the SSAB extractors
-    // above against the already-exported `ssFormat.SsSequenceBinary` (e.g. a
-    // static `extractSequenceNames(ssqbBuffer)`); the schema class is in place,
-    // so it is purely additive.
-
     public setCoordinateSystem(system: WebCoordinateSystem) {
         this.context.set_coordinate_system(system);
     }
@@ -1080,10 +1073,8 @@ export class SSRuntimeManager {
             const start = this.context.get_start_frame();
             const end = this.context.get_end_frame();
             const clamped = frame < start ? start : (frame > end ? end : frame);
-            // One evaluation per frame. The old buf/len pair each ran a full
-            // get_frame_data, so this path cost the Brain twice every frame;
-            // prepare_frame_data builds it and returns the length, and the
-            // pointer is then a pure read of what was just built.
+            // One evaluation per frame: prepare_frame_data builds it and returns the
+            // length, and the pointer is then a pure read of what was just built.
             const len = this.context.prepare_frame_data(clamped);
             this._evaluatedFrame = len > 0 ? frame : NaN;
             return len;

@@ -5,8 +5,7 @@ import { SSRuntimeManager } from '../src/SSRuntimeManager.js';
 // Selecting the animation that is already selected does nothing: there is no
 // switch to make, so the playhead stays, the instance tree is not rebuilt, and
 // the override layer survives. That is what lets a state machine call
-// `setAnimation(state.clip)` every frame without paying a context reset for it,
-// and it is what ForGodot and ForRen'Py have always done.
+// `setAnimation(state.clip)` every frame without paying a context reset for it.
 //
 // The trap this suite exists for is the OTHER half of the rule: "the same name"
 // has to mean "already set up on the pack that is bound NOW". Bind a different

@@ -97,8 +97,7 @@ export function decomposePartAffine(a: ArrayLike<number>): SSDecomposedTransform
 // --- Follower ------------------------------------------------------------
 //
 // Which parts are being followed, by what, and whether we were the one that
-// hid a target — none of that is engine-specific, and it was written out twice
-// (ssplayer-pixi and ssplayer-rmmz) with the same edge cases each time. What IS
+// hid a target — none of that is engine-specific. What IS
 // engine-specific is a single step: writing a transform onto a display object.
 // So the bookkeeping lives here and the host supplies the write.
 

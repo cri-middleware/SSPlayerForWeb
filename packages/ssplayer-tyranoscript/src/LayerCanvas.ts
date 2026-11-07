@@ -14,7 +14,7 @@ import type { TyranoKag } from './tyranoTypes.js';
  * `(layer, page)` owns the single canvas that draws every SS character on that
  * layer and positions each one from its div's rect. That is what keeps the WebGL
  * context count at "layers in use" rather than "characters on screen" — browsers
- * allow only about 8-16 contexts, which a cast of characters used to exhaust.
+ * allow only about 8-16 contexts, which a cast of characters would exhaust.
  *
  * Keeping a real element per character is not incidental. TyranoScript
  * identifies a named element purely by a CSS class (`$.setName` is

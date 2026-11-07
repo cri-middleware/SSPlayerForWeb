@@ -182,13 +182,11 @@ export interface SSPartOverrideStoreAccess {
 }
 
 /**
- * The three-step dance every host was writing by hand: change the stored list,
- * change the live runtime, and keep the two consistent when an animation change
- * makes the runtime drop overrides behind your back.
- *
- * Doing it by hand is what made a whole class of bug possible — an override that
- * survives in a save but not on screen, or the reverse. The methods here are
- * named for the *intent* so the choice that actually matters is explicit:
+ * Keeps the stored override list and the live runtime in step: both change
+ * together, including when an animation change makes the runtime drop overrides.
+ * Out of step, an override survives in a save but not on screen, or the reverse.
+ * The methods here are named for the *intent* so the choice that actually
+ * matters is explicit:
  *
  * - the author asked for a different animation → {@link pruneForNewAnimation},
  *   because the runtime discarded all but the Permanent overrides and the stored
@@ -197,8 +195,8 @@ export interface SSPartOverrideStoreAccess {
  *   lip-sync talk/idle swap) → {@link reapply}, because the author's overrides
  *   were collateral damage and should go straight back.
  *
- * Getting that pair the wrong way round is exactly the bug fixed in
- * ssplayer-rmmz's `messageTalk`.
+ * The wrong one either resurrects overrides the runtime dropped or loses ones
+ * the author set.
  */
 export class SSPartOverrideStore {
     constructor(private readonly access: SSPartOverrideStoreAccess) {}

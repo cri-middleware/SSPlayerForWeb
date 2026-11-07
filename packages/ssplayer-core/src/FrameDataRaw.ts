@@ -13,8 +13,7 @@ import { DrawBatch } from './ss/runtime/draw-batch.js';
  * FlatBuffers *structs* (fixed layout, contiguous, no vtable). Reading them
  * through the generated per-element accessors — e.g. the nested
  * `frameData.partsColor(i).lt().rgba().r()` chain, once per corner per part,
- * every frame — is the dominant frame-data cost in high-level hosts (the doc
- * measured ~7ms → ~0.27ms, ~26x, on 100 bodies in Unity/C#). The cost is the
+ * every frame — is the dominant frame-data cost in high-level hosts. The cost is the
  * accessors themselves (object `__init`, method calls, and flatbuffers'
  * `readFloat32` which reassembles the value from 4 byte reads), not the copy —
  * so a "zero-copy ByteBuffer" does NOT help; the fix is to bypass the accessors.
@@ -140,8 +139,7 @@ export class FrameDataRaw {
     /**
      * Read one PartsColor corner (cornerIdx 0=LT,1=RT,2=LB,3=RB) into caller
      * scratch: `outColors[cornerIdx*4 + 0..3]` = r,g,b,a normalised to 0..1,
-     * `outRates[cornerIdx]` = rate. Corners are always present in the struct, so
-     * this mirrors the old readCorner's populated path exactly.
+     * `outRates[cornerIdx]` = rate.
      */
     public readCornerInto(pcIdx: number, cornerIdx: number, outColors: Float32Array, outRates: Float32Array): void {
         const dv = this._dv!;

@@ -13,9 +13,9 @@
 #               earlier line: not Latest, and the site stays as it is.
 #
 # A tag is its package's prefix -- `v`, or `<package>-v` where packages are
-# versioned apart -- then the version. A prerelease has a `-` (7.0.0-beta.1) or,
-# as Ren'Py writes them, `a`, `b` or `rc` (7.0.0b1). Tags before 7.0 are the
-# previous generation (SSPlayerForGodot's 1.x) and are not counted. The caller
+# versioned apart -- then the version. A prerelease has a `-` (7.0.0-beta.1) or
+# `a`, `b` or `rc` (7.0.0b1). Tags before 7.0 are the previous generation and are
+# not counted. The caller
 # fetches the tags; this reads only what is local.
 set -euo pipefail
 

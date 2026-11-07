@@ -1,18 +1,12 @@
-// The transport, the marker strip and the event list.
-//
-// Ported from the self-contained preview shell in
-// [SSPlayerForWgpu](https://github.com/cri-middleware/SSPlayerForWgpu)
-// (`examples/preview/shell.html`, and the reasoning in its `PREVIEW.md`), so
-// the two previews read the same way: a seek bar, a strip of markers under it
-// in the same coordinate space, and a list of frame / kind / part / payload.
-// Clicking either seeks; the marker for a frame the playhead just crossed
+// The transport, the marker strip and the event list: a seek bar, a strip of
+// markers under it in the same coordinate space, and a list of frame / kind /
+// part / payload. Clicking either seeks; the marker for a frame the playhead just crossed
 // flashes, so the static picture and the live pulse are visibly the same thing.
 //
 // **The strip fills itself from playback.** There is no "list every event this
 // animation authors" call to fill it from, and deliberately: the web player
 // exposes events only as `onUserData` / `onSignal` / `onAudio` subscriptions,
-// which is the precedent SSPlayerForWgpu cites for not growing one either — a
-// viewer-shaped API is a cost every face pays forever, for one caller. What
+// and a viewer-shaped API is a cost every face pays forever, for one caller. What
 // the pulse gives instead is complete: the runtime reports every frame a tick
 // stepped across, not merely the one it landed on, so one pass over the
 // animation is the whole table at any frame rate. The honest cost is that a

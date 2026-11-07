@@ -15,9 +15,7 @@
 #
 # Documentation only, in the sense that this is all the docs need: the other
 # scripts here build and release the player. The -docs suffix keeps the two
-# apart, and every repository in the SpriteStudio family spells this pair the
-# same way -- even though this one wraps pnpm where the others wrap a Python
-# virtualenv, because this site is VitePress rather than Zensical.
+# apart.
 #
 # Then: scripts/build-docs.ps1, which runs TypeDoc and VitePress.
 $ErrorActionPreference = "Stop"

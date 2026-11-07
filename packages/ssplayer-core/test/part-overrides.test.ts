@@ -3,8 +3,7 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 import { SSBlendOp, SSOverridePriority } from '../src/PartOverride.js';
 
 // The override methods only translate arguments and marshal the WASM boundary's
-// throw-on-reject into the boolean contract shared with the Godot / Unity
-// players, so they can be pinned against a fake context without booting WASM.
+// throw-on-reject into a boolean, so they can be pinned against a fake context without booting WASM.
 // `hashString` is the one real WASM call in the path — stubbed here so the cell
 // override can be exercised too (the hash values themselves are the runtime's
 // concern, pinned on its side).

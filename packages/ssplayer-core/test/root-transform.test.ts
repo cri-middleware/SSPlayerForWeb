@@ -62,7 +62,7 @@ function makePlayer(parts: Record<string, { index: number; world: number[] }>) {
 const HAND = [0.75, -0.5, 0.5, 0.75, 120, -48];
 // A part that is ALREADY mirrored in the animation — negative determinant before
 // the player flips anything. Not a contrived case: mirrored parts are common in
-// real assets (the SDK's render-loop notes count 8 of Ringo's 69).
+// real assets.
 const MIRRORED = [-1, 0, 0, 1, 40, 10];
 
 describe('root affine resolution', () => {
@@ -99,8 +99,7 @@ describe('root affine resolution', () => {
         expect(Array.from(player.getRootAffine()!)).toEqual([1, 0, 0, 1, 30, -12]);
 
         // The offset is applied AFTER the flip (p' = S*p + O), so flipping does
-        // not send the artwork off in the other direction — matching Godot's
-        // Transform2D root and Unity's RootScale / RootOffset.
+        // not send the artwork off in the other direction.
         player.flipX = true;
         player.flipY = true;
         expect(Array.from(player.getRootAffine()!)).toEqual([-1, 0, 0, -1, 30, -12]);
@@ -190,7 +189,7 @@ describe('getPartTransform under a root transform', () => {
 });
 
 describe('mirroring composes rather than being set', () => {
-    // The SDK's render-loop notes warn about this: whether a part is mirrored is
+    // Whether a part is mirrored is
     // the PRODUCT of the mirroring already in the animation and the player's
     // flip, so two mirrorings cancel. Code must not infer the sign from "the
     // player is flipped" — these pin the behaviour that makes that true.

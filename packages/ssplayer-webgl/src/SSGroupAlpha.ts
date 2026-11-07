@@ -38,7 +38,7 @@ void main() {
  * result transparent. So that is what this does — render the player opaque into
  * an offscreen texture, then composite that texture once at the player's alpha.
  * Overlaps inside the character are resolved at full opacity first, exactly as
- * CSS opacity on a canvas used to do before characters stopped owning canvases.
+ * CSS opacity on a canvas does.
  *
  * Only players with `alpha < 1` take this path; anything fully opaque draws
  * straight to the target and pays nothing.

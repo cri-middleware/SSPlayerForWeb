@@ -7,15 +7,12 @@
 #   scripts/build-docs.ps1 api=no                # skip TypeDoc; prose changes only
 #   scripts/build-docs.ps1 base=/SSPlayerForWeb/ # what pages.yml passes
 #
-# Three things worth knowing, all of which differ from the sibling repositories:
+# Three things worth knowing:
 #
 #   1. One build, both locales. VitePress resolves `docs/ja` through its own i18n
-#      support, so there is no locale option here and no order to get right --
-#      the Zensical siblings need one build per locale precisely because they
-#      have neither.
+#      support, so there is no locale option here and no order to get right.
 #   2. Dead links fail the build. VitePress checks them by default and the config
-#      does not set `ignoreDeadLinks`, so this is the equivalent of the siblings'
-#      --strict.
+#      does not set `ignoreDeadLinks`.
 #   3. `base` is env-driven. docs/.vitepress/config.mts reads DOCS_BASE and falls
 #      back to '/', because a project site is served under /<repo>/ while local
 #      builds are served from the root. Pass base= rather than setting it.

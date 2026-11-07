@@ -274,8 +274,8 @@ function boot(): void {
   });
 
   // Play a comma-separated SEQUENCE of animations: every entry but the LAST
-  // plays once, the last plays with `loop` (default -1 = loop forever). The
-  // RenPy portrait idiom: "attack1,attack2,wait1" -> attack1 once, attack2 once,
+  // plays once, the last plays with `loop` (default -1 = loop forever):
+  // "attack1,attack2,wait1" -> attack1 once, attack2 once,
   // then wait1 loops. The last entry becomes the picture's animation once it
   // starts.
   reg(PLUGIN_NAME, 'playSSSequence', (args: Record<string, string>) => {

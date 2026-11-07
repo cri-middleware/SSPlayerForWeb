@@ -20,9 +20,8 @@ const ALIGNS: readonly SSAlign[] = ['center', 'top', 'bottom', 'left', 'right', 
  * element pay nothing.
  *
  * The element is a thin, declarative skin over the already-complete player facade;
- * all rendering/loading logic stays in `SSSurface` / `SSPlayer`. It targets the WebGL
- * player specifically — the future wgpu/WebGPU player is a separate product (two
- * independent renderers), so this element does no WebGPU capability detection.
+ * all rendering/loading logic stays in `SSSurface` / `SSPlayer`. It targets WebGL
+ * only, and does no WebGPU capability detection.
  *
  * The animation is fitted into the element's box, `contain` and `center` by default:
  * `fit` (`contain` / `cover` / `none`) and `align` (`center`, `top`, `bottom-left`, …)
@@ -313,9 +312,8 @@ export class SSPlayerElement extends HTMLElement {
   private wireEvents(): void {
     const player = this._player!;
     // Re-dispatch player events as DOM CustomEvents so declarative hosts can
-    // listen on the element, under the family's stems (animationStarted,
-    // userData, …) lower-cased as DOM event names are — the names
-    // <ss-player-webgpu> dispatches too. 'audio' is the notification: the
+    // listen on the element, under the player's stems (animationStarted,
+    // userData, …) lower-cased as DOM event names are. 'audio' is the notification: the
     // player plays the sound itself through the SSWebAudioManager it wires up on
     // its own, unless it was constructed with `autoAudio: false`.
     this._unsubscribe.push(

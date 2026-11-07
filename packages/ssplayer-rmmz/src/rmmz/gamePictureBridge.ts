@@ -3,8 +3,9 @@
 // Model (Game_Picture): we stash the "which SS animation to play" data on the
 // picture object itself. Game objects are serialized by MZ's save system, so the
 // animation is restored automatically on load. Where track 0 stands is written
-// there as each scene ends, which every save comes after, so the player the
-// next scene or a load builds carries on from that frame.
+// there as each scene ends, so the player the next scene or a load builds carries
+// on from that frame. A save made without a scene change stores where the last
+// scene ended.
 //
 // View (Sprite_Picture): rather than monkey-patching the bitmap pipeline, we
 // alias updateBitmap to (a) keep an SS-bearing picture visible even with no
@@ -141,8 +142,6 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     const key = `${ss.ssabUrl}|${ss.animation}`;
     // Same asset AND same animation: nothing to (re)build, but the model may
     // still have changed in ways that need no re-setup — see _ssApplyLive.
-    // Returning outright here used to drop a loop-only or signalSwitch-only
-    // change on the floor, since neither is part of the key.
     if (this._ssChild && this._ssKey === key) {
       this._ssApplyLive(ss);
       return;
@@ -232,9 +231,7 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
    *
    * Keeping these out of `_ssKey` is what lets a `changeSSAnimation` that only
    * alters `loop` — or a second `setSSAsPicture` that only changes
-   * `signalSwitch` — take effect. Both used to be silently ignored: the key was
-   * unchanged, so `_ssSync` returned before reaching them, and `signalSwitch`
-   * was additionally bound once at mount and never revisited.
+   * `signalSwitch` — take effect.
    */
   Sprite_Picture.prototype._ssApplyLive = function (this: any, ss: SSPictureData): void {
     const child = this._ssChild;

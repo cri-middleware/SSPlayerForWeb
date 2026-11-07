@@ -11,14 +11,8 @@ import {
 import { SS_SHADER_IDS, SS_SHADER_ID_HASHES, ssFnv1a, ssShaderIdHash } from '../src/ShaderIds.js';
 
 /**
- * The blend table and the `ss-*` id ↔ hash pairing used to be written twice each
- * — once per renderer, each commented as following the other, so neither was the
- * canon. They agreed at the time, which is exactly why the duplication survived:
- * nothing fails when a second copy is right, and nothing points at the first when
- * a second copy is wrong.
- *
- * These tests are what replaces the second copy. They assert against the values
- * the renderers carried, so a change to the shared table has to be a deliberate
+ * The blend table and the `ss-*` id ↔ hash pairing live once, in core. These
+ * tests assert against literal values, so a change to the shared table has to be a deliberate
  * one rather than a typo nobody sees until a blend looks off or a shader silently
  * never matches.
  */
@@ -33,8 +27,7 @@ describe('SS blend states', () => {
         expect(ssBlendMode(BlendType.Exclusion)).toBe(SSBlendMode.Exclusion);
         expect(ssBlendMode(BlendType.Invert)).toBe(SSBlendMode.Invert);
 
-        // The SS6-era "2" variants, approximated until they can be verified
-        // against SS6PlayerForUnity. Both renderers already agreed on these.
+        // The SS6-era "2" variants, approximated.
         expect(ssBlendMode(BlendType.Mulalpha)).toBe(SSBlendMode.Mul);
         expect(ssBlendMode(BlendType.Mul2)).toBe(SSBlendMode.Mul);
         expect(ssBlendMode(BlendType.Screen2)).toBe(SSBlendMode.Screen);

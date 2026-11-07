@@ -42,7 +42,7 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
             const fps = player.getFrameRate();
 
             // The reference: a slot per effect part, stepped on the player's own
-            // events the way the player used to step, drawing every step.
+            // events, drawing every step.
             const resource = new SSABResource(pack);
             const reference = new Map<number, { slot: SSRuntimeEffectSlot; visible: boolean }>();
             for (const part of player.runtimeManager.getEffectParts()) {

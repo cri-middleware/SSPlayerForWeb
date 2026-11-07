@@ -8,10 +8,7 @@ import { MaskedPartsColorShader, MaskedPartsColorShaderWGSL } from './MaskedPart
  * on the order they were replayed in.
  *
  * These are source assertions — neither shader can be executed here, so they
- * pin the structure rather than the pixels. What they do catch is the exact
- * regression the split fixes: someone collapsing the two accumulators back into
- * one. Actual coverage still has to be confirmed against SpriteStudio 7.6 with
- * three overlapping writers (two only ever agree).
+ * pin the structure rather than the pixels: the two accumulators stay apart.
  */
 
 const VARIANTS: Array<[string, string]> = [
@@ -59,8 +56,8 @@ describe.each(VARIANTS)('%s coverage replay', (_name, source) => {
     expect(body).not.toMatch(/writerCount (?:< 0\.5|== 0)\)\s*(?:\{\s*)?return true/);
   });
 
-  it('no longer reconstructs a single 8-bit stencil value', () => {
-    // The old single-accumulator form; its return would be order-dependent.
+  it('does not reconstruct a single 8-bit stencil value', () => {
+    // A single accumulator's return would be order-dependent.
     expect(body).not.toMatch(/255\.0 - stencil/);
     expect(body).not.toMatch(/~stencil/);
   });

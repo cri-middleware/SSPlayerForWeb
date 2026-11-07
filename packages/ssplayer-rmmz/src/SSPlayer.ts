@@ -357,8 +357,8 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * Whether the playhead is walking forwards right now — the instantaneous
    * heading, so a ping-pong on its return leg reads false while the configured
    * direction still reads Forward. Gate an audio backend on this: SpriteStudio
-   * has no reverse audio, so `onAudio` still reports every key it crosses (as
-   * the Godot and Unity players do) and it is the *playing* that is suppressed.
+   * has no reverse audio, so `onAudio` still reports every key it crosses and
+   * it is the *playing* that is suppressed.
    */
   public get isPlayingForward(): boolean {
     return this.internalPlayer.isPlayingForward;
@@ -596,7 +596,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // setAnimation here, nothing falls back to the first animation. setAnimation
   // folds the stack back to track 0, so lay the tracks again after it.
 
-  /** Number of tracks, empty ones included; 0 before an animation is set up. */
+  /** Number of tracks, empty ones included; always at least 1. */
   public get trackCount(): number {
     return this.internalPlayer.trackCount;
   }
@@ -924,9 +924,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       // Audio keys are reported whichever way the playhead is walking — the
       // observation channel is not the playback. SpriteStudio has no reverse
       // audio, so it is the backend that gates on `isPlayingForward`
-      // (RMMZAudioManager.bindToPlayer does), exactly as the Godot and Unity
-      // players do. Suppressing the event instead used to hide the key from
-      // hosts doing something other than playing a sound with it.
+      // (RMMZAudioManager.bindToPlayer does).
       if (this._audioListeners.size > 0) this.dispatchAudios(events, source);
     }
   }

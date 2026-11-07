@@ -301,8 +301,7 @@ describe.skipIf(!haveFixtures)('BuilderImporter', () => {
 
     // An author is free to keep a pack anywhere under data/ — the picker lists
     // them all — so Reconvert has to write where the .ssab is, not where this
-    // importer would have put it. Same rule as SSPlayerForUnity's
-    // `ReconvertInto` and SSPlayerForGodot's `queue_reconvert`.
+    // importer would have put it.
     const copy = nodePath.join(root, 'data/image/hero');
     cpSync(nodePath.join(root, 'data/others/ssdata/Ringo'), copy, { recursive: true });
     rmSync(nodePath.join(copy, 'Ringo.ssab'));

@@ -3,8 +3,7 @@
 // matches is OPEN — from when it starts until the player advances/closes it —
 // that picture plays its "talk" animation; every other bound picture (and
 // everyone once the window closes) plays "idle". So in a multi-character scene
-// only the character whose message is showing talks. Mirrors the RenPy
-// SSCharacter pattern (talk is tied to that Character's say).
+// only the character whose message is showing talks.
 //
 // NOTE: talk lasts the whole message (through the post-print input wait), not
 // only while the text types — that reads as "this character is speaking now".

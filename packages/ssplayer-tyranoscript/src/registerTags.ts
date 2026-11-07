@@ -190,7 +190,7 @@ function priorityMode(value: unknown): SSOverridePriority {
   return (named !== undefined ? named : num(value, 1)) as SSOverridePriority;
 }
 
-// `[ss_direction]` takes the words Godot's player uses; the runtime takes numbers.
+// `[ss_direction]` takes words; the runtime takes numbers.
 const DIRECTIONS = new Map<string, number>([['forward', 0], ['backward', 1]]);
 const STYLES = new Map<string, number>([['normal', 0], ['pingpong', 1]]);
 
@@ -385,7 +385,7 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
 
   // One overlay — one canvas, one GL context — per (layer, page), shared by every
   // SS character on that layer. followOpacity is what keeps `[anim opacity=]`,
-  // `[kanim]`, `[ss_fadein]` and `[ss_hide]` working now that the character is a
+  // `[kanim]`, `[ss_fadein]` and `[ss_hide]` working on a character that is a
   // div: the overlay reads the element's computed opacity into the player's alpha
   // every frame.
   const overlay = overlayFor(opts.layer, opts.page, layerEl, dpr);
@@ -408,8 +408,8 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     await player.load(storageUrl);
 
     // Pick the animation: the given name, else the pack's first animation. The
-    // player already read the names when it bound the pack, so this no longer
-    // costs a second download of the same `.ssab`.
+    // player already read the names when it bound the pack, so this costs no
+    // second download of the same `.ssab`.
     if (anime) requireAnimation(player, opts.storage, 'anime', anime);
     else anime = player.getAnimationNames()[0] ?? '';
     if (!anime) throw new Error(`no animation found in "${opts.storage}".`);
@@ -1726,7 +1726,7 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     );
   }
 
-  // [ss_restore] — restore explicitly. No longer required: `[plugin
+  // [ss_restore] — restore explicitly. Not required: `[plugin
   // name="ssplayer"]` wires the automatic hook above. Kept for engines without
   // an event system, for scenarios that want the load to *block* until the
   // players are back, and for anyone who already has it in `make.ks`.

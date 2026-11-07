@@ -7,9 +7,8 @@ import { CONVERTER_WASM, RUNTIME_WASM, convert, effectQuads, sdkProject, texture
 // A player switched before its pack's assets are in loads them in the
 // background, and sets its instances up again once the instance packs have
 // arrived. That catch-up must leave the effects alone: they play the pack's
-// own effect data, which was there from the bind. It used to tear them down
-// with the instances and build nothing in their place, so a player played
-// before its load finished drew no particles until the next play().
+// own effect data, which was there from the bind. Torn down with the instances,
+// a player played before its load finished draws no particles until the next play().
 //
 // Boots the real runtime, since what is drawn is the runtime's to say. Plays
 // the SDK's overall/Effect, converted here, and is skipped without the

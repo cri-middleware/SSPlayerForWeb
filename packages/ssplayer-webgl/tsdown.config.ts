@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig([
-  // 1. ESM (モジュール向け)
+  // 1. ESM, for module consumers.
   {
     entry: ['src/index.ts', 'src/lite.ts', 'src/element.ts'],
     format: 'esm',
@@ -12,7 +12,7 @@ export default defineConfig([
       chunkFileNames: 'chunk-[hash].js',
     },
   },
-  // 2. IIFE (ブラウザ直読み向け、全てバンドル)
+  // 2. IIFE for direct use in a browser; everything bundled.
   {
     entry: ['src/index.ts'],
     format: 'iife',
@@ -37,8 +37,9 @@ export default defineConfig([
     }
   },
   // 3. IIFE — self-registering <ss-player> Custom Element for classic <script> / CDN.
-  //    Dropping this one file on a page defines <ss-player> (no JS to call). Each
-  //    element needs a `wasm` attribute (no import.meta.url outside a bundler).
+  //    Dropping this one file on a page defines <ss-player> (no JS to call). Point it
+  //    at the runtime with a `data-wasm` on this script tag, `setSSPlayerWasmUrl()`,
+  //    or a `wasm` attribute per element.
   {
     entry: ['src/element.iife.ts'],
     format: 'iife',

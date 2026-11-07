@@ -7,8 +7,8 @@
 // idHash/params); this file supplies the matching GPU fragment programs so the
 // renderer can apply the effect.
 //
-// The 13 shader bodies are the GLSL ES 1.00 ports of the authoritative SS6-SDK
-// GLSL already migrated for the sibling ssplayer-pixi renderer (its
+// The 13 shader bodies are the GLSL ES 1.00 ports of the SS6 SDK's
+// GLSL already migrated for the ssplayer-pixi renderer (its
 // `SSShaderLib.ts`, GLSL ES 3.00 version — the source of truth). Each computes
 // a `Pixel` (vec4) then reuses this
 // renderer's PartColor tail (`ssFinish`, identical math to PartsColorProgram),
@@ -21,7 +21,7 @@
 //   `out vec4 finalColor` → `gl_FragColor`
 //   `texture(t,uv)`       → `texture2D(t,uv)` (only in ssTex)
 //   fragment precision    → `precision mediump float;` (matches PartsColorProgram)
-//   ss-move's dynamic loop → constant upper bound (128) + `break` (WebGL1 §8-1
+//   ss-move's dynamic loop → constant upper bound (128) + `break` (GLSL ES 1.00
 //                            allows only constant loop bounds; iCount is already
 //                            clamped to ≤128 so the visible result is unchanged).
 //
@@ -355,9 +355,8 @@ const SPOT = `
 // Built-in ss-* shaders, by the readable SpriteStudio shader id (the label). The
 // id ↔ `idHash` pairing is core's (`ssShaderIdHash`), shared with ssplayer-pixi:
 // what reaches a player on the `SHDR` attribute is the hash, and which program
-// that names has nothing to do with how the program is written. The thirteen
-// values it used to carry as literals are pinned by core's
-// `ss_shader_id_hashes_are_stable`, so nothing is assumed here either.
+// that names has nothing to do with how the program is written. The pairing is
+// pinned by core's `ss_shader_id_hashes_are_stable`.
 const SS_SHADERS: { id: string; frag: string }[] = [
   { id: 'ss-sepia', frag: frag(SEPIA) },
   { id: 'ss-hsb', frag: frag(HSB, HSB_HELPERS) },

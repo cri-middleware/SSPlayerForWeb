@@ -6,7 +6,7 @@ import { SSPlayer, SSTrackBlend, SSTrackSync, resolvePlacement } from '@spritest
  *
  * Whether a crossfade reads as a blend or a cut, and whether an additive overlay
  * leaves the motion below it standing, can only be judged by eye — so this page
- * puts every track call on a key (the same keys as the wgpu player's viewer) and
+ * puts every track call on a key and
  * prints the state the calls are meant to change next to the picture.
  *
  * What to look for:

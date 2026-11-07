@@ -121,7 +121,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _fireSignal(commandId: string) { for (const cb of [...this._signalListeners]) cb({ commandId }); }
 
     // The character's element, exposed here so the existing assertions can reach
-    // it from the player they were handed. It is a plain div now: the overlay
+    // it from the player they were handed. It is a plain div: the overlay
     // owns the only canvas on the layer.
     constructor(public element: HTMLElement, public options: unknown) {}
   }
@@ -478,7 +478,7 @@ describe('registerSSTags', () => {
     expect(p.getAnimationNames).toHaveBeenCalled();
     // getAnimationNames mock → ['Anime_1', …]; first is chosen.
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
-    // The regression this guards: a second download of the same pack.
+    // No second download of the same pack.
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
@@ -996,7 +996,7 @@ describe('registerSSTags', () => {
     expect(plays).toEqual([7, 7, 7]);
     expect(ends).toHaveLength(0);
 
-    // And 0, which the old code looped forever on, plays once.
+    // And 0 plays once.
     plays.length = 0;
     p._fireAudio({ soundName: 'step', loopNum: 0 });
     howl.end();
@@ -1018,7 +1018,6 @@ describe('registerSSTags', () => {
 
     expect(engine.stopped).toBeGreaterThan(0);
     expect(engine.unloaded).toBe(true);
-    // A shared manager used to take the other character's sound down too.
     expect(rain.stopped).toBe(0);
     expect(rain.unloaded).toBe(false);
     vi.unstubAllGlobals();
@@ -1532,7 +1531,7 @@ describe('registerSSTags', () => {
     expect(p.setAnimationSection).toHaveBeenCalledWith(5, 9);
   });
 
-  it('ss_direction takes Godot\'s words, keeps them across a change, and restores them', async () => {
+  it('ss_direction takes words, keeps them across a change, and restores them', async () => {
     const h = await withPlayer();
     const p = FakeSSPlayer.instances[0];
 

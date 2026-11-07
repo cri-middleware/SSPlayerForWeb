@@ -7,26 +7,22 @@
 // `shaders(idx)` → idHash/params/maps); this file supplies the matching GPU
 // fragment programs so the renderer can actually apply the effect.
 //
-// The 13 shader bodies are ports of the authoritative SS6-SDK GLSL as already
-// migrated by the sibling SSPlayerForGodot project
-// (ss_player/shaders/ss_<name>.fs). Each Godot `.fs` computes a `Pixel` (vec4)
-// then runs the PartColor composite + output. Here we keep ONLY the `Pixel`
-// computation per shader and reuse this renderer's existing PartColor tail
-// (the same math as PartsColorShader), because Pixi's per-vertex `aVarg`
-// encodes the blend as `[rate, isMix, isMul, isAddSub]` whereas Godot's
-// `CUSTOM0` packs `[rate, blendIdx, pma]` — the tails are not interchangeable.
+// The 13 shader bodies are ports of the SS6 SDK's GLSL. Each computes a `Pixel`
+// (vec4) per shader and reuses this renderer's existing PartColor tail (the same
+// math as PartsColorShader), because Pixi's per-vertex `aVarg` encodes the blend
+// as `[rate, isMix, isMul, isAddSub]`.
 //
-// Godot built-in → Pixi mapping used by the ported bodies:
-//   TEXTURE/UV/COLOR        → uTexture / vUV / vColor (shared vertex stage)
-//   TEXTURE_PIXEL_SIZE      → uPixelSize uniform (1/texW, 1/texH)
-//   ss_cell_rect            → uCellRect uniform (cell UV bounds; circle/spot)
-//   ss_param0..7            → uParams[0..1] (packed 2×vec4)
-//   PI                      → const
-//   ss_input_texture()      → ssTex(): samples then un-premultiplies, since
-//                             Pixi textures are premultiplied but the SS math
-//                             operates on straight-alpha colour.
-//   ss_partcolor_blend()+ss_output_color() → ssFinish(): Pixi's PartColor
-//                             composite + premultiply + world-tint (uColor).
+// What the bodies read:
+//   uTexture / vUV / vColor   the shared vertex stage
+//   uPixelSize                1/texW, 1/texH
+//   uCellRect                 cell UV bounds (circle/spot)
+//   uParams[0..1]             ss_param0..7, packed 2×vec4
+//   PI                        const
+//   ssTex()                   samples then un-premultiplies, since Pixi textures
+//                             are premultiplied but the SS math operates on
+//                             straight-alpha colour
+//   ssFinish()                Pixi's PartColor composite + premultiply +
+//                             world-tint (uColor)
 //
 // Limitations (v1): map0/map1 inputs are not bound (the bundled Shader.ssab
 // uses none); shader × mask clipping is not combined (the renderer falls back
@@ -71,7 +67,7 @@ const float PI = 3.141592653589793;
 
 // Sample + un-premultiply: the SS shader math expects straight-alpha colour,
 // but Pixi textures are premultiplied. Transparent texels (rgb already 0)
-// stay 0 thanks to the max() guard, matching the SS6/Godot reference.
+// stay 0 thanks to the max() guard.
 vec4 ssTex(vec2 uv) {
     vec4 c = texture(uTexture, uv);
     return vec4(c.rgb / max(c.a, 0.0001), c.a);

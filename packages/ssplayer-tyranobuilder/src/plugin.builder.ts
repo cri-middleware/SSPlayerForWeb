@@ -4,8 +4,7 @@
 // The builder discovers plugins by looking for `<id>/<id>.builder.js` inside the
 // open project, `await import()`s it, and calls `new module.plugin_setting(TB)`
 // (`js/app/core/plugin.js`). That constructor is our init hook: it runs once,
-// when a project is opened, which is the counterpart of Ren'Py's `init python:`
-// block in `SSPlayerForRenPy/game/spritestudio/auto_importer.rpy`.
+// when a project is opened.
 //
 // The plugin does two things from there:
 //   - imports SpriteStudio projects, once per project open; and
@@ -114,8 +113,8 @@ function listMethods(obj: object): string[] {
  * failure, because the reason is not in it. The editor's main window is created
  * with `removeMenu()` and has no DevTools, so without this the only account of
  * why a conversion failed is a line in a text file the author would have to go
- * looking for. SSPlayerForRenPy reached the same conclusion — an importer that
- * fails silently mid-iteration looks like an importer that did nothing.
+ * looking for, and an importer that fails silently mid-iteration looks like an
+ * importer that did nothing.
  *
  * Both problems name what the author has to change, which is why they share a
  * dialog: a failed conversion names the project and what the converter said, a
@@ -354,8 +353,7 @@ async function boot(
   try {
     const converter = await importer.converter();
     // Both formats, because a conversion emits both and this line is what
-    // people copy into a bug report — the gap SSConverterGUI closed in its own
-    // footer, which named only the `.ssab` one.
+    // people copy into a bug report.
     const versions =
       `converter ${converter.version} ` +
       `(ssab v${converter.schema.ssab}, ssqb v${converter.schema.ssqb})`;
@@ -369,8 +367,7 @@ async function boot(
   }
 
   // Create the drop folder on first run so there is somewhere obvious to put
-  // projects — the Ren'Py version simply returns when it is missing, which
-  // leaves a first-time user with nothing to go on.
+  // projects.
   if (!fs.exists(importer.sourceDir)) {
     fs.mkdirp(importer.sourceDir);
     log.line(`created source folder: ${importer.sourceDir}`);

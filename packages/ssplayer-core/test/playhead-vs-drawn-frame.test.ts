@@ -6,11 +6,6 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 // question, and turning sub-frame off is the whole of the difference between
 // them.
 //
-// These used to be one accessor. `getFrameNo()` floored, because the renderers
-// read it to decide which frame to ask the runtime for — so the public read-back
-// reported 12 where every sibling Player reports 12.4, and `setFrame` threw the
-// fraction away on the way in as well, which made the sub-frame toggle one-way.
-//
 // Fake context rather than booting WASM, the same trick the neighbouring suites
 // use.
 
@@ -35,7 +30,7 @@ describe('the playhead and the drawn frame are different questions', () => {
     it('reports the playhead fractionally even with sub-frame off', () => {
         const player = makePlayer(false);
         player.setFrameNo(12.4);
-        // What every sibling Player reports here: the playhead, untouched.
+        // The playhead, untouched.
         expect(player.getFrameNo()).toBeCloseTo(12.4);
     });
 

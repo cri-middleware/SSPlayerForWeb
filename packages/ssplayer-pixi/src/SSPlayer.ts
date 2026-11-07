@@ -53,7 +53,7 @@ export interface SSUserDataEvent {
 /**
  * A signal event fired by a part. `params` maps each command parameter id to
  * its authored value (bool / int / float / string). Only **active** signals are
- * dispatched (mirroring the Godot / Unity players).
+ * dispatched.
  */
 export interface SSSignalEvent {
     partIndex: number;
@@ -714,7 +714,7 @@ export class SSPlayer extends Container {
      * pack's textures, instance packs and sounds, so a switch is a runtime reset.
      *
      * Playback settings are separate properties — set {@link loopCount} after
-     * this, the way the Godot / Unity players do it.
+     * this.
      */
     /**
      * Every animation in the bound pack, in the order the `.ssab` lists them.
@@ -828,8 +828,8 @@ export class SSPlayer extends Container {
      * {@link getPlaybackDirection} still reads Forward.
      *
      * Gate an audio backend on this: SpriteStudio has no reverse audio, so
-     * {@link onAudio} still reports every key it crosses (as the Godot and Unity
-     * players do) and it is the *playing* that has to be suppressed.
+     * {@link onAudio} still reports every key it crosses and it is the *playing*
+     * that has to be suppressed.
      */
     public get isPlayingForward(): boolean {
         return this.internalPlayer.isPlayingForward;
@@ -905,7 +905,7 @@ export class SSPlayer extends Container {
     // does: scrubbing a track with setTrackFrame on a stopped player has to
     // reach the screen.
 
-    /** Number of tracks, empty ones included; 0 before an animation is set up. */
+    /** Number of tracks, empty ones included; always at least 1. */
     public get trackCount(): number {
         return this.internalPlayer.trackCount;
     }
@@ -1403,9 +1403,7 @@ export class SSPlayer extends Container {
             // Audio keys are reported whichever way the playhead is walking — the
             // observation channel is not the playback. SpriteStudio has no reverse
             // audio, so it is the backend that gates on `isPlayingForward`
-            // (SSWebAudioManager.bindToPlayer does), exactly as the Godot and Unity
-            // players do. Suppressing the event instead used to hide the key from
-            // hosts doing something other than playing a sound with it.
+            // (SSWebAudioManager.bindToPlayer does).
             if (this._audioListeners.size > 0) {
                 this.dispatchAudios(events, source);
             }
@@ -1440,7 +1438,6 @@ export class SSPlayer extends Container {
             const sig = events.signals(j);
             const val = sig?.value();
             if (!sig || !val) continue;
-            // Skip inactive signals (Godot / Unity behaviour).
             if (!val.active()) continue;
 
             const params: Record<string, boolean | number | string> = {};

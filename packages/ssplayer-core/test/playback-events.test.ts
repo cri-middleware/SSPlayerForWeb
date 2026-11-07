@@ -3,8 +3,6 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 
 // `pollPlaybackEvents` only touches `runtimeManager.context` and its own edge
 // latch, so it can be exercised against a fake context without booting WASM.
-// This logic used to be copy-pasted into every renderer package; the point of
-// hoisting it here is that these cases are pinned once.
 function makePlayer(ctx: { just_looped: () => boolean; is_finished: () => boolean }) {
     const player = Object.create(InternalPlayerBase.prototype) as InternalPlayerBase<never>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

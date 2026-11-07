@@ -12,7 +12,7 @@ export interface SSTextureEntry {
  * A `WebGLTexture` belongs to the context that created it, so the cache is
  * per-context — exactly the scope a Surface owns. Two characters using the same
  * atlas on one surface then cost one upload instead of two, which for a cast of
- * the same character is most of the texture memory they used to take.
+ * the same character is most of the texture memory they would otherwise take.
  *
  * **Keyed by URL, deliberately not by cell-map hash.** The hash the core passes
  * around comes from the cell-map *name*, so two unrelated `.ssab` files that both
