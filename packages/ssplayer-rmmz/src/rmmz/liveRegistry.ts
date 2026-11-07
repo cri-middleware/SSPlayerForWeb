@@ -23,7 +23,11 @@ interface Entry {
    * adapter, which solves the same problem for `[ss_play next=]`.
    */
   chain?: Unsubscribe;
+  /** The chain is a sequence's next entry: this finish is not the end waitForSS waits for. */
+  chainHoldsEnd?: boolean;
   adopt?: () => void;
+  /** A command that needs the pack, held until it has loaded. */
+  deferred?: () => void;
 }
 
 const entries = new Map<number, Entry>();
@@ -47,7 +51,7 @@ export function clearLivePlayer(pictureId: number): void {
  * any earlier one. Safe to call from inside the firing listener: cancelling an
  * already-fired listener is a no-op.
  */
-export function armLiveChain(pictureId: number, unsub: Unsubscribe): void {
+export function armLiveChain(pictureId: number, unsub: Unsubscribe, holdsEnd = false): void {
   const e = entries.get(pictureId);
   if (!e) {
     unsub(); // no live player to own it — don't leak the subscription
@@ -55,12 +59,16 @@ export function armLiveChain(pictureId: number, unsub: Unsubscribe): void {
   }
   clearLiveChain(pictureId);
   e.chain = unsub;
+  e.chainHoldsEnd = holdsEnd;
 }
 
-/** Cancel this picture's pending follow-up, if any. */
+/** Cancel this picture's pending follow-up and any command held for its load. */
 export function clearLiveChain(pictureId: number): void {
   const e = entries.get(pictureId);
-  if (!e?.chain) return;
+  if (!e) return;
+  e.deferred = undefined;
+  e.chainHoldsEnd = false;
+  if (!e.chain) return;
   const off = e.chain;
   e.chain = undefined;
   off();
@@ -71,7 +79,25 @@ export function getLivePlayer(pictureId: number): SSPlayer | undefined {
 /** Mark the picture's animation as finished (drives waitForSS). */
 export function markLivePlayerEnded(pictureId: number): void {
   const e = entries.get(pictureId);
-  if (e) e.ended = true;
+  if (e && !e.chainHoldsEnd) e.ended = true;
+}
+/** A command started playback again, so waitForSS has a new end to wait for. */
+export function clearLivePlayerEnded(pictureId: number): void {
+  const e = entries.get(pictureId);
+  if (e) e.ended = false;
+}
+/** Hold `run` until the picture's pack has loaded, replacing a command already held. */
+export function deferLiveCommand(pictureId: number, run: () => void): void {
+  const e = entries.get(pictureId);
+  if (e) e.deferred = run;
+}
+/** The picture's pack has loaded: run the command held for it, if any. */
+export function runDeferredLiveCommand(pictureId: number): void {
+  const e = entries.get(pictureId);
+  const run = e?.deferred;
+  if (!e || !run) return;
+  e.deferred = undefined;
+  run();
 }
 /**
  * Playback status for waitForSS: 'playing' while mounted and not finished,
