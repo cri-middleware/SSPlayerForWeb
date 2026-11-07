@@ -74,6 +74,11 @@ interface AdapterState {
    * old way still blocks the scenario until the players are back.
    */
   restorePromise: Promise<void> | null;
+  /**
+   * The automatic restore while it runs. A load with `auto_next` resumes the
+   * scenario at once, so its next `[ss_*]` waits for this.
+   */
+  restoring: Promise<void> | null;
   /** Watches layers for canvases the engine removed without going through us. */
   detachObserver: MutationObserver | null;
 }
@@ -86,6 +91,7 @@ const state: AdapterState = {
   talking: null,
   restoreHooked: false,
   restorePromise: null,
+  restoring: null,
   detachObserver: null,
 };
 
@@ -190,7 +196,7 @@ function priorityMode(value: unknown): SSOverridePriority {
   return (named !== undefined ? named : num(value, 1)) as SSOverridePriority;
 }
 
-// `[ss_direction]` takes the words Godot's player uses; the runtime takes numbers.
+// `[ss_direction]` takes words; the runtime takes numbers.
 const DIRECTIONS = new Map<string, number>([['forward', 0], ['backward', 1]]);
 const STYLES = new Map<string, number>([['normal', 0], ['pingpong', 1]]);
 
@@ -253,6 +259,13 @@ function gameResolution(kag: TyranoKag): { w: number; h: number } {
  */
 const overlays = new Map<string, SSOverlay>();
 
+/**
+ * The character divs and overlay canvases built here, as against the copies of them
+ * the engine makes of a layer's DOM for a save or a `[backlay]`. Not the registry:
+ * a player joins that only once its pack has loaded.
+ */
+const ownElements = new WeakSet<Element>();
+
 /** Get (or lazily create) the overlay that draws `layer`/`page`. */
 function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: number): SSOverlay {
   const key = `${layer}_${page}`;
@@ -269,6 +282,8 @@ function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: n
     followOpacity: true,
     maxDPR: Math.min(dpr, 2),
   });
+  overlay.canvas.classList.add('ss-overlay');
+  ownElements.add(overlay.canvas);
   // A placement is stored in logical pixels but pushed to the renderer in
   // drawing-buffer pixels, and a resize changes the ratio between them. Without
   // this, every character on the layer drifts the first time the window is
@@ -379,13 +394,14 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
   const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio ?? 1;
 
   const element = createCharacterElement(layerEl, w, h, opts.name);
+  ownElements.add(element);
   // Apply visibility before the (awaited) load so a preloading `[ss_new
   // visible="false"]` never flashes on screen for a frame.
   void setElementVisible(element, opts.visible && !state.layerHidden, 0);
 
   // One overlay — one canvas, one GL context — per (layer, page), shared by every
   // SS character on that layer. followOpacity is what keeps `[anim opacity=]`,
-  // `[kanim]`, `[ss_fadein]` and `[ss_hide]` working now that the character is a
+  // `[kanim]`, `[ss_fadein]` and `[ss_hide]` working on a character that is a
   // div: the overlay reads the element's computed opacity into the player's alpha
   // every frame.
   const overlay = overlayFor(opts.layer, opts.page, layerEl, dpr);
@@ -408,8 +424,8 @@ async function createPlayer(kag: TyranoKag, opts: CreateOpts): Promise<SSPlayerE
     await player.load(storageUrl);
 
     // Pick the animation: the given name, else the pack's first animation. The
-    // player already read the names when it bound the pack, so this no longer
-    // costs a second download of the same `.ssab`.
+    // player already read the names when it bound the pack, so this costs no
+    // second download of the same `.ssab`.
     if (anime) requireAnimation(player, opts.storage, 'anime', anime);
     else anime = player.getAnimationNames()[0] ?? '';
     if (!anime) throw new Error(`no animation found in "${opts.storage}".`);
@@ -1582,7 +1598,16 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
     state.detachObserver = new MutationObserver((records) => {
       for (const record of records) {
+        // A layer the engine put in place may be a clone, whose character divs and
+        // canvases draw nothing and would answer `[anim name=]`.
+        for (const added of record.addedNodes) {
+          (added as Element).querySelectorAll?.('.ss-player, canvas.ss-overlay').forEach((el) => {
+            if (!ownElements.has(el)) el.remove();
+          });
+        }
         for (const removed of record.removedNodes) {
+          // Moved rather than removed: it is back in the page by now.
+          if (removed.isConnected) continue;
           for (const name of registry.names()) {
             const entry = registry.get(name);
             if (!entry) continue;
@@ -1609,6 +1634,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     // Not `subtree`: a message layer mutates on every character typed out, and
     // this only ever needs the layer's own child list.
     state.detachObserver?.observe(parent, { childList: true });
+    // `[trans layer=]` replaces the layer element itself.
+    if (parent.parentElement) state.detachObserver?.observe(parent.parentElement, { childList: true });
   };
 
   /** Rebuild every player from the saved state. */
@@ -1618,6 +1645,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     // an overlay parented to the old one would draw nowhere.
     registry.destroyAll();
     destroyOverlays();
+    // A save stores the layers' DOM, so the load has put back the divs and canvases
+    // this pass is about to build again.
+    document.querySelectorAll('.ss-player, canvas.ss-overlay').forEach((el) => el.remove());
     state.talking = null;
     // Read the blanket-fade flag BEFORE rebuilding: createPlayer consults it
     // to decide whether a restored player is shown at all.
@@ -1721,12 +1751,15 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const pass = restoreSavedPlayers();
         pass.catch((err) => logFailure('automatic restore', err));
         state.restorePromise = pass;
+        state.restoring = pass;
+        const settled = (): void => { if (state.restoring === pass) state.restoring = null; };
+        pass.then(settled, settled);
       },
       { system: true },
     );
   }
 
-  // [ss_restore] — restore explicitly. No longer required: `[plugin
+  // [ss_restore] — restore explicitly. Not required: `[plugin
   // name="ssplayer"]` wires the automatic hook above. Kept for engines without
   // an event system, for scenarios that want the load to *block* until the
   // players are back, and for anyone who already has it in `make.ks`.
@@ -1740,6 +1773,20 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
       });
     },
   };
+
+  // The engine holds the scenario until a tag calls nextOrder, so a tag can wait
+  // for the restore without the scenario moving past it.
+  for (const name of Object.keys(ftag.master_tag)) {
+    if (!name.startsWith('ss_') || name === 'ss_restore' || name === 'ss_init') continue;
+    const tag = ftag.master_tag[name];
+    const start = tag.start;
+    tag.start = function (this: unknown, pm: Record<string, unknown>) {
+      const restoring = state.restoring;
+      if (!restoring) return start.call(this, pm);
+      const run = (): void => { start.call(this, pm); };
+      restoring.then(run, run);
+    };
+  }
 
   return true;
 }
@@ -1760,6 +1807,7 @@ export function __resetStateForTest(): void {
   state.talking = null;
   state.restoreHooked = false;
   state.restorePromise = null;
+  state.restoring = null;
   state.detachObserver?.disconnect();
   state.detachObserver = null;
 }

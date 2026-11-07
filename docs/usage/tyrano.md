@@ -373,8 +373,8 @@ and about its own anchor.
   to add to `make.ks` — and resume on the frame the save was taken on, with their
   visibility, stacking order, queued `next=` follow-up, `[ss_chara]` binding, speed,
   direction, section and tracks.
-- **Scene changes**: clearing a layer (e.g. `[freeimage]`) releases the players on
-  it automatically, whatever cleared it. `[ss_free]` / `[ss_free_all]` are for
+- **Scene changes**: clearing a layer (e.g. `[freeimage]`) or replacing it (`[trans layer=]`)
+  releases the players on it automatically, whatever did it. `[ss_free]` / `[ss_free_all]` are for
   letting a player go without touching the layer.
 - **Skip**: while the game is skipping with `skipEffectIgnore = true` in
   `data/system/Config.tjs` (the default), SS effects are cut the way `[chara_show]`'s

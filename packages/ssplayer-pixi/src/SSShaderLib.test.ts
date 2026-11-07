@@ -8,8 +8,7 @@ import { SS_SHADER_SOURCES } from './SSShaderLib.js';
  * fails to link: the parts using that shader draw nothing, with nothing but a
  * console error to say why.
  *
- * A source assertion, since no GL context runs here. It covers the rule that
- * broke ss-move; the full compile was checked in a browser on WebGL2 and WebGL1.
+ * A source assertion, since no GL context runs here.
  */
 describe('ss-* GLSL programs', () => {
     const programs = [...SS_SHADER_SOURCES.values()].map(p => p.gl.fragment);

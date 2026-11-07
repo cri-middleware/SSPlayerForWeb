@@ -1,6 +1,6 @@
 name: CI
 
-# Two tiers, as in SpriteStudio-SDK. Every pull request compiles the wasm from
+# Two tiers. Every pull request compiles the wasm from
 # the SDK submodule, or restores the weekly run's build when that run last built
 # the same submodule commit, then runs scripts/build-release.sh on it: every
 # package built, type-checked and tested, and the npm tarballs and plugin
@@ -19,9 +19,7 @@ on:
   # The weekly run also writes the main caches that PRs restore from, since PRs
   # do not save.
   schedule:
-    # Each repository of the family takes its own hour on Sunday, so their
-    # weekly runs do not queue for the organization's runners; :17 keeps clear
-    # of the top of the hour, when GitHub delays scheduled runs.
+    # :17 keeps clear of the top of the hour, when GitHub delays scheduled runs.
     - cron: '17 7 * * 0'
   workflow_dispatch:
 

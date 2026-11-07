@@ -284,8 +284,7 @@ describe('SSPlayer box', () => {
     const player = surface.createPlayer();
 
     const m = player.renderTransform();
-    // [m00, m01, m10, m11, tx, ty] — centred means tx/ty are the box centre, which
-    // is what removed the manual half-canvas maths every host used to carry.
+    // [m00, m01, m10, m11, tx, ty] — centred means tx/ty are the box centre.
     expect(m[4]).toBe(400);
     expect(m[5]).toBe(300);
   });
@@ -602,5 +601,21 @@ describe('onFrame', () => {
     surface.update(16);
 
     expect(order).toEqual(['update']);
+  });
+});
+
+describe('SSSurface.update', () => {
+  it('still ticks the next player when a listener destroys the one before it', () => {
+    const surface = Object.create(SSSurface.prototype) as SSSurface;
+    const players: { update: ReturnType<typeof vi.fn> }[] = [];
+    const first = { update: vi.fn(() => { players.splice(0, 1); }) };
+    const second = { update: vi.fn() };
+    players.push(first, second);
+    (surface as unknown as { players: unknown[] }).players = players;
+
+    surface.update(16);
+
+    expect(first.update).toHaveBeenCalledTimes(1);
+    expect(second.update).toHaveBeenCalledWith(16);
   });
 });

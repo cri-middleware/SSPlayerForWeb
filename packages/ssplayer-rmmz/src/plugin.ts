@@ -13,7 +13,7 @@ import { installAutoImport } from './rmmz/autoImport.js';
 import { installWasmBootGate } from './rmmz/boot.js';
 import { defineSpriteSpriteStudio } from './rmmz/Sprite_SpriteStudio.js';
 import { installGamePictureBridge } from './rmmz/gamePictureBridge.js';
-import { adoptLivePlayer, armLiveChain, clearLiveChain, getLivePlayer } from './rmmz/liveRegistry.js';
+import { adoptLivePlayer, armLiveChain, clearLiveChain, clearLivePlayerEnded, deferLiveCommand, getLivePlayer } from './rmmz/liveRegistry.js';
 import { installInterpreterWait, beginSSWait, beginSSTrackFadeWait } from './rmmz/interpreterWait.js';
 import { installMessageTalk, setSSTalk, clearSSTalk } from './rmmz/messageTalk.js';
 import { playAnimation } from './rmmz/playAnimation.js';
@@ -33,6 +33,9 @@ import {
 } from '@spritestudio/ssplayer-webgl';
 
 const PLUGIN_NAME = 'ssplayer-rpgmakermz';
+
+// Seeded from the clock so an id never repeats one a loaded save carries.
+let lastShowId = Date.now();
 
 function num(v: unknown, dflt = 0): number {
   const n = Number(v);
@@ -95,7 +98,11 @@ function boot(): void {
         const cur = pic && pic.ssData ? pic.ssData() : null;
         if (cur) pic.setSSData({ ...cur, overrides: list });
       },
-      player: () => getLivePlayer(pictureId) ?? null,
+      // One still loading has no parts to resolve; the mount applies the saved list.
+      player: () => {
+        const player = getLivePlayer(pictureId);
+        return player && player.currentAnimation ? player : null;
+      },
     });
 
   /**
@@ -152,7 +159,7 @@ function boot(): void {
     // keeps it visible and mounts the SS child.
     g.$gameScreen.showPicture(pictureId, '', 0, num(args.x, 408), num(args.y, 312), scale, scale, 255, 0);
     const pic = g.$gameScreen.picture(pictureId);
-    if (pic) pic.setSSData(buildSSData(args));
+    if (pic) pic.setSSData({ ...buildSSData(args), showId: ++lastShowId });
     // Optional: hold the event until this (non-looping) animation finishes.
     if (args.wait === 'true') beginSSWait(this as any, pictureId);
   });
@@ -204,7 +211,7 @@ function boot(): void {
     pic.setSSData({
       ...cur,
       animation,
-      loop: args.loop !== undefined ? num(args.loop, cur.loop) : cur.loop,
+      loop: args.loop === undefined || String(args.loop).trim() === '' ? cur.loop : num(args.loop, cur.loop),
       transition,
       overrides: cut ? prunePartOverridesForNewAnimation(cur.overrides) : cur.overrides,
       tracks: cut ? undefined : cur.tracks,
@@ -230,6 +237,7 @@ function boot(): void {
   reg(PLUGIN_NAME, 'playSSOnce', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
     clearLiveChain(pictureId); // supersede an earlier one-shot / sequence
+    clearLivePlayerEnded(pictureId);
     const oneShot = String(args.animation || '');
     // Play count for the one-shot: >=1 finite (0 is coerced to 1; -1 would never
     // end and never revert, so it's clamped to 1 too).
@@ -246,41 +254,47 @@ function boot(): void {
     const play = (name: string, loop: number): void => {
       if (playAnimation(player, name, loop, transition)) afterCut(pictureId);
     };
-    const base = cur.animation;
-    const baseLoop = cur.loop;
-    const revert = () => {
+    const start = (): void => {
+      // Read now: a blank animation name is settled when the pack has loaded.
+      const base = (pic.ssData() ?? cur).animation;
+      const baseLoop = cur.loop;
+      const revert = () => {
+        try {
+          play(base, baseLoop);
+        } catch (e: unknown) {
+          console.error('[ssplayer-rmmz] playSSOnce: failed to return to base loop:', e);
+        }
+      };
+      // Owned by the registry, so a later command (changeSSAnimation, another
+      // playSSOnce, stopSS, removeSS) can cancel the pending revert instead of
+      // having it fire afterwards and clobber whatever is playing by then.
+      armLiveChain(
+        pictureId,
+        player.onAnimationFinished(() => {
+          clearLiveChain(pictureId);
+          revert();
+        }),
+      );
       try {
-        play(base, baseLoop);
+        play(oneShot, count);
       } catch (e: unknown) {
-        console.error('[ssplayer-rmmz] playSSOnce: failed to return to base loop:', e);
+        clearLiveChain(pictureId);
+        console.error('[ssplayer-rmmz] playSSOnce: failed to play one-shot:', e);
       }
     };
-    // Owned by the registry, so a later command (changeSSAnimation, another
-    // playSSOnce, stopSS, removeSS) can cancel the pending revert instead of
-    // having it fire afterwards and clobber whatever is playing by then.
-    armLiveChain(
-      pictureId,
-      player.onAnimationFinished(() => {
-        clearLiveChain(pictureId);
-        revert();
-      }),
-    );
-    try {
-      play(oneShot, count);
-    } catch (e: unknown) {
-      clearLiveChain(pictureId);
-      console.error('[ssplayer-rmmz] playSSOnce: failed to play one-shot:', e);
-    }
+    if (player.currentAnimation) start();
+    else deferLiveCommand(pictureId, start);
   });
 
   // Play a comma-separated SEQUENCE of animations: every entry but the LAST
-  // plays once, the last plays with `loop` (default -1 = loop forever). The
-  // RenPy portrait idiom: "attack1,attack2,wait1" -> attack1 once, attack2 once,
+  // plays once, the last plays with `loop` (default -1 = loop forever):
+  // "attack1,attack2,wait1" -> attack1 once, attack2 once,
   // then wait1 loops. The last entry becomes the picture's animation once it
   // starts.
   reg(PLUGIN_NAME, 'playSSSequence', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
     clearLiveChain(pictureId); // supersede an earlier one-shot / sequence
+    clearLivePlayerEnded(pictureId);
     const seq = String(args.animations || '')
       .split(',')
       .map((s) => s.trim())
@@ -308,6 +322,7 @@ function boot(): void {
             i += 1;
             step();
           }),
+          true,
         );
       }
       try {
@@ -318,7 +333,8 @@ function boot(): void {
         console.error('[ssplayer-rmmz] playSSSequence: failed to play:', e);
       }
     };
-    step();
+    if (player.currentAnimation) step();
+    else deferLiveCommand(pictureId, step);
   });
 
   // --- Tracks above track 0 ---
@@ -327,8 +343,7 @@ function boot(): void {
   // one set up, and records it on the picture, so save/load and a scene change
   // lay the tracks again (SSPictureData.tracks). Track 0 is the picture's own
   // animation, so these refuse it. A player that has no animation set up yet
-  // (trackCount 0, still loading) is left to the mount, which lays the saved
-  // list.
+  // (still loading) is left to the mount, which lays the saved list.
 
   // Lay an animation on a track, mixed over (or added to) what is below.
   reg(PLUGIN_NAME, 'setSSTrack', (args: Record<string, string>) => {
@@ -348,7 +363,7 @@ function boot(): void {
       return;
     }
     const player = getLivePlayer(pictureId);
-    if (player && player.trackCount > 0) {
+    if (player && player.currentAnimation) {
       try {
         if (!applySavedTrack(player, entry, transitionMs(args.transition))) return;
       } catch (e: unknown) {
@@ -373,7 +388,7 @@ function boot(): void {
     const alpha = num(args.alpha, 0);
     const duration = Math.max(0, num(args.duration, 500));
     const player = getLivePlayer(pictureId);
-    const live = !!player && player.trackCount > 0;
+    const live = !!player && !!player.currentAnimation;
     if (live) {
       try {
         if (duration > 0) player!.fadeTrack(track, alpha, duration);
@@ -478,6 +493,7 @@ function boot(): void {
   reg(PLUGIN_NAME, 'playSS', (args: Record<string, string>) => {
     const pictureId = num(args.pictureId, 1);
     clearLiveChain(pictureId);
+    clearLivePlayerEnded(pictureId);
     getLivePlayer(pictureId)?.play();
   });
   reg(PLUGIN_NAME, 'pauseSS', (args: Record<string, string>) => {

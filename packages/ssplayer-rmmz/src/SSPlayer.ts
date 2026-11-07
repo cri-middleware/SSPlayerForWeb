@@ -25,6 +25,7 @@ import {
   SSOverridePriority,
   SSPartFollower,
   type IAudioManager,
+  type SSPassedEvent,
   type SSTextureEntry,
   type WebPlaybackDirection,
   type WebPlaybackStyle,
@@ -198,6 +199,8 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
       throw new SSLoadError(ssabUrl, `[ssplayer-rmmz] failed to load SSAB "${ssabUrl}": ${res.status} ${res.statusText}`);
     }
     const buffer = new Uint8Array(await res.arrayBuffer());
+    // The picture was erased or its scene ended while this loaded.
+    if (this.internalPlayer.destroyed) return;
     this.bindResource(buffer, ssabUrl);
     await this.prepareResources();
   }
@@ -286,6 +289,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     const pausing = this.internalPlayer.isHeld;
     this.internalPlayer.update(deltaMs);
     if (!pausing) this.pollEvents();
+    if (this.internalPlayer.destroyed) return;
 
     // Drive followers, then notify per-frame listeners — the point
     // getPartTransform is valid for this frame. The update above only moved the
@@ -357,8 +361,8 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
    * Whether the playhead is walking forwards right now — the instantaneous
    * heading, so a ping-pong on its return leg reads false while the configured
    * direction still reads Forward. Gate an audio backend on this: SpriteStudio
-   * has no reverse audio, so `onAudio` still reports every key it crosses (as
-   * the Godot and Unity players do) and it is the *playing* that is suppressed.
+   * has no reverse audio, so `onAudio` still reports every key it crosses and
+   * it is the *playing* that is suppressed.
    */
   public get isPlayingForward(): boolean {
     return this.internalPlayer.isPlayingForward;
@@ -596,7 +600,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
   // setAnimation here, nothing falls back to the first animation. setAnimation
   // folds the stack back to track 0, so lay the tracks again after it.
 
-  /** Number of tracks, empty ones included; 0 before an animation is set up. */
+  /** Number of tracks, empty ones included; always at least 1. */
   public get trackCount(): number {
     return this.internalPlayer.trackCount;
   }
@@ -904,7 +908,7 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     if (finished && this._animFinishedListeners.size > 0) {
       this._animFinishedListeners.emit();
     }
-    if (looped && this._animLoopedListeners.size > 0) {
+    if (looped && this._animLoopedListeners.size > 0 && !this.internalPlayer.destroyed) {
       this._animLoopedListeners.emit();
     }
 
@@ -916,25 +920,25 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     for (const event of passed) {
       // Read from the table of the animation whose source fired it, which is
       // not the set-up one after a crossfade on track 0 or for an overlay.
-      const events = mgr.getEventsOf(event);
-      if (!events) continue;
-      const { source } = event;
-      if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
-      if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
+      if (this._userDataListeners.size > 0) this.dispatchUserData(event);
+      if (this._signalListeners.size > 0) this.dispatchSignals(event);
       // Audio keys are reported whichever way the playhead is walking — the
       // observation channel is not the playback. SpriteStudio has no reverse
       // audio, so it is the backend that gates on `isPlayingForward`
-      // (RMMZAudioManager.bindToPlayer does), exactly as the Godot and Unity
-      // players do. Suppressing the event instead used to hide the key from
-      // hosts doing something other than playing a sound with it.
-      if (this._audioListeners.size > 0) this.dispatchAudios(events, source);
+      // (RMMZAudioManager.bindToPlayer does).
+      if (this._audioListeners.size > 0) this.dispatchAudios(event);
     }
   }
 
-  private dispatchUserData(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchUserData(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.usersLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.usersLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      // Asked for afresh each time: a listener may have grown WASM memory, which
+      // detaches the view, bound another pack, or destroyed the player.
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const user = events.users(j);
       const val = user?.value();
       if (!user || !val) continue;
@@ -952,10 +956,13 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     }
   }
 
-  private dispatchSignals(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchSignals(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.signalsLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.signalsLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const sig = events.signals(j);
       const val = sig?.value();
       if (!sig || !val) continue;
@@ -1005,10 +1012,13 @@ export class SSPlayer extends (ContainerBase as { new (): PixiContainer }) {
     }
   }
 
-  private dispatchAudios(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchAudios(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.audiosLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.audiosLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const audio = events.audios(j);
       const val = audio?.value();
       if (!audio || !val) continue;

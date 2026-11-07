@@ -7,9 +7,7 @@
 // via `studio_api`), and wasm cannot `fetch()` a `file://` URL anyway.
 //
 // It is also what lets the wasm run in a Worker. The call is synchronous and
-// long enough to be seen — on the machine this was measured on, a TyranoBuilder
-// project open with 20 sample projects froze the editor for 1.2 s, 680 ms of it
-// in one project — so it runs off the UI thread, and this file keeps only the
+// long enough to be seen, so it runs off the UI thread, and this file keeps only the
 // halves a Worker cannot do: reading the sources and writing the results, both
 // of which need the host's filesystem, which only its UI thread holds.
 //
@@ -17,8 +15,8 @@
 // `file://` document cannot load a worker script from another `file://` URL,
 // and no vendor documents what a given host build allows — so it is proven
 // at startup and falls back to converting in-thread, which is exactly what
-// `probeBinaryBridge()` does for the binary bridge. The fallback is the old
-// behaviour, not a degraded one: the host freezes, as it always did.
+// `probeBinaryBridge()` does for the binary bridge. The fallback freezes the host
+// for the duration.
 
 import {
   convertProject,
@@ -328,10 +326,13 @@ export async function convertProjectAt(
   // a project in a subfolder — stays out of the map.
   const sspjName = fs.path.basename(sspjPath);
   const files = new Map<string, Uint8Array>();
+  // The converter answers with source paths in NFC, and the disk may hold another form.
+  const onDisk = new Map<string, string>();
   for (const full of fs.walkFiles(sourceDir)) {
     const rel = fs.path.relative(sourceDir, full).replace(/\\/g, '/');
     if (rel !== sspjName && rel.toLowerCase().endsWith('.sspj')) continue;
     files.set(rel, fs.readBinary(full));
+    onDisk.set(rel.normalize('NFC'), rel);
   }
   if (files.size === 0) {
     throw new Error(`no readable files under ${sourceDir}`);
@@ -360,7 +361,7 @@ export async function convertProjectAt(
 
   // Textures: a Node-side `copySync`, so these bytes never cross the bridge.
   for (const [destPath, srcPath] of assets) {
-    const src = fs.resolveWithin(sourceDir, srcPath, 'asset source path');
+    const src = fs.resolveWithin(sourceDir, onDisk.get(srcPath) ?? srcPath, 'asset source path');
     const dest = fs.resolveWithin(outDir, destPath, 'asset output path');
     if (!fs.exists(src)) continue;
     fs.mkdirp(fs.path.dirname(dest));

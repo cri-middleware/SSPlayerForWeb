@@ -52,7 +52,7 @@ Method names moved from **PascalCase to camelCase**, and some (like `SetAnimatio
 | SS6Player | This version | Notes |
 |---|---|---|
 | `Setup(pack, anime)` / constructor args | `setAnimation(name)` | No pack name; anime name only |
-| `Play(frameNo?)` | `play(startFrame = -1)` | `-1` = from current frame |
+| `Play(frameNo?)` | `play(startFrame = -1)` | `-1` = from the start of the section; `play(player.frameNo)` carries on from where it stands |
 | `Pause()` / `Resume()` / `Stop()` | `pause()` / `resume()` / `stop()` | |
 | `SetFrame(frame)` | `frameNo` (get/set) | Seek; subframe-capable |
 | `NextFrame()` / `PrevFrame()` | `frameNo = frameNo ± 1` | Dedicated methods removed |

@@ -1,6 +1,8 @@
 export interface SoundAsset {
     name: string;
     path: string;
+    /** The encoded file, when the `.ssab` embeds it (the converter's `--embedded` mode). */
+    bytes?: Uint8Array;
 }
 
 export interface IAudioManager {

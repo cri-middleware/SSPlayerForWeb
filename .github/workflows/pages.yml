@@ -5,9 +5,9 @@ name: Deploy Pages
 # (rmmz), and the static TyranoScript project (tyrano) — from GitHub Pages as a
 # single site. Deployed via the artifact method — no gh-pages branch.
 #
-# A published release or a manual dispatch rebuilds the site, and nothing else does
-# — the same trigger pair every sibling repository uses. A full rebuild (every
-# ssconverter schema version + all examples) is far too heavy to run per merge, and
+# A published release or a manual dispatch rebuilds the site, and nothing else does.
+# A full rebuild (every ssconverter schema version + all examples) is far too heavy
+# to run per merge, and
 # the Release workflow cuts the plugin GitHub Releases, so `release: published`
 # already fires after a release. Use "Run workflow" for an immediate refresh — e.g.
 # a docs fix that should not wait for the next release.

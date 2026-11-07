@@ -52,7 +52,7 @@ player.play();
 | SS6Player | 本バージョン | 備考 |
 |---|---|---|
 | `Setup(pack, anime)` / コンストラクタ引数 | `setAnimation(name)` | パック名不要。アニメ名のみ |
-| `Play(frameNo?)` | `play(startFrame = -1)` | `-1` は現在フレームから |
+| `Play(frameNo?)` | `play(startFrame = -1)` | `-1` はセクションの先頭から。今の位置から続けるなら `play(player.frameNo)` |
 | `Pause()` / `Resume()` / `Stop()` | `pause()` / `resume()` / `stop()` | |
 | `SetFrame(frame)` | `frameNo`（get/set） | シーク。サブフレーム可 |
 | `NextFrame()` / `PrevFrame()` | `frameNo = frameNo ± 1` | 専用メソッドは廃止 |

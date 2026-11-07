@@ -345,10 +345,7 @@ describe.skipIf(!haveFixtures)('AutoImporter', () => {
 
     // Behind a bridge every one of these is a synchronous hop on the host's UI
     // thread, so the count is the point. One walk of the sources,
-    // and for the output nothing beyond a shallow "is there anything here":
-    // finding the projects and dating them used to be separate traversals,
-    // statting each source file three times over, and the output tree was
-    // walked in full — copied textures and all — on top of that.
+    // and for the output nothing beyond a shallow "is there anything here".
     expect(count.stat).toBe(sourceEntries);
     expect(count.readdir).toBeLessThan(sourceEntries);
   });

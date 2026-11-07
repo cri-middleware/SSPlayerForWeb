@@ -98,8 +98,7 @@ export class SSPlayerRenderer extends (ObjectRendererBase as { new (renderer: Re
     // way up the destination runs. Pixi draws the scene straight to the default
     // framebuffer most of the time, but into an FBO whenever a filter or mask is
     // in play — and it flips its projection for the FBO case so the result samples
-    // upright. Read which one we are in rather than assuming: this was hardcoded
-    // to `true`, which drew upside-down on the plain path.
+    // upright. Read which one we are in rather than assuming.
     const intoFramebuffer = !!(renderer as unknown as { framebuffer?: { current?: unknown } })
       .framebuffer?.current;
 

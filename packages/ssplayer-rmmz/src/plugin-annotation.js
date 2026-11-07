@@ -184,9 +184,8 @@
  * @arg loop
  * @text Loop Count
  * @desc -1 or 0 = infinite, 1 = play once, n = n times. Leave blank to keep the current value.
- * @type number
- * @min -1
- * @default -1
+ * @type string
+ * @default
  * @arg transition
  * @text Transition (ms)
  * @desc Crossfade from the current animation over this many ms. 0 = switch at once.
@@ -736,9 +735,8 @@
  * @arg loop
  * @text ループ回数
  * @desc -1 または 0 = 無限、1 = 1回再生、n = n回。空欄なら現在値を維持。
- * @type number
- * @min -1
- * @default -1
+ * @type string
+ * @default
  * @arg transition
  * @text クロスフェード時間（ミリ秒）
  * @desc 今のアニメからこのミリ秒をかけてクロスフェードします。0 = すぐに切り替え。

@@ -338,6 +338,8 @@ async function initWasm() {
     }
 }
 
+// Keyed in NFC, as convertProject keys what it is given: the source paths in its
+// result are looked up here.
 async function readDirectoryRecursive(dirHandle: FileSystemDirectoryHandle, basePath = ''): Promise<void> {
     // @ts-ignore
     for await (const entry of dirHandle.values()) {
@@ -346,7 +348,7 @@ async function readDirectoryRecursive(dirHandle: FileSystemDirectoryHandle, base
         const path = basePath ? `${basePath}/${entry.name}` : entry.name;
         if (entry.kind === 'file') {
             const file = await entry.getFile();
-            sourceFiles.set(path, file);
+            sourceFiles.set(path.normalize('NFC'), file);
         } else if (entry.kind === 'directory') {
             await readDirectoryRecursive(entry as FileSystemDirectoryHandle, path);
         }
@@ -361,7 +363,7 @@ function readPickedFiles(files: File[]) {
     for (const file of files) {
         const segments = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(1) : [file.name];
         if (segments.some((s) => s.startsWith('.'))) continue; // Ignore hidden files like .DS_Store
-        sourceFiles.set(segments.join('/'), file);
+        sourceFiles.set(segments.join('/').normalize('NFC'), file);
     }
 }
 
@@ -417,12 +419,13 @@ async function runConversion() {
 
         updateBadge(convertStatus, 'Reading Files...', 'active');
         log(`Reading folder: ${folder.name}`);
+        sourceFiles.clear();
         await folder.read();
         log(`Found ${sourceFiles.size} files in folder.`);
 
-        if (!currentSspjStem) {
-            throw new Error('No .sspj file found in the selected input folder.');
-        }
+        const { stem, dir } = locateProject(sourceFiles.keys());
+        currentSspjStem = stem;
+        currentSspjDir = dir;
 
         updateBadge(convertStatus, 'Converting...', 'active');
         log('Starting WASM conversion...');
@@ -494,7 +497,11 @@ async function runConversion() {
             log(`Successfully downloaded ${zipFileName}`, 'success');
         }
     } catch (e: any) {
-        const message = `${e.message || e}`;
+        // A picked folder's File objects stop reading once a file changes on disk.
+        const stale = e?.name === 'NotReadableError' || e?.name === 'NotFoundError';
+        const message = stale
+            ? 'A file in the folder changed after it was selected. Select the folder again.'
+            : `${e.message || e}`;
         log(`Error: ${message}`, 'error');
         updateBadge(convertStatus, 'Failed', 'error');
         showResult({

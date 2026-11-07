@@ -191,8 +191,7 @@ jobs:
             echo "::notice::Drafted ${tag} — check it and publish it from the Releases page."
           done <<< "$rows"
 
-      # npm 11.21 is the first CLI that sets a dist-tag through trusted
-      # publishing, and Node 22 ships npm 10.
+      # npm 11.21 is the first CLI that sets a dist-tag through trusted publishing.
       - name: Update npm
         if: inputs.publish_npm
         run: npm install -g npm@11.21.0

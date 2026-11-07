@@ -78,6 +78,9 @@ export class SSOverlay {
   private readonly computedStyles = new WeakMap<HTMLElement, CSSStyleDeclaration>();
   private readonly io: IntersectionObserver | null;
   private readonly onResize: () => void;
+  // A hidden tab gets no animation frames. Restart the clock on the way back, or
+  // the first tick plays the whole absence at once, every event in it included.
+  private readonly onVisibilityChange = (): void => { this.lastTime = performance.now(); };
   // Declared with the other fields so it exists before the constructor's first
   // resize() call, which fires it.
   private readonly _resizeListeners = new Set<() => void>();
@@ -105,6 +108,7 @@ export class SSOverlay {
 
     this.onResize = () => this.resize();
     window.addEventListener('resize', this.onResize);
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.resize();
 
     // Per-element gating, not per-surface: the overlay canvas always intersects
@@ -209,7 +213,7 @@ export class SSOverlay {
     if (this.rafId) return;
     this.lastTime = performance.now();
     const tick = (now: number) => {
-      const delta = now - this.lastTime;
+      const delta = Math.max(0, now - this.lastTime);
       this.lastTime = now;
 
       // Read every rect first, then write. Interleaving reads and writes here is
@@ -252,6 +256,7 @@ export class SSOverlay {
   public destroy(): void {
     if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = 0; }
     window.removeEventListener('resize', this.onResize);
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.io?.disconnect();
     this.entries.clear();
     this.surface.destroy();

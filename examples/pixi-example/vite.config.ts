@@ -4,7 +4,6 @@ import path from 'path';
 import viteCompression from 'vite-plugin-compression';
 
 export default defineConfig(({ command }) => {
-  // package.json から pixi.js のバージョンを動的に取得する
   const pkg = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf-8'));
   const rawVersion = (pkg.dependencies && pkg.dependencies['pixi.js']) || 
                      (pkg.devDependencies && pkg.devDependencies['pixi.js']) || 

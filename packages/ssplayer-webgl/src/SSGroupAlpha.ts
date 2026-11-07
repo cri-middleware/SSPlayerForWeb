@@ -38,7 +38,7 @@ void main() {
  * result transparent. So that is what this does — render the player opaque into
  * an offscreen texture, then composite that texture once at the player's alpha.
  * Overlaps inside the character are resolved at full opacity first, exactly as
- * CSS opacity on a canvas used to do before characters stopped owning canvases.
+ * CSS opacity on a canvas does.
  *
  * Only players with `alpha < 1` take this path; anything fully opaque draws
  * straight to the target and pays nothing.
@@ -46,6 +46,7 @@ void main() {
 export class SSGroupAlpha {
   private framebuffer: WebGLFramebuffer | null = null;
   private texture: WebGLTexture | null = null;
+  private scissored = false;
   private width = 0;
   private height = 0;
 
@@ -74,7 +75,8 @@ export class SSGroupAlpha {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
     // Scissor may still be on from a clipped player; a partial clear here is
-    // exactly the bug described above.
+    // exactly the bug described above. It comes back on for the composite.
+    this.scissored = gl.isEnabled(gl.SCISSOR_TEST);
     gl.disable(gl.SCISSOR_TEST);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
@@ -91,6 +93,7 @@ export class SSGroupAlpha {
   public end(alpha: number): void {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (this.scissored) gl.enable(gl.SCISSOR_TEST);
     this.ensureProgram();
 
     // Full target, in clip space, sampling the texture 1:1.
@@ -116,6 +119,8 @@ export class SSGroupAlpha {
     // Premultiplied source over whatever the surface already holds.
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // The player's last batch may have left a subtract in place.
+    gl.blendEquationSeparate(gl.FUNC_ADD, gl.FUNC_ADD);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     gl.disableVertexAttribArray(0);

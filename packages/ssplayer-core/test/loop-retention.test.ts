@@ -4,10 +4,8 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 // The loop count is per-animation in the runtime: `setup_animation` resets it to
 // the infinite sentinel, because a count is something a transition states. It is
 // NOT per-animation to a caller, who set it on the player and expects it to hold
-// — so the player puts it back after every switch. Every other Player with a
-// node or a widget to hang it on does the same; this one used to be the
-// exception, and a configured `loopCount = 3` quietly became "forever" the
-// moment the animation changed.
+// — so the player puts it back after every switch. Otherwise a configured
+// `loopCount = 3` quietly becomes "forever" the moment the animation changes.
 //
 // Runs against a fake rather than booting WASM, the same trick the neighbouring
 // suites use.

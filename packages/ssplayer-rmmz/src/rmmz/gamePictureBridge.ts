@@ -3,8 +3,9 @@
 // Model (Game_Picture): we stash the "which SS animation to play" data on the
 // picture object itself. Game objects are serialized by MZ's save system, so the
 // animation is restored automatically on load. Where track 0 stands is written
-// there as each scene ends, which every save comes after, so the player the
-// next scene or a load builds carries on from that frame.
+// there as each scene ends, so the player the next scene or a load builds carries
+// on from that frame. A save made without a scene change stores where the last
+// scene ended.
 //
 // View (Sprite_Picture): rather than monkey-patching the bitmap pipeline, we
 // alias updateBitmap to (a) keep an SS-bearing picture visible even with no
@@ -12,7 +13,7 @@
 // child means MZ's move / scale transforms flow into the SS animation for free.
 
 import type { ISpriteSpriteStudio } from './Sprite_SpriteStudio.js';
-import { setLivePlayer, clearLivePlayer, markLivePlayerEnded } from './liveRegistry.js';
+import { setLivePlayer, clearLivePlayer, getLivePlayer, markLivePlayerEnded, runDeferredLiveCommand } from './liveRegistry.js';
 import { isWasmOk } from './boot.js';
 import { SSLoadError } from './loadError.js';
 import { applyPlayhead, readPlayhead, type SSPlayhead } from './playhead.js';
@@ -60,6 +61,11 @@ export interface SSPictureData {
    * in saves made without it, plays from the head.
    */
   playhead?: SSPlayhead;
+  /**
+   * Which Show SS this is. Part of the view's key, so showing what is already
+   * showing plays it again rather than reading as no change.
+   */
+  showId?: number;
 }
 
 interface GamePictureLike {
@@ -104,6 +110,11 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
   const _destroy = Sprite_Picture.prototype.destroy;
   Sprite_Picture.prototype.destroy = function (this: any, options?: unknown): void {
     mounted.delete(this);
+    // Only its own: the next scene's pictures mount before MZ destroys this one.
+    const child = this._ssChild;
+    if (child && typeof this._pictureId === 'number' && getLivePlayer(this._pictureId) === child.player) {
+      clearLivePlayer(this._pictureId);
+    }
     _destroy.call(this, options);
   };
 
@@ -138,11 +149,9 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     // Logging alone leaves the picture blank and holds any "wait for completion"
     // forever, with nothing on screen to say why.
     if (this._ssLoadError) throw this._ssLoadError;
-    const key = `${ss.ssabUrl}|${ss.animation}`;
+    const key = `${ss.ssabUrl}|${ss.animation}|${ss.showId ?? ''}`;
     // Same asset AND same animation: nothing to (re)build, but the model may
     // still have changed in ways that need no re-setup — see _ssApplyLive.
-    // Returning outright here used to drop a loop-only or signalSwitch-only
-    // change on the floor, since neither is part of the key.
     if (this._ssChild && this._ssKey === key) {
       this._ssApplyLive(ss);
       return;
@@ -161,10 +170,19 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       // rest itself, or kept them all on a crossfade (the persisted copy is
       // pruned to match by the command that changed the animation).
       try {
+        // A new Show SS of what is already playing has nothing to switch, so what
+        // the last Show laid on the runtime goes by hand.
+        const player = this._ssChild.player;
+        if (this._ssShowId !== ss.showId && player.currentAnimation === ss.animation) {
+          player.clearAllPartOverrides();
+          for (let track = player.trackCount - 1; track >= 1; track--) player.clearTrack(track);
+        }
         this._ssChild.switchAnimation(ss.animation, ss.loop, ss.transition);
+        this._ssNameBlankAnimation(this._ssChild);
       } catch (e: unknown) {
         console.error('[ssplayer-rmmz] failed to switch SS animation:', e);
       }
+      this._ssShowId = ss.showId;
       // switchAnimation applies the loop itself; record it so _ssApplyLive
       // does not set the same value a second time.
       this._ssLoop = ss.loop;
@@ -178,6 +196,7 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
     this._ssChild = child;
     this._ssKey = key;
     this._ssAsset = ss.ssabUrl;
+    this._ssShowId = ss.showId;
     // A fresh player owns none of the live state yet. loadAnimation applies the
     // loop below, so record it up front and let _ssApplyLive handle the rest.
     this._ssLoop = ss.loop;
@@ -200,18 +219,21 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
       // the picture's persisted overrides once the animation is set up (before
       // that, part names cannot resolve).
       .then(() => {
-        applyPartOverrides(child.player, ss.overrides);
-        // Read now, not at mount: a setSSTrack made while this loaded saved its
-        // track and left laying it to us.
+        if (this._ssChild !== child) return;
+        // Read now, not at mount: a command made while this loaded saved its
+        // change and left applying it to us.
         const picture = this.picture() as GamePictureLike | null;
         const now = picture?.ssData();
+        applyPartOverrides(child.player, now?.overrides);
         applySavedTracks(child.player, now?.tracks);
-        if (now?.playhead && this._ssChild === child && applyPlayhead(child.player, now.playhead)) {
+        if (now?.playhead && applyPlayhead(child.player, now.playhead)) {
           if (now.playhead.state === 'ended') {
             this._ssHeldEnded = true;
             if (typeof this._pictureId === 'number') markLivePlayerEnded(this._pictureId);
           }
         }
+        this._ssNameBlankAnimation(child);
+        if (typeof this._pictureId === 'number') runDeferredLiveCommand(this._pictureId);
       })
       .catch((e: unknown) => {
         console.error('[ssplayer-rmmz] failed to load SS animation:', e);
@@ -232,9 +254,7 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
    *
    * Keeping these out of `_ssKey` is what lets a `changeSSAnimation` that only
    * alters `loop` — or a second `setSSAsPicture` that only changes
-   * `signalSwitch` — take effect. Both used to be silently ignored: the key was
-   * unchanged, so `_ssSync` returned before reaching them, and `signalSwitch`
-   * was additionally bound once at mount and never revisited.
+   * `signalSwitch` — take effect.
    */
   Sprite_Picture.prototype._ssApplyLive = function (this: any, ss: SSPictureData): void {
     const child = this._ssChild;
@@ -279,8 +299,19 @@ export function installGamePictureBridge(SpriteSpriteStudio: new () => ISpriteSp
   Sprite_Picture.prototype._ssAdopt = function (this: any): void {
     const player = this._ssChild?.player;
     if (!player) return;
-    this._ssKey = `${this._ssAsset}|${player.currentAnimation}`;
+    const picture = this.picture() as GamePictureLike | null;
+    this._ssKey = `${this._ssAsset}|${player.currentAnimation}|${picture?.ssData()?.showId ?? ''}`;
     this._ssLoop = player.loopCount;
+  };
+
+  // A blank name plays the pack's first animation. Saved blank, the playhead a
+  // scene change takes could never be matched to it.
+  Sprite_Picture.prototype._ssNameBlankAnimation = function (this: any, child: ISpriteSpriteStudio): void {
+    const picture = this.picture() as GamePictureLike | null;
+    const now = picture?.ssData();
+    if (!picture || !now || now.animation || !child.player.currentAnimation) return;
+    picture.setSSData({ ...now, animation: child.player.currentAnimation });
+    this._ssAdopt();
   };
 
   Sprite_Picture.prototype._ssRemove = function (this: any): void {

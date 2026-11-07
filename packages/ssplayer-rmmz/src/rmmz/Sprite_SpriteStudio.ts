@@ -43,6 +43,7 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
     public readonly player: SSPlayer;
     private _spec: SSViewSpec | null = null;
     private _loadToken = 0;
+    private _loading = false;
     private _audioUnsub: Unsubscribe;
 
     constructor(gl?: GL) {
@@ -58,10 +59,17 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
     public async loadAnimation(spec: SSViewSpec): Promise<void> {
       this._spec = spec;
       const token = ++this._loadToken;
-      await this.player.load(spec.ssabUrl);
+      this._loading = true;
+      try {
+        await this.player.load(spec.ssabUrl);
+      } finally {
+        if (token === this._loadToken) this._loading = false;
+      }
       if (token !== this._loadToken) return; // superseded by a newer load
-      this.player.setAnimation(spec.animation);
-      this.player.loopCount = spec.loop ?? -1;
+      // The spec as it stands: a switch made during the load is recorded there.
+      const { animation, loop } = this._spec ?? spec;
+      this.player.setAnimation(animation);
+      this.player.loopCount = loop ?? -1;
       this.player.play();
     }
 
@@ -74,9 +82,8 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
      */
     public switchAnimation(animation: string, loop = -1, transitionMs = 0): void {
       if (this._spec) this._spec = { ...this._spec, animation, loop };
-      // Nothing awaits below, so no load can slip in between: bump the token so a
-      // load still in flight does not overwrite this switch when it lands.
-      this._loadToken += 1;
+      // No pack to switch on yet: the load plays what the spec now says.
+      if (this._loading) return;
       playAnimation(this.player, animation, loop, transitionMs);
     }
 
@@ -93,6 +100,7 @@ export function defineSpriteSpriteStudio(SpriteBase: any): new (gl?: GL) => ISpr
 
     // Explicitly free WASM memory now rather than waiting for GC.
     public destroy(options?: unknown): void {
+      this._loadToken += 1;
       this._audioUnsub();
       this.player.destroy();
       super.destroy(options as any);

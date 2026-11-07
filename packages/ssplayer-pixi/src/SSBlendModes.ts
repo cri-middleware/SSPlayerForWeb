@@ -6,9 +6,7 @@ import { SSBlendEquation, SSBlendFactor, SSBlendMode, SS_BLEND_STATES } from '@s
  * equivalent for.
  *
  * **What the states are lives in core** (`SS_BLEND_STATES`): SpriteStudio
- * realises EVERY blend as a fixed-function GPU blend state (Unity `Blend Src Dst`
- * + BlendOp — verified against the official SS6PlayerForUnity,
- * `Library_SpriteStudio6.cs` FunctionMaterialSetUpAnimation), reading the
+ * realises EVERY blend as a fixed-function GPU blend state, reading the
  * destination framebuffer through Dst*Color factors, and that is the same answer
  * whichever backend asks. What lives here is the registration: the three tables
  * below (PixiJS mode names, its WebGPU map, its WebGL map) are all derived from
@@ -17,8 +15,7 @@ import { SSBlendEquation, SSBlendFactor, SSBlendMode, SS_BLEND_STATES } from '@s
  * We register them the SAME way — as real GPU blend states (like PixiJS's own
  * normal/add/multiply/screen) — NOT as PixiJS "advanced" blend modes. Advanced
  * blend modes are backdrop-sampling FILTERS: heavier, and in this batch-draw setup
- * they do not reliably engage / read the live framebuffer (Invert/Exclusion came
- * out wrong — the canvas backdrop had no effect on them). Fixed-function GPU blend
+ * they do not reliably engage / read the live framebuffer. Fixed-function GPU blend
  * always engages and blends against the actual framebuffer, exactly like SS.
  *
  * Factors are written for PixiJS's PREMULTIPLIED pipeline; for the opaque sprites

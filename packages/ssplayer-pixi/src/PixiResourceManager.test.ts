@@ -32,8 +32,8 @@ vi.mock('pixi.js', () => ({
       assetsState.cache.set(url, tex);
       return tex;
     },
-    // Present so that a regression reintroducing the unload-on-destroy bug fails
-    // on the assertion about shared state, not on a missing mock method.
+    // Present so that unloading on destroy fails on the assertion about shared
+    // state, not on a missing mock method.
     unload: async (url: string) => { assetsState.cache.delete(url); },
   },
   Texture: class {
@@ -89,24 +89,34 @@ describe('URL-loaded textures live in the shared Assets cache', () => {
 
     a.destroy();
 
-    // The regression this guards: destroy() used to Assets.unload() the hash,
-    // blanking out every other player that had loaded the same atlas.
+    // Assets.unload() here would blank every other player on the same atlas.
     expect(b.getTexture(0x1111)).toBe(shared);
     expect((shared as unknown as FakeTexture).destroyed).toBe(false);
   });
 
-  it('swallows a failed load rather than rejecting', async () => {
-    // Deliberate, and a difference from ssplayer-webgl, which rejects: here a
-    // 404 atlas leaves the pack loading "successfully" and rendering untextured.
+  it('rejects a failed load, naming the URL', async () => {
     assetsState.failFor.add('/missing.png');
-    const console_error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const rm = new PixiResourceManager();
 
-    await expect(rm.loadTexture('/missing.png', 0x2222)).resolves.toBeUndefined();
+    await expect(rm.loadTexture('/missing.png', 0x2222)).rejects.toThrow('/missing.png');
 
     expect(rm.getTexture(0x2222)).toBeUndefined();
-    expect(console_error).toHaveBeenCalled();
-    console_error.mockRestore();
+  });
+
+  it('tells whoever draws from them before a reset frees textures, and only then', async () => {
+    const rm = new PixiResourceManager();
+    const beforeFree = vi.fn();
+    rm.beforeFree = beforeFree;
+
+    rm.reset();
+    expect(beforeFree).not.toHaveBeenCalled();
+
+    const texture = new FakeTexture('embedded');
+    (rm as unknown as { embeddedTextures: Map<number, FakeTexture> }).embeddedTextures.set(0x3333, texture);
+    beforeFree.mockImplementation(() => expect(texture.destroyed).toBe(false));
+    rm.reset();
+    expect(beforeFree).toHaveBeenCalledTimes(1);
+    expect(texture.destroyed).toBe(true);
   });
 });
 

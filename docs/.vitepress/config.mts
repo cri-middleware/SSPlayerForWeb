@@ -102,7 +102,6 @@ export default withMermaid({
   //
   // No og:image: the only SpriteStudio artwork in this repository is the SVG favicon, link
   // previews do not show SVG, and `summary_large_image` without an image renders as nothing.
-  // Add a PNG or JPEG under docs/public/ and switch the card type when there is one.
   transformHead({ pageData, siteData, title, description }) {
     const path = pageData.relativePath
       .replace(/(^|\/)index\.md$/, '$1')
@@ -115,7 +114,6 @@ export default withMermaid({
       ['meta', { property: 'og:url', content: `${SITE_URL}/${path}` }],
       ['meta', { property: 'og:locale', content: pageData.relativePath.startsWith('ja/') ? 'ja_JP' : 'en_US' }],
       ['meta', { name: 'twitter:card', content: 'summary' }],
-      // Keep in sync with the X account linked from the sibling docs sites.
       ['meta', { name: 'twitter:site', content: '@spritestudio' }],
       ['meta', { name: 'twitter:title', content: title }],
       ['meta', { name: 'twitter:description', content: description }],
@@ -178,8 +176,7 @@ export default withMermaid({
               },
             ],
           },
-          // The family entry point, carried in the nav of every sibling site so a reader who
-          // arrives from a search can reach the portal and the other players.
+          // The way back to the portal for a reader who arrives from a search.
           { text: 'SpriteStudio Docs', link: 'https://cri-middleware.github.io/SpriteStudio-Docs/' },
         ],
         sidebar: [
@@ -282,7 +279,7 @@ export default withMermaid({
               },
             ],
           },
-          // ポータルへの戻り導線。日本語ロケール（/ja/）を指すこと。
+          // The way back to the portal; it must point at the Japanese locale (/ja/).
           { text: 'SpriteStudio Docs', link: 'https://cri-middleware.github.io/SpriteStudio-Docs/ja/' },
         ],
         sidebar: [

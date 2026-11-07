@@ -64,6 +64,8 @@ export class SSWebAudioManager implements IAudioManager {
     private buffers: Map<string, AudioBuffer> = new Map();
     private activeSources: Set<AudioBufferSourceNode> = new Set();
     private soundPaths: Map<string, string> = new Map();
+    // Encoded sounds an embedded `.ssab` carried, until they are decoded.
+    private soundBytes: Map<string, Uint8Array> = new Map();
 
     constructor() {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -105,26 +107,37 @@ export class SSWebAudioManager implements IAudioManager {
         // Build the lookup map
         for (const asset of sounds) {
             this.soundPaths.set(asset.name, asset.path);
+            if (asset.bytes && !this.buffers.has(asset.name)) this.soundBytes.set(asset.name, asset.bytes);
         }
         const promises = sounds.map(asset => this.loadSound(asset.name));
         await Promise.all(promises);
     }
 
     /**
-     * Internal method to fetch and decode a single sound file.
+     * Internal method to fetch (unless the pack embeds it) and decode a single sound file.
      */
     private async loadSound(soundName: string): Promise<void> {
         if (this.buffers.has(soundName)) return;
 
         try {
-            const url = this.soundPaths.get(soundName) || soundName;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const arrayBuffer = await response.arrayBuffer();
+            const bytes = this.soundBytes.get(soundName);
+            let arrayBuffer: ArrayBuffer;
+            if (bytes) {
+                // A copy of exactly these bytes: decodeAudioData detaches what it is given.
+                arrayBuffer = bytes.slice().buffer as ArrayBuffer;
+            } else {
+                const url = this.soundPaths.get(soundName) || soundName;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                arrayBuffer = await response.arrayBuffer();
+            }
             const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
             this.buffers.set(soundName, audioBuffer);
         } catch (e) {
             console.error(`[SSWebAudioManager] Failed to load sound: ${soundName}`, e);
+        } finally {
+            // After the decode: a key the playhead crosses during it asks for the sound again.
+            this.soundBytes.delete(soundName);
         }
     }
 

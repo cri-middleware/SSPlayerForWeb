@@ -2,7 +2,7 @@
 ; ssplayer-tyranoscript — 手書きシナリオ最小確認
 ;
 ; SpriteStudio アニメを [ss_*] カスタムタグで表示・再生する最小例。
-; レンダラは @spritestudio/ssplayer-webgl (SSCanvasPlayer)。
+; レンダラは @spritestudio/ssplayer-webgl。
 ;
 ; 前提: このプロジェクトに TyranoScript 本体 (index.html + tyrano/) を配置し、
 ;       `pnpm --filter tyranoscript-example run sync:plugin` でプラグイン資産

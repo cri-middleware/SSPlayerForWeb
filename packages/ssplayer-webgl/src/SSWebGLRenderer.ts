@@ -16,13 +16,11 @@ import type { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 //
 // The TEST side deliberately keeps reading both planes (`!= 0` over the full
 // byte), which is their union — the specified coverage when writers of differing
-// mask_influence overlap. The renderer already claimed all 8 bits before this
-// split, so its footprint against other stencil users is unchanged.
+// mask_influence overlap.
 //
 // The counter can hold 127 writers overlapping at one pixel. A tree may carry
 // more writers than that (MAX_TREE_WRITERS), but not stacked on one spot in
-// practice — unlike ForUnity, which had to fit inside URP's 4 reserved bits and
-// lives with a limit of 7.
+// practice.
 export const MASK_PLANE_PARITY = 0x80;  // INVERT writers (mask_influence 1): parity, no overlap limit
 export const MASK_PLANE_COUNTER = 0x7F; // INCR/DECR writers (mask_influence 0): up to 127 overlaps
 
@@ -548,7 +546,7 @@ export class SSWebGLRenderer {
     }
   }
 
-  /** Set `_ctxTint` = the player tint scaled by the parent-chain opacity (§opacity). */
+  /** Set `_ctxTint` = the player tint scaled by the parent-chain opacity. */
   private applyCtxTint(parentAlpha: number): void {
     const t = this._tint, ct = this._ctxTint;
     ct[0] = t[0] * parentAlpha; ct[1] = t[1] * parentAlpha;

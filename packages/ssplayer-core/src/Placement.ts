@@ -2,8 +2,7 @@
  * Fit and align: where an animation's box lands in a view.
  *
  * Pure arithmetic over a box and a view size, so it needs no renderer and every
- * renderer shares one copy. The names, defaults and arithmetic are the porting
- * guide's Placement page.
+ * renderer shares one copy.
  */
 
 /**

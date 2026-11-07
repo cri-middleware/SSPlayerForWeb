@@ -36,10 +36,8 @@ export function extractInstancePackRefs(buffer: ArrayBuffer): { hash: number, na
     return SSRuntimeManager.extractInstancePackRefs(new Uint8Array(buffer));
 }
 
-// Sequence (.ssqb) listing. Core doesn't expose an SSQB extractor yet (deferred),
-// so this stays app-side — but it uses core's exported `SsSequenceBinary` class
-// rather than a local schema copy. Swap to a core helper once core gains SSQB
-// support (see the NOTE in SSRuntimeManager).
+// Sequence (.ssqb) listing. Core exposes no SSQB extractor, so this reads the
+// sequence names app-side with the exported `SsSequenceBinary` class.
 export function extractSequenceNames(buffer: ArrayBuffer): string[] {
     const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
     if (!ssFormat.SsSequenceBinary.bufferHasIdentifier(bb as any)) return [];

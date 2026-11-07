@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig([
-  // 1. バンドラー向け（ESM, minifyなし）
+  // 1. For bundlers (ESM, unminified).
   {
     entry: ['src/index.ts'],
     format: 'esm',
@@ -11,7 +11,7 @@ export default defineConfig([
       chunkFileNames: '[name].js',
     },
   },
-  // 2. ブラウザ直読み向け（IIFE, minifyあり）
+  // 2. For direct use in a browser (IIFE, minified).
   {
     entry: ['src/index.ts'],
     format: 'iife',
@@ -26,7 +26,7 @@ export default defineConfig([
         'pixi.js': 'PIXI'
       }
     },
-    // pixi.js をバンドルせず、ブラウザのグローバル変数 PIXI に依存させる。
+    // pixi.js is not bundled; the bundle uses the page's global PIXI.
     //
     // **Every core subpath export is listed in alwaysBundle, not just the
     // package.** An IIFE has no way to resolve a bare specifier at runtime, so

@@ -66,8 +66,9 @@ extraction. Its main entry has **no dependency on any rendering engine or the DO
 
 - **Zero-copy:** transform matrices and geometry are read through `Float32Array`
   views mapped directly onto `getWasmMemory().buffer` — no per-frame copies.
-- **Memory safety:** WASM memory is not GC'd by JS; the wrappers use
-  `FinalizationRegistry` to call the WASM `free()` when the JS object is collected.
+- **Memory safety:** WASM memory is not GC'd by JS, so call `destroy()` on a player
+  you are done with. `FinalizationRegistry` frees what a collected wrapper still
+  holds, as a safety net.
 
 ## License
 

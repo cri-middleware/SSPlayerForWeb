@@ -16,8 +16,7 @@
         --error: #ff8a80;
         --success: #a5e887;
         /* One colour per event kind, shared by the strip and the list so a
-           marker and its row are recognisably the same thing. Same three as
-           SSPlayerForWgpu's preview shell. */
+           marker and its row are recognisably the same thing. */
         --user-data: #a78bfa;
         --signal: #38bdf8;
         --audio: #fbbf24;
@@ -170,8 +169,7 @@
       /* Fixed layout and a wrapping payload cell, because the alternative is a
          page wider than the window: one long user-data string widens the table,
          which widens the column, which stretches the stage the canvas sizes
-         itself from — and the animation ends up drawn into a box off screen.
-         (The same trap SSPlayerForWgpu's shell records.) */
+         itself from — and the animation ends up drawn into a box off screen. */
       #events table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 12px; }
       #events td { overflow-wrap: anywhere; }
       #events td:nth-child(1), #events th:nth-child(1) { width: 4.5em; }

@@ -24,15 +24,11 @@ export function init(source?: InitInput | Promise<InitInput>): Promise<InitOutpu
   return __wbg_init(source === undefined ? undefined : { module_or_path: source });
 }
 
-/** Options for {@link convertProject}; mirrors the Rust `ConvertConfig`. */
+/** Options for {@link convertProject}. */
 export interface ConvertOptions {
   /** Inline each texture's bytes into the `.ssab` (no sibling image files). Default `false`. */
   embedded?: boolean;
-  /** Emit debug artifacts. Default `false`. */
-  debug?: boolean;
-  /** Split output. Default `false`. */
-  split?: boolean;
-  /** Optimize output. Default `true`. */
+  /** Share identical tables within the output, for a smaller file. Default `true`. */
   optimize?: boolean;
 }
 
@@ -41,15 +37,20 @@ export interface ConvertOptions {
  *
  * `files` maps every path in the project directory to its bytes, and must hold
  * exactly one `.sspj`: the converter takes no name, so leave out any other
- * `.sspj` in that directory ({@link locateProject} finds the one). Pure — no
+ * `.sspj` in that directory ({@link locateProject} throws on more than one). Pure — no
  * fs, no DOM. Call {@link init} first.
  */
 export function convertProject(
   files: Map<string, Uint8Array>,
   options: ConvertOptions = {},
 ): ConvertResult {
-  const { embedded = false, debug = false, split = false, optimize = true } = options;
-  return convert(files, embedded, debug, split, optimize);
+  const { embedded = false, optimize = true } = options;
+  // The converter matches names byte for byte, and a disk can hold in NFD a name
+  // the project's own files write in NFC.
+  const normalized = new Map<string, Uint8Array>();
+  for (const [path, bytes] of files) normalized.set(path.normalize('NFC'), bytes);
+  // The two in the middle are the converter's `debug` and `split`, which nothing reads.
+  return convert(normalized, embedded, false, false, optimize);
 }
 
 /** Converter build version string (`CARGO_PKG_VERSION` + short git sha). */

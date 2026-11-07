@@ -1,5 +1,4 @@
-// Override Layer API demo — the Web counterpart of SSPlayerForGodot's and
-// SSPlayerForUnity's examples/Override_Ringo.
+// Override Layer API demo.
 //
 // The Ringo animation keeps playing while the demo cycles through the three
 // per-part runtime overrides. Each one wins over the keyframed animation
@@ -27,8 +26,8 @@ const CELL_NAME = 'effect3';
 
 /**
  * Colour for the colour-override step: `0xRRGGBBAA`, the packing the runtime
- * itself takes. This is rgba(0, 51, 255, 191) — the same translucent blue the
- * Godot and Unity demos use. It is interpreted in 8-bit sRGB exactly like an
+ * itself takes. This is rgba(0, 51, 255, 191), a translucent blue. It is
+ * interpreted in 8-bit sRGB exactly like an
  * authored PartColor, and the runtime pre-multiplies the alpha with the part's
  * composed alpha, so it must NOT be pre-multiplied here.
  */
@@ -74,8 +73,7 @@ async function main() {
     await player.load(new URL('Ringo/Ringo.ssab', document.baseURI).href);
     player.setAnimation('run');
     // Horizontally centred, 250px below centre: Ringo's origin sits near its feet,
-    // so centring outright leaves it high in the frame. Same offset the Godot demo
-    // applies (viewport centre + (0, 250)).
+    // so centring outright leaves it high in the frame.
     player.position.set(640, 730);
     app.stage.addChild(player);
 

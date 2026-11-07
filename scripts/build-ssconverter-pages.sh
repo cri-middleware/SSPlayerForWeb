@@ -141,7 +141,6 @@ build_from() {
 trap 'git -C "$ROOT_DIR" worktree prune 2>/dev/null || true' EXIT
 
 mkdir -p "$OUT/ssconverter"
-# Expose the manifest to the site so the app can render a version switcher.
 cp "$MANIFEST" "$OUT/ssconverter/versions.json"
 
 LATEST="$(jq -r '.latest' "$MANIFEST")"

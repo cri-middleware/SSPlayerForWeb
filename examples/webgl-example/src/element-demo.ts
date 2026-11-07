@@ -87,7 +87,7 @@ function populateAnimations(): void {
 }
 player.addEventListener('load', populateAnimations);
 
-// Element CustomEvents: the family's events under their DOM names, and the
+// Element CustomEvents: the player's events under their DOM names, and the
 // element's own `load` / `error`. `audio` is left out: the player plays the sound itself.
 for (const type of ['load', 'animationstarted', 'animationfinished', 'animationlooped', 'userdata', 'signal', 'error']) {
   player.addEventListener(type, (e: Event) => {

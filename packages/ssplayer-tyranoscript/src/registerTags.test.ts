@@ -121,7 +121,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => {
     _fireSignal(commandId: string) { for (const cb of [...this._signalListeners]) cb({ commandId }); }
 
     // The character's element, exposed here so the existing assertions can reach
-    // it from the player they were handed. It is a plain div now: the overlay
+    // it from the player they were handed. It is a plain div: the overlay
     // owns the only canvas on the layer.
     constructor(public element: HTMLElement, public options: unknown) {}
   }
@@ -478,7 +478,7 @@ describe('registerSSTags', () => {
     expect(p.getAnimationNames).toHaveBeenCalled();
     // getAnimationNames mock → ['Anime_1', …]; first is chosen.
     expect(p.setAnimation).toHaveBeenCalledWith('Anime_1');
-    // The regression this guards: a second download of the same pack.
+    // No second download of the same pack.
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
@@ -635,6 +635,77 @@ describe('registerSSTags', () => {
     // so a scenario written the old way still blocks until the players are back.
     expect(FakeSSPlayer.instances).toHaveLength(1);
     expect(getRegistry().names()).toEqual(['chr']);
+  });
+
+  it('clears the divs and canvases a save put back when it restores', async () => {
+    const h = await withPlayer();
+    // What the engine's setLayerHtml does on a load: the layer's DOM comes back
+    // with the character's div and the overlay's canvas in it.
+    const layer = FakeSSPlayer.instances[0].element.parentElement!;
+    const staleDiv = Object.assign(document.createElement('div'), { className: 'ss-player chr' });
+    const staleCanvas = Object.assign(document.createElement('canvas'), { className: 'ss-overlay' });
+    layer.append(staleDiv, staleCanvas);
+
+    h.fire('load-beforemaking');
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual(['chr']));
+
+    expect(staleDiv.isConnected).toBe(false);
+    expect(staleCanvas.isConnected).toBe(false);
+  });
+
+  it('holds a tag that arrives while the automatic restore runs', async () => {
+    const h = await withPlayer();
+
+    // A load with auto_next: the scenario resumes straight after the event.
+    h.fire('load-beforemaking');
+    await runTag(h.tags.ss_pause, { name: 'chr' }, h.nextOrder);
+
+    expect(h.error).not.toHaveBeenCalled();
+    expect(getRegistry().names()).toEqual(['chr']);
+  });
+
+  it('releases a player whose layer the engine replaced', async () => {
+    const h = makeTyrano();
+    registerSSTags(h.tyrano);
+    const tags = h.tyrano.kag.ftag.master_tag;
+    const layer = h.addLayer('0', 'fore');
+    const parent = document.createElement('div');
+    parent.append(layer);
+    await runTag(tags.ss_init, { wasm: 'rt.wasm' }, h.nextOrder);
+    await runTag(tags.ss_new, { name: 'chr', storage: 'others/ssdata/a.ssab', anime: 'Anime_1' }, h.nextOrder);
+
+    // What [trans layer=] does: the clone of the back page takes the layer's place.
+    const clone = layer.cloneNode(true) as HTMLElement;
+    layer.replaceWith(clone);
+
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual([]));
+    expect(clone.querySelector('.ss-player')).toBeNull();
+  });
+
+  it('keeps a player whose layer was only moved', async () => {
+    const h = await withPlayer();
+    const [live] = FakeSSPlayer.instances;
+    const layer = live.element.parentElement!;
+
+    layer.parentElement!.append(layer);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getRegistry().names()).toEqual(['chr']);
+    expect(live.element.isConnected).toBe(true);
+    expect(layer.querySelector('canvas')).not.toBeNull();
+    expect(h.error).not.toHaveBeenCalled();
+  });
+
+  it('keeps the div of a player still loading on a layer that came back', async () => {
+    const h = await withPlayer();
+    const layer = FakeSSPlayer.instances[0].element.parentElement!;
+
+    // What a load does: the layer goes back in, and the restore mounts on it at once.
+    layer.parentElement!.append(layer);
+    h.fire('load-beforemaking');
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual(['chr']));
+
+    expect(FakeSSPlayer.instances.at(-1)!.element.isConnected).toBe(true);
   });
 
   it('still restores through ss_restore on an engine with no event bus', async () => {
@@ -996,7 +1067,7 @@ describe('registerSSTags', () => {
     expect(plays).toEqual([7, 7, 7]);
     expect(ends).toHaveLength(0);
 
-    // And 0, which the old code looped forever on, plays once.
+    // And 0 plays once.
     plays.length = 0;
     p._fireAudio({ soundName: 'step', loopNum: 0 });
     howl.end();
@@ -1018,7 +1089,6 @@ describe('registerSSTags', () => {
 
     expect(engine.stopped).toBeGreaterThan(0);
     expect(engine.unloaded).toBe(true);
-    // A shared manager used to take the other character's sound down too.
     expect(rain.stopped).toBe(0);
     expect(rain.unloaded).toBe(false);
     vi.unstubAllGlobals();
@@ -1532,7 +1602,7 @@ describe('registerSSTags', () => {
     expect(p.setAnimationSection).toHaveBeenCalledWith(5, 9);
   });
 
-  it('ss_direction takes Godot\'s words, keeps them across a change, and restores them', async () => {
+  it('ss_direction takes words, keeps them across a change, and restores them', async () => {
     const h = await withPlayer();
     const p = FakeSSPlayer.instances[0];
 

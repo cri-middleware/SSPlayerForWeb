@@ -82,6 +82,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // this, so the work of a pack no longer bound never marks the new one
     // ready or adds packs to its registry.
     private _bindGeneration: number = 0;
+    private _loadGeneration: number = 0;
     protected _instanceChildren: Map<number, InstanceChildState<T>> = new Map();
     private _effectChildren: Map<number, EffectChildState> = new Map();
     private readonly _partState = new PartState();
@@ -140,10 +141,19 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * instance packs always resolve relative to the SSAB's own location (the
      * structure that ssconverter emits) — there is no separate asset-base
      * override.
+     *
+     * Only the last `load()` or bind counts. One overtaken by another, or by
+     * {@link destroy}, resolves without binding anything, so compare the
+     * `ssabUrl` property before going on from it.
      * @param ssabUrl The URL of the SSAB file.
      */
     public async load(ssabUrl: string) {
+        // The last pack asked for wins, whichever answer arrives first, and a
+        // destroyed player binds nothing.
+        const generation = ++this._loadGeneration;
+        const superseded = (): boolean => generation !== this._loadGeneration || this._destroyed;
         const response = await fetch(ssabUrl);
+        if (superseded()) return;
         if (!response.ok) {
             // Name the URL that was asked for. Without it a 404 reads "Failed to
             // load SSAB: Not Found", which does not say *what* was not found —
@@ -153,6 +163,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             );
         }
         const buffer = await response.arrayBuffer();
+        if (superseded()) return;
 
         this.bindResource(new Uint8Array(buffer), ssabUrl);
         await this.prepareResources();
@@ -186,6 +197,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         // bytes that are not a pack: a refused bind leaves the bound pack, and
         // the instances and effects set up on it, as they were.
         const resource = shared ? shared.resource : new SSABResource(buffer);
+        this._loadGeneration++;
         // Recorded on this path too, not just in load(): a host that fetches
         // the bytes itself (ssplayer-rmmz does, for a better error message)
         // would otherwise leave `ssabUrl` empty for a pack that plainly has
@@ -231,7 +243,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._texturePaths = SSRuntimeManager.extractTexturePaths(buffer);
         // Cached here rather than left to the caller, because the alternative is
         // holding on to the whole SSAB (megabytes) or re-fetching it just to read
-        // a couple of dozen strings — both of which adapters were doing.
+        // a couple of dozen strings.
         this._animationNames = SSRuntimeManager.extractAnimationNames(buffer);
         if (ssabUrl !== undefined) {
             const ctx = this.runtimeManager.context;
@@ -387,13 +399,9 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._soundsPreloadedFor = audio;
         const run = this.readSoundsInto(audio);
         this._soundsPromise = run;
-        // Settled outside the body, and only once `_soundsPromise` holds it.
-        // This used to be a `finally` inside a self-referencing async IIFE, and
-        // a pack with no sounds returns from that body before its first
-        // `await` — so the cleanup ran synchronously, read the `const` still
-        // being initialised, and threw "Cannot access 'run' before
-        // initialization" out of every `load()` that had an audio manager
-        // attached. Soundless packs are the common case, not the exotic one.
+        // Settled outside the body, and only once `_soundsPromise` holds it: a pack
+        // with no sounds returns from the body before its first `await`, so cleanup
+        // in the body would read `run` before it is initialised.
         const forget = (): void => {
             if (this._soundsPromise === run) this._soundsPromise = null;
         };
@@ -408,7 +416,13 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
             const base = this._assetBaseUrl;
             const prefix = base && !base.endsWith('/') ? base + '/' : base;
-            await audio.preload(sounds.map(s => ({ name: s.name, path: prefix + s.path })));
+            // Embedded bytes are views over WASM memory, so they are copied before the
+            // awaited decode: a grow on any context would detach them.
+            await audio.preload(sounds.map(s => ({
+                name: s.name,
+                path: prefix + s.path,
+                ...(s.bytes ? { bytes: s.bytes.slice() } : {}),
+            })));
         } catch (e) {
             // Retryable: forget the attempt rather than pinning this manager
             // to a preload that never completed.
@@ -431,8 +445,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * **Selecting the animation already selected does nothing at all.** It is a
      * switch, so with nothing to switch to it costs nothing and disturbs
      * nothing: the playhead stays, the instance tree is not rebuilt, and the
-     * override layer survives. This is what every Player in the family does, and
-     * it is what lets a state machine call `setAnimation(state.clip)` every frame
+     * override layer survives. It is what lets a state machine call
+     * `setAnimation(state.clip)` every frame
      * without thinking about it. An animation a {@link crossfade} on track 0
      * brought in counts as selected from the moment it was called, so naming it
      * mid-fade leaves the fade running, and naming the one it faded out from
@@ -453,15 +467,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this.runtimeManager.setupAnimation(animationName);
             this._seekPending = -1;
         } catch (cause) {
-            // The wasm boundary throws the Brain's error enum as a bare string —
-            // "AnimationNotFound", naming neither the pack nor what was asked of
-            // it. Only this layer knows either, so only this layer can make the
-            // failure legible. The
-            // reason goes in verbatim because it separates a name the pack does
-            // not have from a player that has no pack bound at all.
+            // The wasm boundary reports the Brain's error, naming neither the pack
+            // nor what was asked of it. Only this layer knows either, so only this
+            // layer can make the failure legible. The reason goes in verbatim because
+            // it separates a name the pack does not have from a player that has no
+            // pack bound at all.
             throw new Error(
                 `[SSPlayer] ${this._ssabUrl || 'the loaded pack'} could not select ` +
-                    `animation "${animationName}" (${String(cause)}). ` +
+                    `animation "${animationName}" (${(cause as Error).message}). ` +
                     `animationNames lists what it does have.`,
                 { cause },
             );
@@ -553,9 +566,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
         this._instanceChildren.forEach(child => {
             try { child.player.destroy(); } catch { /* ignore */ }
             // child.slot is an InstanceSlotHandle (destroy() frees the WASM
-            // handle and unregisters the finalizer). The previous `.free?.()`
-            // was a no-op — the handle has no `free`, only `raw.free` — which
-            // leaked the slot until GC on every re-`setAnimation`.
+            // handle and unregisters the finalizer).
             try { child.slot.destroy(); } catch { /* ignore */ }
         });
         this._instanceChildren.clear();
@@ -809,8 +820,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *
      * When paused, the main timeline is NOT advanced, but the effect / instance
      * slots are still stepped with the real delta so that `independent` parts keep
-     * running on their own clock (SpriteStudio independent semantics; mirrors
-     * SSPlayerForGodot). The runtime's `step()` ignores the delta for
+     * running on their own clock (SpriteStudio independent semantics). The
+     * runtime's `step()` ignores the delta for
      * non-independent slots — they stay synced to the (frozen) parent frame — so
      * passing the real delta unconditionally is safe. When nothing ticks
      * ({@link isTicking}), nothing advances.
@@ -968,11 +979,10 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *
      * The *instantaneous heading*, not the configured direction: a ping-pong on
      * its return leg reads false while {@link getPlaybackDirection} still reads
-     * Forward. It is what an audio backend gates on — SpriteStudio has no
-     * reverse audio — mirroring the Godot
-     * and Unity players' `is_playing_forward`.
+     * Forward. It is what an audio backend gates on: SpriteStudio has no
+     * reverse audio.
      *
-     * Note this says nothing about {@link getSpeed}: the runtime clamps a zero
+     * Note this says nothing about {@link getSpeedScale}: the runtime clamps a zero
      * or negative rate to a stop rather than to reverse playback, so the speed
      * can never flip the heading and does not belong in a gate built on this.
      */
@@ -1045,8 +1055,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *
      * Reports the playhead itself, **not** the frame being drawn: with
      * {@link subFrameEnabled} off the renderer shows frame 12 while this still
-     * reads 12.4, the same way ForGodot, ForUnity, ForFlutter, ForReactNative
-     * and ForWgpu all report it. Use {@link getDrawFrame} to ask what is on
+     * reads 12.4. Use {@link getDrawFrame} to ask what is on
      * screen.
      */
     public getFrameNo(): number {
@@ -1061,9 +1070,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * children's frames, {@link isPartHidden} — so that what is asked of the
      * runtime is always the frame that ends up on screen. Turning sub-frame off
      * does nothing else; this is the whole of it.
-     *
-     * The siblings compute the same value at their own draw sites and call it
-     * the same thing (ForGodot's `draw_frame`, ForReactNative's `drawFrame`).
      */
     public getDrawFrame(): number {
         const frameNo = this.runtimeManager.context.get_frame_no();
@@ -1107,7 +1113,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this.reportOnce(
                 `section\u0000${animation}\u0000${startFrame}\u0000${endFrame}`,
                 `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} refused the section ` +
-                    `${given} (${String(cause)}): its end is before its start, so the section stays as it was.`,
+                    `${given} (${(cause as Error).message}): its end is before its start, so the section stays as it was.`,
             );
             return false;
         }
@@ -1251,7 +1257,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     // one starts it looping forever again — on track 0 this player puts the
     // host's count back, as setAnimation does.
 
-    /** Number of tracks, empty ones included; 0 before an animation is set up. */
+    /** Number of tracks, empty ones included; always at least 1. */
     public get trackCount(): number {
         return this.runtimeManager.context.get_track_count();
     }
@@ -1529,7 +1535,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             return action(this.runtimeManager.context);
         } catch (cause) {
             const where = animationName !== undefined ? ` on ${this._ssabUrl || 'the loaded pack'}` : '';
-            throw new Error(`[SSPlayer] ${call} failed${where} (${String(cause)}).`, { cause });
+            throw new Error(`[SSPlayer] ${call} failed${where} (${(cause as Error).message}).`, { cause });
         }
     }
 
@@ -1587,10 +1593,6 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      *
      * Applies to Normal parts only. Other part types silently ignore it — the
      * call still returns true, so success does not mean the part changed.
-     *
-     * The colour comes first and `blendOp` trails with a default, which is the
-     * family's order. The C ABI puts the
-     * blend first; this face deliberately does not.
      */
     public setPartColorOverride(
         part: number | string,
@@ -1783,8 +1785,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     private _offsetX: number = 0;
     private _offsetY: number = 0;
     // [m00, m01, m10, m11, tx, ty] = scale(±1, ±1) followed by translate(offset),
-    // i.e. p' = S*p + O — the same order Godot's Transform2D root and Unity's
-    // RootScale/RootOffset use. Rebuilt on write; writes are rare, reads are
+    // i.e. p' = S*p + O. Rebuilt on write; writes are rare, reads are
     // per-frame. Allocated on first write, so a player that never flips or
     // offsets carries no buffer at all. m01/m10 are never written: a flip is a
     // mirror, never a rotation or a skew, so they stay at the zeros they start
@@ -1867,7 +1868,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
 
     /**
      * The part's current-frame transform as a 2D affine `[m00, m01, m10, m11,
-     * tx, ty]` in animation-local (Y-down) space, copied out of WASM (safe to
+     * tx, ty]` in animation-local space (Y down once `setCoordinateSystem(YDown)`
+     * has run, as every renderer here does it), copied out of WASM (safe to
      * retain). Returns null when the part name/index is unknown in the current
      * animation. Pass `out` (a `Float32Array(6)`) to avoid allocation. Valid for
      * the frame last evaluated — the last one drawn, or the one
@@ -2072,8 +2074,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     /**
      * Run one override call against the runtime. The WASM boundary reports a
      * rejected override by throwing (bad blend op / priority, unresolvable cell,
-     * part index out of range), while the API contract shared with the Godot and
-     * Unity players is a boolean — so the throw is translated here.
+     * part index out of range), while the API contract is a boolean — so the
+     * throw is translated here.
      */
     private applyOverride(action: (ctx: SSRuntimeManager['context']) => void): boolean {
         try {
@@ -2231,6 +2233,11 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
     protected abstract createChildPlayer(resourceManager?: IResourceManager): T;
 
     private _destroyed = false;
+
+    /** @internal Whether {@link destroy} has run; a listener may have called it mid-tick. */
+    public get destroyed(): boolean {
+        return this._destroyed;
+    }
 
     public destroy() {
         // Idempotent: a second destroy() would re-enter stop() after

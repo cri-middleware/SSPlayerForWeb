@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SSPartFollower, type SSPartFollowHost, type SSPartFollowSource } from '../src/PartTransform.js';
 
-// The follower is the bookkeeping ssplayer-pixi and ssplayer-rmmz used to each
-// carry: which target follows which part, whether the hide on screen is one the
+// The follower is the bookkeeping: which target follows which part, whether the hide on screen is one the
 // follower imposed, and what detaching has to undo. Both the player it reads and
 // the display objects it writes are injected, so all of that is testable here
 // without a runtime, a GL context or a scene graph.

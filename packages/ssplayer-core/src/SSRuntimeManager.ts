@@ -474,11 +474,12 @@ export class SSRuntimeManager {
 
     /**
      * The per-frame events entry a captured event names, or null once a listener
-     * has bound another pack. The view is made here, because a listener can grow
-     * WASM memory, which detaches an older one.
+     * has bound another pack or destroyed the player. Read it before calling the
+     * next listener and ask again after: a listener can grow WASM memory, which
+     * detaches this view.
      */
     public getEventsOf(event: SSPassedEvent): EventsPerFrame | null {
-        if (event.resource !== this.resource) return null;
+        if (!this.context || event.resource !== this.resource) return null;
         const ptr = this.context.get_ssab_buf();
         const len = this.context.get_ssab_len();
         if (ptr === 0 || len === 0) return null;
@@ -523,8 +524,7 @@ export class SSRuntimeManager {
      * effect particle slots. Shared by playback `update()` and `seekTo()`.
      */
     /**
-     * Jump the playhead and re-evaluate effects for that frame, mirroring the
-     * Godot player's `_seek_and_redraw(frame, delta=0, parent_looped=false)`.
+     * Jump the playhead and re-evaluate effects for that frame.
      * Effect slots are otherwise only advanced during playback `update()`, so
      * without this a seek would leave particles frozen at their last frame.
      * delta_seconds = 0 means dependent effects snap deterministically to the
@@ -1026,12 +1026,22 @@ export class SSRuntimeManager {
     /**
      * Parse the SSAB buffer and list all referenced sound assets (name and path).
      * Useful for preloading audio files via the Web Audio API.
+     *
+     * A sound the `.ssab` embeds also carries its `bytes`, as a view over
+     * `ssabBuffer` — consume or copy it before that buffer is detached or freed.
      */
     public static extractSounds(ssabBuffer: Uint8Array): SoundAsset[] {
         const bb = new flatbuffers.ByteBuffer(ssabBuffer);
         // Untrusted input: reject non-SSAB / truncated buffers up front (see extractTexturePaths).
         if (!SsAnimeBinary.bufferHasIdentifier(bb)) return [];
         const ssab = SsAnimeBinary.getRootAsSsAnimeBinary(bb);
+        const embedded = new Map<number, Uint8Array>();
+        for (let i = 0; i < ssab.embeddedAssetsLength(); i++) {
+            const asset = ssab.embeddedAssets(i);
+            const data = asset?.dataArray();
+            if (asset && data) embedded.set(asset.nameHash() >>> 0, data);
+        }
+
         const seen = new Set<string>();
         const out: SoundAsset[] = [];
         for (let i = 0; i < ssab.soundListsLength(); i++) {
@@ -1043,18 +1053,13 @@ export class SSRuntimeManager {
                 const path = soundFile?.filePath();
                 if (name && path && !seen.has(name)) {
                     seen.add(name);
-                    out.push({ name, path });
+                    const bytes = embedded.get(soundFile!.filePathHash() >>> 0);
+                    out.push(bytes ? { name, path, bytes } : { name, path });
                 }
             }
         }
         return out;
     }
-
-    // NOTE: Sequence (.ssqb / SsSequenceBinary) introspection is intentionally
-    // not provided here yet (deferred). When added, mirror the SSAB extractors
-    // above against the already-exported `ssFormat.SsSequenceBinary` (e.g. a
-    // static `extractSequenceNames(ssqbBuffer)`); the schema class is in place,
-    // so it is purely additive.
 
     public setCoordinateSystem(system: WebCoordinateSystem) {
         this.context.set_coordinate_system(system);
@@ -1080,10 +1085,8 @@ export class SSRuntimeManager {
             const start = this.context.get_start_frame();
             const end = this.context.get_end_frame();
             const clamped = frame < start ? start : (frame > end ? end : frame);
-            // One evaluation per frame. The old buf/len pair each ran a full
-            // get_frame_data, so this path cost the Brain twice every frame;
-            // prepare_frame_data builds it and returns the length, and the
-            // pointer is then a pure read of what was just built.
+            // One evaluation per frame: prepare_frame_data builds it and returns the
+            // length, and the pointer is then a pure read of what was just built.
             const len = this.context.prepare_frame_data(clamped);
             this._evaluatedFrame = len > 0 ? frame : NaN;
             return len;

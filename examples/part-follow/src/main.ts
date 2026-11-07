@@ -1,5 +1,4 @@
-// Part-following demo — the Web counterpart of SSPlayerForGodot's
-// SpriteStudioPartAttachment2D and SSPlayerForUnity's SpriteStudioPartTracker.
+// Part-following demo.
 //
 // A fish (a plain Pixi Graphics — no extra asset) is attached to a part of the
 // "Ringo" character with attachToPart(), so it tracks that part's position /
@@ -9,16 +8,14 @@
 // Ringo is a rig with SKINNED (bone-bound) mesh parts — its hands, legs, ears
 // and tail. A skinned part's own transform stays near the character root while
 // its art is drawn by bone skinning, so following one snaps the fish to the root
-// rather than onto the visible mesh. The follow-target picker mirrors the Unity
-// and Godot inspectors: skinned parts are shown but disabled ("dimmed") so they
-// can't be picked by accident — yet a name typed by hand is still accepted (and
-// flagged with a non-blocking warning), exactly as those editors allow a
-// deliberate override. The default target, `bone_14`, is a bone in the
+// rather than onto the visible mesh. In the follow-target picker, skinned parts
+// are shown but disabled ("dimmed") so they can't be picked by accident — yet a
+// name typed by hand is still accepted (and flagged with a non-blocking warning)
+// as a deliberate override. The default target, `bone_14`, is a bone in the
 // right-hand chain — a bone / joint part is the recommended kind of follow target.
 //
-// API used (all on the pixi SSPlayer; equivalents exist on the WebGL and RMMZ
-// players, and getPartTransform / isPartHidden / isPartSkinnedMesh / onFrame on
-// the core player):
+// API used (all on the pixi SSPlayer; the RMMZ player has the same, and the core
+// player has getPartTransform / isPartHidden / isPartSkinnedMesh / onFrame):
 //   attachToPart(part, target, { position, rotation, scale, onHide, addAsChild })
 //   detachFromPart(target)   /   handle.detach()
 //   getPartTransform(part, out?) -> [m00, m01, m10, m11, tx, ty] | null
@@ -137,10 +134,8 @@ async function main() {
 
     /**
      * Rebuild the follow-target dropdown from the parts of the current animation.
-     * Skinned mesh parts are listed but disabled — the same soft filter the Unity
-     * and Godot inspectors apply, so they can't be chosen by accident. The text
-     * box beside it still accepts any name (including a skinned one), matching
-     * those editors' "type it to override" escape hatch.
+     * Skinned mesh parts are listed but disabled, so they can't be chosen by
+     * accident. The text box beside it still accepts any name (including a skinned one).
      */
     function rebuildPicker() {
         selectEl.textContent = '';
@@ -172,8 +167,6 @@ async function main() {
             ? `player.attachToPart('${state.followPart}', fish, {\n  scale: ${state.driveScale}, onHide: '${state.onHide}'\n})   // drives ${axes}`
             : `attachment.detach()`;
 
-        // Non-blocking warning, mirroring Godot's configuration warning and
-        // Unity's "(skinned mesh)" annotation on a stored value.
         if (!known) {
             warnEl.textContent = `⚠ "${state.followPart}" is not a part of this animation — the fish is hidden until it is.`;
             warnEl.hidden = false;

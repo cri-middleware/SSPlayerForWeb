@@ -226,8 +226,7 @@ export class HostFs {
       // Dot entries are pruned wholesale, directories included. Their contents
       // are not themselves dot-prefixed, so a `.git` checkout beside the
       // sources would otherwise bump the newest mtime and force a reconversion
-      // on every project open — the same pruning, for the same reason, as
-      // SSPlayerForRenPy's `latest_source_mtime()`.
+      // on every project open.
       if (name.startsWith('.') || name === 'Thumbs.db') continue;
       const full = this.path.join(dir, name);
       const st = this.statOf(full);

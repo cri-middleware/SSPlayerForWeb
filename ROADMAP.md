@@ -2,6 +2,17 @@
 
 This file lists unfinished work only. Technical constraints live in [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations); work in the underlying Rust / WebAssembly engine lives in the [SDK ROADMAP](https://github.com/cri-middleware/SpriteStudio-SDK/blob/HEAD/ROADMAP.md).
 
+## Before 7.0.0
+
+- [ ] **Release the GL context with a `standalone` surface** — `SSSurface.destroy()` keeps the context, because `<ss-player>` reuses its canvas on reconnect, so a page that mounts and unmounts standalone elements runs into the browser's context limit and loses the oldest one. Lose the context on destroy and give a reconnect a fresh canvas.
+- [ ] **Drop `engines` from the published packages** — `"node": ">=24"` is the requirement for working on this repository, but it ships in the five npm packages, so an app built on an older Node gets an `EBADENGINE` warning and yarn classic refuses the install.
+- [ ] **Forget a pack's sounds with the pack** — `SSWebAudioManager` keeps decoded sounds by name and never drops them on a bind, so a player that loads another pack plays the last pack's file for any sound of the same name. Key them by what they were loaded from, or release them on a bind.
+- [ ] **Say when `setCellmapTexture` matches nothing** — An unknown name is a silent no-op, so a typo reads as a texture that did not change. Warn when the pack has no such cell map.
+- [ ] **Tighten the Node CLI's arguments** — In `packages/ssconverter-web/scripts/cli.js`, `--help` reads as a file name, an unknown option such as `--embeded` is ignored with a successful exit, `-o` and `--suffix` silently go without a value, and of several paths the last wins. Refuse all of them, and add `--help`.
+- [ ] **Keep the Node CLI's output off its input** — With no `-o` it copies each texture onto itself (`EACCES` when read-only), `-e` overwrites the normal conversion under the same name, and an output folder inside the project is read back as input next time. Skip the copy onto itself, and give `-e` the `_emb` the converter page and the native CLI use.
+- [ ] **Treat a conversion with no output as a failure** — A `.sspj` with no animation packs reports success in the converter page (with an empty ZIP) and in the Node CLI (exit 0). `examples/sspj-preview` already treats it as an error.
+- [ ] **Keep TyranoScript characters through `[backlay]` + `[trans layer=]`** — The engine replaces the layer element, which releases the players on it. Carry them over to the new layer.
+
 ## Playback & rendering
 
 - [ ] **Confirm the five approximated blend modes** — `Mulalpha` and `Mul2` draw as Mul, `Screen2` as Screen, and `Div2` and `Overlay2` as Mix, in `ssplayer-webgl` and `ssplayer-pixi` alike (one table, `ssBlendMode` in `ssplayer-core`) and as in SpriteStudio Player for wgpu. The approximation is listed in [Shaders and blend modes](https://cri-middleware.github.io/SSPlayerForWeb/customize/shaders); none of the five has been checked against a reference render.

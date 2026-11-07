@@ -192,8 +192,7 @@ function screenCentre(): { x: number; y: number } {
  * The Reconvert control: a button where the host let the plugin register one,
  * and a momentary tick box where it did not.
  *
- * Scoped to this component's own pack — `storage` names an asset, which is the
- * same footing SSPlayerForGodot's per-asset inspector button stands on.
+ * Scoped to this component's own pack: `storage` names an asset.
  *
  * Whichever shape it takes, it stores nothing. `$.tag()` writes every key in
  * `pm` unconditionally (`js/app/core/libs.js.bk`), with no filtering of
@@ -610,9 +609,8 @@ export function defineSSComponents(ctx: ComponentContext): Record<string, Builde
           help: t('Off loads without displaying, so a later "fade in" is instant.'),
           default_val: true,
         },
-        // A button, not a setting, and scoped to this component's own pack —
-        // the counterpart of SSPlayerForGodot's per-asset inspector button,
-        // which is possible here for the same reason: `storage` names an asset.
+        // A button, not a setting, and scoped to this component's own pack:
+        // `storage` names an asset.
         //
         // `$.tag()` writes every key in `pm` unconditionally (no filtering of
         // `_`-prefixed names, unlike what the host's own `_preview` params

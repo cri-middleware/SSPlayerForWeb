@@ -5,10 +5,8 @@ import { DirectInternalPlayer } from '../src/DirectInternalPlayer.js';
 import { CONVERTER_WASM, RUNTIME_WASM, convert, sdkProject, textures } from './real-runtime.js';
 
 // A player destroyed while its pack loads leaves the load behind, and the load
-// must stop where a bind would stop it. It used to go on: a player switched
-// before its assets were in set its instances up on the runtime destroy() had
-// freed, and logged the TypeError, and the instance packs it resolved after
-// the destroy were never freed.
+// must stop where a bind would stop it: no instances set up on the runtime
+// destroy() freed, and no instance packs left unfreed.
 //
 // Boots the real runtime and plays the SDK's Ringo and overall, converted
 // here. Skipped without the converter WASM, the runtime WASM or the SDK

@@ -147,7 +147,7 @@ describe('parsePartOverrideColor', () => {
 
 // --- SSPartOverrideStore ---------------------------------------------------
 //
-// The three-step dance the hosts used to write by hand. What matters here is
+// What matters here is
 // that the stored list and the live runtime cannot drift: every operation has to
 // touch both, and the pair of animation-change methods has to differ in exactly
 // the documented way.

@@ -13,6 +13,8 @@ export class PixiResourceManager implements IResourceManager {
     // original with no reload. Caller-owned: never destroyed here (like the
     // URL-loaded textures), only forgotten on reset()/destroy().
     private overrideTextures: Map<number, Texture> = new Map();
+    /** Called before {@link reset} destroys textures, for whoever still draws from them. */
+    public beforeFree: (() => void) | null = null;
 
     /**
      * Load `url` and bind it under `hash`. Cached in Pixi's global `Assets`
@@ -25,7 +27,7 @@ export class PixiResourceManager implements IResourceManager {
         try {
             this.textures.set(hash, await Assets.load<Texture>(url));
         } catch (e) {
-            console.error(`Failed to load texture: ${url}`, e);
+            throw new Error(`[PixiResourceManager] Failed to load texture: ${url}`, { cause: e });
         }
     }
 
@@ -73,6 +75,7 @@ export class PixiResourceManager implements IResourceManager {
     }
 
     public reset(): void {
+        if (this.embeddedTextures.size > 0) this.beforeFree?.();
         this.embeddedTextures.forEach(tex => tex.destroy(true));
         this.embeddedTextures.clear();
         this.textures.clear();

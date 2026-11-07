@@ -51,7 +51,6 @@ export interface SSSurfaceOptions {
  *   visibility gating.
  * - **borrowed** — pass an existing `WebGLRenderingContext`. The surface touches
  *   none of the above: the host drives `update()` / `draw()` and owns the frame.
- *   This is how `ssplayer-rmmz` rides RPG Maker MZ's own context.
  * - **overlay** — an owned surface whose canvas covers the viewport, with each
  *   player's {@link SSPlayer.box} driven from a DOM element's rect. Built on top
  *   of the above; see `SSOverlay`.
@@ -194,8 +193,7 @@ export class SSSurface {
   }
 
   /**
-   * Add a player. Called for you by the {@link SSPlayer} constructor, so you only
-   * need this to move a player between surfaces. Idempotent.
+   * Add a player. Called for you by the {@link SSPlayer} constructor. Idempotent.
    */
   public add(player: SSPlayer): void {
     if (this.players.indexOf(player) !== -1) return;
@@ -235,7 +233,12 @@ export class SSSurface {
 
   /** Advance every player's timeline. Owned surfaces call this from their ticker. */
   public update(deltaMs: number): void {
-    for (const player of this.players) player.update(deltaMs);
+    // By index: a listener may destroy its own player, which takes it off this list.
+    for (let i = 0; i < this.players.length; i++) {
+      const player = this.players[i];
+      player.update(deltaMs);
+      if (this.players[i] !== player) i--;
+    }
   }
 
   /**
@@ -488,7 +491,7 @@ export class SSSurface {
     if (!this._rafId && this._intersecting) this.draw();
   }
 
-  /** @internal Let a borrowed host tell us its context was recreated. */
+  /** @internal Let a borrowed host tell us its context was recreated. Restores the renderer only, not textures. */
   public contextChange(): void {
     this.renderer.restoreContext();
   }

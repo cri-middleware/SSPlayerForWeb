@@ -1,11 +1,8 @@
 // npm-facing shim over scripts/build-runtime.{sh,ps1}: picks the twin for this
 // OS and hands it the build mode as the `build=<mode>` those scripts take.
 //
-// The default is **release**, the same default build-runtime has on its own. It
-// used to be debug here, so `pnpm run build:wasm` -- the command CONTRIBUTING
-// and the READMEs give -- produced a debug runtime while running the script
-// directly produced a release one. Pass `debug` (or `build=debug`, or
-// `--debug`) for the quick one.
+// The default is **release**, the same default build-runtime has on its own.
+// Pass `debug` (or `build=debug`, or `--debug`) for the quick one.
 const { spawnSync } = require('child_process');
 const os = require('os');
 

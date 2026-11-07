@@ -1,16 +1,11 @@
 // The auto-importer as TyranoBuilder uses it.
 //
-// The builder gives us Ren'Py's opening — a plugin's constructor runs when the
-// project is opened — so the first pass is Ren'Py's: one when the project
-// opens. Ren'Py then picks up a save through its own autoreload; the builder has
-// no reload for a plugin to ride, so after that nothing happens on its own.
+// A plugin's constructor runs when the project is opened, so the first pass runs
+// then. The builder has no reload for a plugin to ride, so after that nothing
+// happens on its own.
 //
-// The editor could do more (it is a long-lived process, so a save could be
-// noticed while it is open) and an earlier revision of this file did, driven by
-// the window regaining focus. It was dropped to answer the way SSPlayerForGodot
-// does: no freshness check at all, only an explicit `Reconvert`.
-// `reconvertPack()` below is the counterpart, reached from the `[ss_new]`
-// inspector.
+// There is no check on window focus; the only way in is an explicit `Reconvert`:
+// `reconvertPack()` below, reached from the `[ss_new]` inspector.
 //
 // A `.sspj` added to the source folder while the builder is open is therefore
 // not picked up on its own, and the inspector that hosts `Reconvert` cannot be
@@ -27,8 +22,6 @@ import {
   AutoImporter,
   type AutoImporterOptions,
   type ImportRunResult,
-  type ImportState,
-  type PackState,
   type PlannedJob,
 } from '@spritestudio/ssconverter-importer';
 
@@ -39,16 +32,6 @@ import { EMPTY_PACK, readPackContents, type PackContents } from './packContents.
  * See `packages/ssplayer-tyranoscript/README.md`.
  */
 export const DEFAULT_OUT_DIR = 'data/others/ssdata';
-
-/**
- * The old per-output-folder marker. Migrated and deleted when found.
- *
- * TyranoBuilder's exporter has no build filter of the kind Ren'Py uses for its
- * own `.ss_import_ok` — it is three `copySync` calls, one of which takes the
- * whole of `data/` — so a marker under `data/` shipped inside the game. The
- * state lives at the project root instead, where an export cannot reach it.
- */
-const LEGACY_MARKER = '.ss_import_ok';
 
 export type BuilderImporterOptions = Omit<AutoImporterOptions, 'outDirName'> & {
   outDirName?: string;
@@ -179,61 +162,10 @@ export class BuilderImporter extends AutoImporter {
   }
 
   /**
-   * Records written when the key was the `.sspj` stem, re-keyed onto the folder
-   * they describe. Nothing else changes: an entry keeps its mtime, so a
-   * migrated project is not reconverted for the sake of it.
-   *
-   * The key was the stem until a record had to describe a folder outside
-   * `outRoot` (a pack the author copied elsewhere under `data/`, reconverted
-   * where it lies). A key with no `/` in it is one of those older records.
-   */
-  protected override migrateState(state: ImportState): { state: ImportState; changed: boolean } {
-    const packs: Record<string, PackState> = {};
-    let changed = false;
-    for (const [key, entry] of Object.entries(state.packs)) {
-      const moved = key.includes('/') ? key : this.outKey(this.fs.path.join(this.outRoot, key));
-      if (moved !== key) changed = true;
-      packs[moved] = entry;
-    }
-    return { state: { packs }, changed };
-  }
-
-  /**
-   * Carries over — and then removes — the old in-output marker before the
-   * record is read. That marker sat under `data/`, so every export shipped it
-   * inside the game; a project that predates this move gets cleaned up the
-   * first time it is opened.
-   */
-  protected override readMarker(outDir: string): PackState | null {
-    const state = this.loadState();
-    const key = this.outKey(outDir);
-    const legacy = this.fs.path.join(outDir, LEGACY_MARKER);
-
-    if (this.fs.exists(legacy)) {
-      if (!state.packs[key]) {
-        try {
-          const parsed = JSON.parse(this.fs.readText(legacy)) as PackState;
-          if (typeof parsed?.source_mtime === 'number') {
-            state.packs[key] = parsed;
-            this.saveState();
-          }
-        } catch {
-          // Fall through: an unreadable marker just means one reconversion.
-        }
-      }
-      this.fs.remove(legacy);
-      this.log(`removed ${LEGACY_MARKER} from ${outDir} (import state moved out of data/)`);
-    }
-
-    return super.readMarker(outDir);
-  }
-
-  /**
    * Rebuild the one pack a `storage=` value names, whatever its record says.
    *
    * Scoped to a single pack because the control that calls it is attached to an
-   * `[ss_new]`, and that component names the pack it plays — the same shape as
-   * SSPlayerForGodot's per-asset inspector button. Forcing is affordable at
+   * `[ss_new]`, and that component names the pack it plays. Forcing is affordable at
    * this scope and is what "Reconvert" means: the author has already decided
    * the pack is wrong, so a freshness check would only be an opportunity to
    * disagree with them.
@@ -256,8 +188,7 @@ export class BuilderImporter extends AutoImporter {
    * It writes into the folder the `.ssab` is in, not into `outRoot/<stem>`:
    * a pack is an ordinary asset and an author may have moved or copied one
    * elsewhere under `data/`, and rebuilding it anywhere but where it lies would
-   * refresh a file nothing in the scenario points at. SSPlayerForUnity's
-   * `ReconvertInto` and SSPlayerForGodot's `queue_reconvert` draw the same line.
+   * refresh a file nothing in the scenario points at.
    *
    * `'unknown'` is "no source to rebuild this from"; `'missing'` is "we know
    * which project produced it, and that project is gone" — which the author

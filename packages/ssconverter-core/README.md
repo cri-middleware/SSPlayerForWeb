@@ -82,7 +82,7 @@ for (const [dest, src] of result.assets) {
 | Export | Description |
 | --- | --- |
 | `init(source?)` | Initialize the wasm module. `source` is a `URL`/`Response`, wasm `BufferSource`, or `WebAssembly.Module`. |
-| `convertProject(files, opts?)` | Convert a project. `opts`: `{ embedded=false, debug=false, split=false, optimize=true }`. Returns `ConvertResult`. |
+| `convertProject(files, opts?)` | Convert a project. `opts`: `{ embedded=false, optimize=true }`. Returns `ConvertResult`. |
 | `ConvertResult` | `.output: Map<name, bytes>` (generated files) and `.assets: Map<dest, src>` (external assets to copy; empty when embedded). |
 | `locateProject(paths)` | Find the single `.sspj` and derive `{ sspjPath, stem, dir }`. Throws on zero/multiple. |
 | `applySuffix(output, suffix)` | Append `suffix` to each `.ssab` basename and drop non-`.ssab` output (for emitting embedded variants side by side). |

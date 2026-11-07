@@ -9,8 +9,8 @@ import { CONVERTER_WASM, RUNTIME_WASM, convert, effectQuads, sdkProject, texture
 // runtime empties its tracks on a bind, and the manager has to forget the old
 // pack's animation with it. A renderer draws whenever the animation it last drew
 // changes, so the frame between a load's bind and its setAnimation is drawn, and
-// with the old animation's index still cached it reached the runtime, which
-// logged "Animation not found" for it.
+// the old animation's index, still cached, would reach the runtime, which logs
+// "Animation not found" for it.
 //
 // A bind is also all or nothing, and the old pack goes with everything that
 // was its own. Bytes that are not a pack leave the bound pack as it was. Bytes

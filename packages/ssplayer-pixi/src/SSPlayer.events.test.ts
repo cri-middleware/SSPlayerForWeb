@@ -1,5 +1,5 @@
 import { ListenerSet } from '@spritestudio/ssplayer-core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SSPlayer } from './SSPlayer.js';
 
 /**
@@ -46,5 +46,35 @@ describe('event listeners', () => {
     (player as unknown as { pollEvents(): void }).pollEvents();
 
     expect(order).toEqual(['read', 'finished', 'looped', 'user data key from 3']);
+  });
+
+  it('stop the tick where one of them destroyed the player', () => {
+    const player = Object.create(SSPlayer.prototype) as SSPlayer;
+    const internalPlayer = {
+      destroyed: false,
+      isTicking: true,
+      isHeld: false,
+      isStackInMotion: false,
+      update: vi.fn(),
+      getFrameNo: vi.fn(),
+      pollPlaybackEvents: () => ({ looped: true, finished: true }),
+      runtimeManager: { capturePassedEvents: () => [] },
+    };
+    const looped = vi.fn();
+    Object.assign(player, {
+      internalPlayer,
+      _userDataListeners: new ListenerSet(),
+      _signalListeners: new ListenerSet(),
+      _audioListeners: new ListenerSet(),
+      _animFinishedListeners: new ListenerSet(),
+      _animLoopedListeners: new ListenerSet(),
+    });
+    player.onAnimationFinished(() => { internalPlayer.destroyed = true; });
+    player.onAnimationLooped(looped);
+
+    (player as unknown as { update(ticker: { deltaMS: number }): void }).update({ deltaMS: 16 });
+
+    expect(looped).not.toHaveBeenCalled();
+    expect(internalPlayer.getFrameNo).not.toHaveBeenCalled();
   });
 });

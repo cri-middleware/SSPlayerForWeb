@@ -1,25 +1,18 @@
-// The SSPlayerForRenPy auto-importer, for the hosts in this repository that can
-// reach a filesystem.
+// The auto-importer, for the hosts in this repository that can reach a filesystem.
 //
-// Reference: `SSPlayerForRenPy/game/spritestudio/auto_importer.rpy`. There, an
-// `init python:` block runs at every launch in developer mode, walks
-// `SpriteStudio_Source/*.sspj`, reconverts whatever changed (mtime diff against
-// a success marker) and writes into `game/ss_assets/`. A host calls `runOnce()`
-// at its own equivalent of that moment, and after that nothing happens on its
-// own. Ren'Py's block runs again whenever its autoreload reloads the game; the
-// hosts here have no such reload to ride, and SSPlayerForGodot has no freshness
-// check at all, only an explicit `Reconvert`.
+// It walks `SpriteStudio_Source/*.sspj`, reconverts whatever changed (mtime diff
+// against a success marker) and writes into the host's output folder. A host
+// calls `runOnce()` at its own start, and after that nothing happens on its own.
 //
-// The marker discipline is copied deliberately: output mtimes alone cannot tell
-// you a run succeeded, because a failed conversion still leaves fresh-looking
-// partial files behind. Only a marker written *after* a successful run lets the
-// next run skip.
+// Output mtimes alone cannot tell you a run succeeded, because a failed
+// conversion still leaves fresh-looking partial files behind. Only a marker
+// written *after* a successful run lets the next run skip.
 //
 // What the marker records is the newest mtime across the project folder — not
 // the `.sspj` alone. SpriteStudio writes only the files a save actually
 // changed, so editing an animation moves the `.ssae` and leaves the `.sspj`
 // untouched; keying off the manifest would miss the most ordinary edit there
-// is. Ren'Py's `latest_source_mtime()` walks the folder for the same reason.
+// is.
 
 
 import {
@@ -34,10 +27,8 @@ import type { HostFs, WalkedFile } from './hostFs.js';
  * Import bookkeeping, relative to the project root, unless the host says
  * otherwise.
  *
- * Ren'Py keeps a `.ss_import_ok` marker inside each output folder and excludes
- * it from builds with `build.classify`. Not every host's export has such a
- * filter, so the state lives outside the output folder, somewhere the host
- * knows its export does not reach.
+ * Not every host's export can filter files, so the state lives outside the
+ * output folder, somewhere the host knows its export does not reach.
  */
 export const DEFAULT_STATE_FILE = '.ss_import_state.json';
 
@@ -60,10 +51,8 @@ export interface PackState {
   source_mtime: number;
   converter?: string;
   /**
-   * The `.sspj` behind this folder, relative to the project root.
-   *
-   * The source map SSPlayerForGodot keeps in `.ssplayer_sources.cfg` and
-   * SSPlayerForUnity in its importer: it is what lets a `.ssab` find its way
+   * The `.sspj` behind this folder, relative to the project root. It is what
+   * lets a `.ssab` find its way
    * back to a project, including one the author has moved out of the folder
    * this importer writes to. Relative, so copying the whole project elsewhere
    * does not invalidate it.
@@ -74,9 +63,8 @@ export interface PackState {
    *
    * The next conversion removes whatever it no longer produces — rename an
    * animation and the old `.ssab` would otherwise stay in the host's pack
-   * lists and ship inside every exported game. Godot cannot do this (its note
-   * says removing stale output needs the converter to report what it wrote);
-   * here the converter does report it, so the rule can be the narrow one:
+   * lists and ship inside every exported game. The converter reports what it
+   * wrote, so the rule can be the narrow one:
    * nothing is ever deleted but a file this importer recorded writing.
    */
   files?: string[];
@@ -97,8 +85,7 @@ export interface ImportRunResult {
   /**
    * Projects that were not converted because another project had already
    * claimed the folder they would have written into. Reported rather than
-   * dropped quietly, because the fix is the author's — the same judgement as
-   * SSPlayerForGodot's `_dedupe_plan`.
+   * dropped quietly, because the fix is the author's.
    */
   dropped: { name: string; source: string; kept: string }[];
   /**
@@ -208,8 +195,7 @@ export class AutoImporter {
    *
    * The whole folder, not the `.sspj`: SpriteStudio writes only what a save
    * changed, so an edited animation moves its `.ssae` and leaves the manifest
-   * alone. Mirrors `latest_source_mtime()` in SSPlayerForRenPy's
-   * `ss_renpy/import_marker.py`, which is the canonical version of this rule.
+   * alone.
    *
    * A project folder nested inside another counts towards both, exactly as a
    * per-folder walk would: `dir` covers everything below it.
@@ -239,21 +225,8 @@ export class AutoImporter {
         // Unreadable state costs one reconversion, nothing worse.
       }
     }
-    const migrated = this.migrateState(state);
-    this.state = migrated.state;
-    // Written back now rather than left for the first conversion to carry: a
-    // pass that skips everything never saves, and the file would keep a shape
-    // nothing writes any more for as long as the project stayed unchanged.
-    if (migrated.changed) this.saveState();
+    this.state = state;
     return this.state;
-  }
-
-  /**
-   * Bring a state file an older build of the host wrote up to date, before
-   * anything reads it. Nothing to do unless the host has had an older shape.
-   */
-  protected migrateState(state: ImportState): { state: ImportState; changed: boolean } {
-    return { state, changed: false };
   }
 
   protected saveState(): void {
@@ -354,8 +327,6 @@ export class AutoImporter {
    * both were up to date, so the loser was never built again. The first keeps
    * the folder and the rest are reported, because renaming one is the author's
    * call and dropping them quietly would look like the converter lost a file.
-   * SSPlayerForGodot's `_dedupe_plan` and SSPlayerForUnity's `DedupePlan` are
-   * the same decision.
    */
   private planProjects(sspjs: string[]): {
     jobs: PlannedJob[];
@@ -423,10 +394,8 @@ export class AutoImporter {
       empty: false,
     };
 
-    // One walk for the whole pass: it finds the projects *and* dates them. The
-    // two used to be separate traversals, which statted every source file three
-    // times over. A scoped pass already knows its project, so it walks only
-    // that folder.
+    // One walk for the whole pass: it finds the projects *and* dates them. A
+    // scoped pass already knows its project, so it walks only that folder.
     let jobs: PlannedJob[];
     let sourceFiles: WalkedFile[];
     if (opts.jobs) {
@@ -481,8 +450,6 @@ export class AutoImporter {
       const sourceProjectDir = this.fs.path.dirname(job.sspj);
       const latest = mtimes.get(sourceProjectDir) ?? 0;
 
-      // Unconditional, so a host that migrates an older marker here does so
-      // even when the output around it is gone.
       const previous = this.readMarker(outDir);
       if (
         !opts.force &&

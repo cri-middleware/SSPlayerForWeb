@@ -1,4 +1,4 @@
-import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, resolvePlacement, ssFormat, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, WebPlaybackDirection, WebPlaybackStyle, type SSAlign, type SSFit, type SSPartQuad, type SSPlacementBox } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, hashString, IAudioManager, ListenerSet, resolvePlacement, ssFormat, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, WebPlaybackDirection, WebPlaybackStyle, type SSPassedEvent, type SSAlign, type SSFit, type SSPartQuad, type SSPlacementBox } from '@spritestudio/ssplayer-core';
 import { SSWebGLResourceManager } from './SSWebGLResourceManager.js';
 import type { SSTextureEntry } from './SSWebGLTextureCache.js';
 import type { SSSurface } from './SSSurface.js';
@@ -8,7 +8,7 @@ import type { SSSurface } from './SSSurface.js';
 // SSAB events table for the current animation via the runtime manager's
 // introspection accessors, parses the FlatBuffer payloads, and dispatches typed
 // callbacks. Driven once per frame from update() (see pollEvents). Mirrors
-// ssplayer-pixi/src/SSPlayer.ts (memory: events-handled-in-pixi-not-core).
+// ssplayer-pixi/src/SSPlayer.ts.
 
 /**
  * A user-data event fired by a part on the frame it was authored. Optional
@@ -40,7 +40,7 @@ export interface SSUserDataEvent {
 /**
  * A signal event fired by a part. `params` maps each command parameter id to
  * its authored value (bool / int / float / string). Only **active** signals are
- * dispatched (mirroring the Godot / Unity players).
+ * dispatched.
  */
 export interface SSSignalEvent {
   partIndex: number;
@@ -379,6 +379,7 @@ export class SSPlayer {
 
   public async load(ssabUrl: string): Promise<void> {
     await this.internalPlayer.load(ssabUrl);
+    if (this.internalPlayer.destroyed) return;
     this.configureContext();
     await this.ensureAutoAudio();
   }
@@ -449,8 +450,7 @@ export class SSPlayer {
   // Four distinct verbs, passed straight through to the core (and so to the
   // runtime, which owns the state machine). Nothing is mirrored on this object:
   // a copy of "am I playing" is exactly what drifts from the runtime the first
-  // time a call is a no-op there — `resume()` on a stopped animation being the
-  // one that used to leave this player reporting itself as playing forever.
+  // time a call is a no-op there, such as `resume()` on a stopped animation.
 
   /** Head-out: rewinds to the section start (or `startFrame`) and re-arms the loop count. */
   public play(startFrame?: number): void {
@@ -545,8 +545,8 @@ export class SSPlayer {
    * {@link getPlaybackDirection} still reads Forward.
    *
    * Gate an audio backend on this: SpriteStudio has no reverse audio, so
-   * {@link onAudio} still reports every key it crosses (as the Godot and Unity
-   * players do) and it is the *playing* that has to be suppressed.
+   * {@link onAudio} still reports every key it crosses and it is the *playing*
+   * that has to be suppressed.
    */
   public get isPlayingForward(): boolean { return this.internalPlayer.isPlayingForward; }
 
@@ -629,7 +629,7 @@ export class SSPlayer {
   // the stack back to track 0, so lay the tracks again after it. Nothing needs
   // repainting: the Surface draws every frame.
 
-  /** Number of tracks, empty ones included; 0 before an animation is set up. */
+  /** Number of tracks, empty ones included; always at least 1. */
   public get trackCount(): number { return this.internalPlayer.trackCount; }
 
   /** Put an animation on `track` with no fade. On track 0 it becomes {@link currentAnimation} at once. */
@@ -902,6 +902,7 @@ export class SSPlayer {
     // still valid. Must run on the same tick that advanced — including the tick a
     // non-looping animation finishes on.
     this.pollEvents();
+    if (this.internalPlayer.destroyed) return;
 
     // Notify per-frame listeners, the point getPartTransform is valid for the new
     // frame. The update above only moved the playhead, and the Surface draws —
@@ -1169,7 +1170,7 @@ export class SSPlayer {
     if (finished && this._animFinishedListeners.size > 0) {
       this._animFinishedListeners.emit();
     }
-    if (looped && this._animLoopedListeners.size > 0) {
+    if (looped && this._animLoopedListeners.size > 0 && !this.internalPlayer.destroyed) {
       this._animLoopedListeners.emit();
     }
 
@@ -1179,25 +1180,25 @@ export class SSPlayer {
     for (const event of passed) {
       // Read from the table of the animation whose source fired it, which is
       // not the set-up one after a crossfade on track 0 or for an overlay.
-      const events = mgr.getEventsOf(event);
-      if (!events) continue;
-      const { source } = event;
-      if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
-      if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
+      if (this._userDataListeners.size > 0) this.dispatchUserData(event);
+      if (this._signalListeners.size > 0) this.dispatchSignals(event);
       // Audio keys are reported whichever way the playhead is walking — the
       // observation channel is not the playback. SpriteStudio has no reverse
       // audio, so it is the backend that gates on {@link isPlayingForward}
-      // (SSWebAudioManager.bindToPlayer does), exactly as the Godot and Unity
-      // players do. Suppressing the event instead used to hide the key from
-      // hosts doing something other than playing a sound with it.
-      if (this._audioListeners.size > 0) this.dispatchAudios(events, source);
+      // (SSWebAudioManager.bindToPlayer does).
+      if (this._audioListeners.size > 0) this.dispatchAudios(event);
     }
   }
 
-  private dispatchUserData(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchUserData(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.usersLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.usersLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      // Asked for afresh each time: a listener may have grown WASM memory, which
+      // detaches the view, bound another pack, or destroyed the player.
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const user = events.users(j);
       const val = user?.value();
       if (!user || !val) continue;
@@ -1215,14 +1216,16 @@ export class SSPlayer {
     }
   }
 
-  private dispatchSignals(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchSignals(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.signalsLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.signalsLength() ?? 0;
     for (let i = 0; i < n; i++) {
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const sig = events.signals(i);
       const val = sig?.value();
       if (!sig || !val) continue;
-      // Only active signals are dispatched (mirrors the Godot / Unity players).
       if (!val.active()) continue;
 
       const params: Record<string, boolean | number | string> = {};
@@ -1264,10 +1267,13 @@ export class SSPlayer {
     }
   }
 
-  private dispatchAudios(events: ssFormat.EventsPerFrame, source: number): void {
+  private dispatchAudios(event: SSPassedEvent): void {
     const mgr = this.internalPlayer.runtimeManager;
-    const n = events.audiosLength();
+    const { source } = event;
+    const n = mgr.getEventsOf(event)?.audiosLength() ?? 0;
     for (let j = 0; j < n; j++) {
+      const events = mgr.getEventsOf(event);
+      if (!events) return;
       const audio = events.audios(j);
       const val = audio?.value();
       if (!audio || !val) continue;
