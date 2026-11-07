@@ -326,10 +326,13 @@ export async function convertProjectAt(
   // a project in a subfolder — stays out of the map.
   const sspjName = fs.path.basename(sspjPath);
   const files = new Map<string, Uint8Array>();
+  // The converter answers with source paths in NFC, and the disk may hold another form.
+  const onDisk = new Map<string, string>();
   for (const full of fs.walkFiles(sourceDir)) {
     const rel = fs.path.relative(sourceDir, full).replace(/\\/g, '/');
     if (rel !== sspjName && rel.toLowerCase().endsWith('.sspj')) continue;
     files.set(rel, fs.readBinary(full));
+    onDisk.set(rel.normalize('NFC'), rel);
   }
   if (files.size === 0) {
     throw new Error(`no readable files under ${sourceDir}`);
@@ -358,7 +361,7 @@ export async function convertProjectAt(
 
   // Textures: a Node-side `copySync`, so these bytes never cross the bridge.
   for (const [destPath, srcPath] of assets) {
-    const src = fs.resolveWithin(sourceDir, srcPath, 'asset source path');
+    const src = fs.resolveWithin(sourceDir, onDisk.get(srcPath) ?? srcPath, 'asset source path');
     const dest = fs.resolveWithin(outDir, destPath, 'asset output path');
     if (!fs.exists(src)) continue;
     fs.mkdirp(fs.path.dirname(dest));

@@ -88,6 +88,9 @@ async function main() {
     // Read all files in the directory recursively
     const filesMap = new Map();
 
+    // The converter answers with source paths in NFC, and the disk may hold another form.
+    const onDisk = new Map();
+
     function readDirRecursive(dir) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {
@@ -100,6 +103,7 @@ async function main() {
                 // leave out any other (a backup beside it, a project below it).
                 if (relativePath !== path.basename(sspjPath) && relativePath.toLowerCase().endsWith('.sspj')) continue;
                 filesMap.set(relativePath, new Uint8Array(fs.readFileSync(fullPath)));
+                onDisk.set(relativePath.normalize('NFC'), relativePath);
             }
         }
     }
@@ -127,7 +131,7 @@ async function main() {
     // Copy referenced assets (skipped in suffix mode — embedded .ssab inline them).
     if (result.assets && !suffix) {
         for (const [destPath, srcPath] of result.assets.entries()) {
-            const srcFullPath = resolveWithin(sspjDir, srcPath, 'asset source path');
+            const srcFullPath = resolveWithin(sspjDir, onDisk.get(srcPath) ?? srcPath, 'asset source path');
             const destFullPath = resolveWithin(outDir, destPath, 'asset output path');
 
             if (fs.existsSync(srcFullPath)) {
