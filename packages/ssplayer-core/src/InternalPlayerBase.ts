@@ -143,8 +143,8 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
      * override.
      *
      * Only the last `load()` or bind counts. One overtaken by another, or by
-     * {@link destroy}, resolves without binding anything, so compare
-     * {@link ssabUrl} before going on from it.
+     * {@link destroy}, resolves without binding anything, so compare the
+     * `ssabUrl` property before going on from it.
      * @param ssabUrl The URL of the SSAB file.
      */
     public async load(ssabUrl: string) {
@@ -467,15 +467,14 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this.runtimeManager.setupAnimation(animationName);
             this._seekPending = -1;
         } catch (cause) {
-            // The wasm boundary throws the Brain's error enum as a bare string —
-            // "AnimationNotFound", naming neither the pack nor what was asked of
-            // it. Only this layer knows either, so only this layer can make the
-            // failure legible. The
-            // reason goes in verbatim because it separates a name the pack does
-            // not have from a player that has no pack bound at all.
+            // The wasm boundary reports the Brain's error, naming neither the pack
+            // nor what was asked of it. Only this layer knows either, so only this
+            // layer can make the failure legible. The reason goes in verbatim because
+            // it separates a name the pack does not have from a player that has no
+            // pack bound at all.
             throw new Error(
                 `[SSPlayer] ${this._ssabUrl || 'the loaded pack'} could not select ` +
-                    `animation "${animationName}" (${String(cause)}). ` +
+                    `animation "${animationName}" (${(cause as Error).message}). ` +
                     `animationNames lists what it does have.`,
                 { cause },
             );
@@ -1114,7 +1113,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             this.reportOnce(
                 `section\u0000${animation}\u0000${startFrame}\u0000${endFrame}`,
                 `[SSPlayer] animation "${animation}" of ${this._ssabUrl || 'the loaded pack'} refused the section ` +
-                    `${given} (${String(cause)}): its end is before its start, so the section stays as it was.`,
+                    `${given} (${(cause as Error).message}): its end is before its start, so the section stays as it was.`,
             );
             return false;
         }
@@ -1536,7 +1535,7 @@ export abstract class InternalPlayerBase<T extends InternalPlayerBase<T>> {
             return action(this.runtimeManager.context);
         } catch (cause) {
             const where = animationName !== undefined ? ` on ${this._ssabUrl || 'the loaded pack'}` : '';
-            throw new Error(`[SSPlayer] ${call} failed${where} (${String(cause)}).`, { cause });
+            throw new Error(`[SSPlayer] ${call} failed${where} (${(cause as Error).message}).`, { cause });
         }
     }
 

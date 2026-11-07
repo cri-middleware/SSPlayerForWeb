@@ -4,8 +4,8 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 // A name the pack does not have has to come back as a failure that says which
 // pack and which name.
 //
-// The wasm boundary throws the Brain's error enum as a bare string —
-// "AnimationNotFound" — which names neither. This layer is the only one holding
+// The wasm boundary reports the Brain's error, "AnimationNotFound", which names
+// neither. This layer is the only one holding
 // both, so it is the only one that can say. The reason still goes in verbatim,
 // because it is what separates "that name is not in this pack" from "this player
 // has no pack bound at all", and those send a reader to different places.
@@ -13,7 +13,8 @@ import { InternalPlayerBase } from '../src/InternalPlayerBase.js';
 // Fake context rather than booting WASM, the same trick the neighbouring suites
 // use.
 
-function makePlayer(ssabUrl: string, throws: unknown) {
+function makePlayer(ssabUrl: string, reason: string) {
+    const throws = new Error(reason);
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const setupAnimation = vi.fn(() => {
         throw throws;
@@ -28,13 +29,13 @@ function makePlayer(ssabUrl: string, throws: unknown) {
     player._loopCount = -1;
     player._instanceChildren = new Map();
     player._effectChildren = new Map();
-    return { player: player as InternalPlayerBase<never> & Record<string, any>, setupAnimation };
+    return { player: player as InternalPlayerBase<never> & Record<string, any>, setupAnimation, throws };
     /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 describe('selecting a name the pack does not have', () => {
     it('names the pack, the name asked for, and the reason', () => {
-        const { player } = makePlayer('/assets/Ringo.ssab', 'AnimationNotFound');
+        const { player, throws } = makePlayer('/assets/Ringo.ssab', 'AnimationNotFound');
 
         let thrown: unknown;
         try {
@@ -47,9 +48,9 @@ describe('selecting a name the pack does not have', () => {
         const message = (thrown as Error).message;
         expect(message).toContain('/assets/Ringo.ssab');
         expect(message).toContain('"wakl"');
-        expect(message).toContain('AnimationNotFound');
+        expect(message).toContain('(AnimationNotFound)');
         // The original is kept, so a host that wants to branch on it still can.
-        expect((thrown as Error).cause).toBe('AnimationNotFound');
+        expect((thrown as Error).cause).toBe(throws);
     });
 
     it('leaves the selection alone, so the no-op guard cannot be fooled', () => {

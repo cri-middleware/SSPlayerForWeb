@@ -18,11 +18,4 @@ describe('convertProject', () => {
     convertProject(new Map([[nfd, new Uint8Array([1])]]));
     expect([...(convert.mock.calls[0][0] as Map<string, Uint8Array>).keys()]).toEqual(['がぎぐ.png'.normalize('NFC')]);
   });
-
-  it('throws an Error when the converter throws a string', () => {
-    convert.mockImplementationOnce(() => {
-      throw 'SSPJ Parse Error';
-    });
-    expect(() => convertProject(new Map())).toThrow(new Error('SSPJ Parse Error'));
-  });
 });

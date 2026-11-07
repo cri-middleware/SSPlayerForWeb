@@ -146,12 +146,7 @@ export class SSABResource {
                 `(got ${data.length} bytes). The .ssab may be truncated, the wrong file, or a different format.`,
             );
         }
-        try {
-            this.raw = new SSRuntimeResource(data);
-        } catch (e) {
-            // wasm-bindgen hands a refusal (the schema version, say) over as a bare string.
-            throw e instanceof Error ? e : new Error(`[SSPlayer] ${String(e)}`);
-        }
+        this.raw = new SSRuntimeResource(data);
         // 3rd arg is the unregister token; without it destroy()'s unregister(this)
         // is a no-op and the GC finalizer would double-free the raw handle.
         finalizationRegistry.register(this, this.raw, this);

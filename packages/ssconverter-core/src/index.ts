@@ -53,12 +53,7 @@ export function convertProject(
   // the project's own files write in NFC.
   const normalized = new Map<string, Uint8Array>();
   for (const [path, bytes] of files) normalized.set(path.normalize('NFC'), bytes);
-  try {
-    return convert(normalized, embedded, debug, split, optimize);
-  } catch (e) {
-    // wasm-bindgen hands a conversion failure over as a bare string.
-    throw e instanceof Error ? e : new Error(String(e));
-  }
+  return convert(normalized, embedded, debug, split, optimize);
 }
 
 /** Converter build version string (`CARGO_PKG_VERSION` + short git sha). */
