@@ -74,6 +74,11 @@ interface AdapterState {
    * old way still blocks the scenario until the players are back.
    */
   restorePromise: Promise<void> | null;
+  /**
+   * The automatic restore while it runs. A load with `auto_next` resumes the
+   * scenario at once, so its next `[ss_*]` waits for this.
+   */
+  restoring: Promise<void> | null;
   /** Watches layers for canvases the engine removed without going through us. */
   detachObserver: MutationObserver | null;
 }
@@ -86,6 +91,7 @@ const state: AdapterState = {
   talking: null,
   restoreHooked: false,
   restorePromise: null,
+  restoring: null,
   detachObserver: null,
 };
 
@@ -269,6 +275,7 @@ function overlayFor(layer: string, page: LayerPage, layerEl: HTMLElement, dpr: n
     followOpacity: true,
     maxDPR: Math.min(dpr, 2),
   });
+  overlay.canvas.classList.add('ss-overlay');
   // A placement is stored in logical pixels but pushed to the renderer in
   // drawing-buffer pixels, and a resize changes the ratio between them. Without
   // this, every character on the layer drifts the first time the window is
@@ -1582,6 +1589,11 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
 
     state.detachObserver = new MutationObserver((records) => {
       for (const record of records) {
+        // A layer the engine put in place is a clone, whose character divs and
+        // canvases draw nothing and would answer `[anim name=]`.
+        for (const added of record.addedNodes) {
+          (added as Element).querySelectorAll?.('.ss-player, canvas.ss-overlay').forEach((el) => el.remove());
+        }
         for (const removed of record.removedNodes) {
           for (const name of registry.names()) {
             const entry = registry.get(name);
@@ -1609,6 +1621,8 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     // Not `subtree`: a message layer mutates on every character typed out, and
     // this only ever needs the layer's own child list.
     state.detachObserver?.observe(parent, { childList: true });
+    // `[trans layer=]` replaces the layer element itself.
+    if (parent.parentElement) state.detachObserver?.observe(parent.parentElement, { childList: true });
   };
 
   /** Rebuild every player from the saved state. */
@@ -1618,6 +1632,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     // an overlay parented to the old one would draw nowhere.
     registry.destroyAll();
     destroyOverlays();
+    // A save stores the layers' DOM, so the load has put back the divs and canvases
+    // this pass is about to build again.
+    document.querySelectorAll('.ss-player, canvas.ss-overlay').forEach((el) => el.remove());
     state.talking = null;
     // Read the blanket-fade flag BEFORE rebuilding: createPlayer consults it
     // to decide whether a restored player is shown at all.
@@ -1721,6 +1738,9 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
         const pass = restoreSavedPlayers();
         pass.catch((err) => logFailure('automatic restore', err));
         state.restorePromise = pass;
+        state.restoring = pass;
+        const settled = (): void => { if (state.restoring === pass) state.restoring = null; };
+        pass.then(settled, settled);
       },
       { system: true },
     );
@@ -1741,6 +1761,20 @@ export function registerSSTags(tyrano?: TyranoGlobal): boolean {
     },
   };
 
+  // The engine holds the scenario until a tag calls nextOrder, so a tag can wait
+  // for the restore without the scenario moving past it.
+  for (const name of Object.keys(ftag.master_tag)) {
+    if (!name.startsWith('ss_') || name === 'ss_restore' || name === 'ss_init') continue;
+    const tag = ftag.master_tag[name];
+    const start = tag.start;
+    tag.start = function (this: unknown, pm: Record<string, unknown>) {
+      const restoring = state.restoring;
+      if (!restoring) return start.call(this, pm);
+      const run = (): void => { start.call(this, pm); };
+      restoring.then(run, run);
+    };
+  }
+
   return true;
 }
 
@@ -1760,6 +1794,7 @@ export function __resetStateForTest(): void {
   state.talking = null;
   state.restoreHooked = false;
   state.restorePromise = null;
+  state.restoring = null;
   state.detachObserver?.disconnect();
   state.detachObserver = null;
 }

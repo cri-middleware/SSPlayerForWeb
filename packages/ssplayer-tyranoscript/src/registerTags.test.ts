@@ -637,6 +637,51 @@ describe('registerSSTags', () => {
     expect(getRegistry().names()).toEqual(['chr']);
   });
 
+  it('clears the divs and canvases a save put back when it restores', async () => {
+    const h = await withPlayer();
+    // What the engine's setLayerHtml does on a load: the layer's DOM comes back
+    // with the character's div and the overlay's canvas in it.
+    const layer = FakeSSPlayer.instances[0].element.parentElement!;
+    const staleDiv = Object.assign(document.createElement('div'), { className: 'ss-player chr' });
+    const staleCanvas = Object.assign(document.createElement('canvas'), { className: 'ss-overlay' });
+    layer.append(staleDiv, staleCanvas);
+
+    h.fire('load-beforemaking');
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual(['chr']));
+
+    expect(staleDiv.isConnected).toBe(false);
+    expect(staleCanvas.isConnected).toBe(false);
+  });
+
+  it('holds a tag that arrives while the automatic restore runs', async () => {
+    const h = await withPlayer();
+
+    // A load with auto_next: the scenario resumes straight after the event.
+    h.fire('load-beforemaking');
+    await runTag(h.tags.ss_pause, { name: 'chr' }, h.nextOrder);
+
+    expect(h.error).not.toHaveBeenCalled();
+    expect(getRegistry().names()).toEqual(['chr']);
+  });
+
+  it('releases a player whose layer the engine replaced', async () => {
+    const h = makeTyrano();
+    registerSSTags(h.tyrano);
+    const tags = h.tyrano.kag.ftag.master_tag;
+    const layer = h.addLayer('0', 'fore');
+    const parent = document.createElement('div');
+    parent.append(layer);
+    await runTag(tags.ss_init, { wasm: 'rt.wasm' }, h.nextOrder);
+    await runTag(tags.ss_new, { name: 'chr', storage: 'others/ssdata/a.ssab', anime: 'Anime_1' }, h.nextOrder);
+
+    // What [trans layer=] does: the clone of the back page takes the layer's place.
+    const clone = layer.cloneNode(true) as HTMLElement;
+    layer.replaceWith(clone);
+
+    await vi.waitFor(() => expect(getRegistry().names()).toEqual([]));
+    expect(clone.querySelector('.ss-player')).toBeNull();
+  });
+
   it('still restores through ss_restore on an engine with no event bus', async () => {
     const h = makeTyrano();
     delete (h.tyrano.kag as { on?: unknown }).on;
