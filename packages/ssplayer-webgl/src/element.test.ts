@@ -145,6 +145,20 @@ describe('<ss-player>', () => {
     expect(player.current).toBe('walk');
   });
 
+  it('follows `animation` again after being removed while a `src` loaded', async () => {
+    const { el } = await mount({});
+    player.load.mockImplementation(() => new Promise(() => {}));
+    el.setAttribute('src', 'chara.ssab');
+    el.remove();
+    el.removeAttribute('src');
+    document.body.append(el);
+    await settle();
+
+    player.load.mockResolvedValue(undefined);
+    el.setAttribute('animation', 'run');
+    expect(player.current).toBe('run');
+  });
+
   it('does not report a load that fails after the element is removed', async () => {
     const { el, errors } = await mount({});
     let fail!: (reason: unknown) => void;

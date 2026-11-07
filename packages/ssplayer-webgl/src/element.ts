@@ -169,6 +169,7 @@ export class SSPlayerElement extends HTMLElement {
 
   disconnectedCallback(): void {
     this._loadToken++; // invalidate any in-flight load
+    this._srcLoading = false;
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
     for (const off of this._unsubscribe) off();
