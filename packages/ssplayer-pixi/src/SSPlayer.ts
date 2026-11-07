@@ -1,5 +1,5 @@
 import { Container, Texture, Ticker, Text, Shader, Buffer, BufferUsage, RenderTexture, UniformGroup, Matrix, type Renderer } from 'pixi.js';
-import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, SSPartFollower, type SSPartFollowOptions, type SSPartQuad, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
+import { DirectInternalPlayer, ListenerSet, DrawBatch, DrawBatchKind, GeometryBuilder, SSRuntimeManager, FrameData, FrameDataRaw, type MaskPlanner, MaskTreePlanner, type MaskTreeVisitor, InstanceResolver, EffectBatchPlanner, ShaderAttributeResolver, ssBlendMode, MAX_MASK_WRITERS, initializeWasm, getWasmMemory, WebPlaybackDirection, WebPlaybackStyle, ssFormat, IAudioManager, SSBlendOp, SSOverridePriority, SSTrackBlend, SSTrackSync, SSPartFollower, type SSPassedEvent, type SSPartFollowOptions, type SSPartQuad, type SSPartAttachment as SSPartAttachmentOf, composeVisibleInside, ROOT_MASK_INFLUENCE, ROOT_VISIBLE_INSIDE } from '@spritestudio/ssplayer-core';
 import { SSWebAudioManager } from '@spritestudio/ssplayer-core/audio';
 import { PartsColorShader, PartsColorShaderWGSL } from './PartsColorShader.js';
 import { EffectShader, EffectShaderWGSL } from './EffectShader.js';
@@ -338,6 +338,9 @@ export class SSPlayer extends Container {
     // A change that leaves the frame number alone (an override, a track command,
     // a new attachment) waiting for the next tick to draw it.
     private _redrawPending = false;
+    // A restored context has lost the mask coverage textures, and a stopped player
+    // would otherwise never draw them again.
+    private readonly _contextListener = { contextChange: () => { this._redrawPending = true; } };
     
     /**
      * Optional AudioManager. If set, setAnimation will automatically preload sounds
@@ -541,6 +544,10 @@ export class SSPlayer extends Container {
         this.addChild(this._art);
         this.addChild(this.debugText);
 
+        // What a pack bind frees was drawn from until now, and a frame may be
+        // rendered before this player's next tick.
+        this.pixiResourceManager.beforeFree = () => this.releaseTextureBindings();
+
         // Capture the renderer the first time we're drawn. The mask coverage
         // pre-pass renders to offscreen textures and needs a renderer; running
         // it from the ticker (before the stage render) keeps coverage ready by
@@ -577,7 +584,9 @@ export class SSPlayer extends Container {
      */
     public attachRenderer(renderer: Renderer) {
         if (this.renderer === renderer) return;
+        this.renderer?.runners?.contextChange?.remove(this._contextListener);
         this.renderer = renderer;
+        renderer.runners?.contextChange?.add(this._contextListener);
         // WebGL: register the SS fixed-function blend modes into this renderer's
         // blend map (idempotent; no-op on WebGPU, handled at import time).
         registerSSBlendModesGL(renderer);
@@ -585,6 +594,7 @@ export class SSPlayer extends Container {
 
     public override destroy(options?: any) {
         Ticker.shared.remove(this.update, this);
+        this.renderer?.runners?.contextChange?.remove(this._contextListener);
 
         // Detach followers (removes them from our layer and restores any
         // visibility we changed) so destroying the player never destroys or
@@ -620,6 +630,7 @@ export class SSPlayer extends Container {
     public async load(ssabUrl: string) {
         this.releaseTextureBindings();
         await this.internalPlayer.load(ssabUrl);
+        if (this.internalPlayer.destroyed) return;
         this.configureContext();
         await this.ensureAutoAudio();
     }
@@ -1386,7 +1397,7 @@ export class SSPlayer extends Container {
         if (finished && this._animFinishedListeners.size > 0) {
             this._animFinishedListeners.emit();
         }
-        if (looped && this._animLoopedListeners.size > 0) {
+        if (looped && this._animLoopedListeners.size > 0 && !this.internalPlayer.destroyed) {
             this._animLoopedListeners.emit();
         }
 
@@ -1394,26 +1405,26 @@ export class SSPlayer extends Container {
         if (this._userDataListeners.size === 0 && this._signalListeners.size === 0 && this._audioListeners.size === 0) return;
 
         for (const event of passed) {
-            const events = mgr.getEventsOf(event);
-            if (!events) continue;
-            const { source } = event;
-            if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
-            if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
+            if (this._userDataListeners.size > 0) this.dispatchUserData(event);
+            if (this._signalListeners.size > 0) this.dispatchSignals(event);
 
             // Audio keys are reported whichever way the playhead is walking — the
             // observation channel is not the playback. SpriteStudio has no reverse
             // audio, so it is the backend that gates on `isPlayingForward`
             // (SSWebAudioManager.bindToPlayer does).
-            if (this._audioListeners.size > 0) {
-                this.dispatchAudios(events, source);
-            }
+            if (this._audioListeners.size > 0) this.dispatchAudios(event);
         }
     }
 
-    private dispatchUserData(events: ssFormat.EventsPerFrame, source: number): void {
+    private dispatchUserData(event: SSPassedEvent): void {
         const mgr = this.internalPlayer.runtimeManager;
-        const n = events.usersLength();
+        const { source } = event;
+        const n = mgr.getEventsOf(event)?.usersLength() ?? 0;
         for (let j = 0; j < n; j++) {
+            // Asked for afresh each time: a listener may have grown WASM memory, which
+            // detaches the view, bound another pack, or destroyed the player.
+            const events = mgr.getEventsOf(event);
+            if (!events) return;
             const user = events.users(j);
             const val = user?.value();
             if (!user || !val) continue;
@@ -1431,10 +1442,13 @@ export class SSPlayer extends Container {
         }
     }
 
-    private dispatchSignals(events: ssFormat.EventsPerFrame, source: number): void {
+    private dispatchSignals(event: SSPassedEvent): void {
         const mgr = this.internalPlayer.runtimeManager;
-        const n = events.signalsLength();
+        const { source } = event;
+        const n = mgr.getEventsOf(event)?.signalsLength() ?? 0;
         for (let j = 0; j < n; j++) {
+            const events = mgr.getEventsOf(event);
+            if (!events) return;
             const sig = events.signals(j);
             const val = sig?.value();
             if (!sig || !val) continue;
@@ -1481,10 +1495,13 @@ export class SSPlayer extends Container {
         }
     }
 
-    private dispatchAudios(events: ssFormat.EventsPerFrame, source: number): void {
+    private dispatchAudios(event: SSPassedEvent): void {
         const mgr = this.internalPlayer.runtimeManager;
-        const n = events.audiosLength();
+        const { source } = event;
+        const n = mgr.getEventsOf(event)?.audiosLength() ?? 0;
         for (let j = 0; j < n; j++) {
+            const events = mgr.getEventsOf(event);
+            if (!events) return;
             const audio = events.audios(j);
             const val = audio?.value();
             if (!audio || !val) continue;
@@ -1534,6 +1551,7 @@ export class SSPlayer extends Container {
             // since the next tick may early-return on !isTicking. Skipped while paused
             // (the timeline did not move, so no events were passed).
             this.pollEvents();
+            if (this.internalPlayer.destroyed) return;
         }
 
         // The playhead for anything that reports a number, the drawn frame for
@@ -1834,7 +1852,7 @@ export class SSPlayer extends Container {
 
             // Effect batches (and root/null parts) carry textureHash 0; their real
             // texture is resolved per draw command, so avoid the missing-asset warning.
-            const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.WHITE) : Texture.WHITE;
+            const texture = textureHash !== 0 ? (this.pixiResourceManager.getTexture(textureHash) || Texture.EMPTY) : Texture.WHITE;
 
             // SpriteStudio framebuffer-composite blend (alpha_blend_type, 12 values)
             // → PixiJS blend mode. This is the framebuffer
@@ -2061,7 +2079,7 @@ export class SSPlayer extends Container {
                         iOff += d.quadCount * 6;
                     }
 
-                    const effectTex = this.pixiResourceManager.getTexture(cellmap) || Texture.WHITE;
+                    const effectTex = this.pixiResourceManager.getTexture(cellmap) || Texture.EMPTY;
                     // Raw EmitterState.blend_type: 0 = Mix, 1 = Add.
                     const bMode = (blend === 1) ? SS_ADD_BLEND : SS_MIX_BLEND;
                     if (masked) {
