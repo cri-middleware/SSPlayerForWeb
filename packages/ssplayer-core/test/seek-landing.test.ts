@@ -34,10 +34,10 @@ describe.skipIf(!existsSync(RUNTIME_WASM) || !existsSync(CONVERTER_WASM) || !exi
 
         // The frames whose audio keys the update that just ran reported.
         function audioFrames(player: DirectInternalPlayer): number[] {
-            const ctx = player.runtimeManager.context;
+            const manager = player.runtimeManager;
             const frames: number[] = [];
-            for (let e = 0; e < ctx.get_passed_event_count(); e++) {
-                const events = player.runtimeManager.getPassedEvents(e);
+            for (const event of manager.capturePassedEvents()) {
+                const events = manager.getEventsOf(event);
                 if (events && events.audiosLength() > 0) frames.push(events.frameIndex());
             }
             return frames;

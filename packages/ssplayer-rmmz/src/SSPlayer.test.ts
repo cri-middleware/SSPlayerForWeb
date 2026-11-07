@@ -20,7 +20,7 @@ vi.mock('@spritestudio/ssplayer-webgl', async () => ({
     isPlaying = true;
     isTicking = true;
     isHeld = false;
-    runtimeManager = { context: { get_passed_event_count: () => 0 } };
+    runtimeManager = { capturePassedEvents: () => [] };
     update = vi.fn(() => fake.order.push('update'));
     evaluateDrawFrame = vi.fn(() => fake.order.push('evaluate'));
     pollPlaybackEvents = vi.fn(() => ({ looped: false, finished: false }));
@@ -48,6 +48,40 @@ function makePlayer(followers: number) {
   fake.followers = followers;
   return new SSPlayer({} as WebGLRenderingContext);
 }
+
+describe('event listeners', () => {
+  it('hear what the update reported though the first of them sets up an animation', () => {
+    const player = makePlayer(0);
+    const order: string[] = [];
+    const ip = player.internalPlayer as unknown as {
+      pollPlaybackEvents: () => { looped: boolean; finished: boolean };
+      runtimeManager: { capturePassedEvents: () => unknown[]; getEventsOf: () => unknown; getPartName: () => string };
+    };
+    ip.pollPlaybackEvents = () => ({ looped: true, finished: true });
+    ip.runtimeManager.capturePassedEvents = () => {
+      order.push('read');
+      return [{ source: 3 }];
+    };
+    ip.runtimeManager.getPartName = () => 'part';
+    ip.runtimeManager.getEventsOf = () => ({
+      frameIndex: () => 5,
+      usersLength: () => 1,
+      users: () => ({
+        partIndex: () => 0,
+        value: () => ({ integer: () => null, str: () => 'key', rect: () => null, point: () => null }),
+      }),
+      signalsLength: () => 0,
+      audiosLength: () => 0,
+    });
+    player.onAnimationFinished(() => order.push('finished'));
+    player.onAnimationLooped(() => order.push('looped'));
+    player.onUserData((event) => order.push(`user data ${event.str} from ${event.source}`));
+
+    (player as unknown as { pollEvents(): void }).pollEvents();
+
+    expect(order).toEqual(['read', 'finished', 'looped', 'user data key from 3']);
+  });
+});
 
 describe('SSPlayer.update', () => {
   it('evaluates the frame before it drives followers and onFrame', () => {

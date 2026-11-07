@@ -1161,9 +1161,11 @@ export class SSPlayer {
    * animation.
    */
   private pollEvents(): void {
-    const ctx = this.internalPlayer.runtimeManager.context;
+    const mgr = this.internalPlayer.runtimeManager;
 
     const { looped, finished } = this.internalPlayer.pollPlaybackEvents();
+    // Before any listener runs: one that sets up an animation clears them.
+    const passed = mgr.capturePassedEvents();
     if (finished && this._animFinishedListeners.size > 0) {
       this._animFinishedListeners.emit();
     }
@@ -1171,16 +1173,15 @@ export class SSPlayer {
       this._animLoopedListeners.emit();
     }
 
-    const count = ctx.get_passed_event_count();
-    if (count <= 0) return;
+    if (passed.length === 0) return;
     if (this._userDataListeners.size === 0 && this._signalListeners.size === 0 && this._audioListeners.size === 0) return;
 
-    for (let i = 0; i < count; i++) {
+    for (const event of passed) {
       // Read from the table of the animation whose source fired it, which is
       // not the set-up one after a crossfade on track 0 or for an overlay.
-      const events = this.internalPlayer.runtimeManager.getPassedEvents(i);
+      const events = mgr.getEventsOf(event);
       if (!events) continue;
-      const source = ctx.get_passed_event_source_handle(i);
+      const { source } = event;
       if (this._userDataListeners.size > 0) this.dispatchUserData(events, source);
       if (this._signalListeners.size > 0) this.dispatchSignals(events, source);
       // Audio keys are reported whichever way the playhead is walking — the
