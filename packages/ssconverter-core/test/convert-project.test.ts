@@ -18,4 +18,13 @@ describe('convertProject', () => {
     convertProject(new Map([[nfd, new Uint8Array([1])]]));
     expect([...(convert.mock.calls[0][0] as Map<string, Uint8Array>).keys()]).toEqual(['がぎぐ.png'.normalize('NFC')]);
   });
+
+  it('passes embedded and optimize where the converter takes them', () => {
+    convert.mockReset();
+    convert.mockReturnValue({});
+    convertProject(new Map());
+    expect(convert.mock.calls[0].slice(1)).toEqual([false, false, false, true]);
+    convertProject(new Map(), { embedded: true, optimize: false });
+    expect(convert.mock.calls[1].slice(1)).toEqual([true, false, false, false]);
+  });
 });

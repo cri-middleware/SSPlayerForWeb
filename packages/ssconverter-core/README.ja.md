@@ -70,7 +70,7 @@ for (const [dest, src] of result.assets) {
 | エクスポート | 説明 |
 | --- | --- |
 | `init(source?)` | wasm モジュールを初期化する。`source` は `URL` / `Response`、wasm の `BufferSource`、または `WebAssembly.Module`。 |
-| `convertProject(files, opts?)` | プロジェクトを変換する。`opts`: `{ embedded=false, debug=false, split=false, optimize=true }`。`debug` と `split` は予約で、効果はない。`ConvertResult` を返す。 |
+| `convertProject(files, opts?)` | プロジェクトを変換する。`opts`: `{ embedded=false, optimize=true }`。`ConvertResult` を返す。 |
 | `ConvertResult` | `.output: Map<name, bytes>`（生成されたファイル）と `.assets: Map<dest, src>`（コピーすべき外部アセット。embedded 時は空）。 |
 | `locateProject(paths)` | 単一の `.sspj` を見つけ、`{ sspjPath, stem, dir }` を導出する。0 個または複数の場合は例外を投げる。 |
 | `applySuffix(output, suffix)` | 各 `.ssab` のベース名に `suffix` を付与し、`.ssab` 以外の出力を落とす（embedded バリアントを併存させて出力するため）。 |
