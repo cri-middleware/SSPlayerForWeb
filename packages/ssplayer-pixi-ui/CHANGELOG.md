@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssplayer-pixi-ui` are documented here. The
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release.** `SSButton`, a [`@pixi/ui`](https://github.com/pixijs/ui) `ButtonContainer`
   whose look is one SpriteStudio animation: hover, press, keyboard focus and `enabled = false` each

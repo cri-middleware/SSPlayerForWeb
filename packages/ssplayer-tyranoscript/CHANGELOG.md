@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssplayer-tyranoscript` are documented here
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release (beta).** Shows and plays SpriteStudio animations in a TyranoScript scenario
   through `[ss_*]` tags.

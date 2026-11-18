@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssconverter-core` are documented here. The
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release.** `libssconverter` compiled to WebAssembly: converts SpriteStudio projects
   (`.sspj`) to `.ssab` / `.ssqb`, for embedding conversion in your own app or service.

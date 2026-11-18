@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssplayer-rmmz` are documented here. The fo
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release (beta).** Plays SpriteStudio animations (`.ssab`) in RPG Maker MZ through
   plugin commands, in Z-order with your characters and pictures.

@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssplayer-webgl` are documented here. The f
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release.** The framework-free WebGL 1/2 renderer, including the `<ss-player>` Web
   Component. It re-exports `@spritestudio/ssplayer-core`, so it is the only package to install.

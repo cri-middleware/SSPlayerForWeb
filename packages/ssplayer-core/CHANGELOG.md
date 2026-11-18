@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssplayer-core` are documented here. The fo
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release.** The engine-agnostic core of the SpriteStudio player: the SpriteStudio-SDK
   runtime (`libssruntime`) compiled to WebAssembly, plus `DrawBatch` consumption, for building

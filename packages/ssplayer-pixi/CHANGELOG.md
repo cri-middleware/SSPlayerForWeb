@@ -6,6 +6,8 @@ All notable changes to `@spritestudio/ssplayer-pixi` are documented here. The fo
 
 ## [Unreleased]
 
+## [7.0.0-beta.1] - 2026-11-18
+
 ### Added
 - **First release.** The PixiJS v8 renderer (`pixi.js` is a peer dependency). It re-exports
   `@spritestudio/ssplayer-core`, so it is the only package to install.
