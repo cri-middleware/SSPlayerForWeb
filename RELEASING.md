@@ -27,13 +27,7 @@ prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refna
 [ -z "$prev" ] || git diff --stat "$prev" origin/main -- scripts/SDK_VERSION.txt   # any output: a player release takes ssplayer-core along
 ```
 
-A run releases every package whose current version has no Release yet, named or not. So the first release names every package at the version it already has, or leaves the plugins out with `-f release_plugins=false`:
-
-```text
-ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssplayer-pixi-ui@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
-```
-
-Step 4 takes the decision in place of its `<versions>`, in quotes, as in `"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"`.
+A run releases every package whose current version has no Release yet, named or not. Step 4 takes the decision in place of its `<versions>`, in quotes, as in `"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"`.
 
 ### 2. Write the changelog
 
@@ -79,7 +73,7 @@ git switch main && git pull --ff-only &&
 
 ### 4. Run the release
 
-Run the block that fits. npm cannot stage a package it does not have yet, so a run that releases one — the first release is one — adds `-f publish_npm=false`, and step 6 publishes it by hand.
+Run the block that fits. npm cannot stage a package it does not have yet, so a run that releases one adds `-f publish_npm=false`, and step 6 publishes it by hand.
 
 For packages npm already has:
 
@@ -275,13 +269,7 @@ prev=$(git -c versionsort.suffix=- tag --list 'ssplayer-core-v*' --sort=-v:refna
 [ -z "$prev" ] || git diff --stat "$prev" origin/main -- scripts/SDK_VERSION.txt   # 何か出たら、プレイヤーのリリースに ssplayer-core も含める
 ```
 
-run は、指定したかどうかに関わらず、現在のバージョンにまだ Release が無いパッケージをすべて出します。そのため初回のリリースでは、全パッケージをいま持っているバージョンのまま指定するか、`-f release_plugins=false` でプラグインを外します。
-
-```text
-ssplayer-core@7.0.0-beta.1 ssplayer-webgl@7.0.0-beta.1 ssplayer-pixi@7.0.0-beta.1 ssplayer-pixi-ui@7.0.0-beta.1 ssconverter-core@7.0.0-beta.1 ssplayer-rmmz@7.0.0-beta.1 ssplayer-tyranoscript@7.0.0-beta.1 ssplayer-tyranobuilder@7.0.0-beta.1
-```
-
-手順 4 は、決めた組を引用符で囲んで `<versions>` の位置に受け取ります（`"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"` など）。
+run は、指定したかどうかに関わらず、現在のバージョンにまだ Release が無いパッケージをすべて出します。手順 4 は、決めた組を引用符で囲んで `<versions>` の位置に受け取ります（`"ssplayer-core@7.0.0-beta.2 ssplayer-webgl@7.0.0-beta.2"` など）。
 
 ### 2. changelog を書く
 
@@ -327,7 +315,7 @@ git switch main && git pull --ff-only &&
 
 ### 4. リリースを実行する
 
-当てはまる方のブロックを実行します。npm はまだ無いパッケージを stage できないので、それを出す run（初回のリリースがそうです）には `-f publish_npm=false` を足し、手順 6 で手作業で publish します。
+当てはまる方のブロックを実行します。npm はまだ無いパッケージを stage できないので、それを出す run には `-f publish_npm=false` を足し、手順 6 で手作業で publish します。
 
 npm にすでにあるパッケージだけを出すとき:
 
