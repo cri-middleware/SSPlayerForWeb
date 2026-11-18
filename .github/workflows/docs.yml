@@ -47,8 +47,53 @@ jobs:
           node-version: 26
           cache: pnpm
 
+      # The SDK wasm comes from the submodule, not the release SDK_VERSION.txt
+      # names: that is pages.yml's to publish with. The key is ci.yml's, so the
+      # build its weekly run saves is restored here, and only on a miss does this
+      # job compile it. TypeDoc reads the wasm's types, so the docs alone need it.
+      - name: Name the SDK wasm build
+        id: wasm
+        run: echo "key=wasm-${ImageOS}-release-$(git rev-parse HEAD:SpriteStudio-SDK)-${{ hashFiles('scripts/build-runtime.sh', '.github/workflows/ci.yml') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the SDK wasm build
+        id: wasm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            packages/ssplayer-core/wasm
+            packages/ssplayer-core/wasm-nosimd
+            packages/ssconverter-core/wasm
+          key: ${{ steps.wasm.outputs.key }}
+
+      - name: Setup Rust toolchain
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          # Pinned by SHA, so the channel must be named explicitly here.
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Setup Rust cache
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: SpriteStudio-SDK
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install wasm-pack
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: wasm-pack
+
+      - name: Build the SDK wasm
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
+        run: ./scripts/build-runtime.sh build=release
+
+      # sdk=build so the ssconverter stage converts with this wasm as well;
+      # skip=wasm because the steps above already put it in place.
       - name: Build site
         env:
           REPO_NAME: ${{ github.event.repository.name }}
-          SKIP: ${{ github.event_name == 'pull_request' && 'packages,assets,rmmz,tyranoscript,examples,ssconverter' || '' }}
-        run: ./scripts/build-pages.sh base="/$REPO_NAME/" out=_site ${SKIP:+"skip=$SKIP"}
+          SKIP: ${{ github.event_name == 'pull_request' && 'wasm,packages,assets,rmmz,tyranoscript,examples,ssconverter' || 'wasm' }}
+        run: ./scripts/build-pages.sh base="/$REPO_NAME/" out=_site sdk=build skip="$SKIP"
