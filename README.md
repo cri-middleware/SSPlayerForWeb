@@ -82,7 +82,8 @@ No Rust or WASM toolchain is needed — the WASM ships inside each renderer pack
    public/
    └── Ringo/            ← from the converter's output
        ├── Ringo.ssab
-       └── Ringo.png
+       ├── Ringo.png
+       └── …
    ```
 
 3. **Play** it with the `<ss-player>` element (or via the `SSSurface` / `SSPlayer` JS API):

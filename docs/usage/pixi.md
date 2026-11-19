@@ -110,12 +110,13 @@ as printed always works together.
 ### ESM from a CDN — `<script type="module">`
 
 Native modules with no build step, from an ESM CDN (esm.sh here). The same rule applies: pass the
-WASM URL.
+WASM URL. The import also names the runtime's version with `?deps=`: without it, esm.sh serves the
+newest `ssplayer-core` in the range the player declares, which can be a later one than the WASM.
 
 ```html
 <script type="module">
   import { Application } from 'https://esm.sh/pixi.js@8';
-  import { SSPlayer } from 'https://esm.sh/@spritestudio/ssplayer-pixi@7.0.0-beta.1';
+  import { SSPlayer } from 'https://esm.sh/@spritestudio/ssplayer-pixi@7.0.0-beta.1?deps=@spritestudio/ssplayer-core@7.0.0-beta.1';
 
   await SSPlayer.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
 
