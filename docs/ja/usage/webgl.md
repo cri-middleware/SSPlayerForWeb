@@ -194,12 +194,12 @@ WASM の URL の渡し方は 3 通りあります。ランタイムはページ�
 
 ### ESM を CDN から — `<script type="module">`
 
-ビルドなしでネイティブモジュールを使う場合は、ESM の CDN（ここでは esm.sh）から import します。WASM の URL を渡すのは同じです。
+ビルドなしでネイティブモジュールを使う場合は、ESM の CDN（ここでは esm.sh）から import します。WASM の URL を渡すのは同じです。import には `?deps=` でランタイムの版も付けます。付けないと esm.sh は、Player が宣言する範囲で最新の `ssplayer-core` を返すので、WASM より新しいものになることがあります。
 
 ```html
 <canvas id="stage" width="1280" height="960"></canvas>
 <script type="module">
-  import { SSSurface } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1';
+  import { SSSurface } from 'https://esm.sh/@spritestudio/ssplayer-webgl@7.0.0-beta.1?deps=@spritestudio/ssplayer-core@7.0.0-beta.1';
 
   await SSSurface.initialize('https://cdn.jsdelivr.net/npm/@spritestudio/ssplayer-core@7.0.0-beta.1/wasm/ssruntime_bg.wasm');
 

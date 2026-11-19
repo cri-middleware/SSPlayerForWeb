@@ -82,7 +82,8 @@ Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパ
    public/
    └── Ringo/            ← 変換ツールの出力フォルダ
        ├── Ringo.ssab
-       └── Ringo.png
+       ├── Ringo.png
+       └── …
    ```
 
 3. **再生**: `<ss-player>` 要素で配置します（`SSSurface` / `SSPlayer` の JS API からコードで操作することもできます）:
