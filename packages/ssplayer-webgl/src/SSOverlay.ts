@@ -105,6 +105,7 @@ export class SSOverlay {
     // autoStart is off: the overlay owns the frame, because boxes have to be
     // written from layout BEFORE the surface draws.
     this.surface = new SSSurface(this.canvas, { ...options, autoStart: false, pauseWhenHidden: false });
+    this.surface.sharedOverlay = true;
 
     this.onResize = () => this.resize();
     window.addEventListener('resize', this.onResize);

@@ -262,6 +262,31 @@ describe('SSSurface', () => {
       // …but it still draws the player onto the host's framebuffer.
       expect(surface.renderer.render).toHaveBeenCalledTimes(1);
     });
+
+    it('warns once when several players share a transparent surface with no backdrop', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const surface = new SSSurface(makeCanvas());
+      surface.createPlayer();
+      surface.draw();
+      expect(warn).not.toHaveBeenCalled();
+
+      surface.createPlayer();
+      surface.draw();
+      surface.draw();
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+    });
+
+    it("does not warn for several players on the shared overlay's surface", () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const surface = new SSSurface(makeCanvas());
+      surface.sharedOverlay = true;
+      surface.createPlayer();
+      surface.createPlayer();
+      surface.draw();
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
   });
 });
 
