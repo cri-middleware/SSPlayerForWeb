@@ -37,4 +37,12 @@ describe('SSOverlay', () => {
 
     overlay.destroy();
   });
+
+  it('marks its surface as the shared overlay, so several elements draw there without a warning', () => {
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+    const overlay = SSOverlay.getOrCreate('shared-overlay');
+    expect(overlay.surface.sharedOverlay).toBe(true);
+    overlay.destroy();
+  });
 });

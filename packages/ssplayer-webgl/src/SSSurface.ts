@@ -119,6 +119,13 @@ export class SSSurface {
   // framebuffer-reading blend modes with no backdrop anywhere (see checkBackdrop).
   private _warnedNoBackdrop = false;
 
+  /**
+   * @internal Set by `SSOverlay` on the surface it draws every element's player
+   * on. Those players sit over the page, which is their backdrop though the
+   * surface cannot read it, so several of them there are as normal as one alone.
+   */
+  public sharedOverlay = false;
+
   // Offscreen pass for fading a player as one image instead of part by part.
   // Built on first use, so a surface whose players are all opaque never allocates
   // a framebuffer (see SSGroupAlpha).
@@ -337,6 +344,7 @@ export class SSSurface {
     if (!this.owned) return; // the host's framebuffer is the backdrop
     if (this.options.backgroundColor !== undefined || player.backdrop !== null) return;
     if (this.players.length < 2) return; // a lone player on a transparent surface is the normal overlay/ad case
+    if (this.sharedOverlay) return; // so are several, one per element, on SSOverlay's
     this._warnedNoBackdrop = true;
     console.warn(
       '[SSSurface] Several players share a transparent surface with no backdrop. ' +
