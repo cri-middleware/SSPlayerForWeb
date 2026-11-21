@@ -32,7 +32,7 @@
 
 - [**ドキュメントサイト (ホスト版)**](https://cri-middleware.github.io/SSPlayerForWeb/ja/)
 - [**日本語ドキュメント**](./docs/ja/index.md) · [**English docs**](./docs/index.md)
-- [**AI アシスタント向け**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — このドキュメントを Markdown で提供します。`llms.txt`（ページの目次）と `llms-full.txt`（全ページを 1 ファイルに）は英語版のページを集めたもので、日本語の各ページは `ja/` 配下の `.md` で取れます。各 npm パッケージは同じページを `docs/` に、Agent Skill として `skills/` にも持っています（[skill の入れ方](https://cri-middleware.github.io/SpriteStudio-Docs/ja/overview/ai-assistants/)）
+- [**AI アシスタント向け**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — このドキュメントを Markdown で提供します。`llms.txt`（ページの目次）と `llms-full.txt`（全ページを 1 ファイルに）は英語版のページを集めたもので、日本語の各ページは `ja/` 配下の `.md` で取れます。各 npm パッケージは同じページを `docs/` に、Agent Skill として `skills/` にも持っています（[skill の入れ方](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/)）
 - [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player の入口
 
 ### クイックリンク (日本語)
