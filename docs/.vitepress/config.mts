@@ -1,3 +1,4 @@
+import type { DefaultTheme } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import llmstxt, { copyOrDownloadAsMarkdownButtons } from 'vitepress-plugin-llms'
 
@@ -22,6 +23,84 @@ const SITE_URL = 'https://cri-middleware.github.io/SSPlayerForWeb'
 // full `scripts/build-pages.sh` build.
 const demo = (text: string, link: string) => ({ text, link, target: '_blank', rel: 'noreferrer' })
 
+// The sidebar is ordered as a difficulty gradient — reader personas are the
+// design driver but are intentionally NOT surfaced as section labels. Reading
+// top-to-bottom, the effort required rises naturally:
+//   1. Getting started / Usage / API  … copy-paste and it runs
+//   2. Customize            … a little effort to polish expression
+//   3. For Player & SDK Developers … understand the whole, then touch core / WASM
+const DEVELOPERS = 'For Player & SDK Developers'
+const enSidebar: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'Getting started',
+    items: [
+      { text: 'Installation', link: '/setup/install' },
+      { text: 'Quick Start', link: '/setup/quickstart' },
+    ],
+  },
+  {
+    text: 'Usage',
+    items: [
+      { text: 'Basic playback', link: '/usage/basic' },
+      { text: 'Preparing assets (.sspj → .ssab)', link: '/usage/assets' },
+      { text: 'WebGL & Web Components', link: '/usage/webgl' },
+      { text: 'HTML5 ads (Google Ads)', link: '/usage/html5-ads' },
+      { text: 'PixiJS', link: '/usage/pixi' },
+      { text: 'UI buttons (PixiJS)', link: '/usage/pixi-ui' },
+      { text: 'RPG Maker MZ', link: '/usage/rmmz' },
+      { text: 'TyranoScript', link: '/usage/tyrano' },
+      { text: 'TyranoBuilder', link: '/usage/tyranobuilder' },
+      { text: 'Migrating from SS6Player', link: '/migration_from_ss6' },
+    ],
+  },
+  {
+    text: 'API Reference',
+    items: [
+      { text: 'Where to start', link: '/api-guide' },
+      { text: 'Generated reference', link: '/api/' },
+    ],
+  },
+  {
+    text: 'Customize',
+    items: [
+      { text: 'Events & user data', link: '/customize/events' },
+      { text: 'Part control (visibility / cell / color)', link: '/customize/part-overrides' },
+      { text: 'Runtime texture replacement (costume changes)', link: '/customize/texture-replacement' },
+      { text: 'Part tracking (following a part)', link: '/customize/part-following' },
+      { text: 'Motion blending (tracks and crossfade)', link: '/customize/motion-blending' },
+      { text: 'Shaders & blend modes', link: '/customize/shaders' },
+      { text: 'Resources & lifecycle', link: '/customize/resources' },
+      { text: 'Performance tuning', link: '/customize/performance' },
+    ],
+  },
+  {
+    text: 'Limitations & Scope',
+    items: [
+      { text: 'Limitations & Scope', link: '/limitations' },
+    ],
+  },
+  {
+    text: DEVELOPERS,
+    items: [
+      { text: 'Build Guide', link: '/development/build' },
+      { text: 'How the Player Is Put Together', link: '/development/architecture' },
+      { text: 'Contributing', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
+    ],
+  },
+]
+
+// What llms.txt lists: two sections by audience, since a file an assistant reads has no
+// difficulty gradient to follow. The first holds every other section's pages in sidebar
+// order, the second is the developer section as it stands. Derived from `enSidebar`, so a
+// page added there is listed here without a second edit.
+const llmsSidebar: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'Using the Player',
+    items: enSidebar.filter(({ text }) => text !== DEVELOPERS).flatMap(({ items }) => items ?? []),
+  },
+  ...enSidebar.filter(({ text }) => text === DEVELOPERS),
+]
+
 // English is the default (root) locale; Japanese lives under /ja/. The API
 // reference (docs/api/, TypeDoc-generated) is language-neutral and shared by both
 // locales at /api/.
@@ -32,13 +111,6 @@ const demo = (text: string, link: string) => ({ text, link, target: '_blank', re
 // `3. プラグインコマンド` holds ト+U+3099 and a hand-written `#_3-プラグインコマンド`
 // never matches the heading it points at. Its dead-link check does not look at
 // anchors, so nothing else catches it.
-//
-// The sidebar is ordered as a difficulty gradient — reader personas are the
-// design driver but are intentionally NOT surfaced as section labels. Reading
-// top-to-bottom, the effort required rises naturally:
-//   1. Getting started / Usage / API  … copy-paste and it runs
-//   2. Customize            … a little effort to polish expression
-//   3. For Player & SDK Developers … understand the whole, then touch core / WASM
 export default withMermaid({
   title: 'SpriteStudio Player for Web',
   description: 'A player for SpriteStudio animations in the browser (WebAssembly + PixiJS / WebGL)',
@@ -59,10 +131,16 @@ export default withMermaid({
   // pages (the plugin writes one pair for the whole site) and the TypeDoc symbol pages, which
   // are hundreds of files. Both keep their own `.md`, so the discovery link in every page
   // resolves. `ja.md` is what the plugin calls the Japanese home page, which `ja/**` misses.
+  // `llms.txt` lists the pages under one heading per audience, each entry with its page's
+  // frontmatter `description`. The plugin reads only a top-level `themeConfig.sidebar`, and
+  // this site's sidebars are per locale, so `sidebar` below hands it `llmsSidebar`; without
+  // that the list is flat and sorted by title. A page the sidebar does not list falls under
+  // Other, and `llms-full.txt` follows the same order.
   vite: {
     plugins: [
       llmstxt({
         domain: new URL(SITE_URL).origin,
+        sidebar: llmsSidebar,
         ignoreFilesPerOutput: {
           llmsTxt: ['ja.md', 'ja/**', 'api/@spritestudio/*/*/**'],
           llmsFullTxt: ['ja.md', 'ja/**', 'api/@spritestudio/*/*/**'],
@@ -73,14 +151,11 @@ export default withMermaid({
           details: [
             'Browser players for SpriteStudio over one WebAssembly core: `@spritestudio/ssplayer-core`, with',
             'renderers for WebGL and Web Components (`ssplayer-webgl`) and PixiJS (`ssplayer-pixi`), and',
-            'integrations for RPG Maker MZ, TyranoScript and TyranoBuilder. `setup/install` and',
-            '`setup/quickstart` get a first animation on screen, `usage/assets` converts a `.sspj` into an',
-            '`.ssab`, and `api-guide` says where to start in the API. `limitations` lists what is not',
-            'supported. The generated reference keeps one index page per package in this file; each class,',
-            'interface, function and type has its own page at',
-            '`api/@spritestudio/<package>/<kind>/<Name>.md`, where `<kind>` is `classes`, `interfaces`,',
-            '`functions`, `type-aliases`, `enumerations` or `namespaces`. This file is the English pages',
-            'only; each Japanese page is the same path under `ja/` with `.md` appended.',
+            'integrations for RPG Maker MZ, TyranoScript and TyranoBuilder. The generated reference keeps',
+            'one index page per package in this file; each class, interface, function and type has its own',
+            'page at `api/@spritestudio/<package>/<kind>/<Name>.md`, where `<kind>` is `classes`,',
+            '`interfaces`, `functions`, `type-aliases`, `enumerations` or `namespaces`. This file is the',
+            'English pages only; each Japanese page is the same path under `ja/` with `.md` appended.',
           ].join(' '),
         },
       }),
@@ -179,64 +254,7 @@ export default withMermaid({
           // The way back to the portal for a reader who arrives from a search.
           { text: 'SpriteStudio Docs', link: 'https://cri-middleware.github.io/SpriteStudio-Docs/' },
         ],
-        sidebar: [
-          {
-            text: 'Getting started',
-            items: [
-              { text: 'Installation', link: '/setup/install' },
-              { text: 'Quick Start', link: '/setup/quickstart' },
-            ],
-          },
-          {
-            text: 'Usage',
-            items: [
-              { text: 'Basic playback', link: '/usage/basic' },
-              { text: 'Preparing assets (.sspj → .ssab)', link: '/usage/assets' },
-              { text: 'WebGL & Web Components', link: '/usage/webgl' },
-              { text: 'HTML5 ads (Google Ads)', link: '/usage/html5-ads' },
-              { text: 'PixiJS', link: '/usage/pixi' },
-              { text: 'UI buttons (PixiJS)', link: '/usage/pixi-ui' },
-              { text: 'RPG Maker MZ', link: '/usage/rmmz' },
-              { text: 'TyranoScript', link: '/usage/tyrano' },
-              { text: 'TyranoBuilder', link: '/usage/tyranobuilder' },
-              { text: 'Migrating from SS6Player', link: '/migration_from_ss6' },
-            ],
-          },
-          {
-            text: 'API Reference',
-            items: [
-              { text: 'Where to start', link: '/api-guide' },
-              { text: 'Generated reference', link: '/api/' },
-            ],
-          },
-          {
-            text: 'Customize',
-            items: [
-              { text: 'Events & user data', link: '/customize/events' },
-              { text: 'Part control (visibility / cell / color)', link: '/customize/part-overrides' },
-              { text: 'Runtime texture replacement (costume changes)', link: '/customize/texture-replacement' },
-              { text: 'Part tracking (following a part)', link: '/customize/part-following' },
-              { text: 'Motion blending (tracks and crossfade)', link: '/customize/motion-blending' },
-              { text: 'Shaders & blend modes', link: '/customize/shaders' },
-              { text: 'Resources & lifecycle', link: '/customize/resources' },
-              { text: 'Performance tuning', link: '/customize/performance' },
-            ],
-          },
-          {
-            text: 'Limitations & Scope',
-            items: [
-              { text: 'Limitations & Scope', link: '/limitations' },
-            ],
-          },
-          {
-            text: 'For Player & SDK Developers',
-            items: [
-              { text: 'Build Guide', link: '/development/build' },
-              { text: 'How the Player Is Put Together', link: '/development/architecture' },
-              { text: 'Contributing', link: `${GITHUB}/blob/main/CONTRIBUTING.md` },
-            ],
-          },
-        ],
+        sidebar: enSidebar,
       },
     },
 
