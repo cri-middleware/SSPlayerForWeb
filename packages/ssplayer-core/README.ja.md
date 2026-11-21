@@ -7,7 +7,7 @@
 > **対象読者:** 自分でレンダラーを作る開発者 / 上級インテグレーター — 新しいエンジンをバインドするための、エンジン非依存な WASM 再生コアです。**インストール:** `npm install @spritestudio/ssplayer-core`
 > **目的が違う場合:** → [ssplayer-pixi](../ssplayer-pixi) / [ssplayer-webgl](../ssplayer-webgl) — アニメーションを描画したいだけなら、すぐ使えるレンダラーをどうぞ。
 
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](https://cri-middleware.github.io/SSPlayerForWeb/ja/) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり、オフラインで読めます（入口は `docs/README.md`）。同じページは Agent Skill として `skills/ssplayer-core/` にもあり、pnpm 12.11 以降では `pnpm approve @spritestudio/ssplayer-core` のあと、コーディングエージェントの skills ディレクトリにリンクされます。
+[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](https://cri-middleware.github.io/SSPlayerForWeb/ja/) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり、オフラインで読めます（入口は `docs/README.md`）。同じページは Agent Skill として `skills/ssplayer-core/` にもあり、パッケージマネージャーでコーディングエージェントの skills ディレクトリにリンクする方法は [アシスタントに渡すドキュメント](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/docs/#-agent-skill-として) にあります。
 
 > **アニメーションを描画したいだけですか?** [パッケージ表](../../README.ja.md#-どのパッケージを使うか)からレンダラーを選んでください。`core` を直接使うことはありません。
 
