@@ -75,9 +75,9 @@ host framework's plugin system, so they are **not installable from npm**.
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp`, added in TyranoBuilder's plugin settings, or [build from source](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.md#for-contributors--building-from-source) |
 | `@spritestudio/ssconverter-web` | hosted on GitHub Pages at `/ssconverter/`, plus a Node CLI in the repo |
 
-## RPG Maker MZ (beta)
+## RPG Maker MZ {#rpg-maker-mz-beta}
 
-`@spritestudio/ssplayer-rmmz` is **beta**. See [Using RPG Maker MZ](/usage/rmmz).
+See [Using RPG Maker MZ](/usage/rmmz).
 
 ::: warning
 - **A picture's tint and blend mode do not affect the animation.** *Opacity*, *move* and *scale* do apply.
@@ -95,7 +95,7 @@ host framework's plugin system, so they are **not installable from npm**.
 
 ## TyranoScript / TyranoBuilder
 
-Both integrations are **beta**. See [Using TyranoScript](/usage/tyrano) and
+See [Using TyranoScript](/usage/tyrano) and
 [Using TyranoBuilder](/usage/tyranobuilder).
 
 ::: warning TyranoBuilder

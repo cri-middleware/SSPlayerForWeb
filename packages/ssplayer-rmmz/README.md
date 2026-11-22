@@ -6,7 +6,6 @@ Play **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ** — shown in corr
 Z-order with your characters and pictures.
 
 > **Who this is for:** RPG Maker MZ game creators adding SpriteStudio animations via plugin commands — no coding required.
-> **Status:** beta.
 
 ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
 run the bundled sample MZ project in your browser.

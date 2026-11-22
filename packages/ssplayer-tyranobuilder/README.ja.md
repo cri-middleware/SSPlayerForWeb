@@ -7,7 +7,6 @@
 > **対象読者:** ティラノビルダーで制作する方。シナリオを手書きする場合は
 > [`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.ja.md)
 > を使ってください（同じ `[ss_*]` タグを TyranoScript に追加します）。
-> **ステータス:** beta。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 エディタ用プラグイン自体はブラウザで動かせませんが、これは同梱しているランタイムと同じもので、TyranoScript のサンプルで動かしています。

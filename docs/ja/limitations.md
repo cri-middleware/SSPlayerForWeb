@@ -53,9 +53,8 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 | `@spritestudio/ssplayer-tyranobuilder` | `ssplayer.tbp` をティラノビルダーのプラグイン設定から追加、または[ソースからビルド](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/packages/ssplayer-tyranobuilder/README.ja.md#コントリビューター向け--ソースからビルド) |
 | `@spritestudio/ssconverter-web` | GitHub Pages（`/ssconverter/`）でホスト、リポジトリ同梱の Node CLI |
 
-## RPG ツクール MZ（beta） {#rpg-maker-mz-beta}
+## RPG ツクール MZ {#rpg-maker-mz-beta}
 
-`@spritestudio/ssplayer-rmmz` は **beta** です。
 [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
 
 ::: warning
@@ -69,7 +68,7 @@ IIFE バンドルとして提供されるため、**npm からはインストー
 
 ## TyranoScript / ティラノビルダー {#tyranoscript-tyranobuilder}
 
-どちらも **beta** です。[TyranoScript で使う](/ja/usage/tyrano) および[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
+[TyranoScript で使う](/ja/usage/tyrano) および[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
 
 ::: warning ティラノビルダー
 - **スタンダード版が読み込めるプラグインは 2 つまで**で、本プラグインはその 1 つを消費します。

@@ -5,7 +5,6 @@
 **SpriteStudio**（`.ssab`）アニメーションを **RPG ツクール MZ** で再生するプラグインです。キャラやピクチャと正しい前後関係（Z 順）で表示されます。
 
 > **対象読者:** RPG ツクール MZ でゲームを作る人。プラグインコマンドで SpriteStudio アニメを追加します（コード不要）。
-> **ステータス:** beta。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
 同梱のサンプル MZ プロジェクトをブラウザで動かせます。

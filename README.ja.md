@@ -22,7 +22,7 @@
 - ▶️ **[単体 WebGL サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — 依存ゼロの単体レンダラー（`<ss-player>` Web コンポーネント）。※`.ssab` のD&D再生に対応
 - ▶️ **[PixiJS サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — PixiJS v8 アプリ向け。※`.ssab` のD&D再生に対応
 - ▶️ **[RPG ツクール MZ サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — サンプル MZ プロジェクト（SpriteStudio ピクチャ）
-- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン（beta）
+- ▶️ **[TyranoScript サンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — `[ss_*]` タグで動かすヴィジュアルノベルのシーン
 - 🎨 **[パーツ上書きサンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — パーツの色 / セル / 表示を実行時に差し替え（PixiJS）
 - 📂 **[.sspj プレビュー](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)** — `.sspj` フォルダをドロップして同じタブ内で変換・再生。シークバーとイベントマーカー付き（WebGL / PixiJS 切替可）
 
@@ -55,7 +55,7 @@
 | **`.sspj` → `.ssab` を変換する** | [`ssconverter-web`](./packages/ssconverter-web)（Web ツール + Node CLI） | — |
 | **変換機能を自作アプリ/サービスに組み込む** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**ゲームエンジン統合** — npm ではなく GitHub Releases から入れるプラグインで、エンジンのエディタで設定し、コードは書きません。手順は各パッケージの README のクイックスタートにあります。3 つとも **beta** です:
+**ゲームエンジン統合** — npm ではなく GitHub Releases から入れるプラグインで、エンジンのエディタで設定し、コードは書きません。手順は各パッケージの README のクイックスタートにあります。
 
 | あなたの環境 | パッケージ | 実行できるサンプル |
 |---|---|---|
