@@ -6,7 +6,6 @@
 
 > **対象読者:** TyranoScript を使うシナリオ作者。
 > **ティラノビルダー**をお使いの場合は [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.ja.md) を導入してください。本パッケージのランタイムを内包した上で、コンポーネントパレットからの配置と `.sspj` の自動変換に対応します。
-> **ステータス:** beta。
 
 ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 同梱の TyranoScript サンプルをブラウザで動かせます。

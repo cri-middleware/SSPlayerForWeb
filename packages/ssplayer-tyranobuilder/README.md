@@ -9,7 +9,6 @@ component palette, with no scenario code to write.
 > Writing scenarios by hand instead? Use
 > [`@spritestudio/ssplayer-tyranoscript`](../ssplayer-tyranoscript/README.md),
 > which adds the same `[ss_*]` tags to TyranoScript.
-> **Status:** beta.
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 the editor plugin itself can't run in a browser, but this is the same runtime it

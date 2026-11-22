@@ -10,7 +10,6 @@ writing `[ss_*]` tags in your scenario — no coding required.
 > [`@spritestudio/ssplayer-tyranobuilder`](../ssplayer-tyranobuilder/README.md)
 > instead: it wraps this runtime, adds the animations to the component palette,
 > and converts your `.sspj` files for you.
-> **Status:** beta.
 
 ▶️ **[Online demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 the bundled TyranoScript sample, running in your browser.

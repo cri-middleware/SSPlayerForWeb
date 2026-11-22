@@ -22,7 +22,7 @@ No install — these run entirely in your browser:
 - ▶️ **[Standalone WebGL example](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — zero-dependency standalone renderer (the `<ss-player>` Web Component). *Supports D&D of `.ssab` files.*
 - ▶️ **[PixiJS example](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — for PixiJS v8 apps. *Supports D&D of `.ssab` files.*
 - ▶️ **[RPG Maker MZ example](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — a sample MZ project (SpriteStudio pictures)
-- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — a visual-novel scene driven by `[ss_*]` tags (beta)
+- ▶️ **[TyranoScript example](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — a visual-novel scene driven by `[ss_*]` tags
 - 🎨 **[Part override example](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — swap a part's colour, cell or visibility at runtime (PixiJS)
 - 📂 **[.sspj preview](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)** — drop a `.sspj` folder to convert and play it in the same tab, with a seek bar and clickable event markers (WebGL or PixiJS)
 
@@ -55,7 +55,7 @@ Each renderer bundles the WASM core, so you install just one package — pick th
 | **Converting `.sspj` → `.ssab`** | [`ssconverter-web`](./packages/ssconverter-web) (Web tool + Node CLI) | — |
 | **Embedding conversion in your own app/service** | [`@spritestudio/ssconverter-core`](./packages/ssconverter-core) | — |
 
-**Game-engine integrations** — plugins installed from GitHub Releases rather than npm, set up in the engine's editor with no code; each package's README has its own Quick start. All three are **beta**:
+**Game-engine integrations** — plugins installed from GitHub Releases rather than npm, set up in the engine's editor with no code; each package's README has its own Quick start.
 
 | Your environment | Package | Runnable example |
 |---|---|---|
