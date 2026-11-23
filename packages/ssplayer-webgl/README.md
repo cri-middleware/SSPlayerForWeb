@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-webgl
 
-Lightweight, zero-dependency **WebGL1/2** renderer for the **SpriteStudio** player, driven by a Rust/WebAssembly core — with a drop-in **`<ss-player>` custom element** for declarative, zero-JavaScript use.
+Lightweight, zero-dependency **WebGL1/2** renderer for the **[SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/)** player, driven by a Rust/WebAssembly core — with a drop-in **`<ss-player>` custom element** for declarative, zero-JavaScript use. SpriteStudio is a 2D animation tool: an artist adds bones, mesh deformation and effects to their own illustrations, and this package plays the result.
 
 Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline, and in `skills/ssplayer-webgl/` as an Agent Skill; [Docs for Your Assistant](https://cri-middleware.github.io/SpriteStudio-Docs/ai/docs/#-as-an-agent-skill) says how your package manager links it into your coding agent's skills directory.
 
@@ -69,7 +69,7 @@ per-part overrides, textures) is the same path further in, in the
    player.play();
    ```
 
-No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with.
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with. To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
 
 **Read next:** [WebGL guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/webgl) · [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic) ·
 [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)

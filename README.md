@@ -4,7 +4,7 @@
 
 **Professional 2D animation for the Web — authored by an artist, played in any page or app.**
 
-A high-performance player for **[SpriteStudio](https://www.webtech.co.jp/spritestudio/)** animations (`.ssab`) on the Web.
+A high-performance player for **[SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/)** animations (`.ssab`) on the Web.
 
 ## ✨ Why use SpriteStudio on the Web?
 
@@ -90,7 +90,7 @@ No Rust or WASM toolchain is needed — the WASM ships inside each renderer pack
    <ss-player src="/Ringo/Ringo.ssab" animation="wait1" autoplay style="width:640px;height:480px"></ss-player>
    ```
 
-No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with, and [Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) a good one for effects.
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with, and [Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) a good one for effects. To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
 
 **Read next:** [Installation](./docs/setup/install.md) · [Quick Start](./docs/setup/quickstart.md) · [Preparing assets (`.sspj` → `.ssab`)](./docs/usage/assets.md) · [Limitations & Scope](./docs/limitations.md) · [Migrating from SS6Player for Web](./docs/migration_from_ss6.md)
 

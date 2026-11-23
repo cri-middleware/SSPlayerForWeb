@@ -47,6 +47,9 @@ features:
      them client-side and land on the 404 page. target="_blank" both keeps the
      reader's place in the docs and is what stops the router intercepting. -->
 
+[SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/) is a 2D animation tool: an artist adds bones, mesh deformation and effects to
+their own illustrations, and this player plays the result in a web page or app.
+
 ## Try it live
 
 No install — these run entirely in your browser:

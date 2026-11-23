@@ -2,7 +2,9 @@
 
 # @spritestudio/ssplayer-pixi-ui
 
-A **SpriteStudio** animation as a [`@pixi/ui`](https://github.com/pixijs/ui) button in a PixiJS v8 app.
+A **[SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/)** animation as a [`@pixi/ui`](https://github.com/pixijs/ui) button in a PixiJS v8 app.
+SpriteStudio is a 2D animation tool: an artist adds bones, mesh deformation and effects to their own
+illustrations to make them move.
 `SSButton` is a `ButtonContainer` whose look is one animation: hover, press, keyboard focus and
 `enabled = false` each play a section of it, and a pointer can be made to count only on some of its
 parts.
