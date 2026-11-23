@@ -367,6 +367,36 @@ copy_tree () {
   echo "   $label -> ${dest#"$OUT"/}"
 }
 
+# add_demo_links <dir> <path from its pages to the site root>
+# Puts a fixed "Powered by" box, linking to the docs and the repository, into
+# every *.html directly in <dir>, ahead of the last </body>.
+add_demo_links () {
+  local dir="$1" root="$2" page
+  [ -d "$dir" ] || return 0
+  local a='target="_blank" rel="noopener" style="color:#fff"'
+  local links='<div id="ss-demo-links" style="position:fixed;left:12px;bottom:12px;z-index:2147483647;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);color:#fff;font:12px/1.6 system-ui,sans-serif">'
+  links+="Powered by SpriteStudio Player for Web &middot; <a href=\"$root\" $a>Docs</a>"
+  links+=" &middot; <a href=\"https://github.com/cri-middleware/SSPlayerForWeb\" $a>GitHub</a></div>"
+  for page in "$dir"/*.html; do
+    [ -f "$page" ] || continue
+    grep -q 'id="ss-demo-links"' "$page" && continue
+    awk -v links="$links" '
+      { line[NR] = $0 }
+      END {
+        for (at = NR; at > 0; at--) if (tolower(line[at]) ~ /<\/body>/) break
+        for (i = 1; i <= NR; i++) {
+          if (i != at) { print line[i]; continue }
+          lc = tolower(line[i]); j = 0
+          while ((k = index(substr(lc, j + 1), "</body>")) > 0) j += k
+          print substr(line[i], 1, j - 1) links substr(line[i], j)
+        }
+        if (at == 0) print links
+      }' "$page" > "$page.tmp"
+    mv "$page.tmp" "$page"
+  done
+  echo "   links to the docs and the repository -> ${dir#"$OUT"/}/*.html"
+}
+
 # The docs own the site root, so this one copy cannot wipe its destination --
 # ssconverter/ and examples/ live under it.
 if [ -d docs/.vitepress/dist ]; then
@@ -403,6 +433,10 @@ else
   echo "$APP: $TYRANO_SRC has no engine though the tyranoscript stage ran" >&2
   exit 1
 fi
+
+for demo in pixi webgl override sspj-preview rmmz tyranoscript; do
+  add_demo_links "$OUT/examples/$demo" "../../"
+done
 
 # --- done -----------------------------------------------------------------
 echo ""
