@@ -1,14 +1,30 @@
 ---
-description: The minimum code to play a .ssab with ssplayer-webgl or ssplayer-pixi, and the common pitfalls.
+description: Converting a .sspj in the browser, placing the .ssab, and the minimum code to play it with ssplayer-webgl or ssplayer-pixi.
 ---
 
 # Quick start
 
-Here is the minimum code to play a `.ssab`. Both the dependency-free `ssplayer-webgl`
-and the PixiJS v8 `ssplayer-pixi` paths are shown — pick the one that fits your setup.
+Convert your `.sspj`, put the result where your app serves files, and play it with a few lines.
+Both the dependency-free `ssplayer-webgl` and the PixiJS v8 `ssplayer-pixi` paths are shown —
+pick the one that fits your setup.
 
-The imports below assume a bundler (Vite, webpack, …). With no bundler, use the CDN builds:
-[WebGL](/usage/webgl#without-a-bundler-cdn) or [PixiJS](/usage/pixi#without-a-bundler-cdn).
+## Convert and place the `.ssab`
+
+Open <a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>, the converter
+hosted beside these docs, drop your SpriteStudio project folder on it, and press
+**⚡ Convert & Download**. Extract the ZIP into the directory your app serves as-is (such as
+`public/`):
+
+```
+public/
+└── Ringo/            ← from the converter's ZIP
+    ├── Ringo.ssab
+    ├── Ringo.png
+    └── …
+```
+
+The code below loads it as `/Ringo/Ringo.ssab`. The other converters — a desktop app, a CLI and a
+library — are on [Preparing assets](/usage/assets).
 
 ::: tip No SpriteStudio data of your own yet?
 The [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
@@ -18,6 +34,9 @@ character sample, and
 [Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
 if you want effects.
 :::
+
+The imports below assume a bundler (Vite, webpack, …). With no bundler, use the CDN builds:
+[WebGL](/usage/webgl#without-a-bundler-cdn) or [PixiJS](/usage/pixi#without-a-bundler-cdn).
 
 ## ssplayer-webgl (no dependencies)
 
@@ -34,7 +53,7 @@ JavaScript.
 <!-- src points to the ssab file, animation names the animation to play -->
 <ss-player
   src="/Ringo/Ringo.ssab"
-  animation="run"
+  animation="wait1"
   autoplay
   style="width: 640px; height: 480px;">
 </ss-player>
@@ -57,7 +76,7 @@ async function main() {
   const surface = new SSSurface(canvas, { autoStart: true });
   const player = surface.createPlayer();
   await player.load('/Ringo/Ringo.ssab');   // textures load from the .ssab's own directory
-  player.setAnimation('run');    // loopCount defaults to -1 (infinite)
+  player.setAnimation('wait1');    // loopCount defaults to -1 (infinite)
   player.setPlacement({});       // fit the animation's canvas into the surface
   player.play();
 }
@@ -86,7 +105,7 @@ async function main() {
   // 2. Create the player, load the .ssab, and select an animation
   const player = new SSPlayer();
   await player.load('/Ringo/Ringo.ssab');   // textures load from the .ssab's own directory
-  player.setAnimation('run');    // loopCount defaults to -1 (infinite)
+  player.setAnimation('wait1');    // loopCount defaults to -1 (infinite)
 
   player.position.set(640, 730);   // Ringo's origin is at its feet
   app.stage.addChild(player);
@@ -104,8 +123,5 @@ main().catch(console.error);
   is enough (`SSSurface.initialize()` / `SSPlayer.initialize()`).
 - **Don't call `update()` with Pixi**: `SSPlayer` is registered with `Ticker.shared`
   automatically.
-- **No `.ssab`**: see [Preparing assets](/usage/assets) for converting from `.sspj`.
-- **Textures don't appear**: textures load from the `.ssab`'s own directory — make sure
-  the texture files sit next to the `.ssab` (or use an `--embedded` `.ssab`).
 
 Next, explore the playback-control API in [Basic playback](/usage/basic).

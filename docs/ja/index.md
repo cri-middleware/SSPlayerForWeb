@@ -68,7 +68,6 @@ graph LR
 
     subgraph Run ["② 実行時（ブラウザで再生）"]
         LOAD["player.load()"] --> PLAYER["SSPlayer"]
-        RT("ssruntime / WASM") -. "補間" .-> PLAYER
     end
 
     CANVAS{{"Canvas / 画面"}}
@@ -96,22 +95,7 @@ graph LR
 
 ## パッケージ
 
-| パッケージ | 用途 |
-|---|---|
-| [`@spritestudio/ssplayer-webgl`](/ja/usage/webgl) | 依存ゼロの単体 WebGL レンダラー（Web Component `<ss-player>` を含む）。フレームワークを使わない構成やドロップイン利用に向いています。 |
-| [`@spritestudio/ssplayer-pixi`](/ja/usage/pixi) | すでに **PixiJS v8** で構築したアプリ向けのレンダラーです。 |
-| [`@spritestudio/ssplayer-pixi-ui`](/ja/usage/pixi-ui) | `ssplayer-pixi` の上で、アニメーションを `@pixi/ui` のボタンにします。ラベルで状態を再生し、パーツでポインタを受けます。 |
-| `@spritestudio/ssplayer-core` | エンジン非依存の WASM コア（レンダラーを自作する場合）です。 |
-| [`ssconverter-web`](/ja/usage/assets) | `.sspj` → `.ssab` 変換ツール（ブラウザツール + Node CLI）です。 |
-| [`@spritestudio/ssconverter-core`](/ja/usage/assets) | エンジン非依存の WASM 変換コア（変換を自作アプリに組み込む場合）です。 |
-
-**ゲームエンジン統合** — `ssplayer-webgl` の上に載る薄いアダプターです（npm では配布しません。GitHub Releases からプラグインとして導入します）:
-
-| パッケージ | 用途 |
-|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/ja/usage/rmmz) | **RPG ツクール MZ** 向けレンダラー／プラグインです。 |
-| [`@spritestudio/ssplayer-tyranoscript`](/ja/usage/tyrano) | **TyranoScript**（ノベルエンジン）向けプラグインです。 |
-| [`@spritestudio/ssplayer-tyranobuilder`](/ja/usage/tyranobuilder) | **ティラノビルダー** 向けプラグインです。同じアニメをコンポーネントパレットから配置でき、変換もエディタ内で行えます。 |
+環境に合うパッケージの選び方は [インストール](/ja/setup/install) の最初の節に、変換ツールは [アセットの準備](/ja/usage/assets) にあります。
 
 ::: tip 旧プレイヤーからの移行をお探しの方へ
 旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。

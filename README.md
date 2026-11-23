@@ -35,13 +35,6 @@ Comprehensive documentation lives in the `docs/` folder (hosted via VitePress) a
 - [**For AI assistants**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — these docs as Markdown: `llms.txt` indexes the English pages and `llms-full.txt` holds all of them in one file; each Japanese page is available as `.md` under `ja/`; each npm package carries the same pages in its `docs/` folder and as an Agent Skill in `skills/` ([installing the skill](https://cri-middleware.github.io/SpriteStudio-Docs/ai/docs/))
 - [**SpriteStudio Docs (portal)**](https://cri-middleware.github.io/SpriteStudio-Docs/) — the SDK and every official player in one place, with a [plugin](https://cri-middleware.github.io/SpriteStudio-Docs/ai/) that tells your coding assistant about SpriteStudio
 
-### Quick Links
-- [Installation](./docs/setup/install.md)
-- [Quick Start](./docs/setup/quickstart.md)
-- [Basic Usage](./docs/usage/basic.md)
-- [Limitations & Scope](./docs/limitations.md)
-- [Migrating from SS6Player for Web](./docs/migration_from_ss6.md)
-
 ## 🎯 Which Package Should I Use?
 
 Each renderer bundles the WASM core, so you install just one package — pick the row that matches your environment. Each package's README explains **why you'd choose SpriteStudio for that specific stack** (PixiJS, plain WebGL, …).
@@ -99,19 +92,13 @@ No Rust or WASM toolchain is needed — the WASM ships inside each renderer pack
 
 No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with, and [Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) a good one for effects.
 
-**Read next:** [Installation](./docs/setup/install.md) · [Quick Start](./docs/setup/quickstart.md) · [Preparing assets (`.sspj` → `.ssab`)](./docs/usage/assets.md) · [Limitations & Scope](./docs/limitations.md)
+**Read next:** [Installation](./docs/setup/install.md) · [Quick Start](./docs/setup/quickstart.md) · [Preparing assets (`.sspj` → `.ssab`)](./docs/usage/assets.md) · [Limitations & Scope](./docs/limitations.md) · [Migrating from SS6Player for Web](./docs/migration_from_ss6.md)
 
 ## 🎬 Samples
 
 Ready-to-run example apps live under [`examples/`](./examples/) — one per renderer, each linked from the per-environment tables above, plus three that are not tied to one renderer: [`examples/sspj-preview`](./examples/sspj-preview) converts a `.sspj` folder you drop on it and plays the result in the same tab, with a seek bar and a strip of event markers you can click (`ssconverter-core` + `ssplayer-webgl` or `ssplayer-pixi`, switched on the page; no server and no build step), [`examples/part-follow`](./examples/part-follow) pins an HTML element to a part's live transform, and [`examples/cdn`](./examples/cdn) is three single-file pages that load the players straight from a CDN with no bundler and no `npm install`.
 
-From a checkout (requires [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/); pre-built WASM is downloaded automatically with no Rust toolchain needed):
-
-```bash
-git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
-cd SSPlayerForWeb
-pnpm run example                         # or: pnpm run example example=pixi (override / part-follow / sspj-preview too)
-```
+Several of them run live, in [Try it live](#-try-it-live) above. Running one from a checkout is in [CONTRIBUTING.md](./CONTRIBUTING.md#development-environment).
 
 For the PixiJS and WebGL examples, you can drag and drop a folder containing an `.ssab` file (and its textures) or an embedded `.ssab` file directly into the browser to play your own assets.
 

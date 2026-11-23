@@ -35,13 +35,6 @@
 - [**AI アシスタント向け**](https://cri-middleware.github.io/SSPlayerForWeb/llms.txt) — このドキュメントを Markdown で提供します。`llms.txt`（ページの目次）と `llms-full.txt`（全ページを 1 ファイルに）は英語版のページを集めたもので、日本語の各ページは `ja/` 配下の `.md` で取れます。各 npm パッケージは同じページを `docs/` に、Agent Skill として `skills/` にも持っています（[skill の入れ方](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/docs/)）
 - [**SpriteStudio Docs（ポータル）**](https://cri-middleware.github.io/SpriteStudio-Docs/ja/) — SDK と全公式 Player の入口。コーディングアシスタントに SpriteStudio を教える[プラグイン](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/)もあります
 
-### クイックリンク (日本語)
-- [インストール](./docs/ja/setup/install.md)
-- [クイックスタート](./docs/ja/setup/quickstart.md)
-- [基本的な使い方](./docs/ja/usage/basic.md)
-- [制約と適用範囲](./docs/ja/limitations.md)
-- [SS6Player for Web からの移行](./docs/ja/migration_from_ss6.md)
-
 ## 🎯 どのパッケージを使うか
 
 各レンダラーは WASM コアを同梱しているので、インストールするのは1つだけ — 環境に合う行を選んでください。**そのスタック（PixiJS / 素の WebGL …）で SpriteStudio を選ぶ理由**は各パッケージの README に記載しています。
@@ -99,19 +92,13 @@ Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパ
 
 SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。
 
-**次に読む:** [インストール](./docs/ja/setup/install.md) · [クイックスタート](./docs/ja/setup/quickstart.md) · [アセットの準備（`.sspj` → `.ssab`）](./docs/ja/usage/assets.md) · [制約と適用範囲](./docs/ja/limitations.md)
+**次に読む:** [インストール](./docs/ja/setup/install.md) · [クイックスタート](./docs/ja/setup/quickstart.md) · [アセットの準備（`.sspj` → `.ssab`）](./docs/ja/usage/assets.md) · [制約と適用範囲](./docs/ja/limitations.md) · [SS6Player for Web からの移行](./docs/ja/migration_from_ss6.md)
 
 ## 🎬 サンプル
 
 すぐ動かせるサンプルアプリは [`examples/`](./examples/) にあります（レンダラーごとに1つ。上の環境別テーブルからリンクしています）。レンダラーに紐づかないものも 3 つあり、[`examples/sspj-preview`](./examples/sspj-preview) は `.sspj` のフォルダをドロップするとその場で変換して再生するサンプルで、シークバーとイベントのマーカー（クリックでその位置へシーク）付き（`ssconverter-core` + `ssplayer-webgl` または `ssplayer-pixi`、ページ上で切り替え。サーバもビルドも不要）、[`examples/part-follow`](./examples/part-follow) はパーツの実トランスフォームに HTML 要素を追従させるサンプル、[`examples/cdn`](./examples/cdn) はバンドラーも `npm install` も使わず CDN から直接読み込む 1 ファイル完結のページ 3 種です。
 
-チェックアウトから手元で動かす場合は（[Node.js](https://nodejs.org/) と [pnpm](https://pnpm.io/) が必要。ビルド済み WASM は自動取得されるため Rust ツールチェーンは不要）:
-
-```bash
-git clone --recursive https://github.com/cri-middleware/SSPlayerForWeb.git
-cd SSPlayerForWeb
-pnpm run example                         # 別サンプル: pnpm run example example=pixi（override / part-follow / sspj-preview も可）
-```
+いくつかは上の[ブラウザで試す](#-ブラウザで試す)からそのまま動かせます。チェックアウトから動かす方法は [CONTRIBUTING.md](./CONTRIBUTING.md#開発環境のセットアップ) にあります。
 
 PixiJS および WebGL のサンプルでは、`.ssab` ファイル（およびテクスチャ）を含むフォルダ、または embedded な `.ssab` ファイルをブラウザにドラッグ＆ドロップすることで、手元のアセットを再生できる機能が備わっています。
 

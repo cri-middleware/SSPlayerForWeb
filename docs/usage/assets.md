@@ -41,7 +41,7 @@ A tool that converts a `.sspj` project in the browser and downloads the result a
 
 It is hosted beside these docs at
 <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>, so there is
-nothing to install. The bundled Node CLI is a developer tool.
+nothing to install.
 
 ::: info Dropping a folder
 Dropping a folder onto the drop zone uses the **File System Access API**, so it needs a
@@ -52,12 +52,6 @@ Dropping a folder onto the drop zone uses the **File System Access API**, so it 
 ### Steps
 
 1. Open <a href="../ssconverter/" target="_blank" rel="noreferrer">the converter</a>.
-   From a clone of the repository, this serves the same tool:
-
-   ```bash
-   pnpm --filter @spritestudio/ssconverter-web dev
-   ```
-
 2. Drag and drop a **project folder** onto the drop zone, or pick one with `Browse...`.
    - The folder must contain **exactly one** `.sspj` (zero or multiple is an error).
    - Hidden files such as `.DS_Store` are ignored.
@@ -90,11 +84,9 @@ It fits CI, batch conversion, and cases that need reproducibility.
 
 ### Getting it
 
-- **Prebuilt binary**: download the Windows / macOS / Linux build from the
-  **[SpriteStudio-SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases)**.
-  No build environment required.
-- **Build from source**: with a Rust toolchain, run `cargo install --path cli` at the
-  root of the SDK repository.
+Download the Windows / macOS / Linux build from the
+**[SpriteStudio-SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases)**.
+No build environment required.
 
 ### Single mode (one project)
 

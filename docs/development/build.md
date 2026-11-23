@@ -17,8 +17,9 @@ tracking behave — is written once, in the SDK's
 
 [CONTRIBUTING](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md) has the
 setup, the build, the tests and the docs site; `pnpm run example` takes a fresh checkout to a
-running renderer example. Each plugin's README ends with a section for contributors that builds,
-packs and runs that plugin.
+running renderer example, and `pnpm --filter @spritestudio/ssconverter-web dev` serves the browser
+converter. Each plugin's README ends with a section for contributors that builds, packs and runs
+that plugin.
 
 ## Using a changed Player {#using-a-changed-player}
 
