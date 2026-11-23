@@ -380,6 +380,32 @@ try {
         Write-Host "   $Label -> $($Dest.Substring($OUT.Length).TrimStart('/', '\'))"
     }
 
+    # Puts a fixed "Powered by" box, linking to the docs and the repository, into
+    # every *.html directly in $Dir, ahead of the last </body>. $Root is the path
+    # from those pages to the site root.
+    function Add-DemoLinks {
+        param([string] $Dir, [string] $Root)
+        if (!(Test-Path -LiteralPath $Dir -PathType Container)) { return }
+        $a = 'target="_blank" rel="noopener" style="color:#fff"'
+        $links = '<div id="ss-demo-links" style="position:fixed;left:12px;bottom:12px;z-index:2147483647;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);color:#fff;font:12px/1.6 system-ui,sans-serif">' +
+            "Powered by SpriteStudio Player for Web &middot; <a href=`"$Root`" $a>Docs</a>" +
+            " &middot; <a href=`"https://github.com/cri-middleware/SSPlayerForWeb`" $a>GitHub</a></div>"
+        foreach ($page in Get-ChildItem -LiteralPath $Dir -Filter '*.html' -File) {
+            $text = [IO.File]::ReadAllText($page.FullName)
+            if ($text.Contains('id="ss-demo-links"')) { continue }
+            $at = $text.LastIndexOf('</body>', [StringComparison]::OrdinalIgnoreCase)
+            if ($at -ge 0) {
+                $text = $text.Insert($at, $links)
+            } else {
+                if ($text.Length -gt 0 -and !$text.EndsWith("`n")) { $text += "`n" }
+                $text += $links
+            }
+            if (!$text.EndsWith("`n")) { $text += "`n" }
+            [IO.File]::WriteAllText($page.FullName, $text)
+        }
+        Write-Host "   links to the docs and the repository -> $($Dir.Substring($OUT.Length).TrimStart('/', '\'))/*.html"
+    }
+
     # The docs own the site root, so this one copy cannot wipe its destination --
     # ssconverter/ and examples/ live under it.
     if (Test-Path "docs/.vitepress/dist") {
@@ -414,6 +440,10 @@ try {
         Write-Host "   tyranoscript-example: skipped (engine not fetched)"
     } else {
         Fail "$TYRANO_SRC has no engine though the tyranoscript stage ran"
+    }
+
+    foreach ($demo in "pixi", "webgl", "override", "sspj-preview", "rmmz", "tyranoscript") {
+        Add-DemoLinks (Join-Path $OUT "examples/$demo") "../../"
     }
 } finally {
     Pop-Location
