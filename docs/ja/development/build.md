@@ -10,7 +10,7 @@ SpriteStudio の Player に共通すること（再生・モーションブレ�
 
 ## チェックアウトからビルドする {#building-from-a-checkout}
 
-セットアップ・ビルド・テスト・ドキュメントサイトは [CONTRIBUTING](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md) にあります。新しいチェックアウトからレンダラーのサンプルを動かすまでは `pnpm run example` が行います。各プラグインの README の末尾にあるコントリビューター向けの節に、そのプラグインのビルド・パック・実行があります。
+セットアップ・ビルド・テスト・ドキュメントサイトは [CONTRIBUTING](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/CONTRIBUTING.md) にあります。新しいチェックアウトからレンダラーのサンプルを動かすまでは `pnpm run example` が、ブラウザのコンバータの起動は `pnpm --filter @spritestudio/ssconverter-web dev` が行います。各プラグインの README の末尾にあるコントリビューター向けの節に、そのプラグインのビルド・パック・実行があります。
 
 ## 変更したプレイヤーを使う {#using-a-changed-player}
 

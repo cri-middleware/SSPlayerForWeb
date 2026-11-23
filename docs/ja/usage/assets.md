@@ -29,7 +29,7 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 
 ブラウザ上で `.sspj` プロジェクトを変換し、結果を **ZIP** でダウンロードするツールです。WASM 版コンバータをそのままブラウザで実行します。
 
-このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>）でホストしているため、インストールは不要です。同梱の Node CLI は開発者向けのツールです。
+このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>）でホストしているため、インストールは不要です。
 
 ::: info フォルダのドロップ
 ドロップ領域へのフォルダのドラッグ＆ドロップは **File System Access API** を使うため、**Chromium 系ブラウザ（Chrome / Edge など）** が必要です。ほかのブラウザでは `Browse...` でフォルダを選択してください。
@@ -37,12 +37,7 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 
 ### 手順
 
-1. <a href="../../ssconverter/" target="_blank" rel="noreferrer">コンバータ</a>を開きます。リポジトリを clone している場合は、以下でも同じツールを起動できます。
-
-   ```bash
-   pnpm --filter @spritestudio/ssconverter-web dev
-   ```
-
+1. <a href="../../ssconverter/" target="_blank" rel="noreferrer">コンバータ</a>を開きます。
 2. **プロジェクトフォルダ**をドロップ領域にドラッグ＆ドロップするか、`Browse...`
    で選択します。
    - フォルダ内の `.sspj` は **ちょうど 1 つ**にしてください（0 個・複数はエラー）。
@@ -72,11 +67,9 @@ SpriteStudio-SDK が配布する**ネイティブのビルド時 CLI**です（`
 
 ### 入手
 
-- **プリビルドバイナリ**: Windows / macOS / Linux 版を
-  **[SpriteStudio-SDK の Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases)**
-  からダウンロードします。ビルド環境は不要です。
-- **ソースからビルド**: Rust ツールチェーンがあれば SDK リポジトリのルートで
-  `cargo install --path cli` を実行します。
+Windows / macOS / Linux 版を
+**[SpriteStudio-SDK の Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases)**
+からダウンロードします。ビルド環境は不要です。
 
 ### Single モード（単一プロジェクト）
 

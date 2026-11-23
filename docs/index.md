@@ -78,7 +78,6 @@ graph LR
 
     subgraph Run ["② Runtime (play in the browser)"]
         LOAD["player.load()"] --> PLAYER["SSPlayer"]
-        RT("ssruntime / WASM") -. "interpolation" .-> PLAYER
     end
 
     CANVAS{{"Canvas / screen"}}
@@ -106,23 +105,7 @@ For details on the three paths (SSConverter GUI / `ssconverter-web` / `ssconvert
 
 ## Packages
 
-| Package | What it's for |
-|---|---|
-| [`@spritestudio/ssplayer-webgl`](/usage/webgl) | Zero-dependency standalone WebGL renderer (includes the `<ss-player>` Web Component). A good fit for frameworkless setups and drop-in use. |
-| [`@spritestudio/ssplayer-pixi`](/usage/pixi) | Renderer for apps already built on **PixiJS v8**. |
-| [`@spritestudio/ssplayer-pixi-ui`](/usage/pixi-ui) | An animation as a `@pixi/ui` button on top of `ssplayer-pixi`: its labels play the states, and its parts can take the pointer. |
-| `@spritestudio/ssplayer-core` | Engine-agnostic WASM core (for writing your own renderer). |
-| [`ssconverter-web`](/usage/assets) | `.sspj` → `.ssab` conversion tool (browser tool + Node CLI). |
-| [`@spritestudio/ssconverter-core`](/usage/assets) | Engine-agnostic WASM conversion core (for embedding conversion in your own app). |
-
-**Game-engine integrations** — thin adapters on top of `ssplayer-webgl`, not on npm
-(you install them as plugin bundles from GitHub Releases):
-
-| Package | What it's for |
-|---|---|
-| [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) | Renderer / plugin for **RPG Maker MZ**. |
-| [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) | Plugin for **TyranoScript** (visual-novel engine). |
-| [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) | Plugin for **TyranoBuilder** — the same animations from its component palette, with in-editor conversion. |
+Which package fits your environment is the first section of [Installation](/setup/install#choosing-a-package); the converters are on [Preparing assets](/usage/assets).
 
 ::: tip Coming from an older player?
 Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.
