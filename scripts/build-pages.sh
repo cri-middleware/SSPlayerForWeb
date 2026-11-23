@@ -368,14 +368,16 @@ copy_tree () {
 }
 
 # add_demo_links <dir> <path from its pages to the site root>
-# Puts a fixed "Powered by" box, linking to the docs and the repository, into
-# every *.html directly in <dir>, ahead of the last </body>.
+# Puts a fixed "Powered by" box, linking to the docs (English and Japanese) and
+# the repository, into every *.html directly in <dir>, ahead of the last </body>.
 add_demo_links () {
   local dir="$1" root="$2" page
   [ -d "$dir" ] || return 0
   local a='target="_blank" rel="noopener" style="color:#fff"'
   local links='<div id="ss-demo-links" style="position:fixed;left:12px;bottom:12px;z-index:2147483647;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);color:#fff;font:12px/1.6 system-ui,sans-serif">'
   links+="Powered by SpriteStudio Player for Web &middot; <a href=\"$root\" $a>Docs</a>"
+  # "ドキュメント" as character references, the same bytes the .ps1 twin writes.
+  links+=" &middot; <a href=\"${root}ja/\" lang=\"ja\" $a>&#12489;&#12461;&#12517;&#12513;&#12531;&#12488;</a>"
   links+=" &middot; <a href=\"https://github.com/cri-middleware/SSPlayerForWeb\" $a>GitHub</a></div>"
   for page in "$dir"/*.html; do
     [ -f "$page" ] || continue
@@ -436,6 +438,9 @@ fi
 
 for demo in pixi webgl override sspj-preview rmmz tyranoscript; do
   add_demo_links "$OUT/examples/$demo" "../../"
+done
+for schema in "$OUT"/ssconverter/*/; do
+  add_demo_links "${schema%/}" "../../"
 done
 
 # --- done -----------------------------------------------------------------
