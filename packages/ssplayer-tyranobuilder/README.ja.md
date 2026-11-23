@@ -37,7 +37,7 @@
 
 SpriteStudio で編集したら、そのコンポーネントの **今すぐ再変換** を押してください。エディタを開いている間、裏で変換が走ることはありません。ティラノビルダーのスタンダード版が読み込めるプラグインは 2 つまでで、これで 1 つを使います。
 
-SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。
+SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
 
 **次に読む:** [ティラノビルダーガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder) ·
 [コンポーネント](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder#the-components) ·

@@ -53,7 +53,7 @@ TyranoScript のプロジェクトと、**SpriteStudio 7.6 以上**で作成し�
 
 この手順と並べて読める完成したシナリオが、同梱サンプルの [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) です。登場、`[anim]` によるフェード、複数レイヤー、セーブ / ロードをコメント付きで書いてあり、上のオンラインデモはこれを動かしています。
 
-SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。
+SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
 
 **次に読む:** [TyranoScript ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano) ·
 [提供タグ](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano#_4-tags) ·

@@ -36,6 +36,8 @@ features:
 <!-- See the English index.md for why these are relative paths on a raw <a>,
      not markdown links to cri-middleware.github.io. -->
 
+[SpriteStudio](https://www.webtech.co.jp/spritestudio/) は、手持ちのイラストにボーン・メッシュ・エフェクトを付けて動かす 2D アニメーションツールです。このプレイヤーは、その結果を Web ページやアプリで再生します。
+
 ## ブラウザで試す
 
 インストール不要、すべてブラウザ上で動作します:

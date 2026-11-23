@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-pixi-ui
 
-PixiJS v8 のアプリで、**SpriteStudio** のアニメーションを [`@pixi/ui`](https://github.com/pixijs/ui) のボタンにします。`SSButton` は見た目が 1 つのアニメーションの `ButtonContainer` で、ホバー・押下・キーボードのフォーカス・`enabled = false` がそれぞれアニメーションの区間を再生します。ポインタを一部のパーツでだけ受けるようにもできます。
+PixiJS v8 のアプリで、**[SpriteStudio](https://www.webtech.co.jp/spritestudio/)** のアニメーションを [`@pixi/ui`](https://github.com/pixijs/ui) のボタンにします。SpriteStudio は、手持ちのイラストにボーン・メッシュ・エフェクトを付けて動かす 2D アニメーションツールです。`SSButton` は見た目が 1 つのアニメーションの `ButtonContainer` で、ホバー・押下・キーボードのフォーカス・`enabled = false` がそれぞれアニメーションの区間を再生します。ポインタを一部のパーツでだけ受けるようにもできます。
 
 > **対象読者:** PixiJS v8 のアプリで、ボタン・メニュー項目・トグルを SpriteStudio のアニメーションで描きたい開発者です。**インストール:** `npm install @spritestudio/ssplayer-pixi-ui @pixi/ui pixi.js`（`@pixi/ui@^2.4` と `pixi.js@^8.19` は peer 依存）。`@spritestudio/ssplayer-pixi` を一緒に入れて再エクスポートするので、`SSPlayer` もここから使えます。**目的が違う場合:** → ボタンにせず再生するだけなら [ssplayer-pixi](../ssplayer-pixi/README.ja.md) をどうぞ。
 

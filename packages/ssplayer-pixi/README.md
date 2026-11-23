@@ -2,7 +2,7 @@
 
 # @spritestudio/ssplayer-pixi
 
-PixiJS v8 renderer for the **SpriteStudio** player. High-performance **direct drawing** (batched meshes) driven by a Rust/WebAssembly core.
+PixiJS v8 renderer for the **[SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/)** player. High-performance **direct drawing** (batched meshes) driven by a Rust/WebAssembly core. SpriteStudio is a 2D animation tool: an artist adds bones, mesh deformation and effects to their own illustrations, and this package plays the result.
 
 > **Who this is for:** app developers already building on PixiJS v8 who want to play SpriteStudio `.ssab` animations in their app.
 > **Install:** `npm install @spritestudio/ssplayer-pixi pixi.js` (needs `pixi.js@^8.19` as a peer dependency)
@@ -69,7 +69,7 @@ per-part overrides, textures) is the same path further in, in the
    player.play();
    ```
 
-No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with.
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with. To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
 
 **Read next:** [PixiJS guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi) · [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic) ·
 [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)

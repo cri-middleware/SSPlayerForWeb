@@ -90,7 +90,7 @@ Rust / WASM ツールチェーンは不要です（WASM は各レンダラーパ
    <ss-player src="/Ringo/Ringo.ssab" animation="wait1" autoplay style="width:640px;height:480px"></ss-player>
    ```
 
-SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。
+SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
 
 **次に読む:** [インストール](./docs/ja/setup/install.md) · [クイックスタート](./docs/ja/setup/quickstart.md) · [アセットの準備（`.sspj` → `.ssab`）](./docs/ja/usage/assets.md) · [制約と適用範囲](./docs/ja/limitations.md) · [SS6Player for Web からの移行](./docs/ja/migration_from_ss6.md)
 
