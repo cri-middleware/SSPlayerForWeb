@@ -154,7 +154,7 @@ priority・色のパック方法・注意点は [パーツ制御（表示 / セ�
 
 ## 6. ⚠️ 現在は制限付きの機能
 
-以下は SS6Player にありましたが、本バージョンでは利用できません。**`SpriteStudio-SDK`（Rust コア）**側の API に依存します。[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
+以下は SS6Player にありましたが、本バージョンでは利用できません。**`SpriteStudio-SDK`（Rust コア）側**の API に依存します。[ROADMAP.md](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照してください。
 
 | SS6Player | 状態 | 依存 |
 |---|---|---|
