@@ -3,7 +3,6 @@ packages:
   - "examples/*"
   - "docs"
 allowBuilds:
-  esbuild: true
   puppeteer: true
 minimumReleaseAgeExclude:
   - vite@8.3.6
