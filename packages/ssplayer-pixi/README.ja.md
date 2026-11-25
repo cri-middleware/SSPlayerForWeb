@@ -6,13 +6,10 @@
 
 > **対象読者:** すでに PixiJS v8 でアプリを構築していて、SpriteStudio の `.ssab` アニメーションを組み込みたい開発者です。**インストール:** `npm install @spritestudio/ssplayer-pixi pixi.js`（`pixi.js@^8.19` を peer 依存として必要とします）**目的が違う場合:** → Pixi を使っていないなら [ssplayer-webgl](../ssplayer-webgl/README.ja.md)、自作レンダラーを組むなら [ssplayer-core](../ssplayer-core/README.ja.md) をどうぞ。
 
-▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
-`.ssab` を再生する PixiJS v8 アプリ。手元のファイルをドラッグ&ドロップして再生できます。
-
-🎨 **[パーツ上書きデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** —
-実行時にパーツ単位で色 / セル / 表示を上書きするサンプル（ソースは `examples/override-example`）。
-
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](https://cri-middleware.github.io/SSPlayerForWeb/ja/) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり、オフラインで読めます（入口は `docs/README.md`）。同じページは Agent Skill として `skills/ssplayer-pixi/` にもあり、パッケージマネージャーでコーディングエージェントの skills ディレクトリにリンクする方法は [アシスタントに渡すドキュメント](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/docs/#-agent-skill-として) にあります。
+- 📖 **[ドキュメント](https://cri-middleware.github.io/SSPlayerForWeb/ja/)** — 環境ごとのガイド、API リファレンス、制約と適用範囲
+- ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — `.ssab` を再生する PixiJS v8 アプリ。手元のファイルをドラッグ&ドロップして再生できます
+- 🎨 **[パーツ上書きデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — 実行時にパーツ単位で色 / セル / 表示を上書きするサンプル（ソースは `examples/override-example`）
+- 📦 **[リポジトリ](../../README.ja.md)** — SSPlayerForWeb monorepo。すべてのパッケージと、動かせるサンプル
 
 ## ✨ なぜ PixiJS で SpriteStudio を使うのか？
 
@@ -61,6 +58,8 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 **次に読む:** [PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi) · [基本的な再生](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/basic) ·
 [制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations)
+
+このバージョンの同じページ（英語の Markdown）は、パッケージにも入っています。`docs/` はオフラインで読め（入口は `docs/README.md`）、`skills/ssplayer-pixi/` は Agent Skill です。パッケージマネージャーでコーディングエージェントの skills ディレクトリにリンクする方法は [アシスタントに渡すドキュメント](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/docs/#-agent-skill-として) にあります。
 
 ## ライセンス
 

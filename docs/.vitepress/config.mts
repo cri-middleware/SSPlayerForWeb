@@ -138,6 +138,13 @@ export default withMermaid({
   // that the list is flat and sorted by title. A page the sidebar does not list falls under
   // Other, and `llms-full.txt` follows the same order.
   vite: {
+    // mermaid imports CommonJS packages (elkjs's browser build among them), and nothing
+    // pre-bundles it: the plugin imports it from inside node_modules, where Vite's scan does not
+    // look. Left out, `vitepress dev` hands the browser the raw CJS file, the import finds no
+    // default export, and every diagram renders as "Syntax error in text". `vitepress build` is
+    // unaffected. Name mermaid, not its dependencies: pnpm does not hoist them, so they do not
+    // resolve from docs/.
+    optimizeDeps: { include: ['mermaid'] },
     plugins: [
       llmstxt({
         domain: new URL(SITE_URL).origin,

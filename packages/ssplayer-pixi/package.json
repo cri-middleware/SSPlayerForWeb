@@ -18,7 +18,7 @@
     "wasm"
   ],
   "author": "CRI Middleware Co., Ltd.",
-  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-pixi#readme",
+  "homepage": "https://cri-middleware.github.io/SSPlayerForWeb/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",

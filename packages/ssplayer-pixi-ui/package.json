@@ -15,7 +15,7 @@
     "accessibility"
   ],
   "author": "CRI Middleware Co., Ltd.",
-  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-pixi-ui#readme",
+  "homepage": "https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi-ui",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",

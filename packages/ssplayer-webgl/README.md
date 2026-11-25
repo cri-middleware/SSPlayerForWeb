@@ -4,15 +4,16 @@
 
 Lightweight, zero-dependency **WebGL1/2** renderer for the **[SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/)** player, driven by a Rust/WebAssembly core — with a drop-in **`<ss-player>` custom element** for declarative, zero-JavaScript use. SpriteStudio is a 2D animation tool: an artist adds bones, mesh deformation and effects to their own illustrations, and this package plays the result.
 
-Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline, and in `skills/ssplayer-webgl/` as an Agent Skill; [Docs for Your Assistant](https://cri-middleware.github.io/SpriteStudio-Docs/ai/docs/#-as-an-agent-skill) says how your package manager links it into your coding agent's skills directory.
-
 > **Who this is for:** web developers with no framework — drop a SpriteStudio player into any page, either as a single `<ss-player>` HTML tag or via the `SSPlayer` JS API, with zero runtime dependencies.
 > **Install:** `npm install @spritestudio/ssplayer-webgl`
 > **Not what you need?** → [package table](../../README.md#-which-package-should-i-use) — already on PixiJS or RPG Maker MZ? there's a dedicated renderer for that.
 
-▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
-the `<ss-player>` element running in your browser; drop your own `.ssab` file onto the
-page to play it.
+- 📖 **[Documentation](https://cri-middleware.github.io/SSPlayerForWeb/)** — a guide for each environment, the API reference, and the
+  limitations
+- ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — the `<ss-player>` element running in your
+  browser; drop your own `.ssab` file onto the page to play it
+- 📦 **[Repository](../../README.md)** — the SSPlayerForWeb monorepo: every package and the
+  runnable examples
 
 ## ✨ Why SpriteStudio with plain WebGL?
 
@@ -73,6 +74,10 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 **Read next:** [WebGL guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/webgl) · [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic) ·
 [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)
+
+The pages for this version are in this package too: in `docs/` as Markdown, readable offline
+(start at `docs/README.md`), and in `skills/ssplayer-webgl/` as an Agent Skill. [Docs for Your Assistant](https://cri-middleware.github.io/SpriteStudio-Docs/ai/docs/#-as-an-agent-skill)
+says how your package manager links it into your coding agent's skills directory.
 
 ## License
 

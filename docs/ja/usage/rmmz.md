@@ -44,6 +44,10 @@ MyGame/
         └── Ringo.png
 ```
 
+::: tip 手元に `.sspj` がまだ無いときは
+[SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。ダウンロードしたプロジェクトは、上と同じ手順で `SpriteStudio_Source/` に置いてください。
+:::
+
 フォルダー名は `.sspj` の名前です。中の `.ssab` の名前はプロジェクト名ではなくアニメーションファイル（`.ssae`）の名前で、`.ssae` 1 つにつき 1 つできます（`Ringo.ssae` → `Ringo.ssab`）。そのため「SS表示」の `SSABファイル` は `spritestudio/<project>/<アニメーションファイル名>.ssab` になります。テクスチャは `.ssab` からの相対で読み込まれるため、`.ssab` と同じフォルダーに置いたままにしてください。
 
 `spritestudio/` は `img/` の中ではなく、`img/` と並ぶ位置です。デプロイの「未使用ファイルを除外する」は `img/` の中の未使用ファイルを削除するので、そこから出しておくことで素材が残ります（[4. デプロイ](#_4-deployment) を参照）。

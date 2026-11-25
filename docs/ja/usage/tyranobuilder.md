@@ -73,6 +73,10 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 サブフォルダも検索対象なので、ソースの整理は好きな形で構いません。出力フォルダ名は `.sspj` のファイル名だけで決まります。
 
+::: tip 手元に `.sspj` がまだ無いときは
+[SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。ダウンロードしたプロジェクトは、上と同じ手順で `SpriteStudio_Source/` に置いてください。
+:::
+
 ### 変更を取り込む
 
 変換が走るのは**プロジェクトを開いたとき**で、それ以降は指示したときだけです。エディタを開いている間、裏で変換が走ることはありません。SpriteStudio で保存したあとの戻り道は 2 つあります。

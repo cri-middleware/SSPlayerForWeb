@@ -24,6 +24,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <span class="zone-title" id="dropHeading">📥 Drop Project Folder Here</span>
       </div>
       <div class="zone-note">* Must contain exactly one .sspj file</div>
+      <div class="zone-note">No project of your own? The <a href="https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/" target="_blank" rel="noreferrer">official sample data</a> works as-is — the page is in Japanese, the downloads are not.</div>
       <div class="input-row">
         <input type="text" id="inDirDisplay" readonly aria-labelledby="dropHeading" placeholder="Drag & Drop a folder, or click Browse...">
         <button class="btn" id="btnSelectIn">Browse...</button>
