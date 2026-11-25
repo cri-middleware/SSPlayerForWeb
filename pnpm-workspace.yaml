@@ -3,17 +3,16 @@ packages:
   - "examples/*"
   - "docs"
 allowBuilds:
-  esbuild: true
   puppeteer: true
 minimumReleaseAgeExclude:
   - vite@8.3.6
   - jsdom@31.0.0
   - pixi.js@8.22.0
-  - '@types/node@26.6.6'
+  - '@types/node@26.6.6 || 26.6.10'
   - typedoc-plugin-markdown@4.14.1
-  - '@vitest/mocker@5.0.5'
-  - '@vitest/spy@5.0.5'
-  - vitest@5.0.5
+  - '@vitest/mocker@5.0.5 || 5.1.2'
+  - '@vitest/spy@5.0.5 || 5.1.2'
+  - vitest@5.0.5 || 5.1.2
   - '@mermaid-js/parser@2.0.1'
   - mermaid@12.3.0
   - data-urls@8.0.0

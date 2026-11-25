@@ -13,7 +13,7 @@
     "api": "pnpm --filter=@spritestudio/ssplayer-core --filter=@spritestudio/ssplayer-pixi run build && typedoc"
   },
   "devDependencies": {
-    "vitepress": "^1.6.4",
+    "vitepress": "^2.0.0-alpha.21",
     "vitepress-plugin-mermaid": "^2.0.17",
     "vitepress-plugin-llms": "^1.15.0",
     "mermaid": "^12.3.0",

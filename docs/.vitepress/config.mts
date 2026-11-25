@@ -108,9 +108,10 @@ const llmsSidebar: DefaultTheme.SidebarItem[] = [
 // **Every linked Japanese heading carries an explicit ASCII id**, the same one its
 // English page uses -- `## 3. プラグインコマンド {#_3-plugin-commands}`. VitePress
 // slugifies through NFKD, which *decomposes* voiced kana, so the id it emits for
-// `3. プラグインコマンド` holds ト+U+3099 and a hand-written `#_3-プラグインコマンド`
-// never matches the heading it points at. Its dead-link check does not look at
-// anchors, so nothing else catches it.
+// `3. プラグインコマンド` holds ト+U+3099. Links inside the site go through the same
+// slugify and land, but one written from outside it -- the portal, another
+// repository's README -- carries the composed form and never matches. The dead-link
+// check does not look at anchors, so nothing catches it.
 export default withMermaid({
   title: 'SpriteStudio Player for Web',
   description: 'A player for SpriteStudio animations in the browser (WebAssembly + PixiJS / WebGL)',
@@ -207,12 +208,12 @@ export default withMermaid({
         // downloads the first time it opens. The title still finds a class or
         // function by name. Replacing _render drops VitePress's own handling
         // of `search: false` frontmatter, so that is kept here.
-        _render(src, env, md) {
+        async _render(src, env, md) {
           if (env.relativePath.startsWith('api/')) {
             const title = /^# (.+)$/m.exec(src)
-            return title ? md.render(`# ${title[1]}`) : ''
+            return title ? await md.renderAsync(`# ${title[1]}`) : ''
           }
-          const html = md.render(src, env)
+          const html = await md.renderAsync(src, env)
           return env.frontmatter?.search === false ? '' : html
         },
       },
