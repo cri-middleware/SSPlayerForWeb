@@ -14,7 +14,7 @@
     "wasm"
   ],
   "author": "CRI Middleware Co., Ltd.",
-  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssplayer-core#readme",
+  "homepage": "https://cri-middleware.github.io/SSPlayerForWeb/api-guide",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cri-middleware/SSPlayerForWeb.git",

@@ -6,9 +6,9 @@ PixiJS v8 のアプリで、**[SpriteStudio](https://www.webtech.co.jp/spritestu
 
 > **対象読者:** PixiJS v8 のアプリで、ボタン・メニュー項目・トグルを SpriteStudio のアニメーションで描きたい開発者です。**インストール:** `npm install @spritestudio/ssplayer-pixi-ui @pixi/ui pixi.js`（`@pixi/ui@^2.4` と `pixi.js@^8.19` は peer 依存）。`@spritestudio/ssplayer-pixi` を一緒に入れて再エクスポートするので、`SSPlayer` もここから使えます。**目的が違う場合:** → ボタンにせず再生するだけなら [ssplayer-pixi](../ssplayer-pixi/README.ja.md) をどうぞ。
 
-▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html)** — Ringo で描いたボタンが 2 つ。片方は選んだパーツでだけポインタを受けます。
-
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドは [UI ボタン](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi-ui) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり（入口は `docs/README.md`）、Agent Skill として `skills/ssplayer-pixi-ui/` にもあります。
+- 📖 **[UI ボタンのガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi-ui)** — 状態の作り方、絵の上でだけポインタを受ける方法、スクリーンリーダー。再生については[ドキュメント](https://cri-middleware.github.io/SSPlayerForWeb/ja/)のほかのページにあります
+- ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html)** — Ringo で描いたボタンが 2 つ。片方は選んだパーツでだけポインタを受けます
+- 📦 **[リポジトリ](../../README.ja.md)** — SSPlayerForWeb monorepo。すべてのパッケージと、動かせるサンプル
 
 ## クイックスタート
 
@@ -36,6 +36,8 @@ PixiJS v8 のアプリで、**[SpriteStudio](https://www.webtech.co.jp/spritestu
 `prefers-reduced-motion` のときは各状態が区間の最初のフレームで止まり、アニメーションに `reduced_motion` ラベルがあれば、`normal` と `normal` に落ちてくる状態は代わりにその区間を再生します。`accessibleTitle` を渡さなければ、スクリーンリーダーには装飾として扱われます。
 
 **次に読む:** [UI ボタン](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi-ui) · [PixiJS ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/pixi)
+
+このバージョンの同じページ（英語の Markdown）は、パッケージにも入っています。`docs/` はオフラインで読め（入口は `docs/README.md`）、`skills/ssplayer-pixi-ui/` は Agent Skill です。
 
 ## ライセンス
 

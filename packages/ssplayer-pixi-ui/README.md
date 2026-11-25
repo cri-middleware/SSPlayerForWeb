@@ -17,13 +17,12 @@ parts.
 > **Not what you need?** → [ssplayer-pixi](../ssplayer-pixi/README.md) to play animations without
 > the button.
 
-▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html)** — two
-buttons drawn by Ringo, one taking a pointer only on the parts you pick.
-
-Part of the [SSPlayerForWeb](../../README.md) monorepo. For the guide, see
-[UI buttons](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi-ui); the same pages for this
-version are in this package's `docs/` (start at `docs/README.md`), and in `skills/ssplayer-pixi-ui/` as
-an Agent Skill.
+- 📖 **[UI buttons guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi-ui)** — authoring the states, taking the pointer on
+  the artwork only, screen readers; the rest of the [documentation](https://cri-middleware.github.io/SSPlayerForWeb/) covers playback
+- ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html)** — two buttons drawn by Ringo, one taking a
+  pointer only on the parts you pick
+- 📦 **[Repository](../../README.md)** — the SSPlayerForWeb monorepo: every package and the
+  runnable examples
 
 ## Quick start
 
@@ -58,6 +57,9 @@ decoration to a screen reader.
 
 **Read next:** [UI buttons](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi-ui) ·
 [PixiJS guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi)
+
+The pages for this version are in this package too: in `docs/` as Markdown, readable offline
+(start at `docs/README.md`), and in `skills/ssplayer-pixi-ui/` as an Agent Skill.
 
 ## License
 

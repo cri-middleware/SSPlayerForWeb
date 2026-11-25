@@ -14,7 +14,7 @@
     "wasm"
   ],
   "author": "CRI Middleware Co., Ltd.",
-  "homepage": "https://github.com/cri-middleware/SSPlayerForWeb/tree/main/packages/ssconverter-core#readme",
+  "homepage": "https://cri-middleware.github.io/SSPlayerForWeb/usage/assets#ssconverter-core-library-embedding-in-your-own-app",
   "bugs": {
     "url": "https://github.com/cri-middleware/SSPlayerForWeb/issues"
   },

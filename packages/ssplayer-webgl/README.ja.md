@@ -4,13 +4,12 @@
 
 **[SpriteStudio](https://www.webtech.co.jp/spritestudio/)** プレイヤー向けの、軽量で依存ゼロの **WebGL1/2** レンダラー。Rust/WebAssembly コアで駆動し、宣言的で JavaScript 不要な利用を可能にするドロップインの **`<ss-player>` カスタム要素** を備えています。SpriteStudio は、手持ちのイラストにボーン・メッシュ・エフェクトを付けて動かす 2D アニメーションツールです。
 
-[SSPlayerForWeb](../../README.ja.md) monorepo の一部です。ガイドや完全なドキュメントについては [docs](https://cri-middleware.github.io/SSPlayerForWeb/ja/) を参照してください。このバージョンの同じページ（英語の Markdown）がパッケージの `docs/` にあり、オフラインで読めます（入口は `docs/README.md`）。同じページは Agent Skill として `skills/ssplayer-webgl/` にもあり、パッケージマネージャーでコーディングエージェントの skills ディレクトリにリンクする方法は [アシスタントに渡すドキュメント](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/docs/#-agent-skill-として) にあります。
-
 > **対象読者:** フレームワークを使わない Web 開発者 — SpriteStudio プレイヤーを任意のページに、`<ss-player>` という HTML タグ 1 つ、または `SSPlayer` の JS API で、ランタイム依存ゼロで組み込めます。**インストール:** `npm install @spritestudio/ssplayer-webgl`
 > **目的が違う場合:** → [パッケージ表](../../README.ja.md#-どのパッケージを使うか) — すでに PixiJS や RPG ツクール MZ を使っていますか? それ専用のレンダラーがあります。
 
-▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
-`<ss-player>` 要素をブラウザで動かせます。手元の `.ssab` をページにドラッグ&ドロップして再生することもできます。
+- 📖 **[ドキュメント](https://cri-middleware.github.io/SSPlayerForWeb/ja/)** — 環境ごとのガイド、API リファレンス、制約と適用範囲
+- ▶️ **[オンラインデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — `<ss-player>` 要素をブラウザで動かせます。手元の `.ssab` をページにドラッグ&ドロップして再生することもできます
+- 📦 **[リポジトリ](../../README.ja.md)** — SSPlayerForWeb monorepo。すべてのパッケージと、動かせるサンプル
 
 ## ✨ なぜ素の WebGL で SpriteStudio なのか?
 
@@ -63,6 +62,8 @@ SpriteStudio のデータが手元に無くても始められます。[公式の
 
 **次に読む:** [WebGL ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/webgl) · [基本的な再生](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/basic) ·
 [制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations)
+
+このバージョンの同じページ（英語の Markdown）は、パッケージにも入っています。`docs/` はオフラインで読め（入口は `docs/README.md`）、`skills/ssplayer-webgl/` は Agent Skill です。パッケージマネージャーでコーディングエージェントの skills ディレクトリにリンクする方法は [アシスタントに渡すドキュメント](https://cri-middleware.github.io/SpriteStudio-Docs/ja/ai/docs/#-agent-skill-として) にあります。
 
 ## ライセンス
 

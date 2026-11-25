@@ -8,14 +8,14 @@ PixiJS v8 renderer for the **[SpriteStudio](https://www.webtech.co.jp/eng/sprite
 > **Install:** `npm install @spritestudio/ssplayer-pixi pixi.js` (needs `pixi.js@^8.19` as a peer dependency)
 > **Not what you need?** → [ssplayer-webgl](../ssplayer-webgl/README.md) if you're not on Pixi, or [ssplayer-core](../ssplayer-core/README.md) to build your own renderer.
 
-▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — a
-PixiJS v8 app playing `.ssab`; drop your own file onto the page to play it.
-
-🎨 **[Part override demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** —
-per-part colour / cell / visibility overrides at runtime (source in
-`examples/override-example`).
-
-Part of the [SSPlayerForWeb](../../README.md) monorepo. For guides and the full documentation, see the [docs](https://cri-middleware.github.io/SSPlayerForWeb/); the same pages for this version are in this package's `docs/` (start at `docs/README.md`), readable offline, and in `skills/ssplayer-pixi/` as an Agent Skill; [Docs for Your Assistant](https://cri-middleware.github.io/SpriteStudio-Docs/ai/docs/#-as-an-agent-skill) says how your package manager links it into your coding agent's skills directory.
+- 📖 **[Documentation](https://cri-middleware.github.io/SSPlayerForWeb/)** — a guide for each environment, the API reference, and the
+  limitations
+- ▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — a PixiJS v8 app playing `.ssab`; drop your own
+  file onto the page to play it
+- 🎨 **[Part override demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — per-part colour / cell / visibility
+  overrides at runtime (source in `examples/override-example`)
+- 📦 **[Repository](../../README.md)** — the SSPlayerForWeb monorepo: every package and the
+  runnable examples
 
 ## ✨ Why SpriteStudio with PixiJS?
 
@@ -73,6 +73,10 @@ No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.we
 
 **Read next:** [PixiJS guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/pixi) · [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic) ·
 [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)
+
+The pages for this version are in this package too: in `docs/` as Markdown, readable offline
+(start at `docs/README.md`), and in `skills/ssplayer-pixi/` as an Agent Skill. [Docs for Your Assistant](https://cri-middleware.github.io/SpriteStudio-Docs/ai/docs/#-as-an-agent-skill)
+says how your package manager links it into your coding agent's skills directory.
 
 ## License
 
