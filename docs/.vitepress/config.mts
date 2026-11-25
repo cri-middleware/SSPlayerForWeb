@@ -138,6 +138,11 @@ export default withMermaid({
   // that the list is flat and sorted by title. A page the sidebar does not list falls under
   // Other, and `llms-full.txt` follows the same order.
   vite: {
+    // Mermaid 12 imports elkjs's browser build, which is CommonJS. `vitepress dev` serves mermaid
+    // unbundled, so that import finds no default export and every diagram renders as "Syntax error
+    // in text"; `vitepress build` converts it and is unaffected. withMermaid pre-bundles the
+    // CommonJS dependencies mermaid 11 had, not this one.
+    optimizeDeps: { include: ['mermaid > elkjs/lib/elk.bundled.js'] },
     plugins: [
       llmstxt({
         domain: new URL(SITE_URL).origin,
