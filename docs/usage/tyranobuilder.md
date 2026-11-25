@@ -92,6 +92,15 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 Subfolders are searched too, so you can group sources however you like; only the file name of
 the `.sspj` itself decides the output name.
 
+::: tip No `.sspj` of your own yet?
+The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
+works as-is — that page is only available in Japanese, but the downloads
+themselves are language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)
+is a good character sample, and
+[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
+if you want effects. The downloaded project goes in `SpriteStudio_Source/` exactly as above.
+:::
+
 ### Picking up a change
 
 A pass runs **when the project is opened**, and after that only when you ask for one —

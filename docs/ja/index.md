@@ -15,22 +15,33 @@ hero:
       text: GitHub
       link: https://github.com/cri-middleware/SSPlayerForWeb
 
-# 3 枚のカードがサイトの地図です（サイドバーの並び順と同じ）。どこまで読めば
-# 目的に届くかをカード自身が語るので、「読み方」の表は不要になりました。
-# See the English index.md for the same note.
+# See the English index.md for what the cards and the table are for, and why
+# the details are written in HTML.
 features:
-  - title: まず動かす
-    details: パッケージを入れて .ssab を読み込み、数行で再生。RPG ツクール MZ・TyranoScript・ティラノビルダーではプラグインを入れるだけで、コードは書きません。「はじめに」→「使い方」→「API リファレンス」を順に読めば、そこまでで動くところに届きます。以降は読まなくても構いません。
-    link: /ja/setup/install
-    linkText: はじめに
-  - title: 作り込む
-    details: イベントとユーザーデータ、パーツ制御、シェーダー、パフォーマンス調整。素の再生では表現が足りないときに読むのが「カスタマイズ」です。
+  - title: 動きはコードでなくアーティストが作る
+    details: ボーン・メッシュ変形・パーティクルは、手持ちのラスター素材（PNG / WebP）の上に SpriteStudio で目で見ながら付けます。キャラクター・背景・エフェクト・UI を 1 つのタイムラインに組めば、バナーやスプラッシュ画面、カットシーンを 1 つのアニメーションとして再生できます。
+    link: /ja/setup/quickstart
+    linkText: クイックスタート
+  - title: 切り替えずにブレンドする
+    details: 次のアニメーションへクロスフェードし、歩きの上に照準のポーズやリアクションを別のトラックで重ね（混ぜるか、上に足すか）、実行時に重みでアニメーションを混ぜられます。コードからも、RPG ツクール MZ のプラグインコマンドや TyranoScript のタグからも使えます。
+    link: /ja/customize/motion-blending
+    linkText: モーションブレンド
+  - title: アニメーションで描くボタン
+    details: <code>SSButton</code> は SpriteStudio のアニメーションを <code>@pixi/ui</code> のボタンにします。ホバー・押下・無効・フォーカスの各状態をラベルで再生し、形が不規則なボタンは絵の上でだけポインタを受けられます。
+    link: /ja/usage/pixi-ui
+    linkText: UI ボタン
+  - title: アプリやゲームとつながる
+    details: アーティストがタイムラインに置いたユーザーデータ・シグナル・サウンドのキーが、そのフレームでコールバックとして届きます。パーツの色・セル・表示の上書き、セルマップのテクスチャ差し替えによる着せ替え、指定パーツへの追従もコードからできます。
     link: /ja/customize/events
     linkText: カスタマイズ
-  - title: 拡張・貢献する
-    details: 全体構成を理解した上で、パッケージやプラグインを改造し、自分のビルドをゲームで試し、実際のホストで確かめます。開発者向けのページはビルドガイドとプレイヤーの構成で、設計原則とビルド手順は CONTRIBUTING にあります。
-    link: /ja/development/build
-    linkText: ビルドガイド
+  - title: HTML のタグ 1 つからゲームエンジンまで
+    details: どのページにも <code>&lt;ss-player&gt;</code> タグを書くだけで置けるほか、PixiJS v8 のステージに <code>SSPlayer</code> を足す、Google 広告の HTML5 広告に入れる、RPG ツクール MZ・TyranoScript・ティラノビルダーにプラグインを入れてコードを書かずに使う、のいずれもできます。
+    link: '#where-to-start'
+    linkText: どこから始めるか
+  - title: 動画より軽く、操作に反応する
+    details: .gif や .mp4 と違って自由に拡大縮小でき、シームレスにループし、ユーザー操作にも反応します。サブフレーム補間（既定で有効）により、焼き込まれたフレームレートではなくディスプレイのリフレッシュレートで描き、.ssab はパースせずに読み込みます。
+    link: /ja/customize/performance
+    linkText: パフォーマンスチューニング
 ---
 
 <!-- See the English index.md for why these are relative paths on a raw <a>,
@@ -38,17 +49,36 @@ features:
 
 [SpriteStudio](https://www.webtech.co.jp/spritestudio/) は、手持ちのイラストにボーン・メッシュ・エフェクトを付けて動かす 2D アニメーションツールです。このプレイヤーは、その結果を Web ページやアプリで再生します。
 
+::: tip SpriteStudio のデータが手元に無くても始められます
+[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
+:::
+
+## どこから始めるか {#where-to-start}
+
+自分の環境の行を選んでください。各ガイドで、インストールから画面にアニメーションを出すところまで進めます。
+
+| 環境 | パッケージ | ガイド | ライブデモ |
+|---|---|---|---|
+| フレームワークの無い Web ページ（HTML のタグ 1 つ、またはコードから WebGL） | `@spritestudio/ssplayer-webgl` | [WebGL・Web Components](/ja/usage/webgl) | <a href="../examples/webgl/" target="_blank" rel="noreferrer">WebGL</a> |
+| PixiJS v8 のアプリ | `@spritestudio/ssplayer-pixi` | [PixiJS](/ja/usage/pixi) | <a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS</a> |
+| PixiJS v8 のアプリで、アニメーションで描くボタン | `@spritestudio/ssplayer-pixi-ui` | [UI ボタン](/ja/usage/pixi-ui) | <a href="../examples/pixi/ui.html" target="_blank" rel="noreferrer">ボタン</a> |
+| Google 広告の HTML5 広告・アプリキャンペーンのプレイアブル | `@spritestudio/ssplayer-webgl` | [HTML5 広告](/ja/usage/html5-ads) | — |
+| RPG ツクール MZ | プラグイン | [RPG ツクール MZ](/ja/usage/rmmz) | <a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ</a> |
+| TyranoScript | プラグイン | [TyranoScript](/ja/usage/tyrano) | <a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> |
+| ティラノビルダー | プラグイン | [ティラノビルダー](/ja/usage/tyranobuilder) | <a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a>（プラグインが組み込むのと同じランタイム） |
+| 自前のレンダラー | `@spritestudio/ssplayer-core` | [API リファレンス：どこから見るか](/ja/api-guide) | — |
+
+::: tip 旧プレイヤーからの移行をお探しの方へ
+旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
+:::
+
 ## ブラウザで試す
 
 インストール不要、すべてブラウザ上で動作します:
 
-- 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換（まずはここから）
-- ▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">単体 WebGL サンプル</a>** — `<ss-player>` Web コンポーネント
-- ▶️ **<a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS サンプル</a>** — PixiJS v8 アプリ向け
-- ▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ サンプル</a>** — サンプル MZ プロジェクト
-- ▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript サンプル</a>** — ヴィジュアルノベルのシーン
+- 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換
+- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能
 - 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
-- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能。インストール不要
 
 ## 概要（.sspj → 描画まで） {#overview-from-sspj-to-rendering}
 
@@ -94,14 +124,6 @@ graph LR
 ```
 
 図の 3 経路（SSConverter GUI / `ssconverter-web` / `ssconverter-cli`）の詳しい使い方は[アセットの準備](/ja/usage/assets) を参照してください。
-
-## パッケージ
-
-環境に合うパッケージの選び方は [インストール](/ja/setup/install) の最初の節に、変換ツールは [アセットの準備](/ja/usage/assets) にあります。
-
-::: tip 旧プレイヤーからの移行をお探しの方へ
-旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
-:::
 
 ## 関連リポジトリ
 

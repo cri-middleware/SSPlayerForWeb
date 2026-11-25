@@ -59,6 +59,10 @@ data/others/ssdata/
 
 `[ss_new]` の `storage=` は `data/` からのパスで、この例なら `storage="others/ssdata/Ringo/Ringo.ssab"` です。テクスチャは `.ssab` と同じフォルダに置いたままにしてください。
 
+::: tip 手元に `.sspj` がまだ無いときは
+[SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。ダウンロードしたプロジェクトも、上と同じ手順で ssconverter-web に渡せます。
+:::
+
 ## 3. クイックスタート
 
 ループするキャラを 1 体表示する最小のシナリオです。プラグインの読み込みは、ゲーム冒頭で 1 回だけです:

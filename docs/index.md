@@ -15,22 +15,34 @@ hero:
       text: GitHub
       link: https://github.com/cri-middleware/SSPlayerForWeb
 
-# The three cards are the map of the site, in the order the sidebar is ordered:
-# each one says who stops here and what it costs, so the docs need no separate
-# "how to read these docs" table to explain themselves.
+# The cards say what the player does, each linked to the page that shows it; the
+# table under "Where to start" sends each environment to its guide. The details
+# are rendered as HTML, not Markdown, so code is <code> and a tag is escaped.
 features:
-  - title: Get it running
-    details: Install a package, load a .ssab, and play it in a few lines — or, in RPG Maker MZ, TyranoScript or TyranoBuilder, add a plugin and write no code at all. Read "Getting started" → "Usage" → "API reference" in that order and you have a working player. Nothing below is needed to get there.
-    link: /setup/install
-    linkText: Getting started
-  - title: Build it out
-    details: Events and user data, part control, shaders, performance tuning. "Customize" is where you go once plain playback is not quite the expression you want.
+  - title: Motion made by an artist, not in code
+    details: Bones, mesh deformation and particles are built visually in SpriteStudio over the raster (PNG / WebP) art you already have. Characters, backgrounds, effects and UI composed on one timeline play back as a single animation — a banner, a splash screen, a cutscene.
+    link: /setup/quickstart
+    linkText: Quick start
+  - title: Blend animations instead of cutting
+    details: Crossfade into the next animation, layer an aiming pose or a reaction over a walk on another track — mixed in or added on top — and mix animations by weight at runtime. From code, from RPG Maker MZ's plugin commands, or from TyranoScript's tags.
+    link: /customize/motion-blending
+    linkText: Motion blending
+  - title: Buttons drawn by animations
+    details: <code>SSButton</code> makes a SpriteStudio animation a <code>@pixi/ui</code> button. Its labels play the states — hovered, pressed, disabled, focused — and an irregular shape can take the pointer on the artwork only.
+    link: /usage/pixi-ui
+    linkText: UI buttons
+  - title: Wired into your app or game
+    details: User data, signals and sound keys the artist placed arrive as callbacks on the frame they fire. Override a part's colour, cell or visibility, swap a cell map's texture for a costume change, or make your own object follow a part.
     link: /customize/events
     linkText: Customize
-  - title: Extend & contribute
-    details: Understand the whole picture, then change the packages and plugins, try your build in a game, and check it in the real host. The Build Guide and How the Player Is Put Together are the developer pages; CONTRIBUTING has the design principles and the build steps.
-    link: /development/build
-    linkText: Build Guide
+  - title: From one HTML tag to game engines
+    details: Write an <code>&lt;ss-player&gt;</code> tag in any page, add an <code>SSPlayer</code> to a PixiJS v8 stage, ship it inside a Google Ads HTML5 ad, or add a plugin to RPG Maker MZ, TyranoScript or TyranoBuilder and write no code at all.
+    link: '#where-to-start'
+    linkText: Where to start
+  - title: A lighter, interactive alternative to video
+    details: Unlike a .gif or an .mp4, it scales freely, loops seamlessly and reacts to input, and sub-frame interpolation (on by default) draws at the display's refresh rate rather than a baked-in frame rate. A .ssab loads with no parsing.
+    link: /customize/performance
+    linkText: Performance tuning
 ---
 
 <!-- The converter and the examples are built beside this site, not by VitePress
@@ -50,17 +62,40 @@ features:
 [SpriteStudio](https://www.webtech.co.jp/eng/spritestudio/) is a 2D animation tool: an artist adds bones, mesh deformation and effects to
 their own illustrations, and this player plays the result in a web page or app.
 
+::: tip No SpriteStudio data of your own yet?
+The [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — that page is
+Japanese only, but the downloads themselves are language-neutral.
+[Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character sample, and
+[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one if you want effects.
+To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
+:::
+
+## Where to start
+
+Find your environment. Its guide takes you from installing to an animation on screen.
+
+| Your environment | Package | Guide | Live demo |
+|---|---|---|---|
+| Any web page, no framework — one HTML tag, or WebGL from code | `@spritestudio/ssplayer-webgl` | [WebGL & Web Components](/usage/webgl) | <a href="./examples/webgl/" target="_blank" rel="noreferrer">WebGL</a> |
+| A PixiJS v8 app | `@spritestudio/ssplayer-pixi` | [PixiJS](/usage/pixi) | <a href="./examples/pixi/" target="_blank" rel="noreferrer">PixiJS</a> |
+| Buttons drawn by animations in a PixiJS v8 app | `@spritestudio/ssplayer-pixi-ui` | [UI buttons](/usage/pixi-ui) | <a href="./examples/pixi/ui.html" target="_blank" rel="noreferrer">Buttons</a> |
+| A Google Ads HTML5 ad or App campaign playable | `@spritestudio/ssplayer-webgl` | [HTML5 ads](/usage/html5-ads) | — |
+| RPG Maker MZ | Plugin | [RPG Maker MZ](/usage/rmmz) | <a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ</a> |
+| TyranoScript | Plugin | [TyranoScript](/usage/tyrano) | <a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> |
+| TyranoBuilder | Plugin | [TyranoBuilder](/usage/tyranobuilder) | <a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> (the runtime the plugin embeds) |
+| A renderer of your own | `@spritestudio/ssplayer-core` | [API reference: where to start](/api-guide) | — |
+
+::: tip Coming from an older player?
+Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.
+:::
+
 ## Try it live
 
 No install — these run entirely in your browser:
 
-- 🛠️ **<a href="./ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser (start here)
-- ▶️ **<a href="./examples/webgl/" target="_blank" rel="noreferrer">Standalone WebGL example</a>** — the `<ss-player>` Web Component
-- ▶️ **<a href="./examples/pixi/" target="_blank" rel="noreferrer">PixiJS example</a>** — for PixiJS v8 apps
-- ▶️ **<a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ example</a>** — a sample MZ project
-- ▶️ **<a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript example</a>** — a visual-novel scene
+- 🛠️ **<a href="./ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser
+- 📂 **<a href="./examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>** — convert **your own** project in the tab and scrub it, user-data / signal / sound keys marked on the timeline, in the WebGL or the PixiJS player
 - 🎨 **<a href="./examples/override/" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
-- 📂 **<a href="./examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>** — convert **your own** project in the tab and scrub it, user-data / signal / sound keys marked on the timeline, in the WebGL or the PixiJS player. No tool to install
 
 ## Overview (.sspj → on screen) {#overview-from-sspj-to-rendering}
 
@@ -105,14 +140,6 @@ graph LR
 ```
 
 For details on the three paths (SSConverter GUI / `ssconverter-web` / `ssconverter-cli`), see [Preparing assets](/usage/assets).
-
-## Packages
-
-Which package fits your environment is the first section of [Installation](/setup/install#choosing-a-package); the converters are on [Preparing assets](/usage/assets).
-
-::: tip Coming from an older player?
-Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.
-:::
 
 ## Related Repositories
 

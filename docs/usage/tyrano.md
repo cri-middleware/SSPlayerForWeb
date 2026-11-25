@@ -82,6 +82,15 @@ data/others/ssdata/
 `storage="others/ssdata/Ringo/Ringo.ssab"`. Keep the textures in the same folder as their
 `.ssab`.
 
+::: tip No `.sspj` of your own yet?
+The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
+works as-is — that page is only available in Japanese, but the downloads
+themselves are language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)
+is a good character sample, and
+[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
+if you want effects. The downloaded project goes through ssconverter-web exactly as above.
+:::
+
 ## 3. Quick start
 
 A minimal scenario that shows one looping character. Load the plugin once, at the top of your game:

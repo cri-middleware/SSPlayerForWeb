@@ -59,6 +59,15 @@ MyGame/
         └── Ringo.png
 ```
 
+::: tip No `.sspj` of your own yet?
+The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
+works as-is — that page is only available in Japanese, but the downloads
+themselves are language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)
+is a good character sample, and
+[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
+if you want effects. The downloaded project goes in `SpriteStudio_Source/` exactly as above.
+:::
+
 The folder is named after the `.sspj`. Each `.ssab` inside is named after an animation file
 (`.ssae`), not after the project: the converter writes one per `.ssae` (`Ringo.ssae` →
 `Ringo.ssab`). Show SS's `SSAB File` is therefore
