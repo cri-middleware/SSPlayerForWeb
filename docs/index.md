@@ -72,18 +72,21 @@ To make your own, you use SpriteStudio itself — see [its site](https://www.web
 
 ## Where to start
 
-Find your environment. Its guide takes you from installing to an animation on screen.
+Find your environment. Its guide takes you from installing to an animation on screen. The player
+plays `.ssab`, converted from SpriteStudio's `.sspj`: in RPG Maker MZ and TyranoBuilder the plugin
+converts it inside the editor, and everywhere else you convert it yourself
+([Preparing assets](/usage/assets)).
 
-| Your environment | Package | Guide | Live demo |
-|---|---|---|---|
-| Any web page, no framework — one HTML tag, or WebGL from code | `@spritestudio/ssplayer-webgl` | [WebGL & Web Components](/usage/webgl) | <a href="./examples/webgl/" target="_blank" rel="noreferrer">WebGL</a> |
-| A PixiJS v8 app | `@spritestudio/ssplayer-pixi` | [PixiJS](/usage/pixi) | <a href="./examples/pixi/" target="_blank" rel="noreferrer">PixiJS</a> |
-| Buttons drawn by animations in a PixiJS v8 app | `@spritestudio/ssplayer-pixi-ui` | [UI buttons](/usage/pixi-ui) | <a href="./examples/pixi/ui.html" target="_blank" rel="noreferrer">Buttons</a> |
-| A Google Ads HTML5 ad or App campaign playable | `@spritestudio/ssplayer-webgl` | [HTML5 ads](/usage/html5-ads) | — |
-| RPG Maker MZ | Plugin | [RPG Maker MZ](/usage/rmmz) | <a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ</a> |
-| TyranoScript | Plugin | [TyranoScript](/usage/tyrano) | <a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> |
-| TyranoBuilder | Plugin | [TyranoBuilder](/usage/tyranobuilder) | <a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> (the runtime the plugin embeds) |
-| A renderer of your own | `@spritestudio/ssplayer-core` | [API reference: where to start](/api-guide) | — |
+| Your environment | Package | `.sspj` → `.ssab` | Guide | Live demo |
+|---|---|---|---|---|
+| Any web page, no framework — one HTML tag, or WebGL from code | `@spritestudio/ssplayer-webgl` | You convert it | [WebGL & Web Components](/usage/webgl) | <a href="./examples/webgl/" target="_blank" rel="noreferrer">WebGL</a> |
+| A PixiJS v8 app | `@spritestudio/ssplayer-pixi` | You convert it | [PixiJS](/usage/pixi) | <a href="./examples/pixi/" target="_blank" rel="noreferrer">PixiJS</a> |
+| Buttons drawn by animations in a PixiJS v8 app | `@spritestudio/ssplayer-pixi-ui` | You convert it | [UI buttons](/usage/pixi-ui) | <a href="./examples/pixi/ui.html" target="_blank" rel="noreferrer">Buttons</a> |
+| A Google Ads HTML5 ad or App campaign playable | `@spritestudio/ssplayer-webgl` | You convert it | [HTML5 ads](/usage/html5-ads) | — |
+| RPG Maker MZ | Plugin | The plugin, on test play | [RPG Maker MZ](/usage/rmmz) | <a href="./examples/rmmz/" target="_blank" rel="noreferrer">RPG Maker MZ</a> |
+| TyranoScript | Plugin | You convert it | [TyranoScript](/usage/tyrano) | <a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> |
+| TyranoBuilder | Plugin | The plugin, when the project opens | [TyranoBuilder](/usage/tyranobuilder) | <a href="./examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> (the runtime the plugin embeds) |
+| A renderer of your own | `@spritestudio/ssplayer-core` | You convert it | [API reference: where to start](/api-guide) | — |
 
 ::: tip Coming from an older player?
 Migrating from the older **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`)? See **[Migrating from SS6Player](/migration_from_ss6)** for the old→new API mapping and the asset re-conversion (`.ssfb` → `.ssab`) steps.
@@ -96,50 +99,6 @@ No install — these run entirely in your browser:
 - 🛠️ **<a href="./ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — convert `.sspj` → `.ssab` in the browser
 - 📂 **<a href="./examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>** — convert **your own** project in the tab and scrub it, user-data / signal / sound keys marked on the timeline, in the WebGL or the PixiJS player
 - 🎨 **<a href="./examples/override/" target="_blank" rel="noreferrer">Part override example</a>** — runtime colour / cell / visibility overrides (PixiJS)
-
-## Overview (.sspj → on screen) {#overview-from-sspj-to-rendering}
-
-You convert a `.sspj` to a `.ssab` **once, at build time**, and at **runtime** you simply load that `.ssab` and render it. There are three conversion paths: the **browser tool (`ssconverter-web`)**, the **GUI tool ([SSConverter GUI](https://github.com/cri-middleware/SSConverterGUI/releases))**, and the **CLI ([`ssconverter-cli`](https://github.com/cri-middleware/SpriteStudio-SDK/releases))**.
-
-```mermaid
-graph LR
-    SS[".sspj / images"]
-
-    subgraph Build ["① Build time (convert, once)"]
-        WEB["ssconverter-web"]
-        UNZIP["unzip"]
-        GUI["SSConverter GUI"]
-        CLI["ssconverter-cli"]
-    end
-
-    BIN[".ssab"]
-
-    subgraph Run ["② Runtime (play in the browser)"]
-        LOAD["player.load()"] --> PLAYER["SSPlayer"]
-    end
-
-    CANVAS{{"Canvas / screen"}}
-
-    SS -->|"drag & drop"| WEB
-    WEB -->|"download .zip"| UNZIP
-    UNZIP --> BIN
-
-    SS -->|"GUI"| GUI
-    GUI --> BIN
-
-    SS -->|"CLI / CI"| CLI
-    CLI --> BIN
-
-    BIN --> LOAD
-    PLAYER -->|"render"| CANVAS
-
-    classDef gen stroke-dasharray:5 5;
-    class BIN gen;
-    classDef tool fill:#eef2ff,stroke:#818cf8,color:#1e1b4b;
-    class WEB,UNZIP,GUI,CLI tool;
-```
-
-For details on the three paths (SSConverter GUI / `ssconverter-web` / `ssconverter-cli`), see [Preparing assets](/usage/assets).
 
 ## Related Repositories
 

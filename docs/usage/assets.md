@@ -10,11 +10,27 @@ description: Converting a .sspj into the .ssab the player plays, with the browse
 The player does not play SpriteStudio's `.sspj` directly; it plays **`.ssab`**, a
 parse-free runtime binary. A converter reads the `.sspj` and its referenced files
 (`.ssae` / `.ssee` / `.ssqe` / `.ssce`) and produces `.ssab` (animations) plus, when
-needed, `.ssqb` (sequence packs).
+needed, `.ssqb` (sequence packs). Who runs the converter depends on where the animation plays:
 
-There are three conversion tool routes — pick by how you work. In addition, if you
-want to embed conversion itself into your own app, use the library
-**`@spritestudio/ssconverter-core`**.
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart LR
+    sspj[".sspj + images"]
+    sspj -->|"SpriteStudio_Source/"| plugin["The plugin converts it<br/>RPG Maker MZ: on test play<br/>TyranoBuilder: when the project opens"]
+    sspj --> tools["You convert it<br/>ssconverter-web · SSConverter GUI<br/>ssconverter-cli · ssconverter-core"]
+    plugin --> ssab[".ssab + textures"]
+    tools --> ssab
+```
+
+In RPG Maker MZ and TyranoBuilder you need nothing from this page: the plugin converts inside the
+editor — see [RPG Maker MZ](/usage/rmmz#_2-convert-your-animation) and
+[TyranoBuilder](/usage/tyranobuilder#the-auto-importer). Everywhere else you convert it yourself,
+with one of three tools — pick by how you work. To convert inside your own app or service, use the
+library **`@spritestudio/ssconverter-core`**.
 
 ::: tip No `.sspj` of your own yet?
 The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
@@ -32,7 +48,6 @@ if you want effects. The downloaded project feeds any of the tools below as-is.
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
 | [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core` |
 
-For the overall flow, see the [overview diagram on the home page](/#overview-from-sspj-to-rendering).
 
 ## ssconverter-web (browser tool)
 

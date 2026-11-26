@@ -7,9 +7,23 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 <!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
      docs/index.md for why. -->
 
-プレイヤーが再生するのは SpriteStudio の `.sspj` ではなく、パース不要のランタイムバイナリ **`.ssab`** です。変換ツールは `.sspj` と参照ファイル（`.ssae` / `.ssee` / `.ssqe` / `.ssce`）を解析し、`.ssab`（アニメーション）と必要に応じて `.ssqb`（シーケンスパック）を生成します。
+プレイヤーが再生するのは SpriteStudio の `.sspj` ではなく、パース不要のランタイムバイナリ **`.ssab`** です。変換ツールは `.sspj` と参照ファイル（`.ssae` / `.ssee` / `.ssqe` / `.ssce`）を解析し、`.ssab`（アニメーション）と必要に応じて `.ssqb`（シーケンスパック）を生成します。誰が変換するかは、アニメーションを再生する場所で決まります。
 
-変換には 3 つのツール経路があります。用途で選んでください。加えて、変換そのものを自作アプリに組み込みたい場合は、ライブラリ **`@spritestudio/ssconverter-core`** を使います。
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart LR
+    sspj[".sspj + 画像"]
+    sspj -->|"SpriteStudio_Source/"| plugin["プラグインが変換<br/>RPG ツクール MZ: テストプレイで<br/>ティラノビルダー: プロジェクトを開くと"]
+    sspj --> tools["自分で変換<br/>ssconverter-web · SSConverter GUI<br/>ssconverter-cli · ssconverter-core"]
+    plugin --> ssab[".ssab + テクスチャ"]
+    tools --> ssab
+```
+
+RPG ツクール MZ とティラノビルダーでは、このページの作業は要りません。プラグインがエディタの中で変換します（[RPG ツクール MZ](/ja/usage/rmmz#_2-convert-your-animation)、[ティラノビルダー](/ja/usage/tyranobuilder#the-auto-importer)）。それ以外では自分で変換します。ツールは 3 つあるので、用途で選んでください。変換そのものを自作アプリやサービスに組み込みたい場合は、ライブラリ **`@spritestudio/ssconverter-core`** を使います。
 
 ::: tip 手元に `.sspj` がまだ無いときは
 [SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
@@ -23,7 +37,6 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 | [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core` |
 
-全体の流れは [トップページの概要図](/ja/#overview-from-sspj-to-rendering) を参照してください。
 
 ## ssconverter-web（ブラウザツール） {#ssconverter-web-browser-tool}
 

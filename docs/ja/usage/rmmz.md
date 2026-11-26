@@ -18,7 +18,7 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 2. ZIP を展開し、3 つのファイルそのものを（フォルダごとではなく）プロジェクトの `js/plugins/` にコピーします（WASM は `.js` と同じ場所に置く必要があります）。
 3. **ツール → プラグイン管理** で **ssplayer-rpgmakermz** を有効化します。パラメーターはありません。WASM はプラグイン `.js` と同じフォルダーから自動で読み込まれます。
 
-## 2. アニメーションの変換（.sspj → .ssab）
+## 2. アニメーションの変換（.sspj → .ssab） {#_2-convert-your-animation}
 
 `.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換はテストプレイのときに、`js/plugins/` の `ssconverter_bg.wasm` が行います。
 
