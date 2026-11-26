@@ -80,9 +80,9 @@ Each `.ssab` is named after its animation file (`.ssae`). `[ss_new]`'s `storage=
 ::: tip No `.sspj` of your own yet?
 The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
 works as-is — that page is only available in Japanese, but the downloads
-themselves are language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)
+themselves are language-neutral. [Ringo](https://www.webtech.co.jp/spritestudio/ss6user/download/OPTPiX_SpriteStudio_Ringo_Sample_20220121.zip)
 is a good character sample, and
-[Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
+[Particle](https://www.webtech.co.jp/spritestudio/ss6user/download/OPTPiX_SpriteStudio_ParticleEffect_Sample_20191025.zip) is a good one
 if you want effects. The downloaded project converts exactly as above.
 :::
 

@@ -70,7 +70,7 @@ per-part overrides, textures) is the same path further in, in the
    player.play();
    ```
 
-No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with. To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
+No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/spritestudio/ss6user/download/OPTPiX_SpriteStudio_Ringo_Sample_20220121.zip) is a good character to start with. To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
 
 **Read next:** [WebGL guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/webgl) · [Basic playback](https://cri-middleware.github.io/SSPlayerForWeb/usage/basic) ·
 [Limitations & Scope](https://cri-middleware.github.io/SSPlayerForWeb/limitations)
