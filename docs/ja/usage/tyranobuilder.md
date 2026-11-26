@@ -28,34 +28,6 @@ TyranoScript 版のサンプルシーンです。ランタイムは同じなの�
 
 `.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はゲームが実際に再生する軽量なランタイムファイルです。このプラグインは、ゲームのフォルダに置いた SpriteStudio のプロジェクトを、エディタの中で `.ssab` に変換します。
 
-```mermaid
-graph LR
-    SS[".sspj / 画像"]
-
-    subgraph Author ["① 制作中（何度でも変換）"]
-        AUTO[["自動インポート<br/>（ティラノビルダー内）"]]
-        TOOLS[["ssconverter-web / GUI / CLI"]]
-    end
-
-    MANUAL(("手動でコピー"))
-
-    subgraph Game ["② ティラノビルダーのプロジェクト内"]
-        BIN[".ssab + テクスチャ<br/>data/others/ssdata/"]
-        COMP["[ss_*] コンポーネント"]
-        RT("main.js + ssruntime")
-    end
-
-    SS -->|"SpriteStudio_Source/ に置く"| AUTO
-    SS -->|"ドラッグ&ドロップ / CLI"| TOOLS
-    AUTO -. "プロジェクトを開いたとき、または手動で" .-> BIN
-    TOOLS --> MANUAL --> BIN
-    BIN -->|"プルダウンから選択"| COMP
-    COMP -. "再生" .-> RT
-
-    classDef generated stroke-dasharray: 5 5;
-    class BIN generated;
-```
-
 自動変換したものも手動で入れたものも置き場所は同じで、コンポーネントのプルダウンには両方が並びます（[自分で変換した .ssab を使う](#bringing-in-a-pack-you-converted-yourself)を参照）。
 
 ### 基本の使い方
@@ -98,14 +70,6 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 この記録はプロジェクト直下の `.ss_import_state.json` です。すべて作り直したいときは、このファイル（または出力フォルダ）を削除してプロジェクトを開き直してください。
 
-### 自分で変換した .ssab を使う {#bringing-in-a-pack-you-converted-yourself}
-
-**アニメデータ**のプルダウンには、**`data/` 以下のすべての `.ssab`** が並びます（自動変換したものが先、残りはアルファベット順）。
-
-[`ssconverter-web` / SSConverter GUI / `ssconverter-cli`](/ja/usage/assets) で変換して手動でコピーしたデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。**アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
-
-自動で同期されるのは `SpriteStudio_Source/` に置いたものだけです。ただし `data/others/ssdata/` から**コピーした**データなら **今すぐ再変換** が使え、生成元のフォルダではなく今ある場所へ書き直します。まったく別の場所で変換したデータには変換元のプロジェクトがないため、その旨を表示します。
-
 ### 生成されるファイルの置き場所
 
 | パス | 内容 | 書き出したゲームに含まれる？ |
@@ -118,7 +82,9 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 書き出したゲームには `data/` 以下がすべて入るので、制作時のファイルは `data/` の外に置いています。
 
-### ログを読む
+### 変換に失敗したとき {#when-a-conversion-fails}
+
+変換に失敗したプロジェクトや、同じ名前の別のプロジェクトに出力フォルダを取られたプロジェクトは、理由とともにダイアログに表示されます。SpriteStudio で直して保存し、**今すぐ再変換**（または **今すぐ取り込む**）を使ってください。変換できたプロジェクトは、短い通知で知らされます。
 
 エディタにはコンソールが無いので、変換の記録はプロジェクト直下の **`ss_import_log.txt`** に 1 行ずつ書き込まれます。セッションをまたいで追記されます（256 KB を超えると書き直します）。
 
@@ -134,6 +100,14 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 `converter:` の行が `inline` のときは、変換のあいだエディタの操作が止まります。理由は同じ行に出ます。
 
 起動時に検出したホスト環境も記録されるので、プラグインが動いていないように見えるときは、まずここを見てください。
+
+### 自分で変換した .ssab を使う {#bringing-in-a-pack-you-converted-yourself}
+
+**アニメデータ**のプルダウンには、**`data/` 以下のすべての `.ssab`** が並びます（自動変換したものが先、残りはアルファベット順）。
+
+[`ssconverter-web` / SSConverter GUI / `ssconverter-cli`](/ja/usage/assets) で変換して手動でコピーしたデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。**アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
+
+自動で同期されるのは `SpriteStudio_Source/` に置いたものだけです。ただし `data/others/ssdata/` から**コピーした**データなら **今すぐ再変換** が使え、生成元のフォルダではなく今ある場所へ書き直します。まったく別の場所で変換したデータには変換元のプロジェクトがないため、その旨を表示します。
 
 ### 現在の制限
 
@@ -179,7 +153,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 ## うまくいかないとき {#troubleshooting}
 
-変換に失敗した場合は、その理由が画面に表示されます。同じ内容は、成功した変換の記録とともにプロジェクト直下の `ss_import_log.txt` に残ります。このファイルはプラグイン画面から開けます。
+変換に失敗した場合は、その理由がダイアログに表示されます。それ以外の記録はプロジェクト直下の `ss_import_log.txt` にあります（[変換に失敗したとき](#when-a-conversion-fails)を参照）。
 
 プレビュー中にコンポーネントが役目を果たせないとき（「表示」で作っていない管理名や、アニメデータに無くなったアニメーションを指定したときなど）は、その理由がシーンのファイル名と行番号付きのダイアログで表示されます。書き出したゲームでは表示されません。書き出し時にエンジンのデバッグ設定がオフになるためです。
 

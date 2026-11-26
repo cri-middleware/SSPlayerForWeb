@@ -214,7 +214,7 @@ The roles of `.sspj` / `.ssae` / `.ssce` / `.ssqe` and how they map to the outpu
 every Player, so they are documented in the portal —
 [Asset Conversion — How a project's files map to the output](https://cri-middleware.github.io/SpriteStudio-Docs/overview/conversion/#how-a-projects-files-map-to-the-output).
 
-Two points matter. **One `.ssae` becomes one `.ssab`**, and **cell positions are baked from the
+Two points matter. **One `.ssae` becomes one `.ssab`**, named after it, and **cell positions are baked from the
 `.ssce` into the `.ssab`**. Because of the latter, whenever you add, move or resize cells, or change
 the image size, **re-deploy the `.ssab` as well as the image** — serving a new image alone leaves the
 old source rectangles in place and the artwork shifts.

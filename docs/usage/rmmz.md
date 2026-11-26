@@ -31,15 +31,15 @@ the bundled sample MZ project in your browser.
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
 plugin actually plays. Test play does the converting, with the `ssconverter_bg.wasm` in
-`js/plugins/`:
+`js/plugins/`.
+
+### Basic use
 
 1. Create a `SpriteStudio_Source/` folder at your project root (beside `js/` and `img/`) and put your
    SpriteStudio project in it — the `.sspj` **and its folder**, since an animation is several files.
    Subfolders are fine.
 2. Start a test play. Before the title, every project that changed since it was last
    converted is converted into `spritestudio/<project>/`.
-3. After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and
-   the change is converted on the way back up.
 
 ```
 MyGame/
@@ -68,27 +68,51 @@ is a good character sample, and
 if you want effects. The downloaded project goes in `SpriteStudio_Source/` exactly as above.
 :::
 
-The folder is named after the `.sspj`. Each `.ssab` inside is named after an animation file
-(`.ssae`), not after the project: the converter writes one per `.ssae` (`Ringo.ssae` →
-`Ringo.ssab`). Show SS's `SSAB File` is therefore
-`spritestudio/<project>/<animation file>.ssab`. Keep each `.ssab` and its textures in the
-same folder — the plugin resolves textures relative to the `.ssab`.
+The folder is named after the `.sspj`, and each `.ssab` inside after an animation file (`.ssae`),
+not after the project (`Ringo.ssae` → `Ringo.ssab`). Show SS's `SSAB File` is therefore
+`spritestudio/<project>/<animation file>.ssab`.
+
+### Picking up a change
+
+After saving in SpriteStudio, press **F5** in the test play. It restarts the game, and the change
+is converted on the way back up. Only a test play converts; a deployed game never does.
+
+### What counts as a change
+
+At the start of a test play, each project's folder is compared — the **newest modification time
+anywhere in it** (`.sspj`, `.ssae`, `.ssce`, textures, all of it) — against what the last
+**successful** conversion covered, and only newer sources are converted again. Updating the
+plugin rebuilds packs whose sources have not changed, and a missing output folder
+(`spritestudio/Ringo/`, say) is rebuilt too.
+
+A reconversion deletes the files the previous one wrote and this one no longer does, so an
+animation you remove in SpriteStudio stops being in `spritestudio/` and in your deployed game.
+Anything you put in the folder yourself stays. Sounds are not converted — see
+[5. Sound](#_5-sound).
+
+The record is `SpriteStudio_Source/.ss_import_state.json`. To force everything to be rebuilt,
+delete it (or the output folder) and start a test play.
+
+### Where things go
+
+| Path | What it is | In a deployed game? |
+| --- | --- | --- |
+| `SpriteStudio_Source/` | Your `.sspj` projects — the input | No — leave it out ([4. Deployment](#_4-deployment)) |
+| `spritestudio/<project>/` | The converted `.ssab` + textures | **Yes** — this is what the game plays |
+| `SpriteStudio_Source/.ss_import_state.json` | What the last successful conversion covered | No — it sits inside the source folder |
+| `js/plugins/ssconverter_bg.wasm` | The converter; with it there, a test play converts | No — leave it out ([4. Deployment](#_4-deployment)) |
 
 `spritestudio/` sits beside `img/`, not inside it: deployment's "Exclude unused files"
 deletes unused files from `img/`, so keeping SS assets out of it is what makes them survive
 (see [4. Deployment](#_4-deployment)).
 
+### When a conversion fails
+
 If a project fails to convert, the boot stops on MZ's error screen, naming the project and
 the reason. Fix it in SpriteStudio, save, and press **Retry**. Two projects with the same
 file name stop it too — `chara/hero.sspj` and `enemy/hero.sspj` would both write
-`spritestudio/hero/` — so rename one. The console (F8) has the details.
-
-Only a test play converts; a deployed game never does. It converts only what changed:
-the record of past conversions is `SpriteStudio_Source/.ss_import_state.json`. A
-conversion also removes the files the previous one wrote and this one no longer does, and
-leaves anything else in the folder alone. Sounds are not converted — see
-[5. Sound](#_5-sound). Before you deploy, leave the sources out
-([4. Deployment](#_4-deployment)).
+`spritestudio/hero/` — so rename one. The console (F8) has the details; nothing is written to a
+log file.
 
 ### Converting it yourself
 
