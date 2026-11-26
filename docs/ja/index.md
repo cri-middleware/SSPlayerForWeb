@@ -77,7 +77,7 @@ features:
 インストール不要、すべてブラウザ上で動作します:
 
 - 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換
-- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能
+- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">SpriteStudio プロジェクトをドラッグ＆ドロップして再生</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能
 - 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
 
 ## 関連リポジトリ
