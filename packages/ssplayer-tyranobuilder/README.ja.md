@@ -40,7 +40,7 @@ SpriteStudio で編集したら、そのコンポーネントの **今すぐ再�
 SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
 
 **次に読む:** [ティラノビルダーガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder) ·
-[コンポーネント](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder#the-components) ·
+[コンポーネント](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder-components) ·
 [うまくいかないとき](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyranobuilder#troubleshooting) ·
 [制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations#tyranoscript-tyranobuilder)
 

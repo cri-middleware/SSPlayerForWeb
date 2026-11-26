@@ -42,7 +42,7 @@ SpriteStudio で保存したら、テストプレイ中に **F5** を押すと�
 SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
 
 **次に読む:** [RPG ツクール MZ ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz) ·
-[プラグインコマンド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz#_3-plugin-commands) ·
+[プラグインコマンド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/rmmz-commands) ·
 [制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations#rpg-maker-mz-beta)
 
 ---
