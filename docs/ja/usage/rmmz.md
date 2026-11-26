@@ -22,9 +22,10 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 
 `.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。変換はテストプレイのときに、`js/plugins/` の `ssconverter_bg.wasm` が行います。
 
+### 基本の使い方 {#basic-use}
+
 1. プロジェクト直下（`js/` や `img/` と並ぶ位置）に `SpriteStudio_Source/` フォルダを作り、SpriteStudio のプロジェクトを置きます。アニメーションは複数のファイルで構成されるので、**`.sspj` だけでなくフォルダーごと**置いてください。サブフォルダーに入れても構いません。
 2. テストプレイを開始します。タイトルの前に、前回の変換から変更のあったプロジェクトがすべて `spritestudio/<project>/` へ変換されます。
-3. SpriteStudio で保存したら、テストプレイ中に **F5** を押します。ゲームが再起動し、その途中で変更が変換されます。
 
 ```
 MyGame/
@@ -48,15 +49,36 @@ MyGame/
 [SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。ダウンロードしたプロジェクトは、上と同じ手順で `SpriteStudio_Source/` に置いてください。
 :::
 
-フォルダー名は `.sspj` の名前です。中の `.ssab` の名前はプロジェクト名ではなくアニメーションファイル（`.ssae`）の名前で、`.ssae` 1 つにつき 1 つできます（`Ringo.ssae` → `Ringo.ssab`）。そのため「SS表示」の `SSABファイル` は `spritestudio/<project>/<アニメーションファイル名>.ssab` になります。テクスチャは `.ssab` からの相対で読み込まれるため、`.ssab` と同じフォルダーに置いたままにしてください。
+フォルダー名は `.sspj` の名前で、中の `.ssab` の名前はプロジェクト名ではなくアニメーションファイル（`.ssae`）の名前です（`Ringo.ssae` → `Ringo.ssab`）。そのため「SS表示」の `SSABファイル` は `spritestudio/<project>/<アニメーションファイル名>.ssab` になります。
+
+### 変更を取り込む {#picking-up-a-change}
+
+SpriteStudio で保存したら、テストプレイ中に **F5** を押します。ゲームが再起動し、その途中で変更が変換されます。変換するのはテストプレイのときだけで、デプロイしたゲームでは変換しません。
+
+### 何が「変更」か {#what-counts-as-a-change}
+
+テストプレイの開始時に、プロジェクトのフォルダーごとに**中で一番新しい更新時刻**（`.sspj`・`.ssae`・`.ssce`・テクスチャのすべて）を、前回**成功した**変換の記録と比べ、新しいものだけを変換し直します。プラグインを更新すると、ソースが変わっていないパックも作り直されます。出力フォルダー（たとえば `spritestudio/Ringo/`）が無い場合も作り直されます。
+
+変換し直すときは、前回の変換が書き出して今回は書き出さなかったファイルを消します。そのため、SpriteStudio で消したアニメーションは `spritestudio/` からも、デプロイしたゲームからも消えます。フォルダーに自分で置いたファイルには触れません。音声は変換しません（[5. 音声](#_5-sound) を参照）。
+
+記録は `SpriteStudio_Source/.ss_import_state.json` です。すべてを作り直すには、これ（または出力フォルダー）を消してテストプレイを開始してください。
+
+### 置き場所 {#where-things-go}
+
+| パス | 中身 | デプロイしたゲームに入るか |
+| --- | --- | --- |
+| `SpriteStudio_Source/` | `.sspj` のプロジェクト（変換の入力） | 入れない（[4. デプロイ](#_4-deployment) で除外） |
+| `spritestudio/<project>/` | 変換した `.ssab` とテクスチャ | **入る**（ゲームが再生するのはこれ） |
+| `SpriteStudio_Source/.ss_import_state.json` | 前回成功した変換の記録 | 入らない（ソースのフォルダーの中にある） |
+| `js/plugins/ssconverter_bg.wasm` | コンバーター（これがあるとテストプレイで変換する） | 入れない（[4. デプロイ](#_4-deployment) で除外） |
 
 `spritestudio/` は `img/` の中ではなく、`img/` と並ぶ位置です。デプロイの「未使用ファイルを除外する」は `img/` の中の未使用ファイルを削除するので、そこから出しておくことで素材が残ります（[4. デプロイ](#_4-deployment) を参照）。
 
-変換に失敗したプロジェクトがあると、起動が MZ のエラー画面で止まり、プロジェクト名と理由が表示されます。SpriteStudio で直して保存し、**Retry** を押してください。同じファイル名のプロジェクトが 2 つある場合も止まります（`chara/hero.sspj` と `enemy/hero.sspj` はどちらも `spritestudio/hero/` に書き出すため）。どちらかの名前を変えてください。詳しい内容はコンソール（F8）に出ます。
+### 変換に失敗したとき {#when-a-conversion-fails}
 
-変換するのはテストプレイのときだけで、デプロイしたゲームでは変換しません。変換するのは変更のあったものだけです（これまでの変換の記録は `SpriteStudio_Source/.ss_import_state.json`）。変換では、前回の変換が書き出して今回は書き出さなかったファイルを消します。フォルダー内のそれ以外のファイルには触れません。音声は変換しません（[5. 音声](#_5-sound) を参照）。デプロイの前にソースを除外してください（[4. デプロイ](#_4-deployment) を参照）。
+変換に失敗したプロジェクトがあると、起動が MZ のエラー画面で止まり、プロジェクト名と理由が表示されます。SpriteStudio で直して保存し、**Retry** を押してください。同じファイル名のプロジェクトが 2 つある場合も止まります（`chara/hero.sspj` と `enemy/hero.sspj` はどちらも `spritestudio/hero/` に書き出すため）。どちらかの名前を変えてください。詳しい内容はコンソール（F8）に出ます。ログファイルには書きません。
 
-### 自分で変換する場合
+### 自分で変換する場合 {#converting-it-yourself}
 
 [アセットの準備](/ja/usage/assets) のツール（ssconverter-web など）で変換した場合は、出力されたプロジェクト名のフォルダーを `spritestudio/` に置きます（`spritestudio/Ringo/Ringo.ssab`）。この場合 `ssconverter_bg.wasm` と `SpriteStudio_Source/` は要りません。
 

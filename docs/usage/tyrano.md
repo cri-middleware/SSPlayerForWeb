@@ -61,15 +61,11 @@ nothing. The paths inside `init.ks` are written against that location too.
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. Convert it in your browser with
-<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>: drop the folder holding your `.sspj`
-onto it (or pick it with **Browse...**), press **⚡ Convert & Download**, and extract the ZIP into
-`data/others/ssdata/`. On the desktop, SSConverter GUI does the same; [Preparing assets](/usage/assets)
-covers both.
-
-Put what you convert under `data/others/ssdata/`, one folder per project. The ZIP from
-ssconverter-web already holds that folder, named after the project, so extracting it there
-is all it takes. There is one `.ssab` per animation file (`.ssae`), named after it.
+plugin actually plays. Convert it with one of the tools in [Preparing assets](/usage/assets) —
+<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> runs in the browser
+with nothing to install — and put what it gives you under `data/others/ssdata/`, one folder per
+project. The ZIP from ssconverter-web already holds that folder, named after the project, so
+extracting it there is all it takes.
 
 ```
 data/others/ssdata/
@@ -78,9 +74,8 @@ data/others/ssdata/
     └── Ringo.png
 ```
 
-`[ss_new]`'s `storage=` is a path from `data/` — here,
-`storage="others/ssdata/Ringo/Ringo.ssab"`. Keep the textures in the same folder as their
-`.ssab`.
+Each `.ssab` is named after its animation file (`.ssae`). `[ss_new]`'s `storage=` is a path from
+`data/` — here, `storage="others/ssdata/Ringo/Ringo.ssab"`.
 
 ::: tip No `.sspj` of your own yet?
 The [official SpriteStudio sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
@@ -88,7 +83,7 @@ works as-is — that page is only available in Japanese, but the downloads
 themselves are language-neutral. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)
 is a good character sample, and
 [Particle](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) is a good one
-if you want effects. The downloaded project goes through ssconverter-web exactly as above.
+if you want effects. The downloaded project converts exactly as above.
 :::
 
 ## 3. Quick start

@@ -46,9 +46,7 @@ data/others/plugin/ssplayer/
 
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。ブラウザーで <a href="../../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> を開き、`.sspj` の入ったフォルダをドロップ（または **Browse...** で選択）して **⚡ Convert & Download** を押し、ダウンロードされた ZIP を `data/others/ssdata/` に展開します。デスクトップでは SSConverter GUI で同じことができます。どちらも [アセットの準備](/ja/usage/assets) にあります。
-
-変換したものは、プロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。`.ssab` はアニメーションファイル（`.ssae`）1 つにつき 1 つ、同じ名前でできます。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。[アセットの準備](/ja/usage/assets) のツールで変換し（<a href="../../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> ならブラウザーだけで済み、何もインストールしません）、できたものをプロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。
 
 ```
 data/others/ssdata/
@@ -57,10 +55,10 @@ data/others/ssdata/
     └── Ringo.png
 ```
 
-`[ss_new]` の `storage=` は `data/` からのパスで、この例なら `storage="others/ssdata/Ringo/Ringo.ssab"` です。テクスチャは `.ssab` と同じフォルダに置いたままにしてください。
+`.ssab` の名前は、アニメーションファイル（`.ssae`）の名前です。`[ss_new]` の `storage=` は `data/` からのパスで、この例なら `storage="others/ssdata/Ringo/Ringo.ssab"` です。
 
 ::: tip 手元に `.sspj` がまだ無いときは
-[SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。ダウンロードしたプロジェクトも、上と同じ手順で ssconverter-web に渡せます。
+[SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら [パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample) が手頃です。ダウンロードしたプロジェクトも、上と同じ手順で変換できます。
 :::
 
 ## 3. クイックスタート

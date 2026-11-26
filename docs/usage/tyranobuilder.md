@@ -41,34 +41,6 @@ actually plays. This plugin converts the SpriteStudio projects you put in your g
 into `.ssab`, inside the editor. Each project becomes one *animation pack* — its `.ssab` files and
 their textures — and the component dropdowns list packs.
 
-```mermaid
-graph LR
-    SS[".sspj / images"]
-
-    subgraph Author ["① Authoring (convert, repeatedly)"]
-        AUTO[["Auto importer<br/>(inside TyranoBuilder)"]]
-        TOOLS[["ssconverter-web / GUI / CLI"]]
-    end
-
-    MANUAL(("copy in by hand"))
-
-    subgraph Game ["② Inside the TyranoBuilder project"]
-        BIN[".ssab + textures<br/>data/others/ssdata/"]
-        COMP["[ss_*] components"]
-        RT("main.js + ssruntime")
-    end
-
-    SS -->|"put in SpriteStudio_Source/"| AUTO
-    SS -->|"drag & drop / CLI"| TOOLS
-    AUTO -. "on project open, or on demand" .-> BIN
-    TOOLS --> MANUAL --> BIN
-    BIN -->|"picked from a dropdown"| COMP
-    COMP -. "plays" .-> RT
-
-    classDef generated stroke-dasharray: 5 5;
-    class BIN generated;
-```
-
 Imported packs and packs you copy in by hand land in the same place, and the component
 dropdowns list both (see [Bringing in a pack you converted yourself](#bringing-in-a-pack-you-converted-yourself)).
 
@@ -135,21 +107,6 @@ game. Anything you put in the folder yourself stays.
 The record is `.ss_import_state.json` at the project root. To force everything to be rebuilt,
 delete it (or the output folder) and reopen the project.
 
-### Bringing in a pack you converted yourself
-
-The **Animation pack** dropdown lists **every `.ssab` anywhere under `data/`**, with the
-imported ones first and the rest alphabetically.
-
-A pack you converted with [`ssconverter-web`, SSConverter GUI or `ssconverter-cli`](/usage/assets)
-and copied in by hand shows up like any other — put it wherever suits your project (next to a
-scene's images, for instance). The **Animation** dropdown is read out of the `.ssab` itself, so
-it is accurate for those packs too.
-
-Only what lives under `SpriteStudio_Source/` is kept in sync automatically. **Reconvert now**
-still works on a pack you copied *out of* `data/others/ssdata/`, and rebuilds it where it now
-lies rather than back where it was generated; a pack converted somewhere else entirely has no
-project here to rebuild it from, and the plugin says so.
-
 ### Where the importer puts things
 
 | Path | What it is | In an exported game? |
@@ -162,7 +119,11 @@ project here to rebuild it from, and the plugin says so.
 
 An exported game carries everything under `data/`, so the author-time files sit outside it.
 
-### Reading the log
+### When a conversion fails
+
+A project that fails to convert, or that loses its folder to another project of the same name, is
+named in a dialog with the reason. Fix it in SpriteStudio, save, and use **Reconvert now** (or
+**Import now**). The projects that did convert are listed in a short notice instead.
 
 The editor has no console, so every line the importer writes lands in **`ss_import_log.txt`**
 at your project root, appended across sessions (it is started over once it passes 256 KB):
@@ -181,6 +142,21 @@ the reason is on the same line.
 
 It also records the host environment it found at startup, which is the first thing to look at
 if the plugin does not seem to be doing anything.
+
+### Bringing in a pack you converted yourself
+
+The **Animation pack** dropdown lists **every `.ssab` anywhere under `data/`**, with the
+imported ones first and the rest alphabetically.
+
+A pack you converted with [`ssconverter-web`, SSConverter GUI or `ssconverter-cli`](/usage/assets)
+and copied in by hand shows up like any other — put it wherever suits your project (next to a
+scene's images, for instance). The **Animation** dropdown is read out of the `.ssab` itself, so
+it is accurate for those packs too.
+
+Only what lives under `SpriteStudio_Source/` is kept in sync automatically. **Reconvert now**
+still works on a pack you copied *out of* `data/others/ssdata/`, and rebuilds it where it now
+lies rather than back where it was generated; a pack converted somewhere else entirely has no
+project here to rebuild it from, and the plugin says so.
 
 ### Current limits
 
@@ -235,8 +211,8 @@ tracks (`[ss_track]`, `[ss_track_fade]`, `[ss_track_clear]`); those are for Tyra
 
 ## Troubleshooting
 
-A conversion that fails says why on screen. The same reason, and every conversion that worked,
-is in `ss_import_log.txt` at your project root — the Plugins window opens it for you.
+A conversion that fails says why in a dialog, and `ss_import_log.txt` at your project root has
+the rest — see [When a conversion fails](#when-a-conversion-fails).
 
 While you preview, a component that cannot do its job — a name no *show* created, an animation
 the pack no longer has — says why in a dialog naming the scene file and line. An exported game
