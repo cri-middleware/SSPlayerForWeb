@@ -1,3 +1,9 @@
 .VPNavBar.has-sidebar .VPNavBarTitle.has-sidebar {
   max-width: none;
 }
+
+/* mermaid sizes a label's box for its own 24px lines, and the label's text sits in a <p>, which
+   .vp-doc gives 28px: a label of three lines overflowed its box and lost its last line. */
+.vp-doc .mermaid p {
+  line-height: inherit;
+}

@@ -27,7 +27,7 @@ the bundled sample MZ project in your browser.
 3. Turn **ssplayer-rpgmakermz** ON in **Tools → Plugin Manager**. There are no parameters — the
    WASM files are auto-loaded from the same folder as the plugin `.js`.
 
-## 2. Convert your animation (.sspj → .ssab)
+## 2. Convert your animation (.sspj → .ssab) {#_2-convert-your-animation}
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
 plugin actually plays. Test play does the converting, with the `ssconverter_bg.wasm` in
