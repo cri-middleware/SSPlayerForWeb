@@ -124,6 +124,11 @@ export default withMermaid({
   // VitePress build has no --base CLI flag.
   base: process.env.DOCS_BASE || '/',
 
+  // mermaid 12 defaults to the ELK layout and the redux-color theme, which draw a flowchart as a
+  // thin strip with text too small to read, and wraps labels at 120px. In dark mode the plugin
+  // swaps the theme for `dark` itself, so `default` here is the light one only.
+  mermaid: { layout: 'dagre', theme: 'default', flowchart: { wrappingWidth: 200 } },
+
   // VitePress puts no `base` in front of a `head` href, so the icon's spells it out.
   head: [['link', { rel: 'icon', type: 'image/svg+xml', href: `${process.env.DOCS_BASE || '/'}favicon.svg` }]],
 
