@@ -58,7 +58,7 @@ converts in the background while the editor is open. TyranoBuilder's Standard ed
 No `.sspj` of your own yet? SpriteStudio's [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/) works as-is — the page is in Japanese, the downloads are not. [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) is a good character to start with. To make your own, you use SpriteStudio itself — see [its site](https://www.webtech.co.jp/eng/spritestudio/).
 
 **Read next:** [TyranoBuilder guide](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder) ·
-[The components](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder#the-components) ·
+[The components](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder-components) ·
 [Troubleshooting](https://cri-middleware.github.io/SSPlayerForWeb/usage/tyranobuilder#troubleshooting) ·
 [Limitations](https://cri-middleware.github.io/SSPlayerForWeb/limitations#tyranoscript-tyranobuilder)
 

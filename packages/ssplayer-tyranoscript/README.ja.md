@@ -56,7 +56,7 @@ TyranoScript のプロジェクトと、**SpriteStudio 7.6 以上**で作成し�
 SpriteStudio のデータが手元に無くても始められます。[公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo) が手頃です。自分のアニメーションを作るには SpriteStudio 本体を使います（[製品サイト](https://www.webtech.co.jp/spritestudio/)）。
 
 **次に読む:** [TyranoScript ガイド](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano) ·
-[提供タグ](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano#_4-tags) ·
+[提供タグ](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano-tags) ·
 [うまくいかないとき](https://cri-middleware.github.io/SSPlayerForWeb/ja/usage/tyrano#troubleshooting) ·
 [制約と適用範囲](https://cri-middleware.github.io/SSPlayerForWeb/ja/limitations#tyranoscript-tyranobuilder)
 
