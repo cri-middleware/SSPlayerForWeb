@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-webgl",
   "version": "7.0.0-beta.1",
-  "description": "SpriteStudio Player for Web on WebGL 1/2: plays SpriteStudio animations (.ssab) on a canvas or as an <ss-player> element, with no dependencies.",
+  "description": "SpriteStudio Player for Web on WebGL 1/2: plays SpriteStudio animations (.ssab) on a canvas or as an <ss-player> element, with no dependencies. SpriteStudio is a 2D animation tool: an artist adds bones, mesh deformation and effects to their own illustrations.",
   "keywords": [
     "spritestudio",
     "spritestudio7",

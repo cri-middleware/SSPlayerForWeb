@@ -1,7 +1,7 @@
 {
   "name": "@spritestudio/ssplayer-pixi-ui",
   "version": "7.0.0-beta.1",
-  "description": "SpriteStudio Player for Web on PixiJS v8, as UI: a SpriteStudio animation as a @pixi/ui button whose states play its labels, hit-tested on its parts.",
+  "description": "SpriteStudio Player for Web on PixiJS v8, as UI: a SpriteStudio animation as a @pixi/ui button whose states play its labels, hit-tested on its parts. SpriteStudio is a 2D animation tool: an artist adds bones, mesh deformation and effects to their own illustrations.",
   "keywords": [
     "spritestudio",
     "spritestudio7",
