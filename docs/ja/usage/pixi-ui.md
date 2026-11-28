@@ -6,10 +6,7 @@ description: SpriteStudio のアニメーションで描く @pixi/ui のボタ�
 
 `@spritestudio/ssplayer-pixi-ui` は、SpriteStudio のアニメーションを [`@pixi/ui`](https://github.com/pixijs/ui) のボタンにして、ボタンの状態（ホバー・押下・無効・フォーカス）を見せます。形が不規則なボタンでは、ポインタを絵の上でだけ受けるようにもできます。別のパッケージなので、アニメーションを再生するだけのアプリは何も負担しません。
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../../examples/pixi/ui.html" target="_blank" rel="noreferrer">ライブデモ</a>** — Ringo で描いたボタンが 2 つ。片方は選んだパーツでだけポインタを受けます。
+▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html)** — Ringo で描いたボタンが 2 つ。片方は選んだパーツでだけポインタを受けます。
 
 ```bash
 pnpm add @spritestudio/ssplayer-pixi-ui @pixi/ui pixi.js
@@ -77,7 +74,7 @@ clip で指定した区間も、次のラベルの 1 フレーム手前までで
 start.hitParts = ['face', 'ribbon'];
 ```
 
-パーツの範囲は描いた輪郭です（[パーツの輪郭](/ja/customize/part-following#a-parts-outline) を参照）。ボタンは `hitArea` で答えるので、カーソルが手の形になるのはそのパーツの上だけで、絵の周りのポインタはボタンの後ろにあるものに届きます。絞るのはポインタだけで、キーボードのフォーカスとスクリーンリーダーはこれまでどおりボタンに届きます。
+パーツの範囲は描いた輪郭です（[パーツの輪郭](../customize/part-following.md#a-parts-outline) を参照）。ボタンは `hitArea` で答えるので、カーソルが手の形になるのはそのパーツの上だけで、絵の周りのポインタはボタンの後ろにあるものに届きます。絞るのはポインタだけで、キーボードのフォーカスとスクリーンリーダーはこれまでどおりボタンに届きます。
 
 ## スクリーンリーダー
 
@@ -106,6 +103,6 @@ driver.show('normal', true); // 動きを減らすとき
 
 ## 関連
 
-- [パーツトラッキング](/ja/customize/part-following) — 当たり判定が使う輪郭と、その隣の変換
-- [基本的な再生](/ja/usage/basic) — フレームとラベルで指定する再生区間
-- [PixiJS で使う](/ja/usage/pixi) — ボタンを描く player
+- [パーツトラッキング](../customize/part-following.md) — 当たり判定が使う輪郭と、その隣の変換
+- [基本的な再生](./basic.md) — フレームとラベルで指定する再生区間
+- [PixiJS で使う](./pixi.md) — ボタンを描く player

@@ -11,9 +11,9 @@ each authored by the artist as an animation of its own.
 The methods below are on `SSPlayer` in both the PixiJS and the WebGL packages, under the
 same names, and on RPG Maker MZ's `SSPlayer`. RPG Maker MZ also has plugin commands for tracks
 (**Set SS Track**, **Fade SS Track**, **Clear SS Track**) and a `Transition (ms)` on its animation
-commands that crossfades track 0 — see [RPG Maker MZ](/usage/rmmz). TyranoScript has `[ss_track]`,
+commands that crossfades track 0 — see [RPG Maker MZ](../usage/rmmz.md). TyranoScript has `[ss_track]`,
 `[ss_track_fade]` and `[ss_track_clear]`, and `transition=` on `[ss_play]` — see
-[TyranoScript](/usage/tyrano). TyranoBuilder has no component for tracks.
+[TyranoScript](../usage/tyrano.md). TyranoBuilder has no component for tracks.
 
 ## The model: a stack of tracks
 
@@ -98,7 +98,7 @@ The incoming animation takes track 0 over **when the fade begins**, not when it 
   report the incoming animation's playback; the outgoing one running out mid-fade does
   not finish the player.
 - The incoming animation's events fire from the start of the fade, and the outgoing
-  one's stop (see [Events](/customize/events)).
+  one's stop (see [Events](./events.md)).
 - The incoming animation plays with the playback settings you set on the player —
   `speedScale`, `frameRate`, `frameSkipEnabled`, the direction and `loopCount` — as
   after a `setAnimation`. Its section is the whole animation.

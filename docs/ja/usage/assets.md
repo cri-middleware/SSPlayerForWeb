@@ -4,9 +4,6 @@ description: .sspj を再生用の .ssab に変換する方法。ブラウザツ
 
 # アセットの準備（.sspj → .ssab）
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
 プレイヤーが再生するのは SpriteStudio の `.sspj` ではなく、パース不要のランタイムバイナリ **`.ssab`** です。変換ツールは `.sspj` と参照ファイル（`.ssae` / `.ssee` / `.ssqe` / `.ssce`）を解析し、`.ssab`（アニメーション）と必要に応じて `.ssqb`（シーケンスパック）を生成します。誰が変換するかは、アニメーションを再生する場所で決まります。
 
 ```mermaid
@@ -23,7 +20,7 @@ flowchart LR
     tools --> ssab
 ```
 
-RPG ツクール MZ とティラノビルダーでは、このページの作業は要りません。プラグインがエディタの中で変換します（[RPG ツクール MZ](/ja/usage/rmmz#_2-convert-your-animation)、[ティラノビルダー](/ja/usage/tyranobuilder#the-auto-importer)）。それ以外では自分で変換します。ツールは 3 つあるので、用途で選んでください。変換そのものを自作アプリやサービスに組み込みたい場合は、ライブラリ **`@spritestudio/ssconverter-core`** を使います。
+RPG ツクール MZ とティラノビルダーでは、このページの作業は要りません。プラグインがエディタの中で変換します（[RPG ツクール MZ](./rmmz.md#_2-convert-your-animation)、[ティラノビルダー](./tyranobuilder.md#the-auto-importer)）。それ以外では自分で変換します。ツールは 3 つあるので、用途で選んでください。変換そのものを自作アプリやサービスに組み込みたい場合は、ライブラリ **`@spritestudio/ssconverter-core`** を使います。
 
 ::: tip 手元に `.sspj` がまだ無いときは
 [SpriteStudio 公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
@@ -32,7 +29,7 @@ RPG ツクール MZ とティラノビルダーでは、このページの作業
 
 | ツール | 向いている用途 | 導入 |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-browser-tool) | 手元で数個を手軽に変換 | ブラウザで開く（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>） |
+| [`ssconverter-web`](#ssconverter-web-browser-tool) | 手元で数個を手軽に変換 | ブラウザで開く（[/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)） |
 | [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | GUI で手軽に変換したい | [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) からバイナリ取得 |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / バッチ / 再現性 | [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) からバイナリ取得 |
 | [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | 変換を自作アプリ/サービスに組み込む | `npm i @spritestudio/ssconverter-core` |
@@ -42,7 +39,7 @@ RPG ツクール MZ とティラノビルダーでは、このページの作業
 
 ブラウザ上で `.sspj` プロジェクトを変換し、結果を **ZIP** でダウンロードするツールです。WASM 版コンバータをそのままブラウザで実行します。
 
-このドキュメントと同じ場所（<a href="../../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>）でホストしているため、インストールは不要です。
+このドキュメントと同じ場所（[/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)）でホストしているため、インストールは不要です。
 
 ::: info フォルダのドロップ
 ドロップ領域へのフォルダのドラッグ＆ドロップは **File System Access API** を使うため、**Chromium 系ブラウザ（Chrome / Edge など）** が必要です。ほかのブラウザでは `Browse...` でフォルダを選択してください。
@@ -50,7 +47,7 @@ RPG ツクール MZ とティラノビルダーでは、このページの作業
 
 ### 手順
 
-1. <a href="../../ssconverter/" target="_blank" rel="noreferrer">コンバータ</a>を開きます。
+1. [コンバータ](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)を開きます。
 2. **プロジェクトフォルダ**をドロップ領域にドラッグ＆ドロップするか、`Browse...`
    で選択します。
    - フォルダ内の `.sspj` は **ちょうど 1 つ**にしてください（0 個・複数はエラー）。
@@ -134,7 +131,7 @@ TypeScript API を被せたもので、これ単体は npm で公開していま
 
 **バイト入力・バイト出力**で、ファイルシステムにも DOM にも依存しません。そのため同じコアがブラウザ・Node・Web Worker・エッジランタイムのいずれでも動作します（`ssconverter-web` のブラウザ UI と Node CLI もこのコアの上に載っています）。
 
-📂 **<a href="../../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>**
+📂 **[.sspj を落として再生する](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)**
 は、このライブラリとプレイヤー（`ssplayer-webgl`、または WebGPU / WebGL 上の `ssplayer-pixi` をメニューで選択）を 1 ページに載せたものです。ソース（[`examples/sspj-preview`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/examples/sspj-preview)）は以下の内容が実際に動く形になっています。ブラウザでフォルダを読み、変換し、サーバもビルドも介さずそのままプレイヤーに渡す、という一連の流れです。
 
 ```bash
@@ -216,7 +213,7 @@ TTL が違う——が典型的な踏み方です。バンドラや CDN が画�
 ::: warning embedded は差分配信には向きません
 埋め込むと、**大きくてめったに変わらないアトラス**が、**小さくて頻繁に変わるキーフレーム**と同じファイルに溶接されます。アニメを 1 フレーム直しただけでもアトラスごと再ダウンロードになり、差分配信でやりたいことのちょうど逆になります。
 
-共有も効きません。埋め込みテクスチャは意図的に共有キャッシュの外に置かれ、`SSPlayer` ごとにデコードされます（[リソースとライフサイクル](/ja/customize/resources)）。同じアトラスを使うキャラクターが 5 体いる場合、テクスチャを別ファイルにした通常モードならダウンロード 1 回・GPU テクスチャ 1 枚で済むところが、embedded では 5 回・5 枚になります。
+共有も効きません。埋め込みテクスチャは意図的に共有キャッシュの外に置かれ、`SSPlayer` ごとにデコードされます（[リソースとライフサイクル](../customize/resources.md)）。同じアトラスを使うキャラクターが 5 体いる場合、テクスチャを別ファイルにした通常モードならダウンロード 1 回・GPU テクスチャ 1 枚で済むところが、embedded では 5 回・5 枚になります。
 
 単発のバナーやアトラスを共有しない 1 体には向きますが、**アトラスを共有する複数キャラを継続的に更新する**なら、テクスチャを別ファイルのままにして、セット単位でバージョンを切ってください。
 :::
@@ -225,6 +222,6 @@ TTL が違う——が典型的な踏み方です。バンドラや CDN が画�
 `<ベース URL>/<パック名>.ssab` として別途フェッチされるため、埋め込んでもリクエストは 1 本にはなりません。親子のパックはセットで配信してください。テクスチャの選択もパック単位ではなく**テクスチャ単位**で、埋め込みが無いものは従来どおり URL で取りに行きます——混在パックでは埋め込まれていない分にこの節の話がそのまま当てはまります。
 
 セット単位で URL を変えるやり方は、実行時のキャッシュとも噛み合います。PixiJS の `Assets`
-キャッシュも WebGL バックエンドのテクスチャキャッシュも **URL をキー**にしているため、URL が変われば古いテクスチャを掴み続けることはありません（[リソースとライフサイクル](/ja/customize/resources)）。
+キャッシュも WebGL バックエンドのテクスチャキャッシュも **URL をキー**にしているため、URL が変われば古いテクスチャを掴み続けることはありません（[リソースとライフサイクル](../customize/resources.md)）。
 
-読み込み・再生の手順は [クイックスタート](/ja/setup/quickstart) を参照してください。
+読み込み・再生の手順は [クイックスタート](../setup/quickstart.md) を参照してください。

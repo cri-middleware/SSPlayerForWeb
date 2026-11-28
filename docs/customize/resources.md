@@ -94,19 +94,19 @@ blank.
 
 Textures normally resolve as siblings of the `.ssab`. To serve them from somewhere else — an
 in-memory bundle, an atlas your engine already has on the GPU — implement
-[`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) and drive
+[`IResourceManager`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/interfaces/IResourceManager) and drive
 the core directly, or bind the pack with `loadBuffer(ssab, textures)`, whose second argument maps each
 cell-map hash to a URL, encoded image bytes or an image source (on WebGL it is registered with
 `bindTextureSource()` for you). Binding a pack — `load()` or `loadBuffer()` — resets the player's
 texture manager first, so a texture registered with `bindTextureSource()` before `load()` is dropped.
 
 To swap a texture *after* load — a costume change or dynamic expression — use the name-keyed
-[runtime texture replacement](/customize/texture-replacement) API instead; it resolves the
+[runtime texture replacement](./texture-replacement.md) API instead; it resolves the
 cell-map name for you and can restore the original.
 
 The same applies to Instance parts whose packs are not URL-addressable: hand the bytes over with
 `player.internalPlayer.setInstancePackProvider(provider)` — a function of type
-[`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md) —
+[`InstancePackProvider`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider) —
 before the pack's resources are prepared (`load()` / `loadBuffer()`).
 When you do, the core stops fetching for you — registering that pack's textures becomes your job
 too.

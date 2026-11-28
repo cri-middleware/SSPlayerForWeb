@@ -4,7 +4,7 @@ description: どのクラスから始めるか、その下に何があるか、�
 
 # API リファレンス
 
-すべてのエクスポートは[生成リファレンス](/api/)に一覧があります。このページはその地図です。どのクラスから始めるか、その下に何があるか、実際に触れる型はどれかをまとめています。
+すべてのエクスポートは[生成リファレンス](https://cri-middleware.github.io/SSPlayerForWeb/api/)に一覧があります。このページはその地図です。どのクラスから始めるか、その下に何があるか、実際に触れる型はどれかをまとめています。
 
 ## 起点となるクラスは 1 つ
 
@@ -12,11 +12,11 @@ description: どのクラスから始めるか、その下に何があるか、�
 
 | 環境 | クラス | パッケージ |
 |---|---|---|
-| フレームワーク非依存 / ドロップイン | [`SSSurface`](/api/@spritestudio/ssplayer-webgl/classes/SSSurface.md)（`createPlayer()` が [`SSPlayer`](/api/@spritestudio/ssplayer-webgl/classes/SSPlayer.md) を返す） | `ssplayer-webgl` |
-| HTML だけで済ませたい | `<ss-player>`（[WebGL・Web Components で使う](/ja/usage/webgl)） | `ssplayer-webgl` |
-| PixiJS v8 アプリ | [`SSPlayer`](/api/@spritestudio/ssplayer-pixi/classes/SSPlayer.md) | `ssplayer-pixi` |
-| PixiJS v8 アプリのボタン（[UI ボタン](/ja/usage/pixi-ui) を参照） | [`SSButton`](/api/@spritestudio/ssplayer-pixi-ui/classes/SSButton.md) | `ssplayer-pixi-ui` |
-| レンダラーを自作する | [`DirectInternalPlayer`](/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer.md) + [`GeometryBuilder`](/api/@spritestudio/ssplayer-core/classes/GeometryBuilder.md) | `ssplayer-core` |
+| フレームワーク非依存 / ドロップイン | [`SSSurface`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/classes/SSSurface)（`createPlayer()` が [`SSPlayer`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/classes/SSPlayer) を返す） | `ssplayer-webgl` |
+| HTML だけで済ませたい | `<ss-player>`（[WebGL・Web Components で使う](./usage/webgl.md)） | `ssplayer-webgl` |
+| PixiJS v8 アプリ | [`SSPlayer`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-pixi/classes/SSPlayer) | `ssplayer-pixi` |
+| PixiJS v8 アプリのボタン（[UI ボタン](./usage/pixi-ui.md) を参照） | [`SSButton`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-pixi-ui/classes/SSButton) | `ssplayer-pixi-ui` |
+| レンダラーを自作する | [`DirectInternalPlayer`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/classes/DirectInternalPlayer) + [`GeometryBuilder`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/classes/GeometryBuilder) | `ssplayer-core` |
 
 WASM ランタイムはモジュールレベルのシングルトンなので、プレイヤーを作る前に一度だけ初期化します。
 
@@ -45,37 +45,37 @@ SSPlayer (webgl) / SSPlayer (pixi) ← 呼び出すファサード（再生・�
 
 ## 実際に触れる型
 
-**イベント** — [イベントとユーザーデータ](/ja/customize/events)を参照。
-[`SSUserDataEvent`](/api/@spritestudio/ssplayer-webgl/interfaces/SSUserDataEvent.md)、
-[`SSSignalEvent`](/api/@spritestudio/ssplayer-webgl/interfaces/SSSignalEvent.md)、
-[`SSAudioEvent`](/api/@spritestudio/ssplayer-webgl/interfaces/SSAudioEvent.md)、および
+**イベント** — [イベントとユーザーデータ](./customize/events.md)を参照。
+[`SSUserDataEvent`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/interfaces/SSUserDataEvent)、
+[`SSSignalEvent`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/interfaces/SSSignalEvent)、
+[`SSAudioEvent`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/interfaces/SSAudioEvent)、および
 `onX` メソッドが返す解除ハンドル
-[`Unsubscribe`](/api/@spritestudio/ssplayer-webgl/type-aliases/Unsubscribe.md)。
+[`Unsubscribe`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/type-aliases/Unsubscribe)。
 
-**パーツオーバーライド** — [パーツ制御](/ja/customize/part-overrides)を参照。
-[`SSBlendOp`](/api/@spritestudio/ssplayer-core/enumerations/SSBlendOp.md)、
-[`SSOverridePriority`](/api/@spritestudio/ssplayer-core/enumerations/SSOverridePriority.md)、
-[`SSPartOverrideTarget`](/api/@spritestudio/ssplayer-core/interfaces/SSPartOverrideTarget.md)。
+**パーツオーバーライド** — [パーツ制御](./customize/part-overrides.md)を参照。
+[`SSBlendOp`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/enumerations/SSBlendOp)、
+[`SSOverridePriority`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/enumerations/SSOverridePriority)、
+[`SSPartOverrideTarget`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/interfaces/SSPartOverrideTarget)。
 
-**テクスチャ差し替え** — [テクスチャ差し替え（着せ替え）](/ja/customize/texture-replacement)を参照。
+**テクスチャ差し替え** — [テクスチャ差し替え（着せ替え）](./customize/texture-replacement.md)を参照。
 `setCellmapTexture` / `getReplaceableTextureNames` は `SSPlayer` にあり、各エンジンのテクスチャオブジェクトを渡します（インポートすべき専用型はありません）。
 
-**パーツトラッキング** — [パーツトラッキング](/ja/customize/part-following)を参照。
-[`SSPartFollowOptions`](/api/@spritestudio/ssplayer-core/interfaces/SSPartFollowOptions.md)、
-[`SSDecomposedTransform`](/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform.md)、
+**パーツトラッキング** — [パーツトラッキング](./customize/part-following.md)を参照。
+[`SSPartFollowOptions`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/interfaces/SSPartFollowOptions)、
+[`SSDecomposedTransform`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/interfaces/SSDecomposedTransform)、
 PixiJS ではさらに
-[`SSPartAttachment`](/api/@spritestudio/ssplayer-pixi/type-aliases/SSPartAttachment.md)。
+[`SSPartAttachment`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-pixi/type-aliases/SSPartAttachment)。
 
-**モーションブレンド** — [モーションブレンド](/ja/customize/motion-blending)を参照。`setTrackBlend` と `setTrackSync` が取る [`SSTrackBlend`](/api/@spritestudio/ssplayer-core/enumerations/SSTrackBlend.md) と [`SSTrackSync`](/api/@spritestudio/ssplayer-core/enumerations/SSTrackSync.md)。ソースのハンドルはただの `number` です。
+**モーションブレンド** — [モーションブレンド](./customize/motion-blending.md)を参照。`setTrackBlend` と `setTrackSync` が取る [`SSTrackBlend`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/enumerations/SSTrackBlend) と [`SSTrackSync`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/enumerations/SSTrackSync)。ソースのハンドルはただの `number` です。
 
 **再生系の enum。**
 `setPlaybackDirection` の 2 引数が
-[`WebPlaybackDirection`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackDirection.md) と
-[`WebPlaybackStyle`](/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackStyle.md) です。
+[`WebPlaybackDirection`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackDirection) と
+[`WebPlaybackStyle`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/enumerations/WebPlaybackStyle) です。
 
 **構築オプション**（WebGL のみ）—
-[`SSSurfaceOptions`](/api/@spritestudio/ssplayer-webgl/interfaces/SSSurfaceOptions.md)。
-`backgroundColor` / `maxDPR` / `antialias` / `pauseWhenHidden` などが含まれます。[パフォーマンスチューニング](/ja/customize/performance)を参照してください。
+[`SSSurfaceOptions`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-webgl/interfaces/SSSurfaceOptions)。
+`backgroundColor` / `maxDPR` / `antialias` / `pauseWhenHidden` などが含まれます。[パフォーマンスチューニング](./customize/performance.md)を参照してください。
 
 ## 自分で実装するインターフェース
 
@@ -83,17 +83,17 @@ PixiJS ではさらに
 
 | インターフェース | 実装するのはどんなとき |
 |---|---|
-| [`IAudioManager`](/api/@spritestudio/ssplayer-core/interfaces/IAudioManager.md) | アニメーションのサウンドを自前のオーディオエンジンで鳴らしたいとき。`@spritestudio/ssplayer-core` に既製の `SSWebAudioManager`（`/audio` サブパス）が用意されているので、そのまま使うこともできます。 |
-| [`IResourceManager`](/api/@spritestudio/ssplayer-core/interfaces/IResourceManager.md) | レンダラーを自作するとき、またはテクスチャを兄弟ファイル以外から供給したいとき。[リソースとライフサイクル](/ja/customize/resources)を参照。 |
-| [`InstancePackProvider`](/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider.md) | インスタンスパーツの参照先パックが URL で辿れないとき（インメモリのバンドル、ドラッグ＆ドロップなど）。 |
+| [`IAudioManager`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/interfaces/IAudioManager) | アニメーションのサウンドを自前のオーディオエンジンで鳴らしたいとき。`@spritestudio/ssplayer-core` に既製の `SSWebAudioManager`（`/audio` サブパス）が用意されているので、そのまま使うこともできます。 |
+| [`IResourceManager`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/interfaces/IResourceManager) | レンダラーを自作するとき、またはテクスチャを兄弟ファイル以外から供給したいとき。[リソースとライフサイクル](./customize/resources.md)を参照。 |
+| [`InstancePackProvider`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssplayer-core/type-aliases/InstancePackProvider) | インスタンスパーツの参照先パックが URL で辿れないとき（インメモリのバンドル、ドラッグ＆ドロップなど）。 |
 
 ## 変換 API
 
 `@spritestudio/ssconverter-core` はプレイヤーとは独立した別系統の API です。
-[`convertProject`](/api/@spritestudio/ssconverter-core/functions/convertProject.md)、
-[`locateProject`](/api/@spritestudio/ssconverter-core/functions/locateProject.md)、
-[`ConvertOptions`](/api/@spritestudio/ssconverter-core/interfaces/ConvertOptions.md) を参照。使い方は[アセットの準備](/ja/usage/assets)にあります。
+[`convertProject`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssconverter-core/functions/convertProject)、
+[`locateProject`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssconverter-core/functions/locateProject)、
+[`ConvertOptions`](https://cri-middleware.github.io/SSPlayerForWeb/api/@spritestudio/ssconverter-core/interfaces/ConvertOptions) を参照。使い方は[アセットの準備](./usage/assets.md)にあります。
 
 ---
 
-これ以外のすべては **[生成 API リファレンス](/api/)** にあります。
+これ以外のすべては **[生成 API リファレンス](https://cri-middleware.github.io/SSPlayerForWeb/api/)** にあります。

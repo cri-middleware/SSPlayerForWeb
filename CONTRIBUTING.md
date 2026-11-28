@@ -146,7 +146,7 @@ touches them and the whole site weekly, and a dead link fails the build, VitePre
 TypeDoc parses `packages/*/src`, which import the bindings.
 
 The English pages also ship in each public package's `docs/`: the package's `build` runs
-`scripts/copy-docs.mjs`, which turns the site paths between pages into relative links and adds
+`scripts/copy-docs.mjs`, which points links to the pages it leaves out at the site and adds
 `scripts/release-docs/npm-README.md` as the folder's front door. It writes the same pages to
 `skills/<package>/` as an Agent Skill, with the front door as its `SKILL.md`. Renaming a page the
 front door links to means editing it too; `build-release.sh` refuses a link that goes nowhere.

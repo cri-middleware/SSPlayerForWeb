@@ -58,15 +58,15 @@ the handle of the animation that fired it — see below. The rest depends on the
 `onAnimationStarted`, `onAnimationFinished` and `onAnimationLooped` take no argument. On `<ss-player>` the
 same events arrive as DOM events on the element — `animationstarted`, `animationfinished`,
 `animationlooped`, `userdata`, `signal`, `audio` — with the payload in `detail` (see
-[WebGL & Web Components](/usage/webgl)); `onFrame` and the rest are on `el.player`.
+[WebGL & Web Components](../usage/webgl.md)); `onFrame` and the rest are on `el.player`.
 
 There is one more hook, `onFrame`, which fires on every advanced frame rather than
 on an authored event — it is the point at which a part's transform is final for
-that frame. See [Part tracking](/customize/part-following).
+that frame. See [Part tracking](./part-following.md).
 
 ## With several animations playing
 
-With [motion blending](/customize/motion-blending) one player can run more than one
+With [motion blending](./motion-blending.md) one player can run more than one
 animation at once, and by default **only track 0's main animation fires events**.
 An overlay on another track, or a second animation mixed into a track, fires only
 once you lower its threshold to its weight or below:
@@ -124,4 +124,4 @@ and audio keys are reported. Those audio keys are not sounded, since the playhea
 them, though `onAudio` still reports them. That holds for `frameNo` and for `setTrackFrame(0, …)`,
 playing or paused. If you play sounds yourself from `onAudio`, skip the destination frame's keys
 that the first update after a seek reports. To receive every key in a span, let playback pass through it instead of seeking
-(`setAnimationSection` in [Basic playback](/usage/basic)).
+(`setAnimationSection` in [Basic playback](../usage/basic.md)).

@@ -4,7 +4,7 @@ description: SpriteStudio Player for Web の構成（再生側・変換側・ホ
 
 # プレイヤーの構成
 
-SpriteStudio Player for Web を開発する人と、自分のプロジェクトのために改造する人に向けたページです。部品をその役割で説明します。ビルド、変更した版をゲームやアプリで使う方法、実際のホストでの確かめ方は[ビルドガイド](/ja/development/build)にあります。各パッケージの README の末尾にあるコントリビューター向けの節が、そのパッケージに踏み込みます。
+SpriteStudio Player for Web を開発する人と、自分のプロジェクトのために改造する人に向けたページです。部品をその役割で説明します。ビルド、変更した版をゲームやアプリで使う方法、実際のホストでの確かめ方は[ビルドガイド](./build.md)にあります。各パッケージの README の末尾にあるコントリビューター向けの節が、そのパッケージに踏み込みます。
 
 SpriteStudio の Player に共通すること（再生・モーションブレンド・サウンドキー・パーツトラッキングの振る舞い）は、SDK の[ポーティングガイド](https://github.com/cri-middleware/SpriteStudio-SDK/tree/develop/libs/ssruntime/docs)に一度だけ書いてあります。
 

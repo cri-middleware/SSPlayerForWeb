@@ -5,7 +5,7 @@ description: "The ssplayer-rmmz plugin commands for RPG Maker MZ: showing an ani
 # RPG Maker MZ plugin commands
 
 The plugin commands the RPG Maker MZ plugin adds. Installing the plugin, converting your animation
-and deploying the game are on [RPG Maker MZ](/usage/rmmz).
+and deploying the game are on [RPG Maker MZ](./rmmz.md).
 
 Run these from an event's **Plugin Command** → `ssplayer-rpgmakermz`. An SS animation
 rides on an MZ **picture**, so *Move Picture* / scale / Z-order / save-load all apply for
@@ -86,7 +86,7 @@ override.
 
 Making a display object of your own follow a part has **no plugin command**. Get the
 `SSPlayer` from a script and call `attachToPart()` — see
-[Part tracking](/customize/part-following).
+[Part tracking](../customize/part-following.md).
 
 ## Playback / lifecycle
 

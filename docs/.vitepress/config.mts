@@ -4,8 +4,8 @@ import llmstxt, { copyOrDownloadAsMarkdownButtons } from 'vitepress-plugin-llms'
 
 const GITHUB = 'https://github.com/cri-middleware/SSPlayerForWeb'
 
-// Canonical production origin, used only for `og:url`. Deliberately not derived from
-// `base` below: that is '/' during local dev, and a card must always advertise the
+// Canonical production origin. Deliberately not derived from `base` below: that is '/'
+// during local dev, and a card, llms.txt and a page read on GitHub must always carry the
 // published address rather than wherever the page happened to be built.
 const SITE_URL = 'https://cri-middleware.github.io/SSPlayerForWeb'
 
@@ -15,10 +15,11 @@ const SITE_URL = 'https://cri-middleware.github.io/SSPlayerForWeb'
 // both handled here:
 //   - the link stays base-relative and is left to VitePress's withBase(), so it is
 //     correct on every deployment of the site (the project Pages site, a fork, a
-//     root-served `base=/` preview) instead of hardcoding one origin;
+//     root-served `base=/` preview) instead of hardcoding one origin. The pages link
+//     the same targets by their SITE_URL address instead, since they are read on
+//     GitHub too (see `markdown` below);
 //   - `target: '_blank'` is what stops the SPA router from intercepting the click
-//     and landing on the 404 page -- the same reason index.md links them with raw
-//     <a target="_blank"> tags.
+//     and landing on the 404 page.
 // They therefore 404 under a docs-only `vitepress dev`: the targets exist only in a
 // full `scripts/build-pages.sh` build.
 const demo = (text: string, link: string) => ({ text, link, target: '_blank', rel: 'noreferrer' })
@@ -175,11 +176,36 @@ export default withMermaid({
     ],
   },
 
-  // The Copy as Markdown button, inserted after each page's first heading. The component
-  // itself is registered in theme/index.ts.
   markdown: {
     config(md) {
+      // The Copy as Markdown button, inserted after each page's first heading. The component
+      // itself is registered in theme/index.ts.
       md.use(copyOrDownloadAsMarkdownButtons)
+
+      // The pages are read on GitHub as well as here, so every link must resolve in both.
+      // Between pages that is a relative `.md` path, which VitePress turns into the page's
+      // URL. What only the published site has -- the TypeDoc reference (docs/api/ is
+      // generated, not committed), ssconverter-web and the examples -- is linked by its
+      // SITE_URL address. A site path (`/usage/assets`) resolves here and nowhere on GitHub,
+      // so it fails the build. API addresses are turned back into site paths here, so
+      // VitePress still checks them against the generated pages and opens them in the tab.
+      md.core.ruler.push('github-readable-links', (state) => {
+        const page: string | undefined = state.env?.relativePath
+        if (page?.startsWith('api/')) return
+        for (const token of state.tokens.flatMap((t) => t.children ?? [])) {
+          if (token.type !== 'link_open') continue
+          const href = token.attrGet('href') ?? ''
+          if (href.startsWith(`${SITE_URL}/api/`)) {
+            token.attrSet('href', href.slice(SITE_URL.length))
+          } else if (href.startsWith('/')) {
+            throw new Error(
+              `${page}: "${href}" is a site path, which goes nowhere on GitHub. Link a page by ` +
+                `its relative .md path, and the API reference, the converter or an example by ` +
+                `its ${SITE_URL}/ address.`,
+            )
+          }
+        }
+      })
     },
   },
 

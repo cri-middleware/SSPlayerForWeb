@@ -4,13 +4,10 @@ description: "The playback-control API shared by the WebGL and PixiJS players: l
 
 # Basic playback
 
-This page collects the playback-control API shared by `SSPlayer` (both the WebGL and PixiJS v8 backends). Most of the API is common to both. For the minimal load-and-play steps, see the [Quick start](/setup/quickstart).
+This page collects the playback-control API shared by `SSPlayer` (both the WebGL and PixiJS v8 backends). Most of the API is common to both. For the minimal load-and-play steps, see the [Quick start](../setup/quickstart.md).
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">WebGL demo</a>** ·
-**<a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS demo</a>** — this API on a
+▶️ **[WebGL demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** ·
+**[PixiJS demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** — this API on a
 running player, one per backend; both play a `.ssab` dropped onto the page.
 
 ## Loading and selecting an animation
@@ -127,14 +124,14 @@ What differs is **who knows the player was mirrored**.
 
 The value of `flipX` is that **things outside the player do not have to know about the flip**: a DOM overlay, a hitbox coordinate, an object in another container, a target from `attachToPart(..., { addAsChild: false })` — each of them lands correctly just by reading `getPartTransform()`. With `scale.x = -1` the host has to re-apply the mirror to every one of them.
 
-Conversely, for `attachToPart()` with all three axes driven (`scale: true`) **there is no visible difference**: either way the target sits on the mirrored part and the target's own artwork is mirrored with it. Under the default `scale: false` they do differ — `scale.x = -1` still mirrors a child target through the hierarchy, while `flipX` leaves it a 180-degree difference in orientation (see [part tracking](/customize/part-following)).
+Conversely, for `attachToPart()` with all three axes driven (`scale: true`) **there is no visible difference**: either way the target sits on the mirrored part and the target's own artwork is mirrored with it. Under the default `scale: false` they do differ — `scale.x = -1` still mirrors a child target through the hierarchy, while `flipX` leaves it a 180-degree difference in orientation (see [part tracking](../customize/part-following.md)).
 
 Notes:
 
 - **The offset is applied after the flip** (`p' = S*p + O`), so turning `flipX` on does not send the offset the other way.
 - The unit is **animation-local pixels**. It rides under the display object's transform, so scaling the player scales the offset with it. This is not the same as WebGL's `setTransform({ x, y })`, which moves the player itself.
 - An instance part's child animation inherits the parent's flip through the hierarchy. There is no need to set it on the child (and doing so has no effect).
-- It is included in what `getPartTransform()` reports — see [part tracking](/customize/part-following).
+- It is included in what `getPartTransform()` reports — see [part tracking](../customize/part-following.md).
 
 There are no TyranoScript / TyranoBuilder tags for these; reach the player from script instead.
 
@@ -146,7 +143,7 @@ player.findPartIndex('body');    // name → index (-1 if unknown)
 ```
 
 To override a part's colour, cell or visibility at run time, see
-[Part control (visibility / cell / color)](/customize/part-overrides) — that API is
+[Part control (visibility / cell / color)](../customize/part-overrides.md) — that API is
 shared by the PixiJS and WebGL players.
 
 ---
@@ -168,4 +165,4 @@ The WebGL package also ships a Custom Element (`<ss-player>`) that you can use j
 You can also grab the DOM element from JavaScript and call methods such as `play()` / `pause()`.
 
 ---
-For timeline events (user data / signals / sound) and other advanced work such as costume swapping, see [Customize](/customize/events).
+For timeline events (user data / signals / sound) and other advanced work such as costume swapping, see [Customize](../customize/events.md).

@@ -4,9 +4,6 @@ description: Converting a .sspj into the .ssab the player plays, with the browse
 
 # Preparing assets (.sspj → .ssab)
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
 The player does not play SpriteStudio's `.sspj` directly; it plays **`.ssab`**, a
 parse-free runtime binary. A converter reads the `.sspj` and its referenced files
 (`.ssae` / `.ssee` / `.ssqe` / `.ssce`) and produces `.ssab` (animations) plus, when
@@ -27,8 +24,8 @@ flowchart LR
 ```
 
 In RPG Maker MZ and TyranoBuilder you need nothing from this page: the plugin converts inside the
-editor — see [RPG Maker MZ](/usage/rmmz#_2-convert-your-animation) and
-[TyranoBuilder](/usage/tyranobuilder#the-auto-importer). Everywhere else you convert it yourself,
+editor — see [RPG Maker MZ](./rmmz.md#_2-convert-your-animation) and
+[TyranoBuilder](./tyranobuilder.md#the-auto-importer). Everywhere else you convert it yourself,
 with one of three tools — pick by how you work. To convert inside your own app or service, use the
 library **`@spritestudio/ssconverter-core`**.
 
@@ -43,7 +40,7 @@ if you want effects. The downloaded project feeds any of the tools below as-is.
 
 | Tool | Best for | Getting it |
 |---|---|---|
-| [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at <a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a> |
+| [`ssconverter-web`](#ssconverter-web-browser-tool) | Converting a few projects by hand | Open it in your browser at [/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) |
 | [SSConverter GUI](#ssconvertergui-desktop-gui-tool) | A simple desktop GUI | Download a binary from [Releases](https://github.com/cri-middleware/SSConverterGUI/releases) |
 | [`ssconverter-cli`](#ssconverter-cli-cli-ci-for-developers) | CI / batch / reproducibility | Download a binary from [SDK Releases](https://github.com/cri-middleware/SpriteStudio-SDK/releases) |
 | [`@spritestudio/ssconverter-core`](#ssconverter-core-library-embedding-in-your-own-app) | Embedding conversion in your own app/service | `npm i @spritestudio/ssconverter-core` |
@@ -55,7 +52,7 @@ A tool that converts a `.sspj` project in the browser and downloads the result a
 **ZIP**. It runs the WASM build of the converter directly in the browser.
 
 It is hosted beside these docs at
-<a href="../ssconverter/" target="_blank" rel="noreferrer">/ssconverter/</a>, so there is
+[/ssconverter/](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/), so there is
 nothing to install.
 
 ::: info Dropping a folder
@@ -66,7 +63,7 @@ Dropping a folder onto the drop zone uses the **File System Access API**, so it 
 
 ### Steps
 
-1. Open <a href="../ssconverter/" target="_blank" rel="noreferrer">the converter</a>.
+1. Open [the converter](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/).
 2. Drag and drop a **project folder** onto the drop zone, or pick one with `Browse...`.
    - The folder must contain **exactly one** `.sspj` (zero or multiple is an error).
    - Hidden files such as `.DS_Store` are ignored.
@@ -158,7 +155,7 @@ It is **bytes in, bytes out** and depends on neither the file system nor the DOM
 the same core runs in the browser, Node, a Web Worker, or an edge runtime
 (`ssconverter-web`'s browser UI and Node CLI both sit on top of this core).
 
-📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">Drop a `.sspj` and play it</a>**
+📂 **[Drop a `.sspj` and play it](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)**
 is this library and a player on one page — `ssplayer-webgl`, or `ssplayer-pixi` on WebGPU or
 WebGL, picked from a menu — and its source
 ([`examples/sspj-preview`](https://github.com/cri-middleware/SSPlayerForWeb/tree/main/examples/sspj-preview))
@@ -255,7 +252,7 @@ keyframes**. Fixing one frame of an animation re-downloads the atlas with it —
 what a differential update is for.
 
 Sharing stops working too. Embedded textures are deliberately kept out of the shared cache and are
-decoded per `SSPlayer` ([Resources and lifecycle](/customize/resources)). Five characters using one
+decoded per `SSPlayer` ([Resources and lifecycle](../customize/resources.md)). Five characters using one
 atlas cost one download and one GPU texture with separate texture files (Normal mode), and five of each
 when embedded.
 
@@ -272,6 +269,6 @@ this section still applies to the rest.
 
 Versioning the set also lines up with the runtime caches: both Pixi's `Assets` cache and the WebGL
 backend's texture cache are **keyed by URL**, so a changed URL cannot keep handing you the old
-texture ([Resources and lifecycle](/customize/resources)).
+texture ([Resources and lifecycle](../customize/resources.md)).
 
-For load-and-play steps, see the [Quick start](/setup/quickstart).
+For load-and-play steps, see the [Quick start](../setup/quickstart.md).

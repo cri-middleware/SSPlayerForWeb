@@ -80,7 +80,7 @@ When all three axes (`position` / `rotation` / `scale`) are on, the affine is ap
 
 ## Combining it with flip (`flipX` / `flipY`)
 
-The player's [flip and offset](/usage/basic#flip-and-offset) work with following rather than against it. `getPartTransform()` reports the part's mirrored pose, so **a target stays pinned to its part across a flip**.
+The player's [flip and offset](../usage/basic.md#flip-and-offset) work with following rather than against it. `getPartTransform()` reports the part's mirrored pose, so **a target stays pinned to its part across a flip**.
 
 With all three axes on (`scale: true`), the affine is written as-is and **the match is exact, mirroring included** — which also means **the target's own artwork is mirrored** (the mirror arrives as a negative scale). That is usually what you want from something meant to match the part exactly, but text or an asymmetric icon on the target will come out backwards.
 
@@ -173,7 +173,7 @@ nothing of their own and have no outline, and neither does a hidden part; a part
 has one. Like `getPartTransform()`, both read the frame last drawn and evaluate nothing.
 
 To make an animation a button that takes the pointer only on some of its parts, see
-[UI buttons (PixiJS)](/usage/pixi-ui), which builds on these two.
+[UI buttons (PixiJS)](../usage/pixi-ui.md), which builds on these two.
 
 ## Building a follow-target picker
 
@@ -202,7 +202,7 @@ The `examples/part-follow` demo does exactly this: the Ringo character's skinned
     - The part name does not exist in the current animation (always hidden, regardless of the `onHide` setting)
     - The part is hidden on this frame and `onHide` is `'hide'`
 - It only restores a hide **it imposed itself**, though. A target you hid with `visible = false` stays hidden, including through a detach.
-- `isPartHidden()` reports the part's `hide` in the frame the player last drew, the same frame `getPartTransform()` reports: the animation's **`hide` keyframe** with any force-hide from `setPartVisibilityOverride()` applied, its cascade included (see [Part control](/customize/part-overrides)). It evaluates nothing, so an override reads back from the next frame drawn, together with the drawing.
+- `isPartHidden()` reports the part's `hide` in the frame the player last drew, the same frame `getPartTransform()` reports: the animation's **`hide` keyframe** with any force-hide from `setPartVisibilityOverride()` applied, its cascade included (see [Part control](./part-overrides.md)). It evaluates nothing, so an override reads back from the next frame drawn, together with the drawing.
 - A part's world matrix is computed every frame regardless of `hide`, so with `onHide: 'follow'` (the default) **a hidden part is still followed**.
 - Part names resolve against the parts of the animation the player itself is running. **Parts inside an Instance part (the child animation) cannot be specified** (the Instance part itself can), and `getPartQuad()` / `hitTestPart()` do not see them.
 - Calling `attachToPart()` twice with the same target replaces the earlier attachment.
@@ -212,8 +212,8 @@ The `examples/part-follow` demo does exactly this: the Ringo character's skinned
 
 ## Using it from each host
 
-- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so reach the pull API through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
-- **RPG Maker MZ** — there are no plugin commands for part tracking. Get the `SSPlayer` instance from a script and call `attachToPart()`. See [RPG Maker MZ](/usage/rmmz).
+- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so reach the pull API through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](../usage/webgl.md).
+- **RPG Maker MZ** — there are no plugin commands for part tracking. Get the `SSPlayer` instance from a script and call `attachToPart()`. See [RPG Maker MZ](../usage/rmmz.md).
 - **TyranoScript / TyranoBuilder** — no tags are provided.
 
 ## What this feature is not for
@@ -222,6 +222,6 @@ These are easy to confuse with part tracking, but belong elsewhere.
 
 | What you want | Where it belongs |
 |---|---|
-| Changing a part's own colour / cell / visibility | The override API in [Part control (visibility / cell / color)](/customize/part-overrides) |
+| Changing a part's own colour / cell / visibility | The override API in [Part control (visibility / cell / color)](./part-overrides.md) |
 | Following a part in screen coordinates | Compose the player's display transform yourself (no API returns the screen transform) |
 | Following a part inside an Instance part | Not available: part names resolve only against the player's own animation. Follow the Instance part itself, or add a NULL part at that spot in the parent animation |

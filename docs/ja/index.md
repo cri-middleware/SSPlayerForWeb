@@ -44,9 +44,6 @@ features:
     linkText: パフォーマンスチューニング
 ---
 
-<!-- See the English index.md for why these are relative paths on a raw <a>,
-     not markdown links to cri-middleware.github.io. -->
-
 [SpriteStudio](https://www.webtech.co.jp/spritestudio/) は、手持ちのイラストにボーン・メッシュ・エフェクトを付けて動かす 2D アニメーションツールです。このプレイヤーは、その結果を Web ページやアプリで再生します。
 
 ::: tip SpriteStudio のデータが手元に無くても始められます
@@ -55,30 +52,30 @@ features:
 
 ## どこから始めるか {#where-to-start}
 
-自分の環境の行を選んでください。各ガイドで、インストールから画面にアニメーションを出すところまで進めます。プレイヤーが再生するのは、SpriteStudio の `.sspj` を変換した `.ssab` です。RPG ツクール MZ とティラノビルダーではプラグインがエディタの中で変換し、それ以外では自分で変換します（[アセットの準備](/ja/usage/assets)）。
+自分の環境の行を選んでください。各ガイドで、インストールから画面にアニメーションを出すところまで進めます。プレイヤーが再生するのは、SpriteStudio の `.sspj` を変換した `.ssab` です。RPG ツクール MZ とティラノビルダーではプラグインがエディタの中で変換し、それ以外では自分で変換します（[アセットの準備](./usage/assets.md)）。
 
 | 環境 | パッケージ | `.sspj` → `.ssab` | ガイド | ライブデモ |
 |---|---|---|---|---|
-| フレームワークの無い Web ページ（HTML のタグ 1 つ、またはコードから WebGL） | `@spritestudio/ssplayer-webgl` | 自分で変換 | [WebGL・Web Components](/ja/usage/webgl) | <a href="../examples/webgl/" target="_blank" rel="noreferrer">WebGL</a> |
-| PixiJS v8 のアプリ | `@spritestudio/ssplayer-pixi` | 自分で変換 | [PixiJS](/ja/usage/pixi) | <a href="../examples/pixi/" target="_blank" rel="noreferrer">PixiJS</a> |
-| PixiJS v8 のアプリで、アニメーションで描くボタン | `@spritestudio/ssplayer-pixi-ui` | 自分で変換 | [UI ボタン](/ja/usage/pixi-ui) | <a href="../examples/pixi/ui.html" target="_blank" rel="noreferrer">ボタン</a> |
-| Google 広告の HTML5 広告・アプリキャンペーンのプレイアブル | `@spritestudio/ssplayer-webgl` | 自分で変換 | [HTML5 広告](/ja/usage/html5-ads) | — |
-| RPG ツクール MZ | プラグイン | プラグインがテストプレイで | [RPG ツクール MZ](/ja/usage/rmmz) | <a href="../examples/rmmz/" target="_blank" rel="noreferrer">RPG ツクール MZ</a> |
-| TyranoScript | プラグイン | 自分で変換 | [TyranoScript](/ja/usage/tyrano) | <a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a> |
-| ティラノビルダー | プラグイン | プラグインがプロジェクトを開くときに | [ティラノビルダー](/ja/usage/tyranobuilder) | <a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">TyranoScript</a>（プラグインが組み込むのと同じランタイム） |
-| 自前のレンダラー | `@spritestudio/ssplayer-core` | 自分で変換 | [API リファレンス：どこから見るか](/ja/api-guide) | — |
+| フレームワークの無い Web ページ（HTML のタグ 1 つ、またはコードから WebGL） | `@spritestudio/ssplayer-webgl` | 自分で変換 | [WebGL・Web Components](./usage/webgl.md) | [WebGL](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/) |
+| PixiJS v8 のアプリ | `@spritestudio/ssplayer-pixi` | 自分で変換 | [PixiJS](./usage/pixi.md) | [PixiJS](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/) |
+| PixiJS v8 のアプリで、アニメーションで描くボタン | `@spritestudio/ssplayer-pixi-ui` | 自分で変換 | [UI ボタン](./usage/pixi-ui.md) | [ボタン](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html) |
+| Google 広告の HTML5 広告・アプリキャンペーンのプレイアブル | `@spritestudio/ssplayer-webgl` | 自分で変換 | [HTML5 広告](./usage/html5-ads.md) | — |
+| RPG ツクール MZ | プラグイン | プラグインがテストプレイで | [RPG ツクール MZ](./usage/rmmz.md) | [RPG ツクール MZ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/) |
+| TyranoScript | プラグイン | 自分で変換 | [TyranoScript](./usage/tyrano.md) | [TyranoScript](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/) |
+| ティラノビルダー | プラグイン | プラグインがプロジェクトを開くときに | [ティラノビルダー](./usage/tyranobuilder.md) | [TyranoScript](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)（プラグインが組み込むのと同じランタイム） |
+| 自前のレンダラー | `@spritestudio/ssplayer-core` | 自分で変換 | [API リファレンス：どこから見るか](./api-guide.md) | — |
 
 ::: tip 旧プレイヤーからの移行をお探しの方へ
-旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](/ja/migration_from_ss6)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
+旧 **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から移行する場合は、**[SS6Player からの移行](./migration_from_ss6.md)** で旧→新の API 対応とアセット再変換（`.ssfb` → `.ssab`）の手順を確認してください。
 :::
 
 ## ブラウザで試す
 
 インストール不要、すべてブラウザ上で動作します:
 
-- 🛠️ **<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>** — `.sspj` → `.ssab` をブラウザ内で変換
-- 📂 **<a href="../examples/sspj-preview/" target="_blank" rel="noreferrer">.sspj を落として再生する</a>** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能
-- 🎨 **<a href="../examples/override/" target="_blank" rel="noreferrer">パーツ上書きサンプル</a>** — 実行時の色 / セル / 表示の上書き（PixiJS）
+- 🛠️ **[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/)** — `.sspj` → `.ssab` をブラウザ内で変換
+- 📂 **[.sspj を落として再生する](https://cri-middleware.github.io/SSPlayerForWeb/examples/sspj-preview/)** — **手元のプロジェクト**をタブ内で変換して再生・シーク。ユーザーデータ／シグナル／サウンドのキーをタイムライン上に表示。プレイヤーは WebGL と PixiJS を切り替え可能
+- 🎨 **[パーツ上書きサンプル](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — 実行時の色 / セル / 表示の上書き（PixiJS）
 
 ## 関連リポジトリ
 

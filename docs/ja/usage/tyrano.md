@@ -6,14 +6,11 @@ description: TyranoScript 向けの ssplayer-tyranoscript プラグイン。イ�
 
 **TyranoScript** のシナリオに `[ss_*]` タグを書くだけで、**SpriteStudio**（`.ssab`）のアニメを表示・再生できます。プログラミングは不要です。アニメはキャラクター・背景・メッセージと同じ Tyrano のレイヤーに並び、Tyrano 標準の `[anim]` / `[kanim]` でも動かせます。ティラノスタジオで作ったプロジェクトでも同じように使えます。
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 `[ss_*]` タグだけで組んだヴィジュアルノベルのシーンです。
 
 ::: tip ティラノビルダーで制作する場合
-[ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。ランタイムは同じで、タグを書く代わりにコンポーネントパレットから配置でき、`.sspj` の変換も自動で行われます。このページのタグ一覧はそのまま有効です（各コンポーネントが書き出すのがこれらのタグです）。
+[ティラノビルダーで使う](./tyranobuilder.md) を参照してください。ランタイムは同じで、タグを書く代わりにコンポーネントパレットから配置でき、`.sspj` の変換も自動で行われます。このページのタグ一覧はそのまま有効です（各コンポーネントが書き出すのがこれらのタグです）。
 :::
 
 ## 動作環境
@@ -46,7 +43,7 @@ data/others/plugin/ssplayer/
 
 ## 2. アニメーションの変換（.sspj → .ssab）
 
-`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。[アセットの準備](/ja/usage/assets) のツールで変換し（<a href="../../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> ならブラウザーだけで済み、何もインストールしません）、できたものをプロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。
+`.sspj` は編集用の SpriteStudio プロジェクト、`.ssab` はプラグインが実際に再生するコンパクトなランタイムファイルです。[アセットの準備](./assets.md) のツールで変換し（[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) ならブラウザーだけで済み、何もインストールしません）、できたものをプロジェクトごとのフォルダのまま `data/others/ssdata/` に置きます。ssconverter-web の ZIP はプロジェクト名のフォルダを含んでいるので、`data/others/ssdata/` に展開するだけです。
 
 ```
 data/others/ssdata/
@@ -91,15 +88,15 @@ data/others/ssdata/
 [ss_play name="chr" anime="wait" loop="true"]     ; …待機ループへ戻す
 ```
 
-シナリオを止めずに同じことをするには `next=` を使います（[アニメの連鎖](/ja/usage/tyrano-tags#chaining-animations) を参照）。動く最小プロジェクトは `examples/tyranoscript-example` にあります。コメント付きの [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) で、登場、`[anim]` によるフェード、複数レイヤー、セーブ / ロードを順に試せます。
+シナリオを止めずに同じことをするには `next=` を使います（[アニメの連鎖](./tyrano-tags.md#chaining-animations) を参照）。動く最小プロジェクトは `examples/tyranoscript-example` にあります。コメント付きの [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks) で、登場、`[anim]` によるフェード、複数レイヤー、セーブ / ロードを順に試せます。
 
 ## 4. 提供タグ {#_4-tags}
 
-各 `[ss_*]` タグの属性と動作は [TyranoScript のタグ](/ja/usage/tyrano-tags) にあります（先読み、連鎖、クロスフェードとトラック、速度と区間、シグナル、トークアニメ、パーツ上書き）。
+各 `[ss_*]` タグの属性と動作は [TyranoScript のタグ](./tyrano-tags.md) にあります（先読み、連鎖、クロスフェードとトラック、速度と区間、シグナル、トークアニメ、パーツ上書き）。
 
 ## 5. 移動・エフェクトは `[anim]` / `[kanim]` で
 
-各 SS プレイヤーはレイヤー内の実要素で、プレイヤー名が識別子として付与されています。そのため他のキャラと同じように、Tyrano 標準の `[anim]` / `[kanim]` でそのまま動かせます。要素は**位置を決める箱**で、描画自体はレイヤー共有の canvas が受け持ち、毎フレーム要素に追従します（[リソースとライフサイクル](/ja/customize/resources) 参照）:
+各 SS プレイヤーはレイヤー内の実要素で、プレイヤー名が識別子として付与されています。そのため他のキャラと同じように、Tyrano 標準の `[anim]` / `[kanim]` でそのまま動かせます。要素は**位置を決める箱**で、描画自体はレイヤー共有の canvas が受け持ち、毎フレーム要素に追従します（[リソースとライフサイクル](../customize/resources.md) 参照）:
 
 ```
 [ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
@@ -149,5 +146,5 @@ SpriteStudio のサウンドイベントは TyranoScript 同梱の音声（howle
 
 ## 既知の制限
 
-未対応の範囲は [制約と適用範囲](/ja/limitations#tyranoscript-tyranobuilder) を参照してください。
+未対応の範囲は [制約と適用範囲](../limitations.md#tyranoscript-tyranobuilder) を参照してください。
 

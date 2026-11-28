@@ -10,13 +10,13 @@ Pick the one package that matches your environment.
 
 | Environment | Package |
 |---|---|
-| Frameworkless / drop-in (includes the `<ss-player>` Web Component) | [`@spritestudio/ssplayer-webgl`](/usage/webgl) |
-| Apps already built on **PixiJS v8** | [`@spritestudio/ssplayer-pixi`](/usage/pixi) |
-| Buttons drawn by animations in a **PixiJS v8** app (`@pixi/ui`) | [`@spritestudio/ssplayer-pixi-ui`](/usage/pixi-ui) |
+| Frameworkless / drop-in (includes the `<ss-player>` Web Component) | [`@spritestudio/ssplayer-webgl`](../usage/webgl.md) |
+| Apps already built on **PixiJS v8** | [`@spritestudio/ssplayer-pixi`](../usage/pixi.md) |
+| Buttons drawn by animations in a **PixiJS v8** app (`@pixi/ui`) | [`@spritestudio/ssplayer-pixi-ui`](../usage/pixi-ui.md) |
 | Building your own renderer on a custom engine | `@spritestudio/ssplayer-core` |
-| A game made in **RPG Maker MZ** | [`@spritestudio/ssplayer-rmmz`](/usage/rmmz) (a plugin) |
-| A **TyranoScript** visual novel | [`@spritestudio/ssplayer-tyranoscript`](/usage/tyrano) (a plugin) |
-| A game made in **TyranoBuilder** | [`@spritestudio/ssplayer-tyranobuilder`](/usage/tyranobuilder) (a `.tbp` plugin) |
+| A game made in **RPG Maker MZ** | [`@spritestudio/ssplayer-rmmz`](../usage/rmmz.md) (a plugin) |
+| A **TyranoScript** visual novel | [`@spritestudio/ssplayer-tyranoscript`](../usage/tyrano.md) (a plugin) |
+| A game made in **TyranoBuilder** | [`@spritestudio/ssplayer-tyranobuilder`](../usage/tyranobuilder.md) (a `.tbp` plugin) |
 
 Each renderer package re-exports `@spritestudio/ssplayer-core`, so you don't need to
 install the core separately; `@spritestudio/ssplayer-pixi-ui` re-exports `@spritestudio/ssplayer-pixi`
@@ -24,7 +24,7 @@ in the same way.
 
 RPG Maker MZ, TyranoScript and TyranoBuilder take a plugin rather than an npm package, and
 need no code: each one's page has its whole setup, and what each does not cover is in
-[Limitations & Scope](/limitations). The rest of this page installs the other packages.
+[Limitations & Scope](../limitations.md). The rest of this page installs the other packages.
 
 ## Install
 
@@ -52,7 +52,7 @@ npm install @spritestudio/ssplayer-pixi pixi.js
 `pixi.js@^8.19` is a **peer dependency**, so add it to your app.
 
 No bundler? Both load straight from a CDN — see
-[WebGL](/usage/webgl#without-a-bundler-cdn) or [PixiJS](/usage/pixi#without-a-bundler-cdn).
+[WebGL](../usage/webgl.md#without-a-bundler-cdn) or [PixiJS](../usage/pixi.md#without-a-bundler-cdn).
 
 ## Prerequisites
 
@@ -60,9 +60,9 @@ No bundler? Both load straight from a CDN — see
   version 2 for `ssplayer-pixi`). `ssplayer-pixi` also runs on **WebGPU**: PixiJS v8
   uses WebGL unless you pass `preference: 'webgpu'` to `app.init()`, and then falls
   back to WebGL where the browser has no WebGPU.
-- The browser must support **WebAssembly SIMD** (see [Limitations & Scope](/limitations#browser-requirements)).
+- The browser must support **WebAssembly SIMD** (see [Limitations & Scope](../limitations.md#browser-requirements)).
 - Projects must be authored in **SpriteStudio 7.6 or later**.
-- Playback needs a **`.ssab` (runtime binary)**. See [Preparing assets](/usage/assets)
+- Playback needs a **`.ssab` (runtime binary)**. See [Preparing assets](../usage/assets.md)
   for how to convert a SpriteStudio `.sspj`.
 
-Next, head to the [Quick start](/setup/quickstart).
+Next, head to the [Quick start](./quickstart.md).

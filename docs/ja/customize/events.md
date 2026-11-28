@@ -37,14 +37,14 @@ off(); // 購読解除
 | `onSignal` | `commandId` と `params`（パラメータ ID から真偽値・数値・文字列への対応）。有効なシグナルだけが届きます |
 | `onAudio` | `soundName`・`soundNameHash`・`soundListNameHash`・`loopNum`（再生回数） |
 
-`onAnimationStarted` / `onAnimationFinished` / `onAnimationLooped` は引数を取りません。`<ss-player>` では、同じイベントが要素上の DOM イベント（`animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`）として届き、中身は `detail` にあります（[WebGL・Web Components で使う](/ja/usage/webgl)を参照）。`onFrame` などは `el.player` にあります。
+`onAnimationStarted` / `onAnimationFinished` / `onAnimationLooped` は引数を取りません。`<ss-player>` では、同じイベントが要素上の DOM イベント（`animationstarted`・`animationfinished`・`animationlooped`・`userdata`・`signal`・`audio`）として届き、中身は `detail` にあります（[WebGL・Web Components で使う](../usage/webgl.md)を参照）。`onFrame` などは `el.player` にあります。
 
 このほかに、オーサリングされたイベントではなく**フレームが進むたび**に発火する
-`onFrame` があります。そのフレームのパーツ変換が確定するタイミングです。詳しくは[パーツトラッキング](/ja/customize/part-following) を参照してください。
+`onFrame` があります。そのフレームのパーツ変換が確定するタイミングです。詳しくは[パーツトラッキング](./part-following.md) を参照してください。
 
 ## 複数のアニメーションを再生しているとき
 
-[モーションブレンド](/ja/customize/motion-blending)では 1 つのプレイヤーで複数のアニメーションを同時に再生できますが、既定では**トラック 0 の主アニメーションだけがイベントを発火します**。ほかのトラックのオーバーレイや、トラックに混ぜたもう 1 本のアニメーションは、しきい値をその weight 以下に下げたときだけ発火します。
+[モーションブレンド](./motion-blending.md)では 1 つのプレイヤーで複数のアニメーションを同時に再生できますが、既定では**トラック 0 の主アニメーションだけがイベントを発火します**。ほかのトラックのオーバーレイや、トラックに混ぜたもう 1 本のアニメーションは、しきい値をその weight 以下に下げたときだけ発火します。
 
 ```ts
 const run = player.addTrackSource(0, 'run', 0.3);
@@ -76,4 +76,4 @@ player.audioManager = myAudioManager; // IAudioManager 実装（load() の前に
 
 ## シーク時の扱い
 
-シークは通過したフレームのイベントを発火しません。報告されるのは移動先フレームのユーザーデータ・シグナル・オーディオキーだけです。再生ヘッドはそのオーディオキーを通過していないため、その音は鳴りません（`onAudio` には届きます）。`frameNo` でも `setTrackFrame(0, …)` でも、再生中でも一時停止中でも同じです。`onAudio` から自前で音を鳴らす場合は、シーク後の最初の更新で報告された移動先フレームのキーを飛ばしてください。区間内のキーをすべて受け取りたい場合は、シークせずに再生で通過させてください（[基本的な再生](/ja/usage/basic) の `setAnimationSection`）。
+シークは通過したフレームのイベントを発火しません。報告されるのは移動先フレームのユーザーデータ・シグナル・オーディオキーだけです。再生ヘッドはそのオーディオキーを通過していないため、その音は鳴りません（`onAudio` には届きます）。`frameNo` でも `setTrackFrame(0, …)` でも、再生中でも一時停止中でも同じです。`onAudio` から自前で音を鳴らす場合は、シーク後の最初の更新で報告された移動先フレームのキーを飛ばしてください。区間内のキーをすべて受け取りたい場合は、シークせずに再生で通過させてください（[基本的な再生](../usage/basic.md) の `setAnimationSection`）。

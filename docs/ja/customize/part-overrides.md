@@ -4,14 +4,11 @@ description: コードからパーツの色・セル・表示を上書きする�
 
 # パーツ制御（表示 / セル / 色）
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
 パーツ単位のランタイムオーバーライドは、「このパーツを**今**この色に / このセルに / 非表示に」とスクリプトから指示する機能です。オーバーライドはキーフレームやアニメーションのブレンドよりも優先されるので、アニメーションと取り合いになりません。
 
 `SSPlayer`（PixiJS・WebGL の両バックエンド）の両方で、同じメソッド名で使えます。
 
-▶️ **<a href="../../examples/override/" target="_blank" rel="noreferrer">ライブデモ</a>** — 色 / 表示 / セルの 3 種類を順に切り替えるサンプル（ソースは `examples/override-example`）
+▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — 色 / 表示 / セルの 3 種類を順に切り替えるサンプル（ソースは `examples/override-example`）
 
 ## 基本的な使い方
 
@@ -125,10 +122,10 @@ player.setPartColorOverrideCorners('body', [
 
 コードを書かないホスト向けには、それぞれの流儀のオーサリング面を用意しています。
 
-- **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、オーバーライドは `el.player`（下層の `SSPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](/ja/usage/webgl) を参照してください。
-- **RPG ツクール MZ** — イベントの**プラグインコマンド**（SSパーツ色変更 / SSパーツ表示切替 / SSパーツセル差替 / SSパーツ上書き解除）から操作できます。設定内容はピクチャに保存され、**セーブ・ロードをまたいでも復元されます**。詳しくは [RPG ツクール MZ で使う](/ja/usage/rmmz) を参照してください。
-- **TyranoScript** — シナリオに `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` タグを書いて操作できます。設定内容はセーブに含まれ、ロード時に自動で復元されます。詳しくは [TyranoScript で使う](/ja/usage/tyrano) を参照してください。
-- **ティラノビルダー** — パレットの「SpriteStudio パーツの色 / パーツの表示 / パーツの画像」と「SpriteStudio パーツの変更を解除」コンポーネントが、同じ 4 つのタグを書き込みます。詳しくは [ティラノビルダーで使う](/ja/usage/tyranobuilder) を参照してください。
+- **`<ss-player>` Web Component** — 要素自体は再生系のメソッドだけを持つ薄い皮なので、オーバーライドは `el.player`（下層の `SSPlayer`）経由で呼び出します。詳しくは [WebGL・Web Components で使う](../usage/webgl.md) を参照してください。
+- **RPG ツクール MZ** — イベントの**プラグインコマンド**（SSパーツ色変更 / SSパーツ表示切替 / SSパーツセル差替 / SSパーツ上書き解除）から操作できます。設定内容はピクチャに保存され、**セーブ・ロードをまたいでも復元されます**。詳しくは [RPG ツクール MZ で使う](../usage/rmmz.md) を参照してください。
+- **TyranoScript** — シナリオに `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` タグを書いて操作できます。設定内容はセーブに含まれ、ロード時に自動で復元されます。詳しくは [TyranoScript で使う](../usage/tyrano.md) を参照してください。
+- **ティラノビルダー** — パレットの「SpriteStudio パーツの色 / パーツの表示 / パーツの画像」と「SpriteStudio パーツの変更を解除」コンポーネントが、同じ 4 つのタグを書き込みます。詳しくは [ティラノビルダーで使う](../usage/tyranobuilder.md) を参照してください。
 
 ## この機能で扱わないもの
 
@@ -136,7 +133,7 @@ player.setPartColorOverrideCorners('body', [
 
 | やりたいこと | 正しい方法 |
 |---|---|
-| テクスチャ / セルマップまるごとの差し替え | [テクスチャ差し替え（着せ替え）](/ja/customize/texture-replacement) — セルマップにバインドされたテクスチャまるごとを差し替えます。こちらは**パーツ 1 つ単位**でセルを差し替える機能です |
-| 反転（フリップ） | プレイヤーの `flipX` / `flipY` を使います — [基本的な再生](/ja/usage/basic#flip-and-offset)を参照してください |
+| テクスチャ / セルマップまるごとの差し替え | [テクスチャ差し替え（着せ替え）](./texture-replacement.md) — セルマップにバインドされたテクスチャまるごとを差し替えます。こちらは**パーツ 1 つ単位**でセルを差し替える機能です |
+| 反転（フリップ） | プレイヤーの `flipX` / `flipY` を使います — [基本的な再生](../usage/basic.md#flip-and-offset)を参照してください |
 | オブジェクト全体の色 / 不透明度 / 描画順 | プレイヤー（`SSPlayer` / コンテナ）側のプロパティで指定します。パーツ単位の関心事ではありません |
 | インスタンスパーツの差し替え | 将来対応予定です（SDK の Instance Lifecycle API 待ち。[ROADMAP](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) を参照） |

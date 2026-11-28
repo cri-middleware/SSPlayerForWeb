@@ -7,7 +7,7 @@ description: "Building SpriteStudio Player for Web from a checkout, using a chan
 For whoever works on SpriteStudio Player for Web, or changes it for a project of their own. It
 assumes a checkout and asks more of you than the rest of the site. How the packages fit together,
 and why the plugins are built the way they are, is on
-[How the Player Is Put Together](/development/architecture).
+[How the Player Is Put Together](./architecture.md).
 
 What every SpriteStudio Player shares — how playback, motion blending, sound keys and part
 tracking behave — is written once, in the SDK's

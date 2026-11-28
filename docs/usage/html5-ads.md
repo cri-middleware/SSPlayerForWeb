@@ -14,7 +14,7 @@ builds that ZIP from one `.ssab`, and the result passes Google's
 ## Build the bundle
 
 1. Convert the project with its textures embedded: the **Embedded** option of the converters in
-   [Preparing assets](/usage/assets), `--embedded` on the command line.
+   [Preparing assets](./assets.md), `--embedded` on the command line.
 2. From the repository root, install and build, then run the script. Get the runtime with
    `pnpm run download:wasm` (prebuilt) or `pnpm run build:wasm` (from source; needs Rust and wasm-pack):
 
@@ -28,7 +28,7 @@ It writes `index.html` and `ad.js` under `examples/html5-ad/out/<name>/`, and
 `examples/html5-ad/out/<name>.zip` to upload. `--help` lists the options, including `player=` and
 `wasm=` for a player bundle and runtime installed from npm.
 
-The bundle is the `SSSurface` setup of [WebGL & Web Components](/usage/webgl) with its inputs
+The bundle is the `SSSurface` setup of [WebGL & Web Components](./webgl.md) with its inputs
 inlined: `SSSurface.initialize` takes the runtime's bytes, `loadBuffer` takes the pack's, and the
 surface is created with `autoStart: true`.
 

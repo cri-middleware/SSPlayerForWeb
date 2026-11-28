@@ -6,13 +6,10 @@ description: ティラノビルダー向けの ssplayer-tyranobuilder プラグ�
 
 **SpriteStudio** のアニメを、ティラノビルダーのコンポーネントパレットから配置できます。シナリオを書く必要はありません。SpriteStudio のプロジェクトをゲーム内のフォルダに置いておけば、プロジェクトを開いたときにエディタ側が自動で変換し、以降は指示したときに変換し直します。動作確認は **TyranoBuilder Ver 3.00** で行っています。**SpriteStudio 7.6 以上**で作成したプロジェクトが必要です。
 
-シナリオを手書きする場合は [TyranoScript で使う](/ja/usage/tyrano) を参照してください。同じアニメを
+シナリオを手書きする場合は [TyranoScript で使う](./tyrano.md) を参照してください。同じアニメを
 `[ss_*]` タグで扱えます。
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../../examples/tyranoscript/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** —
 TyranoScript 版のサンプルシーンです。ランタイムは同じなのでビルダー専用のデモはありません。コンポーネントで配置した結果もここと同じ見た目になります。
 
 ## 1. インストール
@@ -105,7 +102,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 **アニメデータ**のプルダウンには、**`data/` 以下のすべての `.ssab`** が並びます（自動変換したものが先、残りはアルファベット順）。
 
-[`ssconverter-web` / SSConverter GUI / `ssconverter-cli`](/ja/usage/assets) で変換して手動でコピーしたデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。**アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
+[`ssconverter-web` / SSConverter GUI / `ssconverter-cli`](./assets.md) で変換して手動でコピーしたデータも、同じように選べます。シーンの画像の隣に置くなど、プロジェクトの都合で構いません。**アニメーション**のプルダウンは `.ssab` そのものから読むので、手動で入れたデータでも正確です。
 
 自動で同期されるのは `SpriteStudio_Source/` に置いたものだけです。ただし `data/others/ssdata/` から**コピーした**データなら **今すぐ再変換** が使え、生成元のフォルダではなく今ある場所へ書き直します。まったく別の場所で変換したデータには変換元のプロジェクトがないため、その旨を表示します。
 
@@ -117,7 +114,7 @@ SpriteStudio_Source/Ringo/Ringo.sspj   →   data/others/ssdata/Ringo/Ringo.ssab
 
 ## コンポーネント {#the-components}
 
-各コンポーネントの働きと設定項目は [ティラノビルダーのコンポーネント](/ja/usage/tyranobuilder-components) にあります。
+各コンポーネントの働きと設定項目は [ティラノビルダーのコンポーネント](./tyranobuilder-components.md) にあります。
 
 ## うまくいかないとき {#troubleshooting}
 

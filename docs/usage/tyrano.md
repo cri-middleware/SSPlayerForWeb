@@ -9,14 +9,11 @@ writing `[ss_*]` tags in your scenario — no coding required. The animations si
 layers alongside characters, backgrounds and messages, and Tyrano's own `[anim]` / `[kanim]`
 move them too. Projects made in TyranoStudio use it the same way.
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — a
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — a
 visual-novel scene driven entirely by `[ss_*]` tags.
 
 ::: tip Building in TyranoBuilder?
-See [TyranoBuilder](/usage/tyranobuilder) instead. It is the same runtime, reached from the
+See [TyranoBuilder](./tyranobuilder.md) instead. It is the same runtime, reached from the
 component palette rather than by writing tags, and it converts your `.sspj` for you. The tag
 reference on this page still applies — the components write these tags.
 :::
@@ -61,8 +58,8 @@ nothing. The paths inside `init.ks` are written against that location too.
 ## 2. Convert your animation (.sspj → .ssab)
 
 `.sspj` is your editable SpriteStudio project; `.ssab` is the compact runtime file the
-plugin actually plays. Convert it with one of the tools in [Preparing assets](/usage/assets) —
-<a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> runs in the browser
+plugin actually plays. Convert it with one of the tools in [Preparing assets](./assets.md) —
+[ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) runs in the browser
 with nothing to install — and put what it gives you under `data/others/ssdata/`, one folder per
 project. The ZIP from ssconverter-web already holds that folder, named after the project, so
 extracting it there is all it takes.
@@ -120,14 +117,14 @@ and an empty one picks the first:
 ```
 
 The same without stopping the scenario is a `next=` — see
-[Chaining animations](/usage/tyrano-tags#chaining-animations). A runnable minimal project lives at
+[Chaining animations](./tyrano-tags.md#chaining-animations). A runnable minimal project lives at
 `examples/tyranoscript-example`; its commented
 [`first.ks`](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/examples/tyranoscript-example/data/scenario/first.ks)
 works through entrances, `[anim]` fades, several layers and save/load.
 
 ## 4. Tags
 
-Every `[ss_*]` tag, with what it takes and what it does, is on [TyranoScript tags](/usage/tyrano-tags):
+Every `[ss_*]` tag, with what it takes and what it does, is on [TyranoScript tags](./tyrano-tags.md):
 preloading, chaining, crossfades and tracks, speed and sections, signals, talk animations and part
 overrides.
 
@@ -136,7 +133,7 @@ overrides.
 Each SS player is a real element on the layer, tagged with your player name, so Tyrano's
 own `[anim]` / `[kanim]` tags drive it directly — just like any character. The element is a
 positioning box: the drawing happens on the layer's shared canvas, which follows the element
-every frame (see [Resources & lifecycle](/customize/resources)):
+every frame (see [Resources & lifecycle](../customize/resources.md)):
 
 ```
 [ss_new name="ringo" storage="others/ssdata/Ringo/Ringo.ssab" layer="0" x="640" y="480"]
@@ -219,5 +216,5 @@ the player; neither touches any other sound. `[stopse]` does not reach these sou
 ## Known limitations
 
 What this plugin does not cover is listed in
-[Limitations & Scope](/limitations#tyranoscript-tyranobuilder).
+[Limitations & Scope](../limitations.md#tyranoscript-tyranobuilder).
 

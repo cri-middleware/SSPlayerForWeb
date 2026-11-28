@@ -9,13 +9,10 @@ code to write. Drop a SpriteStudio project into a folder in your game and the ed
 it for you — when the project opens, and again whenever you ask.
 Verified on **TyranoBuilder Ver 3.00**. You need a project made in **SpriteStudio 7.6 or later**.
 
-Writing scenarios by hand instead? See [TyranoScript](/usage/tyrano), which gives you the same
+Writing scenarios by hand instead? See [TyranoScript](./tyrano.md), which gives you the same
 animations as `[ss_*]` tags.
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../examples/tyranoscript/" target="_blank" rel="noreferrer">Live demo</a>** — the
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/tyranoscript/)** — the
 TyranoScript sample scene. There is no separate Builder demo because it is the same runtime:
 what the components place is what you see here.
 
@@ -148,7 +145,7 @@ if the plugin does not seem to be doing anything.
 The **Animation pack** dropdown lists **every `.ssab` anywhere under `data/`**, with the
 imported ones first and the rest alphabetically.
 
-A pack you converted with [`ssconverter-web`, SSConverter GUI or `ssconverter-cli`](/usage/assets)
+A pack you converted with [`ssconverter-web`, SSConverter GUI or `ssconverter-cli`](./assets.md)
 and copied in by hand shows up like any other — put it wherever suits your project (next to a
 scene's images, for instance). The **Animation** dropdown is read out of the `.ssab` itself, so
 it is accurate for those packs too.
@@ -170,7 +167,7 @@ project here to rebuild it from, and the plugin says so.
 ## The components
 
 The components — what each does and the fields it has — are on
-[TyranoBuilder components](/usage/tyranobuilder-components).
+[TyranoBuilder components](./tyranobuilder-components.md).
 
 ## Troubleshooting
 
