@@ -4,7 +4,7 @@ description: SpriteStudio Player for Web をチェックアウトからビルド
 
 # ビルドガイド
 
-SpriteStudio Player for Web を開発する人と、自分のプロジェクトのために改造する人に向けたページです。チェックアウトがある前提で、サイトのほかのページより読み手に求めるものが多くなっています。パッケージの組み合わせと、プラグインがこの作りになっている理由は[プレイヤーの構成](/ja/development/architecture)にあります。
+SpriteStudio Player for Web を開発する人と、自分のプロジェクトのために改造する人に向けたページです。チェックアウトがある前提で、サイトのほかのページより読み手に求めるものが多くなっています。パッケージの組み合わせと、プラグインがこの作りになっている理由は[プレイヤーの構成](./architecture.md)にあります。
 
 SpriteStudio の Player に共通すること（再生・モーションブレンド・サウンドキー・パーツトラッキングの振る舞い）は、SDK の[ポーティングガイド](https://github.com/cri-middleware/SpriteStudio-SDK/tree/develop/libs/ssruntime/docs)に一度だけ書いてあります。
 

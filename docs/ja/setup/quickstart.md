@@ -9,7 +9,7 @@ PixiJS v8 アプリ向けの `ssplayer-pixi` の両方を示します。使う�
 
 ## `.ssab` に変換して置く
 
-このドキュメントと同じ場所でホストしている <a href="../../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a> を開き、SpriteStudio のプロジェクトのフォルダをドロップして **⚡ Convert & Download** を押します。ダウンロードした ZIP を、アプリがそのまま配信するディレクトリ（`public/` など）に展開します。
+このドキュメントと同じ場所でホストしている [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/) を開き、SpriteStudio のプロジェクトのフォルダをドロップして **⚡ Convert & Download** を押します。ダウンロードした ZIP を、アプリがそのまま配信するディレクトリ（`public/` など）に展開します。
 
 ```
 public/
@@ -19,14 +19,14 @@ public/
     └── …
 ```
 
-以下のコードは、これを `/Ringo/Ringo.ssab` として読み込みます。ほかの変換方法（デスクトップアプリ、CLI、ライブラリ）は [アセットの準備](/ja/usage/assets) にあります。
+以下のコードは、これを `/Ringo/Ringo.ssab` として読み込みます。ほかの変換方法（デスクトップアプリ、CLI、ライブラリ）は [アセットの準備](../usage/assets.md) にあります。
 
 ::: tip SpriteStudio のデータが手元に無くても始められます
 [公式のサンプルデータ](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)がそのまま使えます。キャラクターなら
 [Ringo](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#ringo)、エフェクトを含むものなら[パーティクル](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/#Perticle_sample)が手頃です。
 :::
 
-以下の import はバンドラー（Vite、webpack など）を使う前提です。バンドラーを使わない場合は CDN 版を使います。[WebGL](/ja/usage/webgl#without-a-bundler-cdn)、[PixiJS](/ja/usage/pixi#without-a-bundler-cdn) を参照してください。
+以下の import はバンドラー（Vite、webpack など）を使う前提です。バンドラーを使わない場合は CDN 版を使います。[WebGL](../usage/webgl.md#without-a-bundler-cdn)、[PixiJS](../usage/pixi.md#without-a-bundler-cdn) を参照してください。
 
 ## ssplayer-webgl（依存なし）
 
@@ -109,4 +109,4 @@ main().catch(console.error);
 - **`initialize()` は一度だけ**：WASM ランタイムはアプリ起動時に 1 回初期化すれば十分です（`SSSurface.initialize()` / `SSPlayer.initialize()`）。
 - **Pixi では `update()` を呼ばない**：`SSPlayer` は `Ticker.shared` に自動登録されます。
 
-次は [基本的な再生](/ja/usage/basic) で再生制御 API を見ていきます。
+次は [基本的な再生](../usage/basic.md) で再生制御 API を見ていきます。

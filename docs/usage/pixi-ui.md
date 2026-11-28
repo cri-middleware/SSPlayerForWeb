@@ -9,10 +9,7 @@ button and has it show what the button is doing — hovered, pressed, disabled, 
 irregular shape, take the pointer on the artwork only. It is a package of its own, so an app that only
 plays animations pays nothing for it.
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../examples/pixi/ui.html" target="_blank" rel="noreferrer">Live demo</a>** — two buttons
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/ui.html)** — two buttons
 drawn by Ringo, one taking the pointer only on the parts you pick.
 
 ```bash
@@ -96,7 +93,7 @@ start.hitParts = ['face', 'ribbon'];
 ```
 
 What counts as a part's area is its outline as drawn — see
-[A part's outline](/customize/part-following#a-parts-outline). The button answers through its
+[A part's outline](../customize/part-following.md#a-parts-outline). The button answers through its
 `hitArea`, so the cursor turns into a hand only over those parts, and a pointer around the artwork
 reaches whatever is behind the button. Only the pointer is narrowed: keyboard focus and a screen reader
 reach the button as before.
@@ -137,6 +134,6 @@ driver.show('normal', true); // under reduced motion
 
 ## See also
 
-- [Part tracking](/customize/part-following) — the outlines the hit test uses, and the transforms beside them
-- [Basic playback](/usage/basic) — playback sections, by frame and by label
-- [PixiJS](/usage/pixi) — the player the button is drawn with
+- [Part tracking](../customize/part-following.md) — the outlines the hit test uses, and the transforms beside them
+- [Basic playback](./basic.md) — playback sections, by frame and by label
+- [PixiJS](./pixi.md) — the player the button is drawn with

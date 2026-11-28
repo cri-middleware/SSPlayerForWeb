@@ -72,7 +72,7 @@ with the plain program and the shader is dropped. Both renderers behave this way
 If a part needs both, split it into two parts at authoring time.
 :::
 
-Shader parts also break batching — see [Performance tuning](/customize/performance#what-breaks-batching).
+Shader parts also break batching — see [Performance tuning](./performance.md#what-breaks-batching).
 
 ::: tip Validating the look
 Prioritize **matching the look in the SpriteStudio editor** over the spec values.

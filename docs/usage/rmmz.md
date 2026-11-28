@@ -4,15 +4,12 @@ description: "The ssplayer-rmmz plugin for RPG Maker MZ: install, convert, deplo
 
 # RPG Maker MZ
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
 This plugin plays **SpriteStudio** (`.ssab`) animations in **RPG Maker MZ**, driven by
 plugin commands with no code to write. An animation rides on a picture and sits in the
 correct Z-order with your characters and pictures. You need a project made in
 **SpriteStudio 7.6 or later**.
 
-▶️ **<a href="../examples/rmmz/" target="_blank" rel="noreferrer">Live demo</a>** — run
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** — run
 the bundled sample MZ project in your browser.
 
 ## 1. Install
@@ -116,7 +113,7 @@ log file.
 
 ### Converting it yourself
 
-If you convert with one of the tools in [Preparing assets](/usage/assets), such as
+If you convert with one of the tools in [Preparing assets](./assets.md), such as
 ssconverter-web, put the project-named folder it gives you in `spritestudio/`
 (`spritestudio/Ringo/Ringo.ssab`). You then need neither `ssconverter_bg.wasm` nor
 `SpriteStudio_Source/`.
@@ -124,7 +121,7 @@ ssconverter-web, put the project-named folder it gives you in `spritestudio/`
 ## 3. Plugin commands
 
 The plugin commands — the name each shows in the MZ editor, its arguments and what it does — are on
-[RPG Maker MZ plugin commands](/usage/rmmz-commands).
+[RPG Maker MZ plugin commands](./rmmz-commands.md).
 
 ## 4. Deployment
 

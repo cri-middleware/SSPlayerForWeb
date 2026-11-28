@@ -70,7 +70,7 @@ player.subFrameEnabled = false;  // disable sub-frame interpolation (on by defau
 ::: warning
 Turn `subFrameEnabled` off on its own, as above, and leave `frameSkipEnabled` on. The reverse is the
 pair: `frameSkipEnabled = false` should come with `subFrameEnabled = false`, or the timing drifts
-(see [Basic playback](/usage/basic)).
+(see [Basic playback](../usage/basic.md)).
 :::
 
 ## What breaks batching
@@ -81,7 +81,7 @@ batches, and the cost is proportional to how many parts are involved:
 - **Integration shaders (`ss-*`)**. A batch containing a shader part is drawn **one part at a
   time**, each with its own program and uniforms, so the shader parts composite correctly. Frames
   with no shader parts skip the check entirely and pay nothing. See
-  [Shaders & blend modes](/customize/shaders).
+  [Shaders & blend modes](./shaders.md).
 - **Masking**. Masked content goes through a separate coverage pre-pass. On PixiJS, set
   `player.maskEnabled = false` to drop that pass for animations that do not use mask parts (the
   WebGL renderer has no such toggle). Without the pass every part draws unclipped, including a
@@ -108,7 +108,7 @@ Players that `load()` the same `.ssab` URL also share one parsed pack; each keep
 playback state (a pack bound with `loadBuffer()` has no URL and is not shared). On WebGL the GL
 context belongs to the `SSSurface`, so only players on the same surface share textures: put a crowd
 of the same character on one surface. See
-[Resources & lifecycle](/customize/resources).
+[Resources & lifecycle](./resources.md).
 
 ## Measurement tips
 

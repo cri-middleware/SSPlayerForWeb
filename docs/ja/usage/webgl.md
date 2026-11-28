@@ -6,10 +6,7 @@ description: エンジンに依存しない単体の WebGL レンダラー。ss-
 
 `@spritestudio/ssplayer-webgl` は、外部のレンダリングエンジン（PixiJS など）に依存しない単体の WebGL 1/2 レンダラーです。依存関係やファイルサイズを抑えたい構成に向いており、広告バナーやシンプルな Web ページにそのまま組み込めます。フレームワークを使わないドロップイン用途を想定しています。
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../../examples/webgl/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** —
 フレームワークなしのページで `<ss-player>` を動かす例です。`.ssab` をドロップすれば手元のデータも再生できます。
 
 ## インストール
@@ -83,7 +80,7 @@ pnpm add @spritestudio/ssplayer-webgl
 
 **オーバーレイか standalone か。** ブラウザはページが持てる WebGL コンテキストの数に上限を設けているため、既定ではすべての `<ss-player>` がページに重ねた **1 枚のオーバーレイキャンバス** を共有し、要素はアニメーションを描く箱でしかありません。これで何個並べても軽く済みますが、要素自身の CSS はアニメーションの形に影響しません。要素の `transform`、`filter`、`clip-path`、`border-radius` は届かず、重なり順も要素のものとは別です。`standalone` を付けると要素が自前のキャンバスを持ち、これらがすべて効きます。CSS の効果や不透明な背景、独自の重なり順が必要な要素向けの指定です。上の表のコンテキスト用オプションはこの専用コンテキストの設定なので、オーバーレイの要素には効きません。共有オーバーレイのオプションは `SSOverlay.getOrCreate('default', options)` で渡します（`SSOverlay` は `@spritestudio/ssplayer-webgl` から import できます）。最初の `<ss-player>` が接続する前に呼んでください。最初に接続した要素が、オプションなしでオーバーレイを作るためです。要素の `overlay="<id>"` 属性で別のオーバーレイを指定できますが、WebGL コンテキストが 1 つ増えます。
 
-JavaScript から制御するには、`await el.ready` のあとで、要素の `play()`・`pause()`・`resume()`・`stop()`・`setAnimation(name)` を呼びます。[基本的な再生](/ja/usage/basic) にあるそれ以外の再生 API は、下層の `SSPlayer` である `el.player` にあります。
+JavaScript から制御するには、`await el.ready` のあとで、要素の `play()`・`pause()`・`resume()`・`stop()`・`setAnimation(name)` を呼びます。[基本的な再生](./basic.md) にあるそれ以外の再生 API は、下層の `SSPlayer` である `el.player` にあります。
 
 この要素は意図的に再生系の動詞だけを持つ薄い皮です。それ以外 — パーツ単位の上書きを含む — は、下層の `SSPlayer` である `el.player` 経由で呼び出します:
 
@@ -93,7 +90,7 @@ await el.ready;
 el.player.setPartColorOverride('apple', 0x0033ffbf);
 ```
 
-パーツ変換の読み出しも同じ経路です。このプレイヤーはシーングラフを持たないため、パーツへの追従は `onFrame()` から `el.player.getPartTransform()` を読んで自前の要素を配置する形になります。詳しくは [パーツトラッキング](/ja/customize/part-following) を参照してください。
+パーツ変換の読み出しも同じ経路です。このプレイヤーはシーングラフを持たないため、パーツへの追従は `onFrame()` から `el.player.getPartTransform()` を読んで自前の要素を配置する形になります。詳しくは [パーツトラッキング](../customize/part-following.md) を参照してください。
 
 ## SSSurface と SSPlayer を直接使う場合
 

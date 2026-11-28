@@ -5,7 +5,7 @@ description: "How SpriteStudio Player for Web is put together — the playback s
 # How the Player Is Put Together
 
 For whoever works on SpriteStudio Player for Web, or changes it for a project of their own. It
-describes the parts by what they do; the [Build Guide](/development/build) builds them, puts a
+describes the parts by what they do; the [Build Guide](./build.md) builds them, puts a
 changed build into a game or an app, and checks it in the real hosts. Each package's README ends
 with a section for contributors that goes into that package.
 

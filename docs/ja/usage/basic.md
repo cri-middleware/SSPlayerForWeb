@@ -4,13 +4,10 @@ description: WebGL と PixiJS のプレイヤーに共通する再生制御 API�
 
 # 基本的な再生
 
-`SSPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](/ja/setup/quickstart) を参照してください。
+`SSPlayer`（WebGL）および `SSPlayer`（PixiJS v8）の共通の再生制御 API をまとめます。API の多くは両者で共通しています。読み込み〜再生の最小手順は [クイックスタート](../setup/quickstart.md) を参照してください。
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../../examples/webgl/" target="_blank" rel="noreferrer">WebGL デモ</a>** ·
-**<a href="../../examples/pixi/" target="_blank" rel="noreferrer">PixiJS デモ</a>** —
+▶️ **[WebGL デモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** ·
+**[PixiJS デモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/pixi/)** —
 このページの API が動いている状態をバックエンド別に見られます。どちらも `.ssab` のドロップ再生に対応しています。
 
 ## 読み込みとアニメーション選択
@@ -111,7 +108,7 @@ player.flipX = velocityX < 0;
 
 `flipX` の利点は、**プレイヤーの外側にいるものが反転を知らずに済む**ことです。DOM オーバーレイ、当たり判定の座標、別コンテナに置いたオブジェクト、`attachToPart(..., { addAsChild: false })` のターゲット — いずれも `getPartTransform()` を読むだけで正しい位置に付いてきます。`scale.x = -1` の場合は、これらすべてにホスト側で反転を掛け直す必要があります。
 
-逆に、`attachToPart()` で 3 軸すべてを駆動している（`scale: true`）場合は**両者に見た目の差はありません**。どちらのやり方でもターゲットは反転後のパーツに乗り、ターゲット自身の絵も裏返ります。既定の `scale: false` では差が出ます。`scale.x = -1` は子のターゲットを階層ごと裏返しますが、`flipX` ではターゲットの向きに 180 度の差が残ります（詳しくは [パーツトラッキング](/ja/customize/part-following)）。
+逆に、`attachToPart()` で 3 軸すべてを駆動している（`scale: true`）場合は**両者に見た目の差はありません**。どちらのやり方でもターゲットは反転後のパーツに乗り、ターゲット自身の絵も裏返ります。既定の `scale: false` では差が出ます。`scale.x = -1` は子のターゲットを階層ごと裏返しますが、`flipX` ではターゲットの向きに 180 度の差が残ります（詳しくは [パーツトラッキング](../customize/part-following.md)）。
 
 補足:
 
@@ -119,7 +116,7 @@ player.flipX = velocityX < 0;
 - 単位は**アニメーションローカルのピクセル**です。表示オブジェクトの変換の下に入るので、プレイヤーを拡大縮小していればオフセットもその分だけ拡大縮小されます。
   WebGL の `setTransform({ x, y })` とは別物で、あちらはプレイヤーそのものを動かします。
 - インスタンスパーツの子アニメーションは、親の反転を階層で受け継ぎます。子に対して個別に設定する必要はありません（設定しても効果はありません）。
-- `getPartTransform()` が返す変換にも反映されます。詳しくは [パーツトラッキング](/ja/customize/part-following) を参照してください。
+- `getPartTransform()` が返す変換にも反映されます。詳しくは [パーツトラッキング](../customize/part-following.md) を参照してください。
 
 TyranoScript / TyranoBuilder のタグは用意していません。スクリプトからプレイヤーを取得して設定してください。
 
@@ -130,7 +127,7 @@ player.getPartNames();          // 全パーツ名（インデックス順。個
 player.findPartIndex('body');    // 名前 → インデックス（不明なら -1）
 ```
 
-パーツ単位で色 / セル / 表示を実行時に上書きするには[パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください（こちらは PixiJS・WebGL 共通です）。
+パーツ単位で色 / セル / 表示を実行時に上書きするには[パーツ制御（表示 / セル / 色）](../customize/part-overrides.md) を参照してください（こちらは PixiJS・WebGL 共通です）。
 
 ---
 
@@ -151,4 +148,4 @@ WebGL 版パッケージでは、HTML に記述するだけで簡単に利用で
 JavaScript から DOM 要素を取得して、`play()` / `pause()` などのメソッドを呼ぶことも可能です。
 
 ---
-タイムラインイベント（ユーザーデータ / シグナル / サウンド）や着せ替えなどの作り込みは [カスタマイズ](/ja/customize/events) を参照してください。
+タイムラインイベント（ユーザーデータ / シグナル / サウンド）や着せ替えなどの作り込みは [カスタマイズ](../customize/events.md) を参照してください。

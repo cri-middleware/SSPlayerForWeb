@@ -8,7 +8,7 @@ Google 広告の HTML5 広告は、HTML・CSS・JavaScript・画像を入れた 
 
 ## バンドルを作る
 
-1. テクスチャを埋め込んで変換します。[アセットの準備](/ja/usage/assets)にある変換ツールの **Embedded** オプション、コマンドラインなら `--embedded` です。
+1. テクスチャを埋め込んで変換します。[アセットの準備](./assets.md)にある変換ツールの **Embedded** オプション、コマンドラインなら `--embedded` です。
 2. リポジトリのルートでインストールとビルドをし、スクリプトを実行します。ランタイムは `pnpm run download:wasm`（ビルド済みを取得）か `pnpm run build:wasm`（ソースからビルド。Rust と wasm-pack が必要）で用意します。
 
    ```bash
@@ -19,7 +19,7 @@ Google 広告の HTML5 広告は、HTML・CSS・JavaScript・画像を入れた 
 
 `examples/html5-ad/out/<name>/` に `index.html` と `ad.js` を、入稿用に `examples/html5-ad/out/<name>.zip` を書き出します。オプションは `--help` で確認できます。npm から入れたプレイヤーのバンドルとランタイムを使うときは `player=` と `wasm=` で指定します。
 
-中身は [WebGL・Web Components で使う](/ja/usage/webgl)の `SSSurface` の使い方を、入力ごとスクリプトに入れたものです。`SSSurface.initialize` にランタイムのバイト列を、`loadBuffer` にパックのバイト列を渡し、サーフェスは `autoStart: true` で作ります。
+中身は [WebGL・Web Components で使う](./webgl.md)の `SSSurface` の使い方を、入力ごとスクリプトに入れたものです。`SSSurface.initialize` にランタイムのバイト列を、`loadBuffer` にパックのバイト列を渡し、サーフェスは `autoStart: true` で作ります。
 
 ## バンドルが前提にしていること
 

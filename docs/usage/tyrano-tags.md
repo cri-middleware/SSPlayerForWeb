@@ -5,7 +5,7 @@ description: "Every [ss_*] tag the TyranoScript plugin adds: attributes, chainin
 # TyranoScript tags
 
 Every `[ss_*]` tag the TyranoScript plugin adds. Installing the plugin, converting your animation
-and a first scene are on [TyranoScript](/usage/tyrano); TyranoBuilder's components write these
+and a first scene are on [TyranoScript](./tyrano.md); TyranoBuilder's components write these
 same tags.
 
 | Tag | Role | Key attributes |

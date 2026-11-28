@@ -5,7 +5,7 @@ description: What the Web players do not do yet, the browser requirements, how e
 # Limitations & Scope
 
 Constraints to be aware of when shipping with the current SpriteStudio Player for Web. For what
-*is* supported, see [Basic playback](/usage/basic) and the usage guides.
+*is* supported, see [Basic playback](./usage/basic.md) and the usage guides.
 
 This repository is a monorepo, so a constraint applies at one of three levels. Each section below
 says which.
@@ -56,7 +56,7 @@ no-SIMD build for MZ's NW.js. Treat SIMD support as a browser requirement for yo
 
 In the browser converter `ssconverter-web`, dropping a folder needs the **File System Access
 API**, so it works only in a **Chromium-based browser** (Chrome / Edge, etc.); in other browsers,
-pick the folder with `Browse...`. See [Preparing assets](/usage/assets).
+pick the folder with `Browse...`. See [Preparing assets](./usage/assets.md).
 
 ## How each package is distributed
 
@@ -77,7 +77,7 @@ host framework's plugin system, so they are **not installable from npm**.
 
 ## RPG Maker MZ {#rpg-maker-mz-beta}
 
-See [Using RPG Maker MZ](/usage/rmmz).
+See [Using RPG Maker MZ](./usage/rmmz.md).
 
 ::: warning
 - **A picture's tint and blend mode do not affect the animation.** *Opacity*, *move* and *scale* do apply.
@@ -90,13 +90,13 @@ See [Using RPG Maker MZ](/usage/rmmz).
   covers them.
 - **The same option deletes the sound files only an animation plays.** MZ plays them from
   `audio/se/`, which it prunes; register them with the official MaterialBase.js plugin
-  ([Sound](/usage/rmmz#_5-sound)).
+  ([Sound](./usage/rmmz.md#_5-sound)).
 :::
 
 ## TyranoScript / TyranoBuilder
 
-See [Using TyranoScript](/usage/tyrano) and
-[Using TyranoBuilder](/usage/tyranobuilder).
+See [Using TyranoScript](./usage/tyrano.md) and
+[Using TyranoBuilder](./usage/tyranobuilder.md).
 
 ::: warning TyranoBuilder
 - **The Standard edition (without PRO) loads at most two plugins**, and this counts as one.
@@ -119,5 +119,5 @@ every official player too, so the full explanations — and the rest of the shar
   reverse direction, or a ping-pong return leg). A negative speed is not one of those cases: speed is a multiplier, and a negative one stops the playhead rather than turning it around, as does `0`.
 - **The runtime does not play audio.** `onAudio` hands you the sound reference and the timing.
   The players play it for you through Web Audio unless you set your own `audioManager`
-  ([Sound playback](/customize/events#sound-playback)).
+  ([Sound playback](./customize/events.md#sound-playback)).
 :::

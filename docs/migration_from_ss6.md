@@ -4,7 +4,7 @@ description: "Moving from the legacy SS6Player for Web (ss6player-pixi) to sspla
 
 # Migrating from SS6Player for Web
 
-[← Back to docs home](/)
+[← Back to docs home](./index.md)
 
 This guide covers moving from the legacy **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)** (`ss6player-pixi`) to this player (`@spritestudio/ssplayer-pixi`). Timeline evaluation has moved from **JavaScript to a Rust/WebAssembly core**, and the asset pipeline and API have been redesigned. This is not a drop-in swap — you will need to **re-convert your assets and rewrite your scripts**.
 
@@ -14,7 +14,7 @@ Note that **both players target PixiJS v8**, so your Pixi-side rendering and sce
 
 - **SS6Player**: converted `.sspj` into the FlatBuffers-based **`.ssfb`** format, loaded alongside textures (PNG, etc.).
 - **This version**: uses the optimized binary **`.ssab`** format. `.ssfb` is not supported, so **re-convert from `.sspj` to `.ssab`**.
-  - See [Preparing assets (.sspj → .ssab)](/usage/assets) for the conversion steps.
+  - See [Preparing assets (.sspj → .ssab)](./usage/assets.md) for the conversion steps.
   - An `--embedded` mode that bundles textures into a single file is also available.
 
 ## 2. Class layout & initialization
@@ -160,10 +160,10 @@ player.findPartIndex('body');  // part name → index (-1 if unknown)
 index when you set overrides often enough to want the lookup cached.
 
 The same methods are on `SSPlayer` (both the PixiJS and WebGL backends). See
-[Part control (visibility / cell / color)](/customize/part-overrides) for blend operations,
+[Part control (visibility / cell / color)](./customize/part-overrides.md) for blend operations,
 priority modes, colour packing and the caveats — and for the authoring surfaces in
-[RPG Maker MZ](/usage/rmmz), [TyranoScript](/usage/tyrano) and
-[TyranoBuilder](/usage/tyranobuilder), where this is driven without writing code.
+[RPG Maker MZ](./usage/rmmz.md), [TyranoScript](./usage/tyrano.md) and
+[TyranoBuilder](./usage/tyranobuilder.md), where this is driven without writing code.
 
 ## 6. ⚠️ Currently limited features
 
@@ -179,5 +179,5 @@ The following existed in SS6Player and is **not available** in this version: it 
 - **Mask / clipping**: SS6Player only meshed mask parts (no real masking); this version does **full masking** via a coverage pre-pass (toggle with `player.maskEnabled`).
 - **Sound**: unsupported in SS6Player; this version integrates Web Audio (`SSWebAudioManager`) and auto-binds for `.ssab` files that contain sounds.
 - **WebGPU**: in addition to WebGL, a WebGPU backend is supported (every custom shader ships both GLSL and WGSL).
-- **Attaching objects to parts**: in SS6Player each part was a Pixi child, so you could read its transform via `getChildByLabel(partName)`. This version uses **batched drawing**, so that route is gone — use **part tracking** instead (`attachToPart()` drives any display object to follow a part; `getPartTransform()` reads the transform alone). See [Part tracking (following a specified part)](/customize/part-following).
-- **Environment**: PixiJS v8. See [PixiJS](/usage/pixi) for details.
+- **Attaching objects to parts**: in SS6Player each part was a Pixi child, so you could read its transform via `getChildByLabel(partName)`. This version uses **batched drawing**, so that route is gone — use **part tracking** instead (`attachToPart()` drives any display object to follow a part; `getPartTransform()` reads the transform alone). See [Part tracking (following a specified part)](./customize/part-following.md).
+- **Environment**: PixiJS v8. See [PixiJS](./usage/pixi.md) for details.

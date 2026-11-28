@@ -4,7 +4,7 @@ description: 従来の SS6Player for Web（ss6player-pixi）から ssplayer-pixi
 
 # SS6Player for Web からのマイグレーション
 
-[← ドキュメント目次へ戻る](/ja/)
+[← ドキュメント目次へ戻る](./index.md)
 
 旧プレイヤー **[SS6Player for Web](https://github.com/SpriteStudio/SS6PlayerForWeb)**（`ss6player-pixi`）から本プレイヤー（`@spritestudio/ssplayer-pixi`）へ移行する場合の要点をまとめます。タイムライン評価が **JavaScript から Rust/WebAssembly コア**に置き換わり、アセットパイプラインと API も一新されています。単純な差し替えではなく、**アセットの再変換とスクリプトの書き換え**が必要です。
 
@@ -14,7 +14,7 @@ description: 従来の SS6Player for Web（ss6player-pixi）から ssplayer-pixi
 
 - **SS6Player**: `.sspj` を FlatBuffers 形式の **`.ssfb`** に変換し、テクスチャ（PNG 等）と併せて読み込んでいました。
 - **本バージョン**: 最適化されたバイナリ形式 **`.ssab`** を利用します。`.ssfb` は使えないため、**`.sspj` から `.ssab` へ変換し直してください**。
-  - 変換手順は [アセットの準備（.sspj → .ssab）](/ja/usage/assets) を参照してください。
+  - 変換手順は [アセットの準備（.sspj → .ssab）](./usage/assets.md) を参照してください。
   - テクスチャを埋め込んだ単一ファイルにする `--embedded` モードも利用できます。
 
 ## 2. クラス構成と初期化の変更
@@ -150,7 +150,7 @@ player.findPartIndex('body');  // パーツ名 → インデックス（不明�
 `findPartIndex('body')` はランタイム側で同じ解決を行うもので、`part` 引数の内部処理でも使われます。上書きを頻繁に行う場合は、これでインデックスを取得して使い回してください。
 
 同じメソッドは `SSPlayer`（PixiJS・WebGL の両バックエンド）の両方にあります。ブレンド方法・
-priority・色のパック方法・注意点は [パーツ制御（表示 / セル / 色）](/ja/customize/part-overrides) を参照してください。コードを書かずに扱えるオーサリング手段は[RPG ツクール MZ で使う](/ja/usage/rmmz)・[TyranoScript で使う](/ja/usage/tyrano)・[ティラノビルダーで使う](/ja/usage/tyranobuilder) にあります。
+priority・色のパック方法・注意点は [パーツ制御（表示 / セル / 色）](./customize/part-overrides.md) を参照してください。コードを書かずに扱えるオーサリング手段は[RPG ツクール MZ で使う](./usage/rmmz.md)・[TyranoScript で使う](./usage/tyrano.md)・[ティラノビルダーで使う](./usage/tyranobuilder.md) にあります。
 
 ## 6. ⚠️ 現在は制限付きの機能
 
@@ -166,5 +166,5 @@ priority・色のパック方法・注意点は [パーツ制御（表示 / セ�
 - **マスク / クリッピング**: SS6Player はメッシュ化のみで**実際のマスクは非対応**でしたが、本バージョンは**カバレッジ前処理による本格的なマスク**に対応します（`player.maskEnabled` で切り替え）。
 - **サウンド**: SS6Player は**非対応**でしたが、本バージョンは Web Audio 連携（`SSWebAudioManager`）に対応し、サウンド付き `.ssab` で自動バインドされます。
 - **WebGPU**: WebGL に加えて WebGPU バックエンドに対応します（全カスタムシェーダーが GLSL/WGSL 両対応）。
-- **パーツへの追従**: SS6Player では各パーツが Pixi の子ノードだったため `getChildByLabel(partName)` で座標を取得できましたが、本バージョンは**バッチ描画**のためその方法は使えません。代わりに **パーツトラッキング**（`attachToPart()` で任意の表示オブジェクトをパーツに追従させる機能。座標だけ読む `getPartTransform()` もあります）を利用してください。詳しくは [パーツトラッキング（指定パーツへの追従）](/ja/customize/part-following) を参照してください。
-- **対応環境**: PixiJS v8 系。詳細は [PixiJS で使う](/ja/usage/pixi) を参照してください。
+- **パーツへの追従**: SS6Player では各パーツが Pixi の子ノードだったため `getChildByLabel(partName)` で座標を取得できましたが、本バージョンは**バッチ描画**のためその方法は使えません。代わりに **パーツトラッキング**（`attachToPart()` で任意の表示オブジェクトをパーツに追従させる機能。座標だけ読む `getPartTransform()` もあります）を利用してください。詳しくは [パーツトラッキング（指定パーツへの追従）](./customize/part-following.md) を参照してください。
+- **対応環境**: PixiJS v8 系。詳細は [PixiJS で使う](./usage/pixi.md) を参照してください。

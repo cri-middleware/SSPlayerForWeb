@@ -6,7 +6,7 @@ description: Swapping the texture a cell map binds to from code, without touchin
 
 Swap the texture a cell map binds **from your code**, without touching the `.ssab` — colour variations, costume changes, dynamic facial expressions. It keys by **cell-map name**, so one call reaches every part that draws from that cell map.
 
-This is a Player-side responsibility, and is **not** the [Part control](/customize/part-overrides) API: that replaces the cell one *part* draws; this replaces the whole *texture* a cell map is bound to.
+This is a Player-side responsibility, and is **not** the [Part control](./part-overrides.md) API: that replaces the cell one *part* draws; this replaces the whole *texture* a cell map is bound to.
 
 The same method names are available on `SSPlayer` (both the PixiJS and WebGL backends) and on RPG Maker MZ — each takes its own engine's texture object.
 
@@ -58,7 +58,7 @@ They read alike but do different things — do not reach for one when you mean t
 | Unit | A whole **cell map** (texture) | **One part** |
 | Effect | Every part drawing from that cell map | Only that part |
 | Replaces | The **texture object** bound to the name | The **cell** (rect + texture) the part draws |
-| Belongs to | This page (a Player-side texture swap) | [Part control](/customize/part-overrides) |
+| Belongs to | This page (a Player-side texture swap) | [Part control](./part-overrides.md) |
 
 Reach for `setCellmapTexture` to re-skin (a costume, a palette swap); reach for `setPartCellOverride` to make one part show a different picture from the same atlas.
 
@@ -80,7 +80,7 @@ The `texture` argument is engine-native: a `Texture` on PixiJS, an image source 
 - **Ownership.** A `Texture` (PixiJS) or an `SSTextureEntry` (WebGL) you pass is yours — the player never frees it. A raw image source (WebGL) or `Bitmap` (MZ) is uploaded into a GPU texture the *player* owns and frees on restore, replacement, or teardown.
 - **Instance children share this player's textures**, so replacing a name a child's sub-animation also uses re-skins the child too — unlike part overrides, which stop at an instance boundary.
 - **Binding a different `.ssab` clears every override** (its cell-map hashes belong to the old pack).
-- **WebGL context loss drops overrides.** The originals are re-uploaded automatically (see [Resources & lifecycle](/customize/resources)), but a runtime override is not — re-apply it if the context is lost.
+- **WebGL context loss drops overrides.** The originals are re-uploaded automatically (see [Resources & lifecycle](./resources.md)), but a runtime override is not — re-apply it if the context is lost.
 
 ## When the change reaches the screen
 
@@ -94,4 +94,4 @@ Like a part override, a texture swap changes the output **without changing the f
 
 ## Using it from a Web Component
 
-The `<ss-player>` element carries only the playback verbs, so reach the swap through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl). There is no plugin-command or TyranoScript surface for texture replacement — it is available from code only.
+The `<ss-player>` element carries only the playback verbs, so reach the swap through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](../usage/webgl.md). There is no plugin-command or TyranoScript surface for texture replacement — it is available from code only.

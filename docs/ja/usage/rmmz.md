@@ -4,12 +4,9 @@ description: RPG ツクール MZ 向けの ssplayer-rmmz プラグイン。イ�
 
 # RPG ツクール MZ で使う
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
 このプラグインを使うと、**RPG ツクール MZ** のゲームで **SpriteStudio**（`.ssab`）のアニメーションを再生できます。操作はプラグインコマンドで行い、コードは書きません。アニメーションはピクチャに載り、キャラクターやピクチャと正しい Z 順で重なります。**SpriteStudio 7.6 以上**で作成したプロジェクトが必要です。
 
-▶️ **<a href="../../examples/rmmz/" target="_blank" rel="noreferrer">ライブデモ</a>** —
+▶️ **[ライブデモ](https://cri-middleware.github.io/SSPlayerForWeb/examples/rmmz/)** —
 同梱のサンプル MZ プロジェクトをブラウザーで実行できます。
 
 ## 1. インストール
@@ -80,11 +77,11 @@ SpriteStudio で保存したら、テストプレイ中に **F5** を押しま�
 
 ### 自分で変換する場合 {#converting-it-yourself}
 
-[アセットの準備](/ja/usage/assets) のツール（ssconverter-web など）で変換した場合は、出力されたプロジェクト名のフォルダーを `spritestudio/` に置きます（`spritestudio/Ringo/Ringo.ssab`）。この場合 `ssconverter_bg.wasm` と `SpriteStudio_Source/` は要りません。
+[アセットの準備](./assets.md) のツール（ssconverter-web など）で変換した場合は、出力されたプロジェクト名のフォルダーを `spritestudio/` に置きます（`spritestudio/Ringo/Ringo.ssab`）。この場合 `ssconverter_bg.wasm` と `SpriteStudio_Source/` は要りません。
 
 ## 3. プラグインコマンド {#_3-plugin-commands}
 
-プラグインコマンド（MZ のエディタでの表示名・引数・動作）は [RPG ツクール MZ のプラグインコマンド](/ja/usage/rmmz-commands) にあります。
+プラグインコマンド（MZ のエディタでの表示名・引数・動作）は [RPG ツクール MZ のプラグインコマンド](./rmmz-commands.md) にあります。
 
 ## 4. デプロイ {#_4-deployment}
 

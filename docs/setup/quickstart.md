@@ -10,7 +10,7 @@ pick the one that fits your setup.
 
 ## Convert and place the `.ssab`
 
-Open <a href="../ssconverter/" target="_blank" rel="noreferrer">ssconverter-web</a>, the converter
+Open [ssconverter-web](https://cri-middleware.github.io/SSPlayerForWeb/ssconverter/), the converter
 hosted beside these docs, drop your SpriteStudio project folder on it, and press
 **⚡ Convert & Download**. Extract the ZIP into the directory your app serves as-is (such as
 `public/`):
@@ -24,7 +24,7 @@ public/
 ```
 
 The code below loads it as `/Ringo/Ringo.ssab`. The other converters — a desktop app, a CLI and a
-library — are on [Preparing assets](/usage/assets).
+library — are on [Preparing assets](../usage/assets.md).
 
 ::: tip No SpriteStudio data of your own yet?
 The [official sample data](https://www.webtech.co.jp/help/ja/spritestudio7/download/sample/)
@@ -36,7 +36,7 @@ if you want effects.
 :::
 
 The imports below assume a bundler (Vite, webpack, …). With no bundler, use the CDN builds:
-[WebGL](/usage/webgl#without-a-bundler-cdn) or [PixiJS](/usage/pixi#without-a-bundler-cdn).
+[WebGL](../usage/webgl.md#without-a-bundler-cdn) or [PixiJS](../usage/pixi.md#without-a-bundler-cdn).
 
 ## ssplayer-webgl (no dependencies)
 
@@ -124,4 +124,4 @@ main().catch(console.error);
 - **Don't call `update()` with Pixi**: `SSPlayer` is registered with `Ticker.shared`
   automatically.
 
-Next, explore the playback-control API in [Basic playback](/usage/basic).
+Next, explore the playback-control API in [Basic playback](../usage/basic.md).

@@ -5,7 +5,7 @@ description: "The SpriteStudio components the TyranoBuilder plugin adds to the p
 # TyranoBuilder components
 
 The SpriteStudio components the TyranoBuilder plugin adds to the palette. Installing the plugin and
-bringing your animations in are on [TyranoBuilder](/usage/tyranobuilder).
+bringing your animations in are on [TyranoBuilder](./tyranobuilder.md).
 
 Under **Plugins** in the palette:
 
@@ -44,5 +44,5 @@ A few things the fields do that are worth knowing:
   the parts the change applies to: a colour takes normal parts, an image normal and mask parts.
 
 Each component writes the matching `[ss_*]` tag verbatim, so the
-[tag reference](/usage/tyrano-tags) describes exactly what they do. There is no component for
+[tag reference](./tyrano-tags.md) describes exactly what they do. There is no component for
 tracks (`[ss_track]`, `[ss_track_fade]`, `[ss_track_clear]`); those are for TyranoScript scenarios.

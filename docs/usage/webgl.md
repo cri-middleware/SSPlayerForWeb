@@ -9,10 +9,7 @@ an external rendering engine such as PixiJS. It suits setups that want to keep
 dependencies and file size low — ad banners, simple web pages — and drops straight into
 frameworkless pages.
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
-▶️ **<a href="../examples/webgl/" target="_blank" rel="noreferrer">Live demo</a>** — the
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/webgl/)** — the
 `<ss-player>` Web Component in a frameworkless page; drop a `.ssab` onto it to play your
 own.
 
@@ -114,7 +111,7 @@ Call it before the first `<ss-player>` connects, because that element creates th
 An element's `overlay="<id>"` attribute names another overlay, which costs another WebGL context.
 
 To control it from JavaScript, `await el.ready`, then call `play()`, `pause()`, `resume()`, `stop()` or
-`setAnimation(name)` on the element. The rest of the playback API in [Basic playback](/usage/basic)
+`setAnimation(name)` on the element. The rest of the playback API in [Basic playback](./basic.md)
 is on `el.player`, the `SSPlayer` underneath.
 
 The element deliberately carries only the playback verbs; everything else — including the
@@ -128,7 +125,7 @@ el.player.setPartColorOverride('apple', 0x0033ffbf);
 
 The part-transform read-out is reached the same way. This player has no scene graph, so
 following a part means reading `el.player.getPartTransform()` from `onFrame()` and placing
-your own element — see [Part tracking](/customize/part-following).
+your own element — see [Part tracking](../customize/part-following.md).
 
 ## Using SSSurface and SSPlayer directly
 

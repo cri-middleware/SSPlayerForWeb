@@ -4,14 +4,11 @@ description: Overriding a part's colour, cell or visibility from code, which win
 
 # Part control (visibility / cell / color)
 
-<!-- Relative path on a raw <a target="_blank">, not a markdown link -- see
-     docs/index.md for why. -->
-
 Per-part runtime overrides let a script say "make this part this colour / this cell / hidden **now**". An override wins over both the keyframes and the animation blending, so it never fights the animation.
 
 The same method names are available on `SSPlayer` (both the PixiJS and WebGL backends).
 
-▶️ **<a href="../examples/override/" target="_blank" rel="noreferrer">Live demo</a>** — cycles through the colour, visibility and cell overrides (source in `examples/override-example`)
+▶️ **[Live demo](https://cri-middleware.github.io/SSPlayerForWeb/examples/override/)** — cycles through the colour, visibility and cell overrides (source in `examples/override-example`)
 
 ## Basic usage
 
@@ -125,10 +122,10 @@ An override changes the output **without changing the frame number**, so an impl
 
 Hosts whose authors don't write code get an authoring surface in their own idiom.
 
-- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so overrides are reached through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](/usage/webgl).
-- **RPG Maker MZ** — drive it from an event's **plugin commands** (Set SS Part Color / Visibility / Cell, Clear SS Part Overrides). The settings are stored on the picture, so they **survive save/load**. See [RPG Maker MZ](/usage/rmmz).
-- **TyranoScript** — write `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` in a scenario. The settings are part of the save and are restored on load. See [TyranoScript](/usage/tyrano).
-- **TyranoBuilder** — the palette's **SpriteStudio: part colour / hide part / part image** and **SpriteStudio: reset parts** components write the same four tags. See [TyranoBuilder](/usage/tyranobuilder).
+- **`<ss-player>` Web Component** — the element deliberately carries only the playback verbs, so overrides are reached through `el.player` (the `SSPlayer` underneath). See [WebGL & Web Components](../usage/webgl.md).
+- **RPG Maker MZ** — drive it from an event's **plugin commands** (Set SS Part Color / Visibility / Cell, Clear SS Part Overrides). The settings are stored on the picture, so they **survive save/load**. See [RPG Maker MZ](../usage/rmmz.md).
+- **TyranoScript** — write `[ss_part_color]` / `[ss_part_visible]` / `[ss_part_cell]` / `[ss_part_clear]` in a scenario. The settings are part of the save and are restored on load. See [TyranoScript](../usage/tyrano.md).
+- **TyranoBuilder** — the palette's **SpriteStudio: part colour / hide part / part image** and **SpriteStudio: reset parts** components write the same four tags. See [TyranoBuilder](../usage/tyranobuilder.md).
 
 ## What this feature is not for
 
@@ -136,7 +133,7 @@ These are easy to confuse with overrides, but belong elsewhere.
 
 | What you want | Where it belongs |
 |---|---|
-| Replacing a whole texture / cell map | [Runtime texture replacement](/customize/texture-replacement) — swaps the texture a whole cell map binds. Overrides work on **one part** at a time |
-| Flipping | The player's `flipX` / `flipY` — see [Basic playback](/usage/basic#flip-and-offset) |
+| Replacing a whole texture / cell map | [Runtime texture replacement](./texture-replacement.md) — swaps the texture a whole cell map binds. Overrides work on **one part** at a time |
+| Flipping | The player's `flipX` / `flipY` — see [Basic playback](../usage/basic.md#flip-and-offset) |
 | Whole-object colour / opacity / draw order | Properties on the player (`SSPlayer` / its container) — not a per-part concern |
 | Swapping an instance part's animation | Planned, pending the SDK's Instance Lifecycle API — see the [ROADMAP](https://github.com/cri-middleware/SSPlayerForWeb/blob/main/ROADMAP.md) |
