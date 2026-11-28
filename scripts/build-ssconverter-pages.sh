@@ -19,12 +19,15 @@
 #
 # Usage:  SITE_BASE=/SSPlayerForWeb/ scripts/build-ssconverter-pages.sh <out-dir>
 #   SITE_BASE : Pages base path (with leading/trailing slash), e.g. /SSPlayerForWeb/
-#   SDK_WASM  : download (default) | build. build reuses the converter wasm
-#               already in the working tree for the one version whose sdk tag
-#               matches scripts/SDK_VERSION.txt -- what `build-pages.sh sdk=build`
-#               passes, and the way through while that SDK release does not exist
-#               yet. Every other version is still downloaded: an older pinned
-#               version's wasm is not what the submodule builds today.
+#   SDK_WASM  : download (default) | build. The one version whose sdk tag
+#               matches scripts/SDK_VERSION.txt takes the converter wasm already
+#               in the working tree. With build, that is what `build-pages.sh
+#               sdk=build` compiled, the way through while that SDK release does
+#               not exist yet. With download, it is what download-sdk installed
+#               from that very release, as its wasm/VERSION stamp says, so a Pages
+#               build fetches the release once; a stamp naming anything else
+#               downloads it here. Every other version is downloaded: an older
+#               pinned version's wasm is not what the working tree holds.
 #   <out-dir> : staging destination, e.g. _site
 set -euo pipefail
 
@@ -39,8 +42,10 @@ esac
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd -P)"
 MANIFEST="$ROOT_DIR/packages/ssconverter-web/versions.json"
 REPO="cri-middleware/SpriteStudio-SDK"
-# The version the working tree's own wasm is built from, for SDK_WASM=build.
+# The version the working tree's own wasm comes from.
 LOCAL_SDK="$(tr -d '[:space:]' < "$ROOT_DIR/scripts/SDK_VERSION.txt")"
+# download-sdk writes the release it installed here; a source build writes "local".
+STAMP="$ROOT_DIR/packages/ssplayer-core/wasm/VERSION"
 # The SDK publishes ONE combined web archive holding runtime-web/,
 # runtime-web-nosimd/ and converter-web/ as subdirectories — the same asset
 # `download-sdk.sh` consumes. There is no per-package zip; keep this name and the
@@ -59,18 +64,28 @@ fetch_wasm() {
   local wasm_dir="$src/packages/ssconverter-core/wasm"
   local tmp base expected actual
 
-  # SDK_WASM=build: this version pins the very tag the working tree's wasm was
-  # built from, so use that instead of asking the Releases for it. Only the
-  # current version qualifies -- an older pinned one wants the wasm it shipped
-  # with, which is exactly what its sdk tag names.
-  if [ "$SDK_WASM" = "build" ] && [ "$sdk" = "$LOCAL_SDK" ]; then
-    if [ ! -f "$ROOT_DIR/packages/ssconverter-core/wasm/ssconverter_bg.wasm" ]; then
-      echo "ERROR: SDK_WASM=build, but packages/ssconverter-core/wasm holds no" >&2
-      echo "       ssconverter_bg.wasm -- build it first ('pnpm run build:wasm', or" >&2
-      echo "       scripts/build-pages.sh sdk=build without skip=wasm)" >&2
-      exit 1
+  # The current version's wasm may already be in the working tree: compiled
+  # there (SDK_WASM=build), or installed by download-sdk from the very release
+  # this would fetch it from. Only the current version qualifies -- an older
+  # pinned one wants the wasm it shipped with, which is exactly what its sdk tag
+  # names.
+  local reuse=""
+  if [ "$sdk" = "$LOCAL_SDK" ]; then
+    if [ "$SDK_WASM" = "build" ]; then
+      if [ ! -f "$ROOT_DIR/packages/ssconverter-core/wasm/ssconverter_bg.wasm" ]; then
+        echo "ERROR: SDK_WASM=build, but packages/ssconverter-core/wasm holds no" >&2
+        echo "       ssconverter_bg.wasm -- build it first ('pnpm run build:wasm', or" >&2
+        echo "       scripts/build-pages.sh sdk=build without skip=wasm)" >&2
+        exit 1
+      fi
+      reuse="SDK_WASM=build"
+    elif [ -f "$ROOT_DIR/packages/ssconverter-core/wasm/ssconverter_bg.wasm" ] \
+      && [ -f "$STAMP" ] && [ "$(tr -d '[:space:]' < "$STAMP")" = "$sdk" ]; then
+      reuse="installed by download-sdk"
     fi
-    echo "   using the working tree's converter wasm (SDK_WASM=build, sdk $sdk)"
+  fi
+  if [ -n "$reuse" ]; then
+    echo "   using the working tree's converter wasm ($reuse, sdk $sdk)"
     # Already in place when building from the repo itself; a pinned-ref worktree
     # needs its own copy.
     if [ "$src" != "$ROOT_DIR" ]; then

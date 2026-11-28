@@ -21,12 +21,15 @@
 #
 # Usage:  $env:SITE_BASE = "/SSPlayerForWeb/"; scripts/build-ssconverter-pages.ps1 <out-dir>
 #   SITE_BASE : Pages base path (with leading/trailing slash), e.g. /SSPlayerForWeb/
-#   SDK_WASM  : download (default) | build. build reuses the converter wasm
-#               already in the working tree for the one version whose sdk tag
-#               matches scripts/SDK_VERSION.txt -- what `build-pages.ps1 sdk=build`
-#               passes, and the way through while that SDK release does not exist
-#               yet. Every other version is still downloaded: an older pinned
-#               version's wasm is not what the submodule builds today.
+#   SDK_WASM  : download (default) | build. The one version whose sdk tag
+#               matches scripts/SDK_VERSION.txt takes the converter wasm already
+#               in the working tree. With build, that is what `build-pages.ps1
+#               sdk=build` compiled, the way through while that SDK release does
+#               not exist yet. With download, it is what download-sdk installed
+#               from that very release, as its wasm/VERSION stamp says, so a Pages
+#               build fetches the release once; a stamp naming anything else
+#               downloads it here. Every other version is downloaded: an older
+#               pinned version's wasm is not what the working tree holds.
 #   <out-dir> : staging destination, e.g. _site
 #
 # Unlike the .sh twin this needs no jq -- ConvertFrom-Json reads the manifest.
@@ -72,8 +75,10 @@ $REPO = "cri-middleware/SpriteStudio-SDK"
 # `download-sdk.ps1` consumes. There is no per-package zip; keep this name and
 # the extraction below in step with that script.
 $WEB_ASSET = "spritestudio-sdk-web-libs.zip"
-# The version the working tree's own wasm is built from, for SDK_WASM=build.
+# The version the working tree's own wasm comes from.
 $LOCAL_SDK = (Get-Content (Join-Path $ROOT_DIR "scripts/SDK_VERSION.txt")).Trim()
+# download-sdk writes the release it installed here; a source build writes "local".
+$STAMP = Join-Path $ROOT_DIR "packages/ssplayer-core/wasm/VERSION"
 
 # Fetch a version's converter wasm into <src>/packages/ssconverter-core/wasm,
 # replacing whatever was there (a previous iteration or `download:wasm`). The
@@ -85,17 +90,27 @@ function Get-VersionWasm {
     $wasmDir = Join-Path $Src "packages/ssconverter-core/wasm"
     $localWasm = Join-Path $ROOT_DIR "packages/ssconverter-core/wasm"
 
-    # SDK_WASM=build: this version pins the very tag the working tree's wasm was
-    # built from, so use that instead of asking the Releases for it. Only the
-    # current version qualifies -- an older pinned one wants the wasm it shipped
-    # with, which is exactly what its sdk tag names.
-    if ($SDK_WASM -eq "build" -and $Sdk -eq $LOCAL_SDK) {
-        if (!(Test-Path (Join-Path $localWasm "ssconverter_bg.wasm"))) {
-            [Console]::Error.WriteLine("${APP}: SDK_WASM=build, but packages/ssconverter-core/wasm holds no")
-            [Console]::Error.WriteLine("${APP}: ssconverter_bg.wasm -- build it first ('pnpm run build:wasm', or")
-            Fail "scripts/build-pages.ps1 sdk=build without skip=wasm)"
+    # The current version's wasm may already be in the working tree: compiled
+    # there (SDK_WASM=build), or installed by download-sdk from the very release
+    # this would fetch it from. Only the current version qualifies -- an older
+    # pinned one wants the wasm it shipped with, which is exactly what its sdk tag
+    # names.
+    $reuse = $null
+    if ($Sdk -eq $LOCAL_SDK) {
+        $hasWasm = Test-Path (Join-Path $localWasm "ssconverter_bg.wasm")
+        if ($SDK_WASM -eq "build") {
+            if (-not $hasWasm) {
+                [Console]::Error.WriteLine("${APP}: SDK_WASM=build, but packages/ssconverter-core/wasm holds no")
+                [Console]::Error.WriteLine("${APP}: ssconverter_bg.wasm -- build it first ('pnpm run build:wasm', or")
+                Fail "scripts/build-pages.ps1 sdk=build without skip=wasm)"
+            }
+            $reuse = "SDK_WASM=build"
+        } elseif ($hasWasm -and (Test-Path $STAMP) -and "$(Get-Content $STAMP -Raw)".Trim() -eq $Sdk) {
+            $reuse = "installed by download-sdk"
         }
-        Write-Host "   using the working tree's converter wasm (SDK_WASM=build, sdk $Sdk)"
+    }
+    if ($reuse) {
+        Write-Host "   using the working tree's converter wasm ($reuse, sdk $Sdk)"
         # Already in place when building from the repo itself; a pinned-ref
         # worktree needs its own copy.
         if ($Src -ne $ROOT_DIR) {

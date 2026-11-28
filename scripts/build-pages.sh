@@ -279,8 +279,8 @@ fi
 # land in packages/*/wasm.
 #
 # (The ssconverter stage takes its converter wasm per schema version, from the
-# sdk tag versions.json pins. sdk=build reaches the one version whose tag is the
-# one built here; the rest still download.)
+# sdk tag versions.json pins. The one version whose tag is SDK_VERSION.txt's
+# takes what this stage put in place, built or downloaded; the rest download.)
 if [ "$SDK" = "build" ]; then
   wasm_what="build the SDK wasm from source (runtime + converter, release)"
 else
