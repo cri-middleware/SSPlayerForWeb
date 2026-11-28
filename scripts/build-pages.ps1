@@ -272,8 +272,9 @@ try {
     # the converter all land in packages/*/wasm.
     #
     # (The ssconverter stage takes its converter wasm per schema version, from
-    # the sdk tag versions.json pins. sdk=build reaches the one version whose tag
-    # is the one built here; the rest still download.)
+    # the sdk tag versions.json pins. The one version whose tag is
+    # SDK_VERSION.txt's takes what this stage put in place, built or downloaded;
+    # the rest download.)
     $wasmWhat = if ($opts.sdk -eq "build") {
         "build the SDK wasm from source (runtime + converter, release)"
     } else {
